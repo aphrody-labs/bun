@@ -112,7 +112,8 @@ impl Root {
             if target.first() == Some(&b'/') {
                 done.clear();
             }
-            for p in target.split(|byte| *byte == b'/').rev() {
+            let parts: Vec<&[u8]> = strings::split(&target, b"/").collect();
+            for p in parts.into_iter().rev() {
                 if p != b"" && p != b"." {
                     queue.push_front(p.to_vec());
                 }

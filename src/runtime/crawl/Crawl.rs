@@ -49,7 +49,7 @@ mod native {
                 .ok_or("Crawl store path must be UTF-8")?
                 .as_bytes()
                 .to_vec();
-            if bytes.contains(&0) {
+            if bun_core::strings::contains_char(&bytes, 0) {
                 return Err("Invalid Crawl store path".into());
             }
             bytes.push(0);

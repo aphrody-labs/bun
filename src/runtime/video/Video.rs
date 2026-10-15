@@ -312,7 +312,7 @@ impl Video {
             .into_utf8()
             .slice()
             .to_vec();
-        if path.is_empty() || path.contains(&0) {
+        if path.is_empty() || bun_core::strings::contains_char(&path, 0) {
             return Err(global.throw_invalid_arguments(format_args!(
                 "Video.remux expects a nonempty file path without NUL"
             )));

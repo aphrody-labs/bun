@@ -27,7 +27,7 @@ pub(crate) fn command_index(argv: &[&[u8]], command: &[u8]) -> Option<usize> {
 }
 
 fn global_option_takes_value(arg: &[u8]) -> bool {
-    if arg.contains(&b'=') {
+    if bun_core::strings::contains_char(arg, b'=') {
         return false;
     }
     let param = super::arguments::RUN_PARAMS.iter().find(|param| match arg {

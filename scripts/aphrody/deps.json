@@ -267,7 +267,7 @@
     {
       "repo": "aphrody-labs/WebKit",
       "kind": "prebuilt",
-      "ref": "autobuild-0c06faadf65bf8e8c8ad3a5a8aca83e1e9ed653f",
+      "ref": "autobuild-3d3257150c40a1aabdc5f8b48d5b33d0413674cb",
       "usedBy": [
         "build",
         "scripts/build/deps/webkit.ts"
@@ -279,7 +279,7 @@
     {
       "repo": "oven-sh/WebKit",
       "kind": "prebuilt",
-      "ref": "autobuild-0c06faadf65bf8e8c8ad3a5a8aca83e1e9ed653f",
+      "ref": "autobuild-3d3257150c40a1aabdc5f8b48d5b33d0413674cb",
       "usedBy": [
         "build",
         "scripts/build/deps/webkit.ts"
@@ -341,6 +341,16 @@
     {
       "repo": "aphrody-labs/aphrody",
       "kind": "cargo-git",
+      "ref": "4b83ea7f6c2727d67c30d4942501e5b831e559dd",
+      "usedBy": [
+        "packages/bun-google/aphrody/Cargo.toml"
+      ],
+      "internal": true,
+      "visibility": "PRIVATE"
+    },
+    {
+      "repo": "aphrody-labs/aphrody",
+      "kind": "cargo-git",
       "ref": "c58e93d6dc1b4b2d420c3c929a40c67dd071d2f4",
       "usedBy": [
         "packages/bun-python-native/Cargo.toml"
@@ -360,6 +370,46 @@
       "visibility": "PUBLIC"
     },
     {
+      "repo": "aphrody-labs/filmcraft",
+      "kind": "cargo-git",
+      "ref": "cee1feb185e675a108f78067f71ad86a640ace3d",
+      "usedBy": [
+        "packages/bun-video/native/Cargo.toml"
+      ],
+      "internal": true,
+      "visibility": "PUBLIC"
+    },
+    {
+      "repo": "software-mansion/smelter",
+      "kind": "cargo-git",
+      "ref": "6637f3df71282c816140cd3bb9821d69b30be2ba",
+      "usedBy": [
+        "packages/bun-video/native/Cargo.toml"
+      ],
+      "internal": false,
+      "visibility": "PUBLIC"
+    },
+    {
+      "repo": "jonnyburger/mp4-rust",
+      "kind": "cargo-git",
+      "ref": "92ba375738cc2f05a4d754e1f968cf2e97d06641",
+      "usedBy": [
+        "packages/bun-video/packages/remotion/packages/compositor/Cargo.toml"
+      ],
+      "internal": false,
+      "visibility": "PUBLIC"
+    },
+    {
+      "repo": "remotion-dev/rust-ffmpeg",
+      "kind": "cargo-git",
+      "ref": "05791070b6ca8ed8d0940a9251f7e41f570634ee",
+      "usedBy": [
+        "packages/bun-video/packages/remotion/packages/compositor/Cargo.toml"
+      ],
+      "internal": false,
+      "visibility": "PUBLIC"
+    },
+    {
       "repo": "aphrody-labs/wry",
       "kind": "cargo-git",
       "ref": "dev",
@@ -370,6 +420,36 @@
       "visibility": "PUBLIC"
     },
     {
+      "repo": "aphrody-labs/aphrody",
+      "kind": "cargo-git",
+      "ref": "631434e1aa92291f417a09ee19c41056527402b4",
+      "usedBy": [
+        "packages/bun-windows-winclean/Cargo.toml"
+      ],
+      "internal": true,
+      "visibility": "PRIVATE"
+    },
+    {
+      "repo": "aphrody-labs/material",
+      "kind": "cargo-git",
+      "ref": "default branch",
+      "usedBy": [
+        "packages/web/rust/Cargo.toml"
+      ],
+      "internal": true,
+      "visibility": "PRIVATE"
+    },
+    {
+      "repo": "aphrody-labs/aphrody",
+      "kind": "cargo-git",
+      "ref": "default branch",
+      "usedBy": [
+        "packages/web/rust/Cargo.toml"
+      ],
+      "internal": true,
+      "visibility": "PRIVATE"
+    },
+    {
       "repo": "aphrody-labs/uv",
       "kind": "in-tree",
       "ref": "f3e56e16e0302e26ea456cb51b676b35958572a0",
@@ -377,39 +457,6 @@
         "packages/buv/vendor.json"
       ],
       "note": "source of uv",
-      "internal": true,
-      "visibility": "PUBLIC"
-    },
-    {
-      "repo": "aphrody-labs/ruff",
-      "kind": "in-tree",
-      "ref": "3265ed1f944c98bb4c04d632fbefb1257cdb583d",
-      "usedBy": [
-        "packages/buv/vendor.json"
-      ],
-      "note": "source of ruff",
-      "internal": true,
-      "visibility": "PUBLIC"
-    },
-    {
-      "repo": "aphrody-labs/pyo3",
-      "kind": "in-tree",
-      "ref": "451d99fdcdcddf159e8e0a1186960b332cdb5d7c",
-      "usedBy": [
-        "packages/buv/vendor.json"
-      ],
-      "note": "source of pyo3",
-      "internal": true,
-      "visibility": "PUBLIC"
-    },
-    {
-      "repo": "aphrody-labs/vu",
-      "kind": "provenance",
-      "ref": "6ea52f1aada7269d81470dd9d93144555610868e",
-      "usedBy": [
-        "packages/buv/buv.json"
-      ],
-      "note": "code packages/buv was absorbed from; not fetched",
       "internal": true,
       "visibility": "PUBLIC"
     },

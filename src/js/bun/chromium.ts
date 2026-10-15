@@ -341,6 +341,8 @@ async function launch(
   let job: any;
   let pidfd: number | null = null;
   let processGroup = false;
+  // Re-read after each await: the process can exit while Browser.close is pending.
+  const running = (child: Bun.Subprocess) => child.exitCode === null;
   const waitForExit = async (child: Bun.Subprocess, milliseconds: number): Promise<boolean> => {
     let timer: ReturnType<typeof setTimeout> | undefined;
     try {
@@ -359,7 +361,7 @@ async function launch(
       closed = true;
       if (abort) options.signal?.removeEventListener("abort", abort);
       try {
-        if (proc && proc.exitCode === null) {
+        if (proc && running(proc)) {
           if (connection && !connection.closed) {
             // Browser.close can close its socket before replying; process exit is the acknowledgement.
             const request = connection.send("Browser.close").catch(() => undefined);
@@ -368,7 +370,7 @@ async function launch(
               await request;
             }
           }
-          if (proc.exitCode === null) {
+          if (running(proc)) {
             if (job) job.terminate();
             else if (pidfd === null || !processGroup) proc.kill("SIGKILL");
           }
@@ -625,8 +627,9 @@ async function readBookmarks(file: string, options: { site?: string; includeSubd
   if (typeof file !== "string" || !path.isAbsolute(file))
     throw new TypeError("Bookmarks file must be an absolute path");
   let hostname: string | undefined;
-  if (options.site !== undefined) {
-    const site = new URL(options.site);
+  const { site: siteOption } = options;
+  if (siteOption !== undefined) {
+    const site = new URL(siteOption);
     if (!["http:", "https:"].includes(site.protocol) || site.username || site.password)
       throw new TypeError("bookmark site must be an HTTP(S) URL without credentials");
     hostname = site.hostname;
@@ -800,14 +803,15 @@ async function importSite(options: import("bun:chromium").profiles.ImportSiteOpt
           parameter[name] = cookie[name];
         }
       }
-      if (cookie.session !== true && cookie.expires !== undefined) {
-        if (typeof cookie.expires !== "number" || !Number.isFinite(cookie.expires))
+      const { expires, partitionKey } = cookie;
+      if (cookie.session !== true && expires !== undefined) {
+        if (typeof expires !== "number" || !Number.isFinite(expires))
           throw new Error("Source cookie expiry is invalid");
-        if (cookie.expires >= 0) parameter.expires = cookie.expires;
+        if (expires >= 0) parameter.expires = expires;
       }
       if (cookie.partitionKeyOpaque === true) throw new Error("Opaque partitioned cookies cannot be imported");
-      if (cookie.partitionKey !== undefined) {
-        const key = cookie.partitionKey as { topLevelSite?: unknown; hasCrossSiteAncestor?: unknown };
+      if (partitionKey !== undefined) {
+        const key = partitionKey as { topLevelSite?: unknown; hasCrossSiteAncestor?: unknown };
         if (!key || typeof key.topLevelSite !== "string" || typeof key.hasCrossSiteAncestor !== "boolean")
           throw new Error("Source cookie partition key is invalid");
         let topLevel: URL;

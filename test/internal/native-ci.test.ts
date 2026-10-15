@@ -203,7 +203,7 @@ test("installer tests use the linked native binary after its existing build phas
   const installer = gates.findIndex(gate => gate.id === "native-install-test");
   expect(native).toBeGreaterThan(-1);
   expect(installer).toBe(native + 1);
-  expect(gates).toHaveLength(16);
+  expect(gates).toHaveLength(19);
   expect(gates.some(gate => gate.id === "rust-install-test")).toBe(false);
   expect(gates[installer]!.command.slice(0, 4)).toEqual(["bun", "bd", "-j1", "test"]);
   for (const file of gates[installer]!.command.slice(4)) {
@@ -222,6 +222,7 @@ test("Clippy selects each source owner's configuration without changing strict w
   const directories = {
     "rust-google-clippy": "packages/bun-google/aphrody",
     "rust-web-clippy": "packages/web/rust",
+    "rust-obscura-web-clippy": "packages/web/rust",
     "rust-install-clippy": ".",
   };
   for (const [id, directory] of Object.entries(directories)) {
@@ -245,6 +246,7 @@ test("Clippy selects each source owner's configuration without changing strict w
     "rust-google-clippy",
     "rust-install-clippy",
     "rust-web-clippy",
+    "rust-obscura-web-clippy",
   ]);
   expect(gateEnvironment(gates[0]!, checkout, inherited)).toEqual(inherited);
 });
@@ -301,7 +303,7 @@ test("the pinned fetch owner receives all Rust sources and stamps are checked af
   expect(gates.findIndex(gate => gate.id === "rust-dependencies")).toBeLessThan(
     gates.findIndex(gate => gate.id === "rust-install-check"),
   );
-  expect(gates).toHaveLength(16);
+  expect(gates).toHaveLength(19);
 });
 
 test("a missing first-party Cargo prerequisite fails before any source fetch", async () => {

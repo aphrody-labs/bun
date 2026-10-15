@@ -357,7 +357,7 @@ impl Renderer {
     ///
     /// DIM and BOLD are glyph intensity attributes (ECMA-48), so they
     /// tint a background only under INVERSE, where `cell_bg` already
-    /// swapped fg/bg and this color is really the foreground. Ungated,
+    /// swapped fg/bg and this color is really the foreground. Applied to any cell,
     /// faint text over an explicit background painted a darker block
     /// (tmux always sets one: it re-emits the pane's OSC 11 as SGR 48
     /// on every cell it draws).

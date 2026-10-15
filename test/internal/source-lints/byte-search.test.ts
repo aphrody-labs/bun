@@ -1,6 +1,6 @@
 import { file } from "bun";
 import { expect, test } from "bun:test";
-import { realpathSync } from "fs";
+import { existsSync, readFileSync, realpathSync } from "fs";
 import path from "path";
 import { globAllSources } from "../../../scripts/glob-sources.ts";
 
@@ -49,9 +49,27 @@ for (const manifest of new Bun.Glob("src/*/Cargo.toml").scanSync({ cwd: root }))
   const build = /^\s*build\s*=\s*"([^"]+)"/m.exec(toml);
   hostOnly.push(path.posix.join(dir, build ? build[1] : "build.rs"));
 }
+// Only crates that depend on bun_core or bun_highway can reach `strings::`;
+// standalone crates (imported toolchains, the terminal, the browser engine)
+// do not link highway and keep libcore.
+const linksHighway = new Map<string, boolean>();
+function crateLinksHighway(rel: string): boolean {
+  for (let dir = path.posix.dirname(rel); dir !== "." && dir !== ""; dir = path.posix.dirname(dir)) {
+    const cached = linksHighway.get(dir);
+    if (cached !== undefined) return cached;
+    const manifest = path.join(root, dir, "Cargo.toml");
+    if (!existsSync(manifest)) continue;
+    const toml = readFileSync(manifest, "utf8");
+    const links = /^\s*(?:bun_core|bun_highway)\s*[=.]|(?:package|name)\s*=\s*"bun_(?:core|highway)"/m.test(toml);
+    linksHighway.set(dir, links);
+    return links;
+  }
+  return true;
+}
 const rustSources = globAllSources().rust.filter(abs => {
   if (!abs.endsWith(".rs")) return false;
   const rel = path.relative(root, abs).replaceAll(path.sep, "/");
+  if (!crateLinksHighway(rel)) return false;
   return !hostOnly.some(h => (h.endsWith("/") ? rel.startsWith(h) : rel === h));
 });
 
@@ -141,6 +159,8 @@ const ALLOW: Record<string, number> = {
   "src/collections/linear_fifo.rs": 1,
   // The wasm32 stand-in for the highway kernels themselves; it cannot call them.
   "src/highway/wasm_fallback.rs": 1,
+  // Splits UTF-16 units (`&[u16]`) on NUL; highway kernels are byte-only.
+  "src/runtime/windows/sys/registry.rs": 1,
 };
 
 const counts: Record<string, number> = {};

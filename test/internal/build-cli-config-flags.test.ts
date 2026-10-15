@@ -9,7 +9,7 @@ import { emitGeneratorRule, resolveJsToolchain } from "../../scripts/build/confi
 import { Ninja } from "../../scripts/build/ninja.ts";
 import { quote } from "../../scripts/build/shell.ts";
 import { join } from "node:path";
-import { existsSync, linkSync, statSync, unlinkSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, statSync, unlinkSync, writeFileSync } from "node:fs";
 import { builtRuntimeEnvironment, runtimePathEnvironment, withBuildDirectoryLock } from "../../scripts/build.ts";
 
 const buildScript = join(import.meta.dirname, "..", "..", "scripts", "build.ts");
@@ -60,7 +60,8 @@ test("runtime PATH preserves Windows casing and all inherited toolchain entries"
 test("runtime child resolves bun to the exact built executable and refreshes replaced links", async () => {
   using dir = tempDir("built-runtime-alias", {});
   const exe = join(String(dir), isWindows ? "bun-debug.exe" : "bun-debug");
-  linkSync(bunExe(), exe);
+  // A copy: the temporary directory may be on another device than the executable.
+  copyFileSync(bunExe(), exe);
   const alias = join(String(dir), ".runtime-bin", isWindows ? "bun.exe" : "bun");
   const env = builtRuntimeEnvironment(exe, bunEnv);
   expect(statSync(alias).ino).toBe(statSync(exe).ino);

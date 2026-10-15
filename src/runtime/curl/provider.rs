@@ -80,7 +80,7 @@ pub(crate) fn perform(request: Request) -> Result<Response, String> {
         || request
             .headers
             .iter()
-            .any(|header| header.bytes().any(|c| matches!(c, 0 | b'\r' | b'\n')))
+            .any(|header| bun_core::strings::index_of_any(header.as_bytes(), b"\0\r\n").is_some())
     {
         return Err("ERR_CURL_INVALID_REQUEST".into());
     }

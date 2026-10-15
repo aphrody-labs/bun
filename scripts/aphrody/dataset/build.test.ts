@@ -125,7 +125,8 @@ test("the dataset of this checkout is deterministic, unique and versioned", () =
   const serve = a.entries.find(e => e.api.includes("Bun.serve") && e.kind === "example")!;
   expect(serve).toMatchObject({ version: "1.4.4", checks: { parse: true } });
   expect(serve.source).toMatch(/:\d+$/);
-});
+  // Scans the whole checkout twice.
+}, 60_000);
 
 test("every curated pair typechecks against packages/bun-types", () => {
   const { entries } = finalize(fromPairs(), "1.4.4", "0".repeat(40));

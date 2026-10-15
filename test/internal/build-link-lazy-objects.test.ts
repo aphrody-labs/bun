@@ -25,7 +25,7 @@ const macosCross: Target = { ...macosNative, crossTarget: "arm64-apple-macosx13.
 function emitLink(target: Target, buildDir: string) {
   const cfg = { buildDir, cwd: buildDir, host: { os: "linux" }, cxx: "/fake/clang++", ld: "/fake/ld.lld", ...target };
   const n = new Ninja({ buildDir });
-  n.rule("link", { command: "clang++ @$out.rsp $lazy $ldflags -o $out" });
+  n.rule("link", { command: "clang++ @$out.rsp $lazy $driverflags $ldflags -o $out" });
   n.rule("mkdir_stamp", { command: "mkdir -p $dir && touch $out" });
   link(n, cfg as Config, "bun", ["obj/bun.o"], {
     libs: [join(buildDir, "cache", "libWTF.a")],

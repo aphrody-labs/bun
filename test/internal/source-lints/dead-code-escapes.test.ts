@@ -16,6 +16,7 @@ import { expect, test } from "bun:test";
 import { realpathSync } from "fs";
 import path from "path";
 import { globAllSources } from "../../../scripts/glob-sources.ts";
+import { usesWorkspaceLints } from "./crates.ts";
 
 // Item-level escapes only: `#[allow(dead_code)]`, combined lists like
 // `#[allow(dead_code, non_snake_case)]`, and `#[cfg_attr(<pred>, allow(dead_code))]`
@@ -54,6 +55,8 @@ for (const abs of rustSources) {
   // under its canonical path.
   if (path.relative(root, realpathSync(abs)).replaceAll(path.sep, "/") !== source) continue;
   if (tracked !== null && !tracked.has(source)) continue;
+  // The deny this guards comes from `[workspace.lints]`; crates outside it are tracked by workspace-lints.test.ts.
+  if (!usesWorkspaceLints(source)) continue;
   const content = await file(abs).text();
   // Whole-file scan so rustfmt-wrapped attributes are counted too; strip
   // full-line `//` comments first so commented-out escapes stay ignored.
@@ -62,6 +65,27 @@ for (const abs of rustSources) {
   if (n > 0) counts[source] = n;
 }
 
+// Escapes that came with crates imported before they adopted this rule: a ratchet, never add to it.
+// `win32_cmd_templates.rs` holds its escape inside a Rust template string it emits.
+const PENDING: Record<string, number> = {
+  "src/migrate/cli/analyze.rs": 3,
+  "src/migrate/cli/bin_cmd.rs": 1,
+  "src/migrate/cli/commands/migrate.rs": 1,
+  "src/migrate/cli/commands/wasm_spec/codegen.rs": 2,
+  "src/migrate/cli/commands/wasm_spec/mod.rs": 2,
+  "src/migrate/cli/subprocess/bun.rs": 1,
+  "src/migrate/cli/win32_cmd_templates.rs": 1,
+  "src/migrate/engine/rules/node_imports.rs": 1,
+  "src/migrate/types.rs": 1,
+  "src/wasm/lib.rs": 1,
+};
+
 test("no #[allow(dead_code)] escapes", () => {
-  expect(counts).toEqual({});
+  const added = Object.fromEntries(Object.entries(counts).filter(([f, n]) => n > (PENDING[f] ?? 0)));
+  expect(added).toEqual({});
+});
+
+test("pending escapes only go down", () => {
+  const stale = Object.fromEntries(Object.entries(PENDING).filter(([f, n]) => (counts[f] ?? 0) < n));
+  expect(stale).toEqual({});
 });

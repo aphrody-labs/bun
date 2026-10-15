@@ -207,7 +207,7 @@ describe("Bun OS source feature inventory", () => {
     const source = await Bun.file(new URL("../../src/browser/crates/js/build.rs", import.meta.url)).text();
     const selection = /let cross_mksnapshot = match cross_mksnapshot\s*\{([\s\S]*?)\n\s*};/.exec(source)?.[1];
     expect(selection).toBeDefined();
-    const missing = /None\s*=>\s*\{([\s\S]*?)\n\s*},/.exec(selection!)?.[1];
+    const missing = /None\s*=>\s*\{([\s\S]*?)\n\s*},?\s*$/.exec(selection!)?.[1];
     expect(missing).toMatch(/^\s*panic!\(/);
     expect(missing).toContain("refusing to embed a host V8 snapshot");
   });

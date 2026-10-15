@@ -253,7 +253,7 @@ fn decode_record(p: &[u8], rowid: i64) -> Result<Vec<Cell>> {
 
 /// Column names from `CREATE TABLE x(a TEXT, [b] INT, PRIMARY KEY(a))`.
 fn column_names(sql: &[u8]) -> Result<Vec<String>> {
-    let Some(open) = sql.iter().position(|&c| c == b'(') else {
+    let Some(open) = bun_core::strings::index_of_char_usize(sql, b'(') else {
         return Ok(Vec::new());
     };
     let body = &sql[open + 1..];

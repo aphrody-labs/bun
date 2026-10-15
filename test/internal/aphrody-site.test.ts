@@ -45,7 +45,7 @@ test("release README reflects source inventory and does not assert binary public
   expect(readme).toContain("**9.8.7**");
   expect(readme).toContain("`bun:future`");
   expect(readme).toContain(`https://github.com/owner/source/tree/${"a".repeat(40)}`);
-  expect(readme).toContain("does not establish availability");
+  expect(readme).toContain("a source declaration alone does not qualify behavior");
   expect(digest(readme)).toBe(digest(releaseReadme("9.8.7", "a".repeat(40), "owner/source", ["bun:future"])));
 });
 

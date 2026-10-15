@@ -16,7 +16,7 @@ test("deps.json lists exactly what the checkout pins", async () => {
   const repos = fresh.map(d => d.repo);
   expect(repos).toContain("aphrody-labs/uutils-coreutils");
   expect(repos).toContain("aphrody-labs/WebKit");
-  expect(repos).toContain("aphrody-labs/oxc");
+  expect(repos).toContain("aphrody-labs/pyo3");
   for (const d of fresh.filter(d => d.kind === "github-archive")) expect(d.ref).toMatch(/^[0-9a-f]{40}$/);
 });
 
@@ -58,6 +58,6 @@ test("dry run plans every step and changes nothing", async () => {
   const build = plan.steps.find((s: { id: string }) => s.id === "build");
   expect(build.commands.at(-1)).toEndWith("run bd --version");
   const packages = plan.steps.find((s: { id: string }) => s.id === "packages");
-  expect(packages.commands.join("\n")).toContain("packages/bun-oxc/Cargo.toml");
+  expect(packages.commands.join("\n")).toContain("packages/bun-webview-core/Cargo.toml");
   expect(exitCode).toBe(0);
 });

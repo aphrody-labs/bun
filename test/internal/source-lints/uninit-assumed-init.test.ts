@@ -3,6 +3,7 @@ import { expect, test } from "bun:test";
 import { realpathSync } from "fs";
 import path from "path";
 import { globAllSources } from "../../../scripts/glob-sources.ts";
+import { usesWorkspaceLints } from "./crates.ts";
 
 // `MaybeUninit::uninit().assume_init()` on an integer array produces a value
 // whose bytes are uninitialized. The Rust reference lists that as undefined
@@ -46,6 +47,8 @@ for (const abs of rustSources) {
   // its canonical path.
   if (path.relative(root, realpathSync(abs)).replaceAll(path.sep, "/") !== source) continue;
   if (tracked !== null && !tracked.has(source)) continue;
+  // The deny this guards comes from `[workspace.lints]`; crates outside it are tracked by workspace-lints.test.ts.
+  if (!usesWorkspaceLints(source)) continue;
   const content = await file(abs).text();
   // Strip full-line comments so prose mentions don't count.
   sources.set(source, content.replace(/^\s*\/\/.*$/gm, ""));

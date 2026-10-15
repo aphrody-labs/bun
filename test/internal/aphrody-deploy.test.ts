@@ -477,7 +477,7 @@ describe("clean", () => {
       writeFileSync(join(root, "releases", id, "server"), id.repeat(100));
     }
     mkdirSync(join(root, "releases", "d.partial"), { recursive: true });
-    const old = new Date(Date.now() - 3 * 86_400_000);
+    const old = new Date(Date.now() - 3 * 86_400_000 - 3_600_000);
     utimesSync(join(root, "releases", "d.partial"), old, old);
     if (!isWindows) {
       symlinkSync(join(root, "releases/c"), join(root, "current"), "dir");

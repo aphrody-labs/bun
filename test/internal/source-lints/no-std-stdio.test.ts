@@ -2,6 +2,7 @@ import { Glob } from "bun";
 import { expect, test } from "bun:test";
 import { readFileSync } from "node:fs";
 import path from "node:path";
+import { isInLinkedCrate } from "./crates.ts";
 
 // A release build of Bun has no symbol of `std::io::stdio`. The first use of `println!`, `eprintln!`, `dbg!`,
 // `std::io::stdout()`, `std::io::stderr()` or `std::process::exit` (which flushes stdout) brings in the output capture
@@ -30,12 +31,64 @@ test("Rust sources linked into Bun do not use the streams of the standard librar
     ["src/react_compiler/pipeline.rs", 4],
     ["src/router/lib.rs", 4],
   ]);
+  // Imported before this rule applied to them: a ratchet that only goes down. Convert to `bun_core::Output`.
+  const pending = new Map<string, number>([
+    ["src/browser/crates/dom/src/serialize.rs", 1],
+    ["src/browser/crates/dom/src/tree.rs", 6],
+    ["src/browser/crates/extract/src/extract.rs", 1],
+    ["src/bun_vpn/src/lib.rs", 7],
+    ["src/docker/cli.rs", 2],
+    ["src/host/environment.rs", 1],
+    ["src/just/src/cache.rs", 2],
+    ["src/just/src/justfile.rs", 7],
+    ["src/just/src/main.rs", 1],
+    ["src/just/src/parser.rs", 4],
+    ["src/just/src/platform/unix.rs", 1],
+    ["src/just/src/print.rs", 2],
+    ["src/just/src/recipe.rs", 11],
+    ["src/just/src/run.rs", 3],
+    ["src/just/src/signal_handler.rs", 4],
+    ["src/just/src/subcommand.rs", 47],
+    ["src/migrate/bin/n2b.rs", 1],
+    ["src/migrate/cli/analyze.rs", 6],
+    ["src/migrate/cli/app_cmd.rs", 11],
+    ["src/migrate/cli/bin_cmd.rs", 3],
+    ["src/migrate/cli/bunpp_cmd.rs", 21],
+    ["src/migrate/cli/commands/audit.rs", 2],
+    ["src/migrate/cli/commands/migrate.rs", 1],
+    ["src/migrate/cli/commands/prompt.rs", 1],
+    ["src/migrate/cli/commands/rules.rs", 4],
+    ["src/migrate/cli/commands/scan.rs", 3],
+    ["src/migrate/cli/commands/wasm_spec/codegen.rs", 10],
+    ["src/migrate/cli/commands/wasm_spec/mod.rs", 13],
+    ["src/migrate/cli/commands/wasm_spec/validator.rs", 3],
+    ["src/migrate/cli/commands/web.rs", 4],
+    ["src/migrate/cli/linux_cmd.rs", 5],
+    ["src/migrate/cli/mod.rs", 2],
+    ["src/migrate/cli/patch.rs", 11],
+    ["src/migrate/cli/rust_cmd.rs", 19],
+    ["src/migrate/cli/scaffold_fs.rs", 1],
+    ["src/migrate/cli/subprocess/bun.rs", 2],
+    ["src/migrate/cli/wasm_cmd.rs", 8],
+    ["src/migrate/cli/win32_cmd.rs", 2],
+    ["src/migrate/cli/win32_cmd_com.rs", 8],
+    ["src/migrate/engine/audit.rs", 2],
+    ["src/migrate/engine/llmstxt/mod.rs", 10],
+    ["src/migrate/engine/llmstxt/summarize.rs", 2],
+    ["src/quality/format_cli/src/cli/init.rs", 1],
+    ["src/quality/format_cli/src/cli/walk_runner.rs", 2],
+    ["src/quality/linter/src/tester.rs", 3],
+    ["src/runtime/cli/toolchain_command.rs", 1],
+    ["src/runtime/cli/tools_command.rs", 2],
+  ]);
   // Programs of their own.
   const programs = ["src/sema/standalone/"];
   const isLinked = (file: string) =>
     !file.endsWith("/build.rs") &&
     !file.includes("/benches/") &&
     !file.includes("/tests/") &&
+    !file.includes("/examples/") &&
+    isInLinkedCrate(file) &&
     !programs.some(it => file.startsWith(it));
 
   const found = new Map<string, number>();
@@ -50,5 +103,9 @@ test("Rust sources linked into Bun do not use the streams of the standard librar
   }
   // Guard against repoRoot resolving wrong, which would make the ban pass vacuously.
   expect(scanned).toBeGreaterThan(1000);
+  const pendingNow = new Map([...found].filter(([file, n]) => pending.has(file) && n <= pending.get(file)!));
+  for (const file of pendingNow.keys()) found.delete(file);
   expect(Object.fromEntries([...found].sort())).toEqual(Object.fromEntries([...known].sort()));
+  // Lower an entry when a conversion lands so the ratchet holds.
+  expect([...pending].filter(([file, n]) => (pendingNow.get(file) ?? 0) < n).map(([file]) => file)).toEqual([]);
 });

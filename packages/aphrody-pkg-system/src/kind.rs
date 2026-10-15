@@ -70,7 +70,7 @@ pub fn is_system_spec(spec: &[u8]) -> bool {
 }
 
 fn split_source(spec: &[u8]) -> Option<(SourceKind, &[u8])> {
-    let colon = spec.iter().position(|&c| c == b':')?;
+    let colon = bun_core::strings::index_of_char_usize(spec, b':')?;
     let kind = SourceKind::from_name(&spec[..colon])?;
     let rest = &spec[colon + 1..];
     if rest.is_empty() {
@@ -91,7 +91,7 @@ fn range_or_star(range: &str) -> String {
 /// is not the first character, so ids never need quoting.
 pub fn parse_spec(spec: &[u8]) -> Option<Spec> {
     let (source, rest) = split_source(spec)?;
-    let (id, range) = match rest.iter().rposition(|&c| c == b'@') {
+    let (id, range) = match bun_core::strings::last_index_of_char(rest, b'@') {
         Some(at) if at > 0 => (&rest[..at], &rest[at + 1..]),
         _ => (rest, &b""[..]),
     };

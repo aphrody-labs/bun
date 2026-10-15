@@ -4,12 +4,7 @@
  */
 import { describe, expect, test } from "bun:test";
 
-import {
-  resolveConfig,
-  type Config,
-  type PartialConfig,
-  type Toolchain,
-} from "../../scripts/build/config.ts";
+import { resolveConfig, type Config, type PartialConfig, type Toolchain } from "../../scripts/build/config.ts";
 import {
   APHRODY_WEBKIT_PREBUILTS,
   WEBKIT_APHRODY_REPO,
@@ -58,10 +53,7 @@ function mockToolchain(): Toolchain {
 }
 
 function resolveDarwin(partial: PartialConfig = {}): Config {
-  return resolveConfig(
-    { os: "darwin", arch: "aarch64", buildType: "Release", ...partial },
-    mockToolchain(),
-  );
+  return resolveConfig({ os: "darwin", arch: "aarch64", buildType: "Release", ...partial }, mockToolchain());
 }
 
 describe("webkitPrebuiltRepo", () => {
@@ -75,11 +67,10 @@ describe("webkitPrebuiltRepo", () => {
   });
 
   test("uses aphrody-labs for an archive listed in APHRODY_WEBKIT_PREBUILTS", () => {
-    expect(APHRODY_WEBKIT_PREBUILTS[WEBKIT_VERSION]).toContain(name);
-    expect(webkitPrebuiltRepo(name, WEBKIT_VERSION, undefined)).toBe(WEBKIT_APHRODY_REPO);
-    expect(webkitPrebuiltRepo(name, `autobuild-${WEBKIT_VERSION}`, undefined)).toBe(
-      WEBKIT_APHRODY_REPO,
-    );
+    const published = Object.keys(APHRODY_WEBKIT_PREBUILTS).find(sha => APHRODY_WEBKIT_PREBUILTS[sha].includes(name))!;
+    expect(published).toBeDefined();
+    expect(webkitPrebuiltRepo(name, published, undefined)).toBe(WEBKIT_APHRODY_REPO);
+    expect(webkitPrebuiltRepo(name, `autobuild-${published}`, undefined)).toBe(WEBKIT_APHRODY_REPO);
   });
 
   test("$BUN_WEBKIT_REPO forces aphrody, oven or an explicit repo", () => {
@@ -93,8 +84,16 @@ describe("webkitPrebuiltRepo", () => {
 describe("webkit prebuilt source", () => {
   test("keeps oven-sh's archive names and tag in the fork's repo (macOS arm64 LTO)", () => {
     const cfg = resolveDarwin();
-    if (process.env.BUN_WEBKIT_REPO) return; // forced elsewhere: the default is not under test
-    expect(webkitPrebuiltUrl(cfg)).toBe(
+    const old = process.env.BUN_WEBKIT_REPO;
+    process.env.BUN_WEBKIT_REPO = "aphrody";
+    let url: string;
+    try {
+      url = webkitPrebuiltUrl(cfg);
+    } finally {
+      if (old === undefined) delete process.env.BUN_WEBKIT_REPO;
+      else process.env.BUN_WEBKIT_REPO = old;
+    }
+    expect(url).toBe(
       `https://github.com/aphrody-labs/WebKit/releases/download/autobuild-${WEBKIT_VERSION}/bun-webkit-macos-arm64-lto.tar.gz`,
     );
   });

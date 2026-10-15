@@ -4,7 +4,7 @@
 import { describe, expect, test } from "bun:test";
 
 import { resolveConfig, type Config, type PartialConfig, type Toolchain } from "../../../scripts/build/config.ts";
-import { webkit, WEBKIT_VERSION } from "../../../scripts/build/deps/webkit.ts";
+import { webkit, webkitPrebuiltRepo, WEBKIT_VERSION } from "../../../scripts/build/deps/webkit.ts";
 
 /** A fully-populated fake toolchain — resolveConfig never spawns any of these. */
 function mockToolchain(): Toolchain {
@@ -72,20 +72,19 @@ describe("WebKit prebuilt URL", () => {
   // Mirrors prebuiltUrl(): 40-hex shas get the autobuild- prefix, tags pass
   // through, so these assertions hold for both WEBKIT_VERSION forms.
   const defaultTag = WEBKIT_VERSION.startsWith("autobuild-") ? WEBKIT_VERSION : `autobuild-${WEBKIT_VERSION}`;
+  // The fork serves an archive only once it published it for this sha; oven-sh otherwise.
+  const defaultUrl = (name: string) =>
+    `https://github.com/${webkitPrebuiltRepo(name, WEBKIT_VERSION)}/releases/download/${defaultTag}/${name}.tar.gz`;
 
   test("default webkitVersion is used as the release tag", () => {
     const cfg = resolveLinuxRelease();
     expect(cfg.webkitVersion).toBe(WEBKIT_VERSION);
-    expect(prebuiltUrlOf(cfg)).toBe(
-      `https://github.com/aphrody-labs/WebKit/releases/download/${defaultTag}/bun-webkit-linux-amd64.tar.gz`,
-    );
+    expect(prebuiltUrlOf(cfg)).toBe(defaultUrl("bun-webkit-linux-amd64"));
   });
 
   test("lto picks the -lto artifact from the same release tag", () => {
     const cfg = resolveLinuxRelease({ lto: true });
-    expect(prebuiltUrlOf(cfg)).toBe(
-      `https://github.com/aphrody-labs/WebKit/releases/download/${defaultTag}/bun-webkit-linux-amd64-lto.tar.gz`,
-    );
+    expect(prebuiltUrlOf(cfg)).toBe(defaultUrl("bun-webkit-linux-amd64-lto"));
   });
 
   test("debug picks the -debug artifact from the same release tag", () => {
@@ -93,17 +92,15 @@ describe("WebKit prebuilt URL", () => {
       { os: "linux", arch: "x64", abi: "gnu", buildType: "Debug", asan: false, baseline: false, linuxSysroot: "/fake" },
       mockToolchain(),
     );
-    expect(prebuiltUrlOf(cfg)).toBe(
-      `https://github.com/aphrody-labs/WebKit/releases/download/${defaultTag}/bun-webkit-linux-amd64-debug.tar.gz`,
-    );
+    expect(prebuiltUrlOf(cfg)).toBe(defaultUrl("bun-webkit-linux-amd64-debug"));
   });
 
   test("baseline does not affect the suffix (every x64 WebKit is built at the nehalem floor)", () => {
     expect(prebuiltUrlOf(resolveLinuxRelease({ lto: true, baseline: true }))).toBe(
-      `https://github.com/aphrody-labs/WebKit/releases/download/${defaultTag}/bun-webkit-linux-amd64-lto.tar.gz`,
+      defaultUrl("bun-webkit-linux-amd64-lto"),
     );
     expect(prebuiltUrlOf(resolveLinuxRelease({ asan: true, baseline: true }))).toBe(
-      `https://github.com/aphrody-labs/WebKit/releases/download/${defaultTag}/bun-webkit-linux-amd64-asan.tar.gz`,
+      defaultUrl("bun-webkit-linux-amd64-asan"),
     );
   });
 

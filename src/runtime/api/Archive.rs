@@ -80,10 +80,8 @@ impl Archive {
         }
         let promise = JSPromiseStrong::init(cx.global());
         let value = promise.value();
-        let options_root = jsc::StrongOptional::create(
-            options.extra_options.unwrap_or(JSValue::ZERO),
-            cx.global(),
-        );
+        let options_root =
+            jsc::StrongOptional::create(options.extra_options.unwrap_or_default(), cx.global());
         bun_jsc::Job::<ArchiveCopyTask>::schedule(
             cx,
             BlobContext {
