@@ -83,7 +83,7 @@ export async function verifyZlibSDKSource(input: ZlibSourceInput, ports: ZlibSou
     })
   )(url);
   if (
-    !/^[a-f0-9]{40}$/.test(tree.sha) ||
+    tree.sha !== input.commit ||
     tree.truncated !== false ||
     !Array.isArray(tree.tree) ||
     tree.tree.length < 1 ||
@@ -109,6 +109,22 @@ export async function verifyZlibSDKSource(input: ZlibSourceInput, ports: ZlibSou
     )
       throw new Error("Pinned GitHub source inventory has an unsupported member");
     expected.set(entry.path, { mode: entry.mode, sha: entry.sha, size: entry.size! });
+  }
+  // This pinned .gitattributes excludes /.github, .gitattributes and .gitignore from git archive.
+  // https://github.com/zlib-ng/zlib-ng/blob/12731092979c6d07f42da27da673a9f6c7b13586/.gitattributes
+  const attributes = expected.get(".gitattributes");
+  if (
+    attributes?.sha !== "38fd673cc9e488e364d27a71102599fcc237bbc4" ||
+    attributes.size !== 288 ||
+    attributes.mode !== "100644"
+  )
+    throw new Error("Pinned zlib archive export policy differs");
+  const excludedMembers: string[] = [];
+  for (const name of expected.keys()) {
+    if (name.startsWith(".github/") || [".gitattributes", ".gitignore"].includes(basename(name))) {
+      excludedMembers.push(name);
+      expected.delete(name);
+    }
   }
   if (!expected.has("LICENSE.md") || Bun.file(input.archive).size > 64 * 1024 ** 2)
     throw new Error("Pinned zlib source archive or notice is missing");
@@ -188,6 +204,7 @@ export async function verifyZlibSDKSource(input: ZlibSourceInput, ports: ZlibSou
     sourceClean: true,
     gitTree: tree.sha,
     gitInventorySHA256: new Bun.CryptoHasher("sha256").update(JSON.stringify(tree)).digest("hex"),
+    exportPolicy: { attributesGitBlob: attributes.sha, excludedMembers: excludedMembers.sort() },
     archiveSHA256,
     sourceTreeSHA256: source.sourceTreeSHA256,
     patches: patches.map(({ path, sha256 }) => ({ path, sha256 })),

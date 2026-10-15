@@ -32,15 +32,24 @@ async function fixture(base: string) {
     ).blob(),
   );
   const tree = {
-    sha: "a".repeat(40),
+    sha: commit,
     truncated: false,
-    tree: Object.entries(pristine).map(([path, body]) => ({
-      path,
-      mode: "100644",
-      type: "blob",
-      sha: blob(body),
-      size: Buffer.byteLength(body),
-    })),
+    tree: [
+      {
+        path: ".gitattributes",
+        mode: "100644",
+        type: "blob",
+        sha: "38fd673cc9e488e364d27a71102599fcc237bbc4",
+        size: 288,
+      },
+      ...Object.entries(pristine).map(([path, body]) => ({
+        path,
+        mode: "100644",
+        type: "blob",
+        sha: blob(body),
+        size: Buffer.byteLength(body),
+      })),
+    ],
   };
   return {
     input: {
@@ -77,11 +86,47 @@ test("zlib provenance authenticates cached Git blobs and only materializes the p
   expect(receipt.archiveSHA256).toMatch(/^[a-f0-9]{64}$/);
   expect(receipt.sourceTreeSHA256).toMatch(/^[a-f0-9]{64}$/);
   expect(receipt.patches).toHaveLength(1);
+  expect(receipt.exportPolicy.excludedMembers).toEqual([".gitattributes"]);
   expect(await Bun.file(join(value.input.source, "arch/header.h")).text()).toBe("#define NEW 1\n");
 });
 
+test("zlib archive membership honors only the authenticated pinned export policy", async () => {
+  for (const mutation of ["policy", "omitted-source", "exported-metadata", "valid"] as const) {
+    using directory = tempDir("zlib-sdk-export-policy", {});
+    const value = await fixture(String(directory));
+    for (const path of [".github/workflows/build.yml", ".gitignore", "arch/.gitignore"])
+      value.tree.tree.push({ path, mode: "100644", type: "blob", sha: blob("metadata\n"), size: 9 });
+    if (mutation === "policy") value.tree.tree[0]!.sha = "b".repeat(40);
+    if (mutation === "omitted-source")
+      value.tree.tree.push({ path: "missing.c", mode: "100644", type: "blob", sha: blob("source\n"), size: 7 });
+    if (mutation === "exported-metadata")
+      await Bun.write(
+        value.input.archive,
+        await new Bun.Archive({
+          [`zlib-ng-${commit}/LICENSE.md`]: "zlib notice\n",
+          [`zlib-ng-${commit}/arch/header.h`]: "#define OLD 1\n",
+          [`zlib-ng-${commit}/.gitignore`]: "metadata\n",
+        }).blob(),
+      );
+    const result = verifyZlibSDKSource(value.input, {
+      tree: async () => value.tree,
+      patch: path => writeFileSync(join(path, "arch/header.h"), "#define NEW 1\n"),
+    });
+    if (mutation === "valid") {
+      const receipt = await result;
+      expect(receipt.exportPolicy).toEqual({
+        attributesGitBlob: "38fd673cc9e488e364d27a71102599fcc237bbc4",
+        excludedMembers: [".gitattributes", ".github/workflows/build.yml", ".gitignore", "arch/.gitignore"],
+      });
+    } else
+      await expect(result).rejects.toThrow(
+        mutation === "policy" ? "export policy differs" : "missing or unexpected members",
+      );
+  }
+});
+
 test("a correct source stamp cannot conceal modified bytes, extra files or a forged cache archive", async () => {
-  for (const mutation of ["source", "extra", "archive", "inventory"] as const) {
+  for (const mutation of ["source", "extra", "archive", "inventory", "commit"] as const) {
     using directory = tempDir("zlib-sdk-reject-mutation", {});
     const value = await fixture(String(directory));
     if (mutation === "source") await writeFile(join(value.input.source, "LICENSE.md"), "changed notice\n");
@@ -95,11 +140,13 @@ test("a correct source stamp cannot conceal modified bytes, extra files or a for
         }).blob(),
       );
     if (mutation === "inventory") value.tree.truncated = true;
+    if (mutation === "commit") value.tree.sha = "b".repeat(40);
     const errors = {
       source: "changes outside its pinned patches",
       extra: "missing or unexpected files",
       archive: "authenticated Git blob",
       inventory: "inventory is incomplete",
+      commit: "inventory is incomplete",
     };
     await expect(
       verifyZlibSDKSource(value.input, {
