@@ -62,6 +62,7 @@ pub(super) fn read_catalogue(
         }
         Some("shenron-public-cdn/v1") => "https://cdn.dragonballfr.com/catalog/assets/index.json",
         Some("aphrody-dragonballcn-snapshot/v1") => "https://comic.dragonballcn.com/",
+        Some("aphrody-bun-rust-crate-index/v1") => "https://github.com/aphrody-labs/bun",
         Some(other) => return Err(format!("unsupported catalogue schema: {other}")),
         None => "https://dragonballfr.com/",
     };
@@ -78,6 +79,9 @@ pub(super) fn read_catalogue(
         "missingOrPartialReaderVolumeIds": value.get("missingOrPartialReaderVolumeIds"),
         "assetInventorySha256": value.get("assetInventorySha256"),
         "inventorySha256": value.get("inventorySha256"),
+        "repository": value.get("repository"),
+        "producer": value.get("producer"),
+        "coverage": value.get("coverage"),
         "notice": value.get("avertissement"),
         "canonical_eligible": false,
         "catalogueSha256": digest(&bytes),
@@ -110,6 +114,37 @@ pub(super) fn read_catalogue(
             let mut fields = serde_json::Map::new();
             for field in [
                 "id",
+                "name",
+                "version",
+                "license",
+                "manifest",
+                "domain",
+                "snapshot",
+                "snapshotSHA256",
+                "manifestSHA256",
+                "manifestBytes",
+                "repository",
+                "sourceRevision",
+                "producerRevision",
+                "producerSHA256",
+                "workspaceCrates",
+                "indexedDomains",
+                "crateManifestsFound",
+                "missingCrateManifests",
+                "sourceFiles",
+                "nativeFiles",
+                "unresolvedFiles",
+                "metadataOnlyFiles",
+                "parseErrors",
+                "symbolIdCollisions",
+                "unresolvedCalls",
+                "fileCoverageComplete",
+                "exportDomainsVerified",
+                "exportArtifactFilesVerified",
+                "missingSourceHashes",
+                "truncatedDomainExports",
+                "missingDomainBenchmarks",
+                "allExportArtifactsHashVerified",
                 "did",
                 "slug",
                 "series",
@@ -206,7 +241,211 @@ pub(super) fn read_catalogue(
             }
             Ok(())
         };
-    if schema == Some("shenron-public-cdn/v1") {
+    if schema == Some("aphrody-bun-rust-crate-index/v1") {
+        let repository = value
+            .get("repository")
+            .and_then(Value::as_str)
+            .ok_or("Bun crate catalogue has no repository")?;
+        if repository != "aphrody-labs/bun" {
+            return Err("unsupported Bun crate catalogue repository".into());
+        }
+        let revision = value
+            .get("revision")
+            .and_then(Value::as_str)
+            .ok_or("Bun crate catalogue has no revision")?;
+        if revision.len() != 40 || !revision.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+            return Err("invalid Bun crate catalogue revision".into());
+        }
+        let producer = value
+            .get("producer")
+            .and_then(Value::as_object)
+            .ok_or("Bun crate catalogue has no producer")?;
+        let bun_version = producer
+            .get("bunVersion")
+            .and_then(Value::as_str)
+            .filter(|version| !version.trim().is_empty())
+            .ok_or("Bun crate catalogue has no producer version")?;
+        let bun_revision = producer
+            .get("bunRevision")
+            .and_then(Value::as_str)
+            .ok_or("Bun crate catalogue has no producer revision")?;
+        let producer_sha = producer
+            .get("sha256")
+            .and_then(Value::as_str)
+            .ok_or("Bun crate catalogue has no producer checksum")?;
+        if bun_revision.len() != 40 || !bun_revision.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+            return Err("invalid Bun crate catalogue producer revision".into());
+        }
+        if producer_sha.len() != 64 || !producer_sha.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+            return Err("invalid Bun crate catalogue producer checksum".into());
+        }
+        let crates = value
+            .get("crates")
+            .and_then(Value::as_array)
+            .ok_or("Bun crate catalogue has no crates")?;
+        let coverage = value
+            .get("coverage")
+            .and_then(Value::as_object)
+            .ok_or("Bun crate catalogue has no coverage")?;
+        let workspace_crates = coverage
+            .get("workspaceCrates")
+            .and_then(Value::as_u64)
+            .ok_or("Bun crate catalogue has no workspace crate count")?;
+        if crates.len() as u64 != workspace_crates
+            || coverage.get("crateManifestsFound").and_then(Value::as_u64) != Some(workspace_crates)
+            || coverage
+                .get("missingCrateManifests")
+                .and_then(Value::as_u64)
+                != Some(0)
+        {
+            return Err("Bun crate manifest coverage does not match catalogue rows".into());
+        }
+        let mut names = BTreeSet::new();
+        let mut manifests = BTreeSet::new();
+        let mut domains = BTreeSet::new();
+        for row in crates {
+            let name = row
+                .get("name")
+                .and_then(Value::as_str)
+                .ok_or("Bun crate record has no name")?;
+            if name.is_empty()
+                || !name
+                    .bytes()
+                    .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_'))
+            {
+                return Err("invalid Bun crate name".into());
+            }
+            if !names.insert(name) {
+                return Err("duplicate Bun crate name".into());
+            }
+            let manifest = row
+                .get("manifest")
+                .and_then(Value::as_str)
+                .ok_or("Bun crate record has no manifest")?;
+            if manifest.split('/').next_back() != Some("Cargo.toml")
+                || manifest.split('/').any(|part| {
+                    part.is_empty()
+                        || part == "."
+                        || part == ".."
+                        || !part.bytes().all(|byte| {
+                            byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b'.')
+                        })
+                })
+            {
+                return Err("invalid Bun crate manifest path".into());
+            }
+            if !manifests.insert(manifest) {
+                return Err("duplicate Bun crate manifest path".into());
+            }
+            let domain = row
+                .get("domain")
+                .and_then(Value::as_str)
+                .ok_or("Bun crate record has no graph domain")?;
+            if domain.is_empty()
+                || domain.starts_with('/')
+                || domain.split('/').any(|part| part == "..")
+            {
+                return Err("invalid Bun crate graph domain".into());
+            }
+            domains.insert(domain);
+            let version = row
+                .get("version")
+                .and_then(Value::as_str)
+                .ok_or("Bun crate record has no version")?;
+            let snapshot = row
+                .get("snapshot")
+                .and_then(Value::as_str)
+                .filter(|snapshot| !snapshot.trim().is_empty())
+                .ok_or("Bun crate record has no graph snapshot identity")?;
+            let manifest_sha = row
+                .get("manifestSHA256")
+                .and_then(Value::as_str)
+                .ok_or("Bun crate record has no manifest checksum")?;
+            let snapshot_sha = row
+                .get("snapshotSHA256")
+                .and_then(Value::as_str)
+                .ok_or("Bun crate record has no graph snapshot checksum")?;
+            for checksum in [manifest_sha, snapshot_sha] {
+                if checksum.len() != 64 || !checksum.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+                    return Err("invalid Bun crate record checksum".into());
+                }
+            }
+            let manifest_bytes = row
+                .get("manifestBytes")
+                .and_then(Value::as_u64)
+                .ok_or("Bun crate record has no manifest size")?;
+            if version.is_empty() || manifest_bytes == 0 {
+                return Err("invalid Bun crate version or manifest size".into());
+            }
+            let source = format!("{base}/tree/{revision}/{manifest}");
+            let crate_record = serde_json::json!({
+                "id": name,
+                "title": name,
+                "name": name,
+                "version": version,
+                "license": row.get("license"),
+                "manifest": manifest,
+                "domain": domain,
+                "snapshot": snapshot,
+                "snapshotSHA256": snapshot_sha,
+                "manifestSHA256": manifest_sha,
+                "manifestBytes": manifest_bytes,
+                "repository": repository,
+                "sourceRevision": revision,
+                "url": source,
+            });
+            add(
+                "rust-crate",
+                format!("{name}-{manifest}"),
+                &crate_record,
+                &source,
+            )?;
+        }
+        let expected_domains = coverage
+            .get("indexedDomains")
+            .and_then(Value::as_u64)
+            .ok_or("Bun crate catalogue has no indexed domain count")?;
+        if domains.len() as u64 != expected_domains {
+            return Err("Bun crate graph domain coverage does not match catalogue".into());
+        }
+        let summary = serde_json::json!({
+            "title": "Bun Rust workspace crate graph index",
+            "url": format!("{base}/tree/{revision}"),
+            "repository": repository,
+            "sourceRevision": revision,
+            "version": bun_version,
+            "producerRevision": bun_revision,
+            "producerSHA256": producer_sha,
+            "workspaceCrates": workspace_crates,
+            "indexedDomains": expected_domains,
+            "crateManifestsFound": coverage.get("crateManifestsFound"),
+            "missingCrateManifests": coverage.get("missingCrateManifests"),
+            "sourceFiles": coverage.get("sourceFiles"),
+            "nativeFiles": coverage.get("nativeFiles"),
+            "unresolvedFiles": coverage.get("unresolvedFiles"),
+            "metadataOnlyFiles": coverage.get("metadataOnlyFiles"),
+            "parseErrors": coverage.get("parseErrors"),
+            "symbolIdCollisions": coverage.get("symbolIdCollisions"),
+            "unresolvedCalls": coverage.get("unresolvedCalls"),
+            "fileCoverageComplete": coverage.get("fileCoverageComplete"),
+            "exportDomainsVerified": coverage.get("exportDomainsVerified"),
+            "exportArtifactFilesVerified": coverage.get("exportArtifactFilesVerified"),
+            "missingSourceHashes": coverage.get("missingSourceHashes"),
+            "truncatedDomainExports": coverage.get("truncatedDomainExports"),
+            "missingDomainBenchmarks": coverage.get("missingDomainBenchmarks"),
+            "allExportArtifactsHashVerified": coverage.get("allExportArtifactsHashVerified"),
+            "description": format!(
+                "Snapshot-pinned Rust workspace metadata for {workspace_crates} crates across {expected_domains} graph domains. File coverage complete: {}. This is navigation metadata, not build or test qualification.",
+                coverage.get("fileCoverageComplete").and_then(Value::as_bool).unwrap_or(false)
+            ),
+        });
+        add(
+            "rust-crate-index",
+            "summary".into(),
+            &summary,
+            &format!("{base}/tree/{revision}"),
+        )?;
+    } else if schema == Some("shenron-public-cdn/v1") {
         add("asset-inventory", "index".into(), &value, base)?;
         let pages = value
             .pointer("/files/pages")
@@ -500,6 +739,123 @@ mod tests {
         let records = fixture(serde_json::json!({"collections":[{"slug":"original","url":"https://comic.dragonballcn.com/books","ouvrages":[{"did":"1","libelle":"Dragon Ball 1","isbn":"123","planches":192}]}]})).unwrap();
         assert!(records.values().next().unwrap().contains("192"));
         assert_eq!(fixture(serde_json::json!([{"series":"dragonz","episodeNumber":1,"title":"Gohan","synopsis":"Saiyan arrival"}])).unwrap().len(), 1);
+    }
+    fn bun_crate_catalogue() -> Value {
+        let crate_record = |name: &str, manifest: &str| {
+            serde_json::json!({
+                "name": name,
+                "version": "1.4.4",
+                "license": "Apache-2.0",
+                "manifest": manifest,
+                "domain": "src/runtime",
+                "snapshot": "source:bun/src/runtime:graph:fixture",
+                "snapshotSHA256": "b".repeat(64),
+                "manifestSHA256": "c".repeat(64),
+                "manifestBytes": 42
+            })
+        };
+        serde_json::json!({
+            "schema": "aphrody-bun-rust-crate-index/v1",
+            "repository": "aphrody-labs/bun",
+            "revision": "a".repeat(40),
+            "producer": {
+                "bunVersion": "1.4.4",
+                "bunRevision": "d".repeat(40),
+                "sha256": "e".repeat(64)
+            },
+            "coverage": {
+                "workspaceCrates": 2,
+                "indexedDomains": 1,
+                "crateManifestsFound": 2,
+                "missingCrateManifests": 0,
+                "sourceFiles": 100,
+                "nativeFiles": 80,
+                "unresolvedFiles": 20,
+                "metadataOnlyFiles": 10,
+                "parseErrors": 1,
+                "symbolIdCollisions": 0,
+                "unresolvedCalls": 5,
+                "fileCoverageComplete": false,
+                "exportDomainsVerified": 1,
+                "exportArtifactFilesVerified": 4,
+                "missingSourceHashes": 10,
+                "truncatedDomainExports": 1,
+                "missingDomainBenchmarks": 1,
+                "allExportArtifactsHashVerified": true
+            },
+            "crates": [
+                crate_record("bun_runtime", "src/runtime/Cargo.toml"),
+                crate_record("bun_http", "src/http/Cargo.toml")
+            ]
+        })
+    }
+    #[test]
+    fn bun_rust_crate_catalogue_indexes_each_crate_and_preserves_incomplete_coverage() {
+        let records = fixture(bun_crate_catalogue()).unwrap();
+        assert_eq!(records.len(), 3);
+        let text = records.values().cloned().collect::<String>();
+        for term in [
+            "Category: rust-crate",
+            "Category: rust-crate-index",
+            "bun_runtime",
+            "bun_http",
+            "src/runtime/Cargo.toml",
+            "manifestSHA256",
+            "sourceRevision",
+            "fileCoverageComplete",
+            "metadataOnlyFiles",
+            "canonical_eligible",
+        ] {
+            assert!(text.contains(term), "{term}");
+        }
+        assert!(text.contains("\"fileCoverageComplete\": false"));
+        assert!(text.contains("This is navigation metadata, not build or test qualification."));
+        assert!(text.contains("producerSHA256"));
+    }
+    #[test]
+    fn bun_rust_crate_catalogue_rejects_duplicate_or_incomplete_manifests() {
+        let mut duplicate: Value = bun_crate_catalogue();
+        duplicate["crates"][1]["name"] = Value::String("bun_runtime".into());
+        assert!(
+            fixture(duplicate)
+                .unwrap_err()
+                .contains("duplicate Bun crate name")
+        );
+
+        let mut incomplete = bun_crate_catalogue();
+        incomplete["coverage"]["missingCrateManifests"] = Value::from(1);
+        assert!(
+            fixture(incomplete)
+                .unwrap_err()
+                .contains("manifest coverage does not match")
+        );
+
+        let mut unsafe_path = bun_crate_catalogue();
+        unsafe_path["crates"][0]["manifest"] = Value::String("../private/Cargo.toml".into());
+        assert!(
+            fixture(unsafe_path)
+                .unwrap_err()
+                .contains("invalid Bun crate manifest path")
+        );
+
+        let mut missing_snapshot = bun_crate_catalogue();
+        missing_snapshot["crates"][0]
+            .as_object_mut()
+            .unwrap()
+            .remove("snapshot");
+        assert!(
+            fixture(missing_snapshot)
+                .unwrap_err()
+                .contains("no graph snapshot identity")
+        );
+
+        let mut invalid_producer_hash = bun_crate_catalogue();
+        invalid_producer_hash["producer"]["sha256"] = Value::String("bad".into());
+        assert!(
+            fixture(invalid_producer_hash)
+                .unwrap_err()
+                .contains("invalid Bun crate catalogue producer checksum")
+        );
     }
     #[test]
     fn manga_coverage_keeps_reader_extent_page_counts_and_incomplete_pagination_evidence() {

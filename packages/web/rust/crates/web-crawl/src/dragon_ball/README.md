@@ -112,6 +112,13 @@ Les exports connus du dossier de campagne sont reconnus automatiquement :
 `jump-stats.json`, `db_official_news.json`, `dragonballcn.json`,
 `data/catalogues/dragonballcn.json`,
 `publications/manga-catalogue/index.json` et `catalog/assets/index.json`.
+Le schéma `aphrody-bun-rust-crate-index/v1` accepte le catalogue snapshot-pinned
+du graphe Rust Bun : un document par manifeste Cargo et un document de synthèse
+avec les limites de couverture. Le parseur vérifie le dépôt, la révision, les
+comptes de crates/domaines, les identités uniques, les chemins relatifs et la
+forme des empreintes avant de produire les références GitHub de la révision.
+Cette projection est de la métadonnée de navigation ; elle ne prétend pas
+qualifier les crates en compilation ou en test.
 
 L'option répétable `--catalogue <fichier>` (alias `--catalog`) sélectionne des
 snapshots locaux supplémentaires. Exemple :
