@@ -10,7 +10,7 @@ for (const line of (await Bun.file(log).text()).split("\n")) {
   const issue = JSON.parse(line) as { file: string; line?: number };
   if (!issue.line) continue;
   const path = resolve(root, issue.file);
-  if (!["remotion", "hyperframes"].some(engine => path.startsWith(resolve(root, "packages", engine) + sep)))
+  if (!["remotion", "hyperframes"].some(engine => path.startsWith(resolve(root, engine) + sep)))
     throw new Error("Diagnostic outside absorbed engines");
   const lines = files.get(path) ?? new Set<number>();
   lines.add(issue.line);

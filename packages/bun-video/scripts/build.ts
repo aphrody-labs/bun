@@ -1,16 +1,13 @@
 import { mkdir, stat, unlink } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve } from "node:path";
-import {
-  prepareHyperframesStandalone,
-  hyperframesStandaloneConfig,
-} from "../packages/hyperframes/aphrody/standalone-build";
-import { remotionSourcePlugin } from "../packages/remotion/.aphrody/standalone-build";
-import { sharpNativePlugin } from "../packages/hyperframes/aphrody/sharp-native-plugin";
-import { remotionModuleAssetsPlugin } from "../packages/remotion/.aphrody/module-assets";
+import { prepareHyperframesStandalone, hyperframesStandaloneConfig } from "../hyperframes/aphrody/standalone-build";
+import { remotionSourcePlugin } from "../remotion/.aphrody/standalone-build";
+import { sharpNativePlugin } from "../hyperframes/aphrody/sharp-native-plugin";
+import { remotionModuleAssetsPlugin } from "../remotion/.aphrody/module-assets";
 import { mediaPlugin } from "./media-plugin";
 import { videoCatalogPlugin } from "./catalog-plugin";
 import { ytDlpAssetsPlugin } from "./ytdlp-assets-plugin";
-import { hyperframesRuntimeAssetsPlugin } from "../packages/hyperframes/aphrody/runtime-assets-plugin";
+import { hyperframesRuntimeAssetsPlugin } from "../hyperframes/aphrody/runtime-assets-plugin";
 import { libraryReactPlugin, libraryWorkerPlugin, verifiedLibraryPlan } from "./library-plan";
 import { assertLibraryOutputDirectory, ownedLibraryOutputs } from "./verify-library";
 import { buildLibraryDeclarations } from "./library-declarations";
@@ -145,12 +142,12 @@ if (plan) {
     "scripts/library-plan.ts",
     "scripts/catalog-plugin.ts",
     "scripts/ytdlp-assets-plugin.ts",
-    "packages/hyperframes/aphrody/standalone-build.ts",
-    "packages/hyperframes/aphrody/sharp-native-plugin.ts",
-    "packages/hyperframes/aphrody/runtime-assets-plugin.ts",
-    "packages/remotion/.aphrody/standalone-build.ts",
-    "packages/remotion/.aphrody/module-assets.ts",
-    "packages/remotion/.aphrody/module-assets-scope.ts",
+    "hyperframes/aphrody/standalone-build.ts",
+    "hyperframes/aphrody/sharp-native-plugin.ts",
+    "hyperframes/aphrody/runtime-assets-plugin.ts",
+    "remotion/.aphrody/standalone-build.ts",
+    "remotion/.aphrody/module-assets.ts",
+    "remotion/.aphrody/module-assets-scope.ts",
     declarations!.sdkOwner.manifest,
     declarations!.sdkOwner.notice,
     declarations!.ambientOwner.manifest,
@@ -220,7 +217,7 @@ if (plan) {
           ),
           source: [
             {
-              path: "packages/mediabunny/src/index.ts",
+              path: "mediabunny/src/index.ts",
               removedReference: "dom-webcodecs",
               suppliedBy: "typescript@5.9.3/lib.dom.d.ts",
               retainedReference: "dom-mediacapture-transform",

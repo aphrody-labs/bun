@@ -1,7 +1,7 @@
 # yt-dlp dans le binaire Bun Video
 
 `scripts/ytdlp-assets-plugin.ts` embarque les sources Python du propriétaire
-`packages/yt-dlp/yt_dlp` et ses données runtime distribuées, dont les trois
+`yt-dlp/yt_dlp` et ses données runtime distribuées, dont les trois
 scripts du solveur JavaScript upstream. Les tests, caches Python et dossiers
 de dépendances ne sont pas embarqués. Aucun cookie ou profil utilisateur n'est
 collecté pour ce build.

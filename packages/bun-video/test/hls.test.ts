@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { expect, test } from "bun:test";
 import { attachVideoHlsPlayback, getHlsBrowserAssetPath, getHlsPublicAssets } from "../src/hls";
-import { normalizeCookieExport, cookieHeader, validateHlsConfig } from "../labs/hls-lab-core";
+import { normalizeCookieExport, cookieHeader, validateHlsConfig } from "../src/apps/hls-live-core";
 
 test("French Crunchyroll episode accepts a private session without treating the watch page as a manifest", () => {
   const pageUrl = "https://www.crunchyroll.com/fr/watch/GE00389313JAJP/the-god-who-destroys";

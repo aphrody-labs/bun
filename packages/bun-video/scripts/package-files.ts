@@ -1,5 +1,5 @@
 import { join, resolve } from "node:path";
-import { planRemotionLibraryAssets } from "../packages/remotion/.aphrody/module-assets-scope";
+import { planRemotionLibraryAssets } from "../remotion/.aphrody/module-assets-scope";
 import { runtimeClosure } from "./runtime-closure";
 import { publicPackageFile } from "./package-file-policy";
 
@@ -7,7 +7,7 @@ import { publicPackageFile } from "./package-file-policy";
 export async function packagePublicFiles(root = resolve(import.meta.dir, "..")) {
   const closure = await runtimeClosure(root);
   if (closure.missing.length) throw new Error("Public source closure is incomplete");
-  const physical = await planRemotionLibraryAssets(join(root, "packages/remotion"), [
+  const physical = await planRemotionLibraryAssets(join(root, "remotion"), [
     "@remotion/cli",
     "@remotion/renderer",
     "remotion",
@@ -43,18 +43,14 @@ export async function packagePublicFiles(root = resolve(import.meta.dir, "..")) 
   for (const path of Object.values(manifest.bunVideo.sourceBins) as string[]) files.add(path.slice(2));
   for (const path of closure.sourceFileNames) files.add(path);
   for (const owner of physical.owners.filter(owner => owner.workspace)) {
-    const directory = owner.directory.slice(join(root, "packages/remotion").length + 1).replaceAll("\\", "/");
-    trees.add("packages/remotion/" + directory + "/src");
-    files.add("packages/remotion/" + directory + "/package.json");
+    const directory = owner.directory.slice(join(root, "remotion").length + 1).replaceAll("\\", "/");
+    trees.add("remotion/" + directory + "/src");
   }
   for (const path of closure.sourceFileNames) {
-    const directory = path.match(/^(packages\/(?:hyperframes\/packages\/[^/]+|mediabunny))\//)?.[1];
-    if (directory) {
-      trees.add(directory + "/src");
-      files.add(directory + "/package.json");
-    }
+    const directory = path.match(/^(hyperframes\/[^/]+|mediabunny)\/src\//)?.[1];
+    if (directory) trees.add(directory + "/src");
   }
-  for (const directory of ["packages/remotion/.aphrody", "packages/hyperframes/aphrody"])
+  for (const directory of ["remotion/.aphrody", "hyperframes/aphrody"])
     for await (const name of new Bun.Glob("*.{ts,md}").scan({
       cwd: join(root, directory),
       onlyFiles: true,
@@ -62,23 +58,23 @@ export async function packagePublicFiles(root = resolve(import.meta.dir, "..")) 
     }))
       files.add(directory + "/" + name);
   for (const path of [
-    "packages/remotion/package.json",
-    "packages/remotion/LICENSE.md",
-    "packages/hyperframes/package.json",
-    "packages/hyperframes/LICENSE",
-    "packages/mediabunny/package.json",
-    "packages/mediabunny/LICENSE",
-    "packages/remotion/.aphrody/build-deps/package.json",
-    "packages/remotion/.aphrody/build-deps/bun.lock",
-    "packages/remotion/packages/bundler/favicon.ico",
-    "packages/yt-dlp/LICENSE",
-    "packages/yt-dlp/README.md",
-    "packages/yt-dlp/pyproject.toml",
-    "packages/yt-dlp/public.key",
+    "remotion/modules.json",
+    "hyperframes/modules.json",
+    "remotion/LICENSE.md",
+    "hyperframes/LICENSE",
+    "mediabunny/package.json",
+    "mediabunny/LICENSE",
+    "remotion/.aphrody/build-deps/package.json",
+    "remotion/.aphrody/build-deps/bun.lock",
+    "remotion/bundler/favicon.ico",
+    "yt-dlp/LICENSE",
+    "yt-dlp/README.md",
+    "yt-dlp/pyproject.toml",
+    "yt-dlp/public.key",
   ])
     if (await Bun.file(join(root, path)).exists()) files.add(path);
-  trees.add("packages/mediabunny/shared");
-  trees.add("packages/yt-dlp/yt_dlp");
+  trees.add("mediabunny/shared");
+  trees.add("yt-dlp/yt_dlp");
   for (const tree of trees)
     for await (const name of new Bun.Glob("**/*").scan({
       cwd: join(root, tree),

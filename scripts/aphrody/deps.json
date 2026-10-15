@@ -5,11 +5,7 @@
       "repo": "aphrody-labs/bun",
       "kind": "self",
       "ref": "main (releases aphrody-v*)",
-      "usedBy": [
-        "setup",
-        "scripts/aphrody/install.sh",
-        "scripts/aphrody/install.ps1"
-      ],
+      "usedBy": ["setup", "scripts/aphrody/install.sh", "scripts/aphrody/install.ps1"],
       "internal": true,
       "visibility": "PUBLIC"
     },
@@ -17,10 +13,7 @@
       "repo": "oven-sh/boringssl",
       "kind": "github-archive",
       "ref": "41bf9b59c2ebf277a7aa427e1ecad5cc80dd4d4f",
-      "usedBy": [
-        "build",
-        "scripts/build/deps/boringssl.ts"
-      ],
+      "usedBy": ["build", "scripts/build/deps/boringssl.ts"],
       "internal": false,
       "visibility": "PUBLIC"
     },
@@ -28,10 +21,7 @@
       "repo": "google/brotli",
       "kind": "github-archive",
       "ref": "028fb5a23661f123017c060daa546b55cf4bde29",
-      "usedBy": [
-        "build",
-        "scripts/build/deps/brotli.ts"
-      ],
+      "usedBy": ["build", "scripts/build/deps/brotli.ts"],
       "internal": false,
       "visibility": "PUBLIC"
     },
@@ -39,10 +29,7 @@
       "repo": "c-ares/c-ares",
       "kind": "github-archive",
       "ref": "c7a3138dcfe3bb0eaaf10c0c24c36dc66dc790ab",
-      "usedBy": [
-        "build",
-        "scripts/build/deps/cares.ts"
-      ],
+      "usedBy": ["build", "scripts/build/deps/cares.ts"],
       "internal": false,
       "visibility": "PUBLIC"
     },
@@ -50,10 +37,7 @@
       "repo": "HdrHistogram/HdrHistogram_c",
       "kind": "github-archive",
       "ref": "18c7a324383dded1451d15621cd018b0048057d0",
-      "usedBy": [
-        "build",
-        "scripts/build/deps/hdrhistogram.ts"
-      ],
+      "usedBy": ["build", "scripts/build/deps/hdrhistogram.ts"],
       "internal": false,
       "visibility": "PUBLIC"
     },
@@ -61,10 +45,7 @@
       "repo": "google/highway",
       "kind": "github-archive",
       "ref": "2607d3b5b0113992fe84d3848859eae13b3b52c1",
-      "usedBy": [
-        "build",
-        "scripts/build/deps/highway.ts"
-      ],
+      "usedBy": ["build", "scripts/build/deps/highway.ts"],
       "internal": false,
       "visibility": "PUBLIC"
     },
@@ -72,10 +53,7 @@
       "repo": "libarchive/libarchive",
       "kind": "github-archive",
       "ref": "27cbc7827172698143e440801fc0ba39ccb4f1f5",
-      "usedBy": [
-        "build",
-        "scripts/build/deps/libarchive.ts"
-      ],
+      "usedBy": ["build", "scripts/build/deps/libarchive.ts"],
       "internal": false,
       "visibility": "PUBLIC"
     },
@@ -83,10 +61,7 @@
       "repo": "ebiggers/libdeflate",
       "kind": "github-archive",
       "ref": "92e6a0db9fa848d742f9eb286c92afc60f2c3dda",
-      "usedBy": [
-        "build",
-        "scripts/build/deps/libdeflate.ts"
-      ],
+      "usedBy": ["build", "scripts/build/deps/libdeflate.ts"],
       "internal": false,
       "visibility": "PUBLIC"
     },
@@ -94,10 +69,7 @@
       "repo": "libjpeg-turbo/libjpeg-turbo",
       "kind": "github-archive",
       "ref": "c85e6b905bf237038faa936dab160ebfc5da0344",
-      "usedBy": [
-        "build",
-        "scripts/build/deps/libjpeg-turbo.ts"
-      ],
+      "usedBy": ["build", "scripts/build/deps/libjpeg-turbo.ts"],
       "internal": false,
       "visibility": "PUBLIC"
     },
@@ -105,10 +77,7 @@
       "repo": "randy408/libspng",
       "kind": "github-archive",
       "ref": "fb768002d4288590083a476af628e51c3f1d47cd",
-      "usedBy": [
-        "build",
-        "scripts/build/deps/libspng.ts"
-      ],
+      "usedBy": ["build", "scripts/build/deps/libspng.ts"],
       "internal": false,
       "visibility": "PUBLIC"
     },
@@ -116,10 +85,7 @@
       "repo": "oven-sh/libuv",
       "kind": "github-archive",
       "ref": "8023581113b276e7c1aee3f82da57ca0893faab1",
-      "usedBy": [
-        "build",
-        "scripts/build/deps/libuv.ts"
-      ],
+      "usedBy": ["build", "scripts/build/deps/libuv.ts"],
       "internal": false,
       "visibility": "PUBLIC"
     },
@@ -127,10 +93,7 @@
       "repo": "webmproject/libwebp",
       "kind": "github-archive",
       "ref": "b7e29b9d75bd31422b00c2a446d49d7af06c328d",
-      "usedBy": [
-        "build",
-        "scripts/build/deps/libwebp.ts"
-      ],
+      "usedBy": ["build", "scripts/build/deps/libwebp.ts"],
       "internal": false,
       "visibility": "PUBLIC"
     },
@@ -138,10 +101,7 @@
       "repo": "oven-sh/lol-html",
       "kind": "github-archive",
       "ref": "725ce499aa9b71e38b7a2d0a9fbb6d7294a4079e",
-      "usedBy": [
-        "build",
-        "scripts/build/deps/lolhtml.ts"
-      ],
+      "usedBy": ["build", "scripts/build/deps/lolhtml.ts"],
       "internal": false,
       "visibility": "PUBLIC"
     },
@@ -149,10 +109,7 @@
       "repo": "litespeedtech/ls-hpack",
       "kind": "github-archive",
       "ref": "cf0f70dd10b352194c97448eb5d00b4aa484f531",
-      "usedBy": [
-        "build",
-        "scripts/build/deps/lshpack.ts"
-      ],
+      "usedBy": ["build", "scripts/build/deps/lshpack.ts"],
       "internal": false,
       "visibility": "PUBLIC"
     },
@@ -160,10 +117,7 @@
       "repo": "litespeedtech/ls-qpack",
       "kind": "github-archive",
       "ref": "91567706c41c0d97ab8dc576873ecd472d7869fa",
-      "usedBy": [
-        "build",
-        "scripts/build/deps/lsqpack.ts"
-      ],
+      "usedBy": ["build", "scripts/build/deps/lsqpack.ts"],
       "internal": false,
       "visibility": "PUBLIC"
     },
@@ -171,10 +125,7 @@
       "repo": "litespeedtech/lsquic",
       "kind": "github-archive",
       "ref": "f812ceb9529e26717df78c6064a2ff648b949f3e",
-      "usedBy": [
-        "build",
-        "scripts/build/deps/lsquic.ts"
-      ],
+      "usedBy": ["build", "scripts/build/deps/lsquic.ts"],
       "internal": false,
       "visibility": "PUBLIC"
     },
@@ -182,10 +133,7 @@
       "repo": "oven-sh/mimalloc",
       "kind": "github-archive",
       "ref": "92ef6587c57b262f6e6abf513f7776a2f8d12aeb",
-      "usedBy": [
-        "build",
-        "scripts/build/deps/mimalloc.ts"
-      ],
+      "usedBy": ["build", "scripts/build/deps/mimalloc.ts"],
       "internal": false,
       "visibility": "PUBLIC"
     },
@@ -193,10 +141,7 @@
       "repo": "nodejs.org",
       "kind": "prebuilt",
       "ref": "v26.3.0",
-      "usedBy": [
-        "build",
-        "scripts/build/deps/nodejs-headers.ts"
-      ],
+      "usedBy": ["build", "scripts/build/deps/nodejs-headers.ts"],
       "note": "node-v<version>-headers.tar.gz",
       "internal": false
     },
@@ -204,10 +149,7 @@
       "repo": "h2o/picohttpparser",
       "kind": "github-archive",
       "ref": "f4d94b48b31e0abae029ebeafcfd9ca0680ede58",
-      "usedBy": [
-        "build",
-        "scripts/build/deps/picohttpparser.ts"
-      ],
+      "usedBy": ["build", "scripts/build/deps/picohttpparser.ts"],
       "internal": false,
       "visibility": "PUBLIC"
     },
@@ -215,10 +157,7 @@
       "repo": "sru-systems/rust-argon2",
       "kind": "github-archive",
       "ref": "ed81866f163f0c7026aa6fd8388adf37242eb32a",
-      "usedBy": [
-        "build",
-        "scripts/build/deps/rust-argon2.ts"
-      ],
+      "usedBy": ["build", "scripts/build/deps/rust-argon2.ts"],
       "internal": false,
       "visibility": "PUBLIC"
     },
@@ -226,20 +165,14 @@
       "repo": "src/jsc/bindings/sqlite",
       "kind": "in-tree",
       "ref": "checkout",
-      "usedBy": [
-        "build",
-        "scripts/build/deps/sqlite.ts"
-      ],
+      "usedBy": ["build", "scripts/build/deps/sqlite.ts"],
       "internal": false
     },
     {
       "repo": "oven-sh/tinycc",
       "kind": "github-archive",
       "ref": "05f0fafaa3be31e31d7b4b5c17dc60f62c991171",
-      "usedBy": [
-        "build",
-        "scripts/build/deps/tinycc.ts"
-      ],
+      "usedBy": ["build", "scripts/build/deps/tinycc.ts"],
       "internal": false,
       "visibility": "PUBLIC"
     },
@@ -247,10 +180,7 @@
       "repo": "aphrody-labs/uutils-coreutils",
       "kind": "github-archive",
       "ref": "ca3e965d688739916016d4fe1a277701b44f3445",
-      "usedBy": [
-        "build",
-        "scripts/build/deps/uutils.ts"
-      ],
+      "usedBy": ["build", "scripts/build/deps/uutils.ts"],
       "internal": true,
       "visibility": "PUBLIC"
     },
@@ -258,20 +188,14 @@
       "repo": "vendor/uv",
       "kind": "in-tree",
       "ref": "checkout",
-      "usedBy": [
-        "build",
-        "scripts/build/deps/uv.ts"
-      ],
+      "usedBy": ["build", "scripts/build/deps/uv.ts"],
       "internal": false
     },
     {
       "repo": "aphrody-labs/WebKit",
       "kind": "prebuilt",
       "ref": "autobuild-3d3257150c40a1aabdc5f8b48d5b33d0413674cb",
-      "usedBy": [
-        "build",
-        "scripts/build/deps/webkit.ts"
-      ],
+      "usedBy": ["build", "scripts/build/deps/webkit.ts"],
       "note": "release assets bun-webkit-<os>-<arch>[-musl][-debug|-lto][-asan].tar.gz when published for this sha",
       "internal": true,
       "visibility": "PUBLIC"
@@ -280,10 +204,7 @@
       "repo": "oven-sh/WebKit",
       "kind": "prebuilt",
       "ref": "autobuild-3d3257150c40a1aabdc5f8b48d5b33d0413674cb",
-      "usedBy": [
-        "build",
-        "scripts/build/deps/webkit.ts"
-      ],
+      "usedBy": ["build", "scripts/build/deps/webkit.ts"],
       "note": "fallback for the prebuilts aphrody-labs/WebKit does not publish",
       "internal": false,
       "visibility": "PUBLIC"
@@ -292,10 +213,7 @@
       "repo": "zlib-ng/zlib-ng",
       "kind": "github-archive",
       "ref": "12731092979c6d07f42da27da673a9f6c7b13586",
-      "usedBy": [
-        "build",
-        "scripts/build/deps/zlib.ts"
-      ],
+      "usedBy": ["build", "scripts/build/deps/zlib.ts"],
       "internal": false,
       "visibility": "PUBLIC"
     },
@@ -303,10 +221,7 @@
       "repo": "facebook/zstd",
       "kind": "github-archive",
       "ref": "f8745da6ff1ad1e7bab384bd1f9d742439278e99",
-      "usedBy": [
-        "build",
-        "scripts/build/deps/zstd.ts"
-      ],
+      "usedBy": ["build", "scripts/build/deps/zstd.ts"],
       "internal": false,
       "visibility": "PUBLIC"
     },
@@ -314,27 +229,21 @@
       "repo": "vendor/find-msvc-tools",
       "kind": "in-tree",
       "ref": "checkout",
-      "usedBy": [
-        "build"
-      ],
+      "usedBy": ["build"],
       "internal": false
     },
     {
       "repo": "vendor/windows-rs",
       "kind": "in-tree",
       "ref": "checkout",
-      "usedBy": [
-        "build"
-      ],
+      "usedBy": ["build"],
       "internal": false
     },
     {
       "repo": "pop-os/libcosmic",
       "kind": "cargo-git",
       "ref": "default branch",
-      "usedBy": [
-        "packages/bun-cosmic/Cargo.toml"
-      ],
+      "usedBy": ["packages/bun-cosmic/Cargo.toml"],
       "internal": false,
       "visibility": "PUBLIC"
     },
@@ -342,9 +251,7 @@
       "repo": "aphrody-labs/aphrody",
       "kind": "cargo-git",
       "ref": "4b83ea7f6c2727d67c30d4942501e5b831e559dd",
-      "usedBy": [
-        "packages/bun-google/aphrody/Cargo.toml"
-      ],
+      "usedBy": ["packages/bun-google/aphrody/Cargo.toml"],
       "internal": true,
       "visibility": "PRIVATE"
     },
@@ -352,9 +259,7 @@
       "repo": "aphrody-labs/aphrody",
       "kind": "cargo-git",
       "ref": "c58e93d6dc1b4b2d420c3c929a40c67dd071d2f4",
-      "usedBy": [
-        "packages/bun-python-native/Cargo.toml"
-      ],
+      "usedBy": ["packages/bun-python-native/Cargo.toml"],
       "internal": true,
       "visibility": "PRIVATE"
     },
@@ -362,10 +267,7 @@
       "repo": "aphrody-labs/pyo3",
       "kind": "cargo-git",
       "ref": "451d99fdcdcddf159e8e0a1186960b332cdb5d7c",
-      "usedBy": [
-        "packages/bun-python-native/Cargo.toml",
-        "packages/bun-runtime-sdk/Cargo.toml"
-      ],
+      "usedBy": ["packages/bun-python-native/Cargo.toml", "packages/bun-runtime-sdk/Cargo.toml"],
       "internal": true,
       "visibility": "PUBLIC"
     },
@@ -373,9 +275,7 @@
       "repo": "aphrody-labs/filmcraft",
       "kind": "cargo-git",
       "ref": "cee1feb185e675a108f78067f71ad86a640ace3d",
-      "usedBy": [
-        "packages/bun-video/native/Cargo.toml"
-      ],
+      "usedBy": ["packages/bun-video/native/Cargo.toml"],
       "internal": true,
       "visibility": "PUBLIC"
     },
@@ -383,9 +283,7 @@
       "repo": "software-mansion/smelter",
       "kind": "cargo-git",
       "ref": "6637f3df71282c816140cd3bb9821d69b30be2ba",
-      "usedBy": [
-        "packages/bun-video/native/Cargo.toml"
-      ],
+      "usedBy": ["packages/bun-video/native/Cargo.toml"],
       "internal": false,
       "visibility": "PUBLIC"
     },
@@ -393,9 +291,7 @@
       "repo": "jonnyburger/mp4-rust",
       "kind": "cargo-git",
       "ref": "92ba375738cc2f05a4d754e1f968cf2e97d06641",
-      "usedBy": [
-        "packages/bun-video/packages/remotion/packages/compositor/Cargo.toml"
-      ],
+      "usedBy": ["packages/bun-video/remotion/compositor/Cargo.toml"],
       "internal": false,
       "visibility": "PUBLIC"
     },
@@ -403,9 +299,7 @@
       "repo": "remotion-dev/rust-ffmpeg",
       "kind": "cargo-git",
       "ref": "05791070b6ca8ed8d0940a9251f7e41f570634ee",
-      "usedBy": [
-        "packages/bun-video/packages/remotion/packages/compositor/Cargo.toml"
-      ],
+      "usedBy": ["packages/bun-video/remotion/compositor/Cargo.toml"],
       "internal": false,
       "visibility": "PUBLIC"
     },
@@ -413,9 +307,7 @@
       "repo": "aphrody-labs/wry",
       "kind": "cargo-git",
       "ref": "dev",
-      "usedBy": [
-        "packages/bun-webview-core/Cargo.toml"
-      ],
+      "usedBy": ["packages/bun-webview-core/Cargo.toml"],
       "internal": true,
       "visibility": "PUBLIC"
     },
@@ -423,9 +315,7 @@
       "repo": "aphrody-labs/aphrody",
       "kind": "cargo-git",
       "ref": "631434e1aa92291f417a09ee19c41056527402b4",
-      "usedBy": [
-        "packages/bun-windows-winclean/Cargo.toml"
-      ],
+      "usedBy": ["packages/bun-windows-winclean/Cargo.toml"],
       "internal": true,
       "visibility": "PRIVATE"
     },
@@ -433,9 +323,7 @@
       "repo": "aphrody-labs/material",
       "kind": "cargo-git",
       "ref": "default branch",
-      "usedBy": [
-        "packages/web/rust/Cargo.toml"
-      ],
+      "usedBy": ["packages/web/rust/Cargo.toml"],
       "internal": true,
       "visibility": "PRIVATE"
     },
@@ -443,9 +331,7 @@
       "repo": "aphrody-labs/aphrody",
       "kind": "cargo-git",
       "ref": "default branch",
-      "usedBy": [
-        "packages/web/rust/Cargo.toml"
-      ],
+      "usedBy": ["packages/web/rust/Cargo.toml"],
       "internal": true,
       "visibility": "PRIVATE"
     },
@@ -453,9 +339,7 @@
       "repo": "aphrody-labs/uv",
       "kind": "in-tree",
       "ref": "f3e56e16e0302e26ea456cb51b676b35958572a0",
-      "usedBy": [
-        "packages/buv/vendor.json"
-      ],
+      "usedBy": ["packages/buv/vendor.json"],
       "note": "source of uv",
       "internal": true,
       "visibility": "PUBLIC"
@@ -464,10 +348,7 @@
       "repo": "oven-sh/ninja",
       "kind": "toolchain",
       "ref": "bun-ninja-5ecd8831",
-      "usedBy": [
-        "build",
-        "scripts/build/ci-images/spec.ts"
-      ],
+      "usedBy": ["build", "scripts/build/ci-images/spec.ts"],
       "note": "downloaded by scripts/build with pinned sha256",
       "internal": false,
       "visibility": "PUBLIC"
@@ -476,10 +357,7 @@
       "repo": "llvm/llvm-project",
       "kind": "toolchain",
       "ref": "llvmorg-23.1.1",
-      "usedBy": [
-        "setup",
-        "build"
-      ],
+      "usedBy": ["setup", "build"],
       "note": "apt.llvm.org (Debian/Ubuntu), edge/main (Alpine), brew llvm@N (macOS), release tarball (Windows)",
       "internal": false,
       "visibility": "PUBLIC"
@@ -488,11 +366,7 @@
       "repo": "rust-lang/rustup",
       "kind": "toolchain",
       "ref": "nightly-2026-09-15",
-      "usedBy": [
-        "setup",
-        "build",
-        "rust-toolchain.toml"
-      ],
+      "usedBy": ["setup", "build", "rust-toolchain.toml"],
       "note": "rustup-init from static.rust-lang.org (sha256), toolchain from rust-toolchain.toml",
       "internal": false,
       "visibility": "PUBLIC"
@@ -501,10 +375,7 @@
       "repo": "Kitware/CMake",
       "kind": "toolchain",
       "ref": ">=3.24 (CI 3.30.5)",
-      "usedBy": [
-        "setup",
-        "build"
-      ],
+      "usedBy": ["setup", "build"],
       "note": "system package",
       "internal": false,
       "visibility": "PUBLIC"
@@ -513,10 +384,7 @@
       "repo": "microsoft/MSVC",
       "kind": "toolchain",
       "ref": "toolset 14.44, SDK 10.0.26100",
-      "usedBy": [
-        "setup (Windows)",
-        "build"
-      ],
+      "usedBy": ["setup (Windows)", "build"],
       "note": "bun msvc setup (Visual Studio Installer / winget)",
       "internal": false
     }

@@ -190,7 +190,7 @@ async function downloadPage(
   const { runYtDlp } = await import("./ytdlp");
   const result = await runYtDlp({
     url,
-    vendorRoot: join(packageRoot(), "packages", "yt-dlp"),
+    vendorRoot: join(packageRoot(), "yt-dlp"),
     signal,
     options: {
       download: true,
@@ -357,16 +357,7 @@ async function makeComposition(
   const extension = extname(sourcePath) || ".mp4";
   const asset = join(directory, `media${extension}`);
   if (resolve(asset) !== resolve(sourcePath)) await Bun.write(asset, Bun.file(sourcePath));
-  const gsap = join(
-    packageRoot(),
-    "packages",
-    "hyperframes",
-    "skills",
-    "talking-head-recut",
-    "assets",
-    "vendor",
-    "gsap.min.js",
-  );
+  const gsap = join(packageRoot(), "hyperframes", "skills", "talking-head-recut", "assets", "vendor", "gsap.min.js");
   if (!(await Bun.file(gsap).exists()))
     throw new Error("HyperFrames GSAP asset is missing; configure BUN_VIDEO_PACKAGE_ROOT or provide composition.entry");
   await Bun.write(join(directory, "gsap.min.js"), Bun.file(gsap));

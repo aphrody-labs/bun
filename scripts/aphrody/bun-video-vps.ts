@@ -14,7 +14,7 @@ const exportPaths = [
   "/oauth",
   "/secrets",
 ];
-const labs = ["hls-lab", "dash-lab", "hls-lab-har", "hls-keychain", "crunchyroll-app", "crunchyroll-shortcuts"];
+const labs = ["hls", "dash", "har", "keychain", "crunchyroll", "shortcuts"];
 
 export async function probeBunVideoConsumer(
   project: string,
@@ -77,7 +77,7 @@ export async function probeBunVideoConsumer(
   }
   const cli: Array<{ lab: string; stdoutBytes: number; stderrBytes: number }> = [];
   for (const lab of labs) {
-    const child = Bun.spawn([process.execPath, `${packageRoot}/labs/${lab}.ts`, "--help"], {
+    const child = Bun.spawn([process.execPath, `${packageRoot}/umbrella-src/cli.ts`, lab, "--help"], {
       cwd: project,
       stdin: "ignore",
       stdout: "pipe",
@@ -96,7 +96,7 @@ export async function probeBunVideoConsumer(
       clearTimeout(timeout);
     }
   }
-  const check = Bun.spawn([process.execPath, `${packageRoot}/labs/hls-lab.ts`, "--check"], {
+  const check = Bun.spawn([process.execPath, `${packageRoot}/src/apps/hls-live.ts`, "--check"], {
     cwd: project,
     stdin: "ignore",
     stdout: "pipe",
@@ -116,7 +116,7 @@ export async function probeBunVideoConsumer(
   } finally {
     clearTimeout(checkTimeout);
   }
-  const shortcuts = (await import(`${packageRoot}/labs/crunchyroll-shortcuts.ts`)) as {
+  const shortcuts = (await import(`${packageRoot}/src/apps/crunchyroll-shortcuts.ts`)) as {
     startCrunchyrollShortcuts(options: {
       port: number;
     }): Promise<{ url: URL; stop(closeActiveConnections?: boolean): void }>;

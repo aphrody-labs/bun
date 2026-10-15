@@ -22,7 +22,7 @@ evidence. Close owned resources with `.close()` or async disposal.
 
 For a file, inspect dimensions, rational FPS, duration, rotation, color range,
 audio streams and sample rate before authoring. For a page URL, distinguish the
-page from its media source. Open `labs/network-window.tsx` when a browser session
+page from its media source. Open `src/apps/network-window.tsx` when a browser session
 is required; select the player and correlate `currentSrc`, request initiators,
 frame IDs and HLS/DASH manifests. A `blob:` URL is not a downloadable stream.
 Choose a variant explicitly and retain the source timestamps and aspect ratio.

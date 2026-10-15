@@ -13,7 +13,7 @@ let readMs = 0;
 let transformMs = 0;
 if (trace)
   console.error(JSON.stringify({ event: "engine-start", runtime: Bun.revision, executable: process.execPath }));
-for await (const entry of new Bun.Glob("packages/{remotion,hyperframes}/packages/*/src/**/*.{ts,tsx}").scan({
+for await (const entry of new Bun.Glob("{remotion,hyperframes}/*/src/**/*.{ts,tsx}").scan({
   cwd: root,
   onlyFiles: true,
 })) {

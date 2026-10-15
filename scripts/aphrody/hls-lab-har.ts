@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
-export * from "../../packages/bun-video/labs/hls-lab-har";
-import { main } from "../../packages/bun-video/labs/hls-lab-har";
+export * from "../../packages/bun-video/src/apps/har-cli";
+import { main } from "../../packages/bun-video/src/apps/har-cli";
 if (import.meta.main)
   main().catch(() => {
     console.error("Video lab failed; check private inputs and options. Captured values are omitted.");

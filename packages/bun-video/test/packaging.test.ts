@@ -12,7 +12,7 @@ describe("canonical sources and published library plan", () => {
     const typescript = new Bun.Transpiler({ loader: "ts" });
     const tsx = new Bun.Transpiler({ loader: "tsx" });
     const imports: string[] = [];
-    for await (const entry of new Bun.Glob("{src,labs}/**/*.{ts,tsx}").scan({ cwd: root })) {
+    for await (const entry of new Bun.Glob("src/**/*.{ts,tsx}").scan({ cwd: root })) {
       const sourcePath = resolve(root, entry);
       const transpiler = entry.endsWith(".tsx") ? tsx : typescript;
       for (const imported of transpiler.scanImports(await Bun.file(sourcePath).text())) {
@@ -39,7 +39,7 @@ describe("canonical sources and published library plan", () => {
     expect(manifest.exports).toEqual(plan.exports);
     expect(manifest.bin).toEqual(plan.bins);
     for (const entry of [...Object.values(plan.sourceExports), ...Object.values(plan.sourceBins)]) {
-      expect(/^(\.\/(src|labs|umbrella-src|packages)\/)/.test(entry)).toBe(true);
+      expect(/^(\.\/(src|umbrella-src|remotion|hyperframes|mediabunny)\/)/.test(entry)).toBe(true);
       expect(await Bun.file(resolve(root, entry)).exists()).toBe(true);
     }
     for (const entry of Object.values(plan.sourceBins)) {
@@ -49,14 +49,14 @@ describe("canonical sources and published library plan", () => {
     expect(manifest.files.every((entry: string) => !/[*!?]/.test(entry) && publicPackageFile(entry))).toBe(true);
     expect(manifest.files).toContain("dist");
     expect(manifest.files).toContain("tsconfig.json");
-    expect(manifest.files).toContain("packages/mediabunny/shared/mp3-misc.ts");
-    expect(manifest.files).toContain("packages/remotion/packages/bundler/favicon.ico");
+    expect(manifest.files).toContain("mediabunny/shared/mp3-misc.ts");
+    expect(manifest.files).toContain("remotion/bundler/favicon.ico");
     for (const source of plan.entries) expect(manifest.files).toContain(source.slice(2));
   });
 
   test("direct engine exports resolve to the absorbed source", async () => {
-    expect(plan.sourceExports["./remotion"]).toBe("./packages/remotion/packages/core/src/index.ts");
-    expect(plan.sourceExports["./hyperframes"]).toBe("./packages/hyperframes/packages/core/src/index.ts");
+    expect(plan.sourceExports["./remotion"]).toBe("./remotion/core/src/index.ts");
+    expect(plan.sourceExports["./hyperframes"]).toBe("./hyperframes/core/src/index.ts");
     for (const entry of [plan.sourceExports["./remotion"], plan.sourceExports["./hyperframes"]]) {
       expect(await Bun.file(resolve(root, entry)).exists()).toBe(true);
     }
@@ -68,7 +68,7 @@ describe("canonical sources and published library plan", () => {
     const main = await import("../src/index");
     const encode = await import("../src/encode");
     const computer = await import("../src/computer");
-    const hyperframes = await import("../packages/hyperframes/packages/engine/src/services/nativeWebViewCapture");
+    const hyperframes = await import("../hyperframes/engine/src/services/nativeWebViewCapture");
     expect(plan.sourceExports["./engine"]).toBe(plan.sourceExports["."]);
     expect(encode.encodeVideo).toBe(main.encodeVideo);
     expect(computer.runBrowserTask).toBe(main.runBrowserTask);
@@ -76,7 +76,7 @@ describe("canonical sources and published library plan", () => {
   });
 
   test("the engine CLI retains its commands after entrypoint consolidation", async () => {
-    const child = Bun.spawn([process.execPath, resolve(root, plan.sourceBins["bun-video-engine"]!), "--help"], {
+    const child = Bun.spawn([process.execPath, resolve(root, plan.sourceBins["bun-video"]!), "--help"], {
       stdout: "pipe",
       stderr: "pipe",
       timeout: 15_000,
@@ -119,7 +119,7 @@ describe("canonical sources and published library plan", () => {
 
   test("public source and browser assets contain no private fixture files", async () => {
     const invalid: string[] = [];
-    for await (const entry of new Bun.Glob("{src,labs,assets,docs}/**/*").scan({
+    for await (const entry of new Bun.Glob("{src,assets,docs}/**/*").scan({
       cwd: root,
       onlyFiles: true,
     })) {

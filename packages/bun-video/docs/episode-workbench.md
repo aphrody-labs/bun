@@ -7,7 +7,7 @@ partent du checkout Bun Video sélectionné, sur Windows natif.
 ```powershell
 bun scripts/episode-assets.ts --help
 bun scripts/episode-package.ts --help
-bun labs/episode-studio/server.ts --episode-dir .local/episodes/beerus-01
+bun src/apps/episode-studio/server.ts --episode-dir .local/episodes/beerus-01
 ```
 
 `episode-assets.ts` utilise exclusivement `Bun.Video` et `Bun.Image` natifs.
@@ -41,7 +41,7 @@ Une frame d’animé ne constitue pas une preuve des paramètres d’un système
 Les SVG de personnages stylisés et les SVG de pixels exacts sont deux exports
 distincts. Les seconds reproduisent leur référence **redimensionnée** sans
 image raster embarquée ; le reçu indique la résolution et la différence mesurée.
-[SVG et comparaison](episode-svg.md), [page](../labs/episode-studio/README.md).
+[SVG et comparaison](episode-svg.md), [page](../src/apps/episode-studio/README.md).
 
 ## Dataset et Shenron
 

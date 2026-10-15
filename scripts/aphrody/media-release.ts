@@ -484,12 +484,12 @@ export async function packageMediaRelease(input: MediaReleaseInput) {
     "LICENSE.md",
     "packages/bun-video/LICENSE",
     "packages/bun-video/THIRD_PARTY_NOTICES.md",
-    "packages/bun-video/packages/remotion/LICENSE.md",
-    "packages/bun-video/packages/remotion/packages/core/THIRD_PARTY_LICENSES.md",
-    "packages/bun-video/packages/hyperframes/LICENSE",
-    "packages/bun-video/packages/mediabunny/LICENSE",
-    "packages/bun-video/packages/yt-dlp/LICENSE",
-    "packages/bun-video/packages/yt-dlp/THIRD_PARTY_LICENSES.txt",
+    "packages/bun-video/remotion/LICENSE.md",
+    "packages/bun-video/remotion/core/THIRD_PARTY_LICENSES.md",
+    "packages/bun-video/hyperframes/LICENSE",
+    "packages/bun-video/mediabunny/LICENSE",
+    "packages/bun-video/yt-dlp/LICENSE",
+    "packages/bun-video/yt-dlp/THIRD_PARTY_LICENSES.txt",
   ])
     await copy(join(sourceRoot, member), `licenses/${member}`);
   const gates: { id: string; passed: true; log: string; sha256: string }[] = [];

@@ -12,7 +12,7 @@ The optional open-source media toolchain is documented in
 authorized downloads and mpv handles local playback. Their executables remain
 caller-owned and are never installed implicitly.
 
-The source of [Mediabunny](packages/mediabunny/README.md) v1.9.3 is absorbed into the unified package tree and
+The source of [Mediabunny](mediabunny/README.md) v1.9.3 is absorbed into the unified package tree and
 available through `@aphrody/bun-video/mediabunny`. This export is the media
 demuxing, muxing and WebCodecs layer; it does not install a downloader or
 desktop player.
@@ -38,11 +38,12 @@ qualified provider and explicitly authorized URLs. Native encoding requires
 an explicit media executable. The MCP media tool additionally expects the
 runtime-provided `bun-video:media-runtime` module.
 
-The package ships eleven Bun CLI entry points: `bun-video-hls`, `bun-video-dash`,
-`bun-video-har`, `bun-video-keychain`, `bun-video-chrome`, `bun-video-crunchyroll`,
-`bun-video-shortcuts`, `bun-video-webgpu`, `bun-video-engine`, `bun-video-workers`,
-and `bun-video-network`. Their sources and local browser assets are in labs,
-src, umbrella-src and assets. Use each CLI's `--help` for its configuration. Session cookies,
+The package ships one Bun executable, `bun-video`. Its subcommands `hls`, `dash`,
+`har`, `keychain`, `chrome`, `crunchyroll`, `shortcuts`, `webgpu`, `workers`,
+`network`, `site`, `ytdlp`, `capabilities`, `media-probe`, `encode` and `mcp` share
+one dispatcher with `remotion` and `hyperframes`, which run the absorbed upstream CLIs.
+Their sources and local browser assets are in src, umbrella-src and assets.
+Run `bun-video --help` or `bun-video <command> --help` for configuration. Session cookies,
 HAR recordings, signed media URLs and OAuth client secrets are local inputs;
 they are not shipped in the npm artifact.
 
@@ -54,7 +55,7 @@ protocol. No successful authenticated Crunchyroll playback is claimed by
 package publication. See THIRD_PARTY_NOTICES.md for dependency terms.
 
 `/webgpu` runs WGSL compute through either Bun-launched Chromium WebGPU or the precompiled native
-wgpu/CUDA provider. The `bun-video-webgpu` CLI supports Linux serverless jobs when a GPU-enabled
+wgpu/CUDA provider. The `bun-video webgpu` command supports Linux serverless jobs when a GPU-enabled
 ABI 1.5 runtime artifact is installed, and can open the native Windows CEF desktop adapter probe.
 This compute interface does not yet route Remotion/HyperFrames WebGPU compositions through the
 video frame encoder; see [the WebGPU guide](docs/webgpu.md) for runtime requirements and limits.

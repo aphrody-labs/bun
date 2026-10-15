@@ -99,12 +99,12 @@ export function normalizeYtDlpOptions(options: YtDlpOptions = {}): Record<string
 async function vendorRoot(options: YtDlpBridgeOptions): Promise<string> {
   const explicit = options.vendorRoot ?? Bun.env.BUN_VIDEO_YTDLP_VENDOR_ROOT;
   if (explicit) return resolve(explicit);
-  if (Bun.env.BUN_VIDEO_PACKAGE_ROOT) return resolve(Bun.env.BUN_VIDEO_PACKAGE_ROOT, "packages", "yt-dlp");
+  if (Bun.env.BUN_VIDEO_PACKAGE_ROOT) return resolve(Bun.env.BUN_VIDEO_PACKAGE_ROOT, "yt-dlp");
   if (Bun.isStandaloneExecutable) {
     const vendor = await import("bun-video:ytdlp-vendor");
     return vendor.vendorRoot;
   }
-  return Bun.fileURLToPath(new URL("../packages/yt-dlp", import.meta.url));
+  return Bun.fileURLToPath(new URL("../yt-dlp", import.meta.url));
 }
 
 function bunExecutable(): string {

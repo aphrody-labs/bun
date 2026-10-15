@@ -1,18 +1,29 @@
 # yt-dlp dans Bun et Buv
 
-Le catalogue, le parseur CLI et les extracteurs upstream s'exécutent dans le processus Bun via `bun:python` et `Python.async()`. Les sources complètes restent dans `packages/yt-dlp` ; aucun exécutable Python, pip ou Node externe n'est lancé par ce bridge.
+Le catalogue, le parseur CLI et les extracteurs upstream s'exécutent dans le processus Bun via `bun:python` et `Python.async()`. Les sources complètes restent dans `yt-dlp` ; aucun exécutable Python, pip ou Node externe n'est lancé par ce bridge.
 
 `ytDlpRuntimeInfo()` vérifie réellement le host Python et l'import du package sélectionné. La résolution de CPython appartient à `bun:python` : `BUV_PYTHON_LIBPYTHON`, `BUN_PYTHON_LIBPYTHON`, `APHRODY_LIBPYTHON`, `BUV_RUNTIME`, puis l'artefact Buv actif. Le host utilise `BUV_PYTHON_HOST_LIBRARY` ou `BUN_PYTHON_HOST_LIBRARY`, ou sa bibliothèque embarquée. Buv possède l'installation et le manifeste `share/buv/manifest.json` ; ce module ne réinstalle rien.
 
 Le binaire compilé peut sélectionner le package avec `BUN_VIDEO_PACKAGE_ROOT`, ou fournir `vendorRoot` au bridge. Un package déjà importé depuis une autre racine est refusé plutôt que remplacé silencieusement.
 
 ```ts
-import { ytDlpRuntimeInfo, listYtDlpExtractors, parseYtDlpOptions, runYtDlpCli, extractYtDlp } from "@aphrody/bun-video";
+import {
+  ytDlpRuntimeInfo,
+  listYtDlpExtractors,
+  parseYtDlpOptions,
+  runYtDlpCli,
+  extractYtDlp,
+} from "@aphrody/bun-video";
 
 const runtime = await ytDlpRuntimeInfo();
 const providers = await listYtDlpExtractors();
-const parsed = await parseYtDlpOptions(["--skip-download", "https://www.crunchyroll.com/watch/ID"]);
-const result = await extractYtDlp("https://www.crunchyroll.com/watch/ID", { skipDownload: true });
+const parsed = await parseYtDlpOptions([
+  "--skip-download",
+  "https://www.crunchyroll.com/watch/ID",
+]);
+const result = await extractYtDlp("https://www.crunchyroll.com/watch/ID", {
+  skipDownload: true,
+});
 const version = await runYtDlpCli(["--version"]);
 ```
 

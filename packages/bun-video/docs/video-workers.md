@@ -7,17 +7,17 @@ Les sessions et médias privés restent dans le magasin Aphrody protégé.
 
 ## Pool de tâches et SQLite
 
-Depuis `packages/bun-video`, le point d'entrée est `labs/video-workers.ts` :
+Depuis `packages/bun-video`, le point d'entrée est `src/apps/video-workers-cli.ts` :
 
 ```sh
-bun labs/video-workers.ts init
-bun labs/video-workers.ts sources
-bun labs/video-workers.ts apis
-bun labs/video-workers.ts apis --probe ytdlp
-bun labs/video-workers.ts import-capture "C:/Users/aphro/src/www.crunchyroll.com.har"
-bun labs/video-workers.ts run jobs.json --workers 2 --timeout-ms 300000
-bun labs/video-workers.ts sites sites.json
-bun labs/video-workers.ts archive-capture https://web.archive.org/ --cdx-url https://www.crunchyroll.com/
+bun src/apps/video-workers-cli.ts init
+bun src/apps/video-workers-cli.ts sources
+bun src/apps/video-workers-cli.ts apis
+bun src/apps/video-workers-cli.ts apis --probe ytdlp
+bun src/apps/video-workers-cli.ts import-capture "C:/Users/aphro/src/www.crunchyroll.com.har"
+bun src/apps/video-workers-cli.ts run jobs.json --workers 2 --timeout-ms 300000
+bun src/apps/video-workers-cli.ts sites sites.json
+bun src/apps/video-workers-cli.ts archive-capture https://web.archive.org/ --cdx-url https://www.crunchyroll.com/
 ```
 
 `--db` choisit un chemin SQLite explicite ; par défaut
@@ -54,7 +54,7 @@ Pour exporter dans le magasin privé sur Windows :
 
 ```powershell
 $videoDatasetPath = Join-Path $env:USERPROFILE '.aphrody/data/bun-video/dataset.json'
-bun labs/video-workers.ts export $videoDatasetPath --format json --include-text
+bun src/apps/video-workers-cli.ts export $videoDatasetPath --format json --include-text
 ```
 
 `--format` accepte `json`, `jsonl`, `sql` et `wiki`. `--source-id` restreint la
@@ -147,7 +147,7 @@ testés avec succès.
 Depuis `packages/bun-video`, sur un runtime Aphrody qualifié :
 
 ```sh
-bun labs/network-window.tsx https://www.crunchyroll.com/
+bun src/apps/network-window.tsx https://www.crunchyroll.com/
 ```
 
 Chrome/Edge installé et les API natives `bun:chromium`/`bun:windows` sont requis.
@@ -238,8 +238,8 @@ Lire les types et les guides correspondants avant de brancher une famille :
 | Lecteurs              | `/bitmovin`, `/crunchyroll`, `/mpv`                                                                          | Licence, authentification et environnement séparément qualifiés         |
 | Métadonnées/auth      | `/crunchyroll/api`, `/oauth`, `/secrets`                                                                     | Les secrets restent dans leurs magasins isolés                          |
 | React preview         | `/studio`: `VideoStudio`; `/studio-remotion`: `StudioRemotionComposition`                                    | Lecture React et placement dans une composition                         |
-| React rendu           | `/remotion`, `/remotion/renderer`; `loadRemotionCore`, `loadRemotionRenderer`                                | Sources épinglées dans `packages/remotion/packages/`                    |
-| HTML rendu            | `/hyperframes`, `/hyperframes/engine`; `loadHyperframesCore`, `loadHyperframesEngine`                        | Sources épinglées dans `packages/hyperframes/packages/`                 |
+| React rendu           | `/remotion`, `/remotion/renderer`; `loadRemotionCore`, `loadRemotionRenderer`                                | Sources épinglées dans `remotion/`                                      |
+| HTML rendu            | `/hyperframes`, `/hyperframes/engine`; `loadHyperframesCore`, `loadHyperframesEngine`                        | Sources épinglées dans `hyperframes/`                                   |
 | Frames/encodage       | `captureCompositionFrames`, `captureParallelFrames`, `/encode`: `encodeVideo`                                | Fournisseurs navigateur et encodeur explicites                          |
 | Demux/mux Web         | `/mediabunny`                                                                                                | WebCodecs et conteneurs ; disponibilité des codecs du moteur à vérifier |
 | Images/formats        | `/image`: `transformImage`; `/formats`                                                                       | Conversion native et listes de formats, sans preuve d'un codec installé |
@@ -251,8 +251,8 @@ Lire les types et les guides correspondants avant de brancher une famille :
 | Comparaison           | `/pixel-verify`: `compareRGBAFrames`, `verifyPixelFrames`                                                    | Mesure des frames décodées, exactitude et tolérance explicite           |
 
 Les sources Remotion possédées contiennent leurs guides dans
-`packages/remotion/packages/docs/docs/`. Pour HyperFrames, lire les références
-d'auteur sous `packages/hyperframes/`. Conserver licences et provenance ; ne pas
+`remotion/docs/docs/`. Pour HyperFrames, lire les références
+d'auteur sous `hyperframes/`. Conserver licences et provenance ; ne pas
 installer une deuxième copie upstream pour contourner un fournisseur manquant.
 
 ## Critère pixel-perfect

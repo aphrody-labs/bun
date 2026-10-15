@@ -357,7 +357,7 @@ export class VideoCatalog {
 
   /** Read the vendored extractor registry; registry membership is never a playback success. */
   async importYtDlpProviders(
-    registryPath = Bun.fileURLToPath(new URL("../packages/yt-dlp/yt_dlp/extractor/_extractors.py", import.meta.url)),
+    registryPath = Bun.fileURLToPath(new URL("../yt-dlp/yt_dlp/extractor/_extractors.py", import.meta.url)),
   ): Promise<number> {
     if (Bun.isStandaloneExecutable) {
       const { providers } = await import("bun-video:catalog-inventory");

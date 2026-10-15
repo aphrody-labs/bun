@@ -1,8 +1,0 @@
-dist/test/**
-eslint.config.mjs
-tsconfig.tsbuildinfo
-*.tgz
-.turbo
-tsconfig.json
-build.mts
-skills/

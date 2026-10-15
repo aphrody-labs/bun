@@ -8,7 +8,7 @@ async function fixture(extra: Record<string, string> = {}, changes: Record<strin
         name: "@aphrody/bun-video",
         version: "1.4.4-video.2",
         exports: { ".": "./src/index.ts" },
-        bin: { "bun-video-engine": "./src/cli.ts" },
+        bin: { "bun-video": "./src/cli.ts" },
         ...changes,
       }),
       "package/src/index.ts": 'export {value} from "./worker.js";\n',
@@ -36,7 +36,7 @@ test("archive gate binds entrypoints and the actual JS-to-TS relative dependency
   const bytes = await fixture();
   const result = await inspectPackageArchive(bytes);
   expect(result.exports).toEqual(["."]);
-  expect(result.bins).toEqual(["bun-video-engine"]);
+  expect(result.bins).toEqual(["bun-video"]);
   expect(result.sha256).toBe(new Bun.CryptoHasher("sha256").update(bytes).digest("hex"));
   expect(result.entries).toBe(4);
   const missing = await fixture({ "package/src/index.ts": 'export {worker} from "./missing";\n' });

@@ -9,8 +9,8 @@ import {
 } from "./crunchyroll-watchlist";
 import { openConfiguredVideoCatalog } from "./video-neon-runtime";
 
-export const CRUNCHYROLL_CLI_HELP = `Usage: bun-video-crunchyroll help|watch <official URL>|serve [--hostname <host>] [--port <0..65535>]
-       bun-video-crunchyroll watchlist metadata|import <observed.json> [--catalog <path>] [--timeout <1..300000 ms>]
+export const CRUNCHYROLL_CLI_HELP = `Usage: bun-video crunchyroll help|watch <official URL>|serve [--hostname <host>] [--port <0..65535>]
+       bun-video crunchyroll watchlist metadata|import <observed.json> [--catalog <path>] [--timeout <1..300000 ms>]
 metadata registers supplied official series/watch references locally, including films, without authentication.
 import expands supplied series via the existing configured client; watch references remain pending.
 observed.json is an array of {"url":"official URL","title":"optional observed title"}, at most 4 MiB.
@@ -71,9 +71,9 @@ export function parseCrunchyrollCli(args: string[]) {
   return { command: "serve" as const, hostname, port };
 }
 
-if (import.meta.main) {
+export async function crunchyrollCliMain(args = Bun.argv.slice(2)) {
   try {
-    const options = parseCrunchyrollCli(Bun.argv.slice(2));
+    const options = parseCrunchyrollCli(args);
     if (options.command === "help") console.log(CRUNCHYROLL_CLI_HELP);
     else if (options.command === "watch") console.log(JSON.stringify(options.watch));
     else if (options.command === "watchlist") {
@@ -123,3 +123,8 @@ if (import.meta.main) {
     process.exitCode = 1;
   }
 }
+
+if (import.meta.main) await crunchyrollCliMain();
+
+/** Unified `bun-video` subcommand entry. */
+export const run: (args: string[]) => Promise<void> = crunchyrollCliMain;

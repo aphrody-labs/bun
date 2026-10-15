@@ -1,5 +1,4 @@
 import { dirname, isAbsolute, join } from "node:path";
-import { createNeonClient } from "@aphrody/bun-plugin-neon";
 import { VideoCatalog, defaultVideoCatalogPath } from "./video-catalog";
 import { NeonVideoCatalog } from "./video-neon-catalog";
 
@@ -29,6 +28,12 @@ export async function openConfiguredVideoCatalog(
   if (!(await file.exists()) || file.size > 4096)
     throw new Error("Private Neon connection file is missing or oversized");
   const connectionString = (await file.text()).trim();
+  let createNeonClient: typeof import("@aphrody/bun-plugin-neon").createNeonClient;
+  try {
+    ({ createNeonClient } = await import("@aphrody/bun-plugin-neon"));
+  } catch {
+    throw new Error("The Neon catalog requires the optional @aphrody/bun-plugin-neon package");
+  }
   const sql = createNeonClient({
     connectionString,
     expectedHostname: mainHost,

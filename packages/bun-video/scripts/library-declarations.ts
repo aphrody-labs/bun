@@ -1,7 +1,8 @@
 import { mkdir, realpath, symlink, lstat } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
-import type * as TypeScript from "../packages/mediabunny/node_modules/typescript";
-import type * as ApiExtractor from "../packages/mediabunny/node_modules/@microsoft/api-extractor";
+import type * as TypeScript from "../mediabunny/node_modules/typescript";
+import type * as ApiExtractor from "../mediabunny/node_modules/@microsoft/api-extractor";
+import { absorbedFamilies, familyManifests } from "./modules";
 import { verifiedLibraryPlan } from "./library-plan";
 
 type CompilerOptions = TypeScript.CompilerOptions;
@@ -97,7 +98,7 @@ export async function producerReactTypes(root = packageRoot) {
     ["@types/react", "react"],
     ["@types/react-dom", "react-dom"],
   ] as const) {
-    const file = Bun.resolveSync(name + "/package.json", join(root, "packages/remotion/packages/core"));
+    const file = Bun.resolveSync(name + "/package.json", join(root, "remotion/core"));
     const metadata = await Bun.file(file).json();
     if (metadata.name !== name || metadata.version !== manifest.workspaces.catalog[name])
       throw new Error("Producer React declarations diverge from the captured catalog");
@@ -110,7 +111,7 @@ export async function producerReactTypes(root = packageRoot) {
 }
 
 export async function declarationTools(root = packageRoot) {
-  const owner = join(root, "packages/mediabunny");
+  const owner = join(root, "mediabunny");
   const compilerPath = Bun.resolveSync("typescript", owner);
   const extractorPath = Bun.resolveSync("@microsoft/api-extractor", owner);
   const compiler = (await import(compilerPath)) as typeof TypeScript;
@@ -593,7 +594,7 @@ export async function buildLibraryDeclarations(root = packageRoot, checkOnly = f
   const sdkRoot = resolve(dirname(sdkPath), "../..");
   const sdkManifest = await Bun.file(join(sdkRoot, "package.json")).json();
   const captureRoot = dirname(
-    Bun.resolveSync("@types/dom-mediacapture-transform/package.json", join(root, "packages/mediabunny")),
+    Bun.resolveSync("@types/dom-mediacapture-transform/package.json", join(root, "mediabunny")),
   );
   const captureManifest = await Bun.file(join(captureRoot, "package.json")).json();
   if (captureManifest.name !== "@types/dom-mediacapture-transform" || captureManifest.version !== "0.1.11")
@@ -608,15 +609,9 @@ export async function buildLibraryDeclarations(root = packageRoot, checkOnly = f
     throw new Error("Installed SDK HLS owner diverges from its package pin");
   parsed.options.paths["@aphrody/bun-runtime-sdk/video/hls"] = [relative(root, sdkPath).replaceAll("\\", "/")];
   const manifests = await Promise.all(
-    ["packages/remotion", "packages/hyperframes"].map(async directory => {
-      const names = [];
-      for await (const name of new Bun.Glob("packages/*/package.json").scan({
-        cwd: join(root, directory),
-        onlyFiles: true,
-      }))
-        names.push((await Bun.file(join(root, directory, name)).json()).name as string);
-      return names;
-    }),
+    absorbedFamilies.map(async family =>
+      Object.values(await familyManifests(join(root, family))).map(manifest => manifest.name),
+    ),
   );
   const entries = [...new Set(Object.values(plan.sourceExports).map(source => source.slice(2)))];
   const surface = await emitDeclarationSurface(

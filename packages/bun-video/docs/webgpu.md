@@ -31,7 +31,7 @@ console.log(new Float32Array(result.data.buffer), result.elapsedMs);
 
 ## CLI and Linux serverless
 
-The `bun-video-webgpu` executable offers `info`, `probe`, and `run`. The `info` and default `run`
+The `bun-video webgpu` executable offers `info`, `probe`, and `run`. The `info` and default `run`
 commands use the native provider; `BUV_RUNTIME_LIB` or `YOLO_RUNTIME_LIB` must resolve to a Linux
 GPU-enabled runtime artifact advertising `gpu.info` and `gpu.wgsl` (ABI 1.5). A CPU-only release or
 an artifact without the GPU extension returns a capability error; the CLI does not silently claim
@@ -40,14 +40,14 @@ and requires an installed browser and usable WebGPU adapter. Headless browser We
 host's Chromium build, drivers and display/GPU configuration.
 
 ```sh
-bun-video-webgpu info
-bun-video-webgpu run ./scale.wgsl ./pixels.f32 ./pixels-out.f32 --workgroups 1,1,1
-BUV_RUNTIME_LIB=/opt/buv/lib/libbuv_runtime.so bun-video-webgpu info
+bun-video webgpu info
+bun-video webgpu run ./scale.wgsl ./pixels.f32 ./pixels-out.f32 --workgroups 1,1,1
+BUV_RUNTIME_LIB=/opt/buv/lib/libbuv_runtime.so bun-video webgpu info
 ```
 
 ## Native Windows desktop
 
-`bun-video-webgpu desktop` opens a standalone window in the installed CEF desktop host and probes
+`bun-video webgpu desktop` opens a standalone window in the installed CEF desktop host and probes
 the WebGPU adapter visible to that browser engine. It requires Windows, the separately installed
 `yolo-desktop.exe` CEF artifact and a compatible graphics driver. Close the window to end the
 command. This desktop probe reports browser WebGPU availability; use `backend: "native"` / `info`

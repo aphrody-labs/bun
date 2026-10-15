@@ -9,12 +9,12 @@ The PWA entry is `/pwa/`, with `index.html`, `app.js`, `styles.css`, `locales.js
 From the installed package directory, start the Bun server:
 
 ```powershell
-bun run ./labs/crunchyroll-shortcuts.ts --port 8000
+bun run ./src/apps/crunchyroll-shortcuts.ts --port 8000
 ```
 
 Open `http://127.0.0.1:8000/pwa/`. Keep this origin stable for subsequent launches. `--check` validates the manifests and native browser-module availability on an ephemeral port; `--open` selects the existing active Chrome profile through the native launcher without restarting Chrome. It does not install the PWA or the extension. The server exposes only the listed static assets and GET/HEAD, binds to loopback, and stops on SIGINT/SIGTERM. A busy port fails without terminating another service.
 
-The canonical server and Windows launcher are `labs/crunchyroll-shortcuts.ts` and `labs/crunchyroll-app.ts`; their exported `crunchyrollShortcutsMain` and `crunchyrollAppMain` functions support embedding. Asset paths resolve relative to the package, including from a standalone npm installation. The old `scripts/aphrody` entries are repository compatibility wrappers. In the Bun source checkout, use `bun bd -j2 run ./scripts/aphrody/crunchyroll-shortcuts.ts` to qualify the changed binary. The Windows shortcut targets the canonical launcher file, not a repository script outside the package.
+The canonical server and Windows launcher are `src/apps/crunchyroll-shortcuts.ts` and `src/apps/crunchyroll-app.ts`; their exported `crunchyrollShortcutsMain` and `crunchyrollAppMain` functions support embedding. Asset paths resolve relative to the package, including from a standalone npm installation. The old `scripts/aphrody` entries are repository compatibility wrappers. In the Bun source checkout, use `bun bd -j2 run ./scripts/aphrody/crunchyroll-shortcuts.ts` to qualify the changed binary. The Windows shortcut targets the canonical launcher file, not a repository script outside the package.
 
 Native OAuth is exported separately through `@aphrody/bun-video/oauth`; see [OAuth configuration and qualification](oauth.md). These shortcuts use the official site’s existing login. Creating an OAuth client requires authorized provider endpoints, a client ID and a registered callback; the local launcher does not invent those settings or turn a user account into an application registration.
 

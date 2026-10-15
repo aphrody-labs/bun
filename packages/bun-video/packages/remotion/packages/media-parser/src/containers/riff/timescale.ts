@@ -1,1 +1,0 @@
-export const MEDIA_PARSER_RIFF_TIMESCALE = 1_000_000;

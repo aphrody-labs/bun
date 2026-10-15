@@ -1,4 +1,4 @@
-import site from "../labs/video-data-site.html";
+import site from "../src/apps/video-data-site.html";
 import { mkdirSync } from "node:fs";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { VideoCatalog, defaultVideoCatalogPath } from "./video-catalog";

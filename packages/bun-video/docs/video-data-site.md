@@ -1,6 +1,6 @@
 # Atelier Bun Video local
 
-`bun labs/video-data-site.ts` démarre le frontend React et ses APIs sur `127.0.0.1`, avec HTML/CSS/TSX compilés par Bun. Le processus partage le `VideoCatalog` et le pipeline canonique ; Remotion/HyperFrames restent des workers asynchrones.
+`bun src/apps/video-data-site-cli.ts` démarre le frontend React et ses APIs sur `127.0.0.1`, avec HTML/CSS/TSX compilés par Bun. Le processus partage le `VideoCatalog` et le pipeline canonique ; Remotion/HyperFrames restent des workers asynchrones.
 
 APIs : `GET /api/overview`, `POST /api/query` structuré, `POST /api/import` multipart avec champ `capture`, `POST /api/export`, `GET /api/exports/<uuid>` et `POST /api/jobs` avec tableau ou `{jobs}`. Les téléchargements sont uniquement les datasets nettoyés enregistrés par le serveur. Leurs IDs sont persistés dans SQLite pour survivre au redémarrage.
 

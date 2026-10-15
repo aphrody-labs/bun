@@ -1,8 +1,0 @@
-tsconfig.json
-tsconfig.tsbuildinfo
-src
-eslint.config.mjs
-emscripten.cpp
-.turbo
-build-wasm.ts
-bundle.ts

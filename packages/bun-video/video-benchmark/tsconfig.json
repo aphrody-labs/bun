@@ -22,8 +22,8 @@
     "../src/capabilities.ts",
     "../src/media-runtime.d.ts",
     "../remotion/.aphrody/native-frame.ts",
-    "../hyperframes/packages/engine/src/services/nativeWebViewCapture.ts",
-    "../hyperframes/packages/engine/src/services/nativeWebViewCapture.test.ts",
+    "../hyperframes/engine/src/services/nativeWebViewCapture.ts",
+    "../hyperframes/engine/src/services/nativeWebViewCapture.test.ts",
     "../../../packages/bun-types/**/*.d.ts"
   ],
   "exclude": [

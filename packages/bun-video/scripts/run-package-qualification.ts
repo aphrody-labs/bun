@@ -47,7 +47,7 @@ const phases = (
             deadline: 10_000,
           },
           { name: "source-engines", cwd: root, args: ["scripts/check-engines.ts", "--trace"], deadline: 50_000 },
-          { name: "source-lint", cwd: root, args: ["lint", "src", "labs", "test"], deadline: 15_000 },
+          { name: "source-lint", cwd: root, args: ["lint", "src", "test"], deadline: 15_000 },
           { name: "source-format", cwd: root, args: ["scripts/check-format.ts"], deadline: 30_000 },
           ...(!env.BUN_VIDEO_TYPES_VERSION
             ? [

@@ -1,12 +1,12 @@
 # Fenêtre réseau Windows
 
-`labs/network-window.tsx` ouvre le vrai site dans une fenêtre Chrome Windows,
+`src/apps/network-window.tsx` ouvre le vrai site dans une fenêtre Chrome Windows,
 avec le profil Chrome actif, ou le dernier profil original si Chrome est fermé, et ses données existantes. URL par défaut :
 `https://www.crunchyroll.com/`. Aucun profil invité, copie de profil, serveur
 de démonstration ou redémarrage Chrome n'est utilisé.
 
 ```sh
-bun labs/network-window.tsx https://www.crunchyroll.com/
+bun src/apps/network-window.tsx https://www.crunchyroll.com/
 network-window.exe --check
 network-window.exe https://www.crunchyroll.com/ --endpoint http://127.0.0.1:9222
 ```

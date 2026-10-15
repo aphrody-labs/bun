@@ -1,7 +1,7 @@
 import { resolve } from "node:path";
 import type { BunPlugin } from "bun";
 
-export async function ytDlpVendorAssets(root = resolve(import.meta.dir, "../packages/yt-dlp")) {
+export async function ytDlpVendorAssets(root = resolve(import.meta.dir, "../yt-dlp")) {
   const entries: { path: string; absolute: string; bytes: number }[] = [];
   for await (const path of new Bun.Glob("yt_dlp/**/*").scan({ cwd: root, onlyFiles: true })) {
     const normalized = path.replaceAll("\\", "/");

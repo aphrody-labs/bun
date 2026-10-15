@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { expect, test } from "bun:test";
 import { Script } from "node:vm";
-import { startCrunchyrollShortcuts } from "../../packages/bun-video/labs/crunchyroll-shortcuts";
+import { startCrunchyrollShortcuts } from "../../packages/bun-video/src/apps/crunchyroll-shortcuts";
 import { startCrunchyrollShortcuts as compatibilityServer } from "./crunchyroll-shortcuts";
 
 test("legacy shortcut entry forwards to the canonical package server", () => {
@@ -184,7 +184,9 @@ type LocaleModule = {
 };
 
 test("eleven actual language catalogs and extension messages have matching nonempty keys", async () => {
-  const pwa = (await import(new URL("../../packages/bun-video/assets/crunchyroll-pwa/locales.js", import.meta.url).href)) as LocaleModule;
+  const pwa = (await import(
+    new URL("../../packages/bun-video/assets/crunchyroll-pwa/locales.js", import.meta.url).href
+  )) as LocaleModule;
   const extension = (await import(
     new URL("../../packages/bun-video/assets/crunchyroll-extension/locales.js", import.meta.url).href
   )) as LocaleModule;
@@ -219,7 +221,9 @@ test("eleven actual language catalogs and extension messages have matching nonem
 });
 
 test("actual PWA renderer selects Arabic RTL, language variants and fallback without preference storage", async () => {
-  const catalog = (await import(new URL("../../packages/bun-video/assets/crunchyroll-pwa/locales.js", import.meta.url).href)) as LocaleModule;
+  const catalog = (await import(
+    new URL("../../packages/bun-video/assets/crunchyroll-pwa/locales.js", import.meta.url).href
+  )) as LocaleModule;
   const listeners = new Map<string, () => void>();
   const select = {
     value: "",
@@ -250,7 +254,9 @@ test("actual PWA renderer selects Arabic RTL, language variants and fallback wit
       return { value: "", textContent: "" };
     },
   };
-  const source = await Bun.file(new URL("../../packages/bun-video/assets/crunchyroll-pwa/app.js", import.meta.url)).text();
+  const source = await Bun.file(
+    new URL("../../packages/bun-video/assets/crunchyroll-pwa/app.js", import.meta.url),
+  ).text();
   const executable = source.replace(/^import\s+[\s\S]*?\s+from\s+["'][^"']+["'];?\s*/m, "");
   new Script(executable).runInNewContext({
     ...catalog,
@@ -305,7 +311,9 @@ test("actual service worker caches only the local shell and cleans only its own 
       return stored.get(url);
     },
   };
-  const source = await Bun.file(new URL("../../packages/bun-video/assets/crunchyroll-pwa/sw.js", import.meta.url)).text();
+  const source = await Bun.file(
+    new URL("../../packages/bun-video/assets/crunchyroll-pwa/sw.js", import.meta.url),
+  ).text();
   new Script(source).runInNewContext({
     URL,
     Request: BrowserRequest,

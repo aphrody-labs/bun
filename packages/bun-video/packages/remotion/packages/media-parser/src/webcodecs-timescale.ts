@@ -1,1 +1,0 @@
-export const WEBCODECS_TIMESCALE = 1_000_000;

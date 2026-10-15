@@ -1,9 +1,0 @@
-dist/test
-dist/bench
-src
-tsconfig.json
-tsconfig.tsbuildinfo
-bundle.ts
-.turbo
-eslint.config.mjs
-ensure-correct-version.ts

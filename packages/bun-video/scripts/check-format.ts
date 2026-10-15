@@ -4,7 +4,7 @@ import { resolve } from "node:path";
 export async function formatSourcePaths(root: string): Promise<string[]> {
   const paths = Array.from(
     new Bun.Glob(
-      "{src,labs,test,scripts}/**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts,json,jsonc,json5,css,graphql,gql,md,yaml,yml,toml}",
+      "{src,test,scripts}/**/*.{js,jsx,ts,tsx,mjs,cjs,mts,cts,json,jsonc,json5,css,graphql,gql,md,yaml,yml,toml}",
     ).scanSync({
       cwd: root,
       onlyFiles: true,

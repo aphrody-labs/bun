@@ -3,7 +3,7 @@ import { mkdir, mkdtemp } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { publicPackageFile } from "../scripts/package-file-policy";
-import { planRemotionLibraryAssets } from "../packages/remotion/.aphrody/module-assets-scope";
+import { planRemotionLibraryAssets } from "../remotion/.aphrody/module-assets-scope";
 
 test("native pack honors literal public files and leaves unlisted test/old/private fixtures outside its tar", async () => {
   const root = await mkdtemp(join(tmpdir(), "bun-video-positive-pack-"));
@@ -47,7 +47,7 @@ test("native pack honors literal public files and leaves unlisted test/old/priva
 });
 
 test("real manifest closure preserves exact owner pins and excludes optional model peers and unrelated workspaces", async () => {
-  const root = join(import.meta.dir, "../packages/remotion");
+  const root = join(import.meta.dir, "../remotion");
   const plan = await planRemotionLibraryAssets(root, ["@remotion/cli", "@remotion/renderer", "remotion"]);
   expect(plan.files.length).toBeGreaterThan(100);
   expect(plan.bytes).toBeLessThan(160 * 1024 * 1024);

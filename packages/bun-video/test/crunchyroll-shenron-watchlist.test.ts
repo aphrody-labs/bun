@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { describe, expect, test } from "bun:test";
-import { fetchWatchlistPage, parseWatchlistPage } from "../labs/crunchyroll-shenron-watchlist";
+import { fetchWatchlistPage, parseWatchlistPage } from "../src/apps/crunchyroll-shenron-watchlist";
 import type { BrowserVideoCookie } from "../src/video-cookies";
 
 const cookie: BrowserVideoCookie = {

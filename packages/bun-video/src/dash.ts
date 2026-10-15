@@ -1,5 +1,4 @@
 // SPDX-License-Identifier: Apache-2.0
-import { XMLParser, XMLValidator } from "fast-xml-parser";
 import type { MediaPlayerClass, ProtectionDataSet } from "dashjs";
 
 export interface DashPlaybackInstance {
@@ -84,10 +83,10 @@ const nodes = (value: unknown): XmlNode[] =>
   (Array.isArray(value) ? value : [value]).filter((node): node is XmlNode => !!node && typeof node === "object");
 const children = (node: XmlNode, localName: string): XmlNode[] =>
   Object.entries(node)
-    .filter(([name]) => !name.startsWith("@_") && name.split(":").at(-1) === localName)
+    .filter(([name]) => !name.startsWith("@") && name.split(":").at(-1) === localName)
     .flatMap(([, value]) => nodes(value));
 const attribute = (node: XmlNode, name: string): string | undefined => {
-  const value = node[`@_${name}`];
+  const value = node[`@${name}`];
   return typeof value === "string" ? value : undefined;
 };
 const numeric = (value: string | undefined): number | undefined => {
@@ -107,14 +106,12 @@ const protectionSystem = (node: XmlNode): string => {
 export function inspectDashManifest(xml: string) {
   if (/<!\s*(?:DOCTYPE|ENTITY)\b/i.test(xml))
     throw new Error("DASH manifest must not contain DTD or entity declarations.");
-  if (XMLValidator.validate(xml) !== true) throw new Error("Invalid DASH manifest XML.");
-  const parsed = new XMLParser({
-    ignoreAttributes: false,
-    removeNSPrefix: false,
-    processEntities: false,
-    parseTagValue: false,
-    parseAttributeValue: false,
-  }).parse(xml) as XmlNode;
+  let parsed: XmlNode;
+  try {
+    parsed = Bun.XML.parse(xml) as XmlNode;
+  } catch {
+    throw new Error("Invalid DASH manifest XML.");
+  }
   const roots = Object.entries(parsed).filter(([name]) => name.split(":").at(-1) === "MPD");
   if (roots.length !== 1) throw new Error("DASH manifest must have an MPD root.");
   const mpd = nodes(roots[0]![1])[0];
@@ -129,7 +126,7 @@ export function inspectDashManifest(xml: string) {
     segmentTemplateCount = 0;
   const visit = (node: XmlNode) => {
     for (const [name, value] of Object.entries(node)) {
-      if (name.startsWith("@_")) continue;
+      if (name.startsWith("@") || name === "#text") continue;
       const local = name.split(":").at(-1);
       if (local === "BaseURL") baseUrlCount += Array.isArray(value) ? value.length : 1;
       if (local === "SegmentTemplate") segmentTemplateCount += nodes(value).length;

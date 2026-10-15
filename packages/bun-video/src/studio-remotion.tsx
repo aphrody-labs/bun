@@ -2,7 +2,7 @@ import { AbsoluteFill } from "./render-runtime";
 import { createRequire } from "node:module";
 import type { StudioAsset } from "./studio";
 
-const { OffthreadVideo } = createRequire(import.meta.url)("../packages/remotion/packages/core/src/index") as {
+const { OffthreadVideo } = createRequire(import.meta.url)("../remotion/core/src/index") as {
   OffthreadVideo: any;
 };
 

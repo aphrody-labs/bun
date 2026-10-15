@@ -320,24 +320,31 @@ console.log(JSON.stringify({runtime:Bun.version,revision:Bun.revision,exports:re
     throw new Error("Package consumer did not report every public export");
   const manifest = await Bun.file(join(root, "node_modules/@aphrody/bun-video/package.json")).json();
   const helpMarkers: Record<string, string[]> = {
-    "bun-video-chrome": ["Crunchyroll", "--check", "--install"],
-    "bun-video-crunchyroll": ["bun-video-crunchyroll", "watch", "serve"],
-    "bun-video-dash": ["bun-video-dash", "--live-config"],
-    "bun-video-har": ["bun-video-har", "--har"],
-    "bun-video-hls": ["bun-video-hls", "--prepare"],
-    "bun-video-keychain": ["bun-video-keychain", "--migrate", "--check"],
-    "bun-video-shortcuts": ["crunchyroll-shortcuts", "PWA:"],
-    "bun-video-webgpu": ["bun-video-webgpu", "workgroups"],
-    "bun-video-engine": ["bun-video capabilities", "bun-video mcp", "bun-video encode"],
-    "bun-video-workers": ["bun-video-workers", "--workers"],
-    "bun-video-network": ["network-window", "--endpoint"],
+    "": ["bun-video capabilities", "bun-video mcp", "bun-video encode", "bun-video remotion"],
+    chrome: ["Crunchyroll", "--check", "--install"],
+    crunchyroll: ["bun-video crunchyroll", "watch", "serve"],
+    dash: ["bun-video dash", "--live-config"],
+    har: ["bun-video har", "--har"],
+    hls: ["bun-video hls", "--prepare"],
+    keychain: ["bun-video keychain", "--migrate", "--check"],
+    shortcuts: ["crunchyroll-shortcuts", "PWA:"],
+    webgpu: ["bun-video webgpu", "workgroups"],
+    workers: ["bun-video workers", "--workers"],
+    network: ["network-window", "--endpoint"],
   };
+  if (snapshot.bins.length !== 1 || snapshot.bins[0] !== "bun-video")
+    throw new Error("Public CLI must be the single bun-video executable");
   report.clis = [];
-  for (const name of snapshot.bins) {
-    const markers = helpMarkers[name];
-    if (!markers) throw new Error("Public CLI has no reviewed credential-free help gate");
+  for (const [subcommand, markers] of Object.entries(helpMarkers)) {
+    const name = subcommand ? "bun-video " + subcommand : "bun-video";
     const cli = Bun.spawn(
-      [process.execPath, "--no-env-file", join(root, "node_modules/@aphrody/bun-video", manifest.bin[name]), "--help"],
+      [
+        process.execPath,
+        "--no-env-file",
+        join(root, "node_modules/@aphrody/bun-video", manifest.bin["bun-video"]),
+        ...(subcommand ? [subcommand] : []),
+        "--help",
+      ],
       { cwd: root, env, stdin: "ignore", stdout: "pipe", stderr: "pipe", timeout: 15_000 },
     );
     const [stdout, stderr, code] = await Promise.all([
@@ -356,7 +363,8 @@ console.log(JSON.stringify({runtime:Bun.version,revision:Bun.revision,exports:re
     });
   }
   report.checks.publicCLIs =
-    report.clis.length === snapshot.bins.length && report.clis.every((cli: { passed: boolean }) => cli.passed);
+    report.clis.length === Object.keys(helpMarkers).length &&
+    report.clis.every((cli: { passed: boolean }) => cli.passed);
   let typeCheck;
   if (types) {
     await Bun.write(

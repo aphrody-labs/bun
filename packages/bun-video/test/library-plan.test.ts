@@ -13,7 +13,7 @@ test("published aliases share one compiled owner and refuse path/output collisio
       "./engine": "./src/index.ts",
       "./studio": "./src/studio.tsx",
     },
-    bin: { "bun-video-engine": "./umbrella-src/cli.ts" },
+    bin: { "bun-video": "./umbrella-src/cli.ts" },
   });
   expect(plan.exports["."]).toEqual({
     types: "./dist/types/src/index.d.ts",

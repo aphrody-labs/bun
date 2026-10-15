@@ -26,11 +26,11 @@ item lists require verified provider pagination. Returned episode IDs and
 official URLs can feed the existing episode workflow; metadata import does not
 establish playable media, subtitles or CDN publication.
 
-The existing `bun-video-crunchyroll` CLI accepts:
+The existing `bun-video crunchyroll` CLI accepts:
 
 ```text
-bun-video-crunchyroll watchlist metadata observed.json --catalog <catalog.sqlite>
-bun-video-crunchyroll watchlist import observed.json --catalog <catalog.sqlite> --timeout 300000
+bun-video crunchyroll watchlist metadata observed.json --catalog <catalog.sqlite>
+bun-video crunchyroll watchlist import observed.json --catalog <catalog.sqlite> --timeout 300000
 ```
 
 Input is a UTF-8 JSON array of `{ "url": "official URL", "title": "optional observed title" }`,
@@ -76,8 +76,8 @@ This adapter requires a Bun runtime; it does not provision a deployment or a
 browser/media provider.
 
 ```sh
-bun-video-crunchyroll watch https://www.crunchyroll.com/fr/watch/G4VUQ9QWX/fixture
-bun-video-crunchyroll serve --hostname 127.0.0.1 --port 3000
+bun-video crunchyroll watch https://www.crunchyroll.com/fr/watch/G4VUQ9QWX/fixture
+bun-video crunchyroll serve --hostname 127.0.0.1 --port 3000
 ```
 
 Serve defaults to public parsing/health only. Private metadata requires explicit
@@ -94,7 +94,7 @@ authorized Crunchyroll account and supported browser environment.
 
 ## Private export to Shenron
 
-`bun packages/bun-video/labs/crunchyroll-shenron-watchlist.ts` reads cookies from
+`bun packages/bun-video/src/apps/crunchyroll-shenron-watchlist.ts` reads cookies from
 the encrypted Windows vault, fetches `/fr/watchlist` with redirects restricted to
 Crunchyroll, and writes observed references and titles to
 `C:\shenron\data\home\imports`. This private metadata artifact is not ingested

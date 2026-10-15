@@ -2,10 +2,10 @@ import { afterAll, beforeAll, expect, test } from "bun:test";
 import { mkdtempSync, mkdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, join } from "node:path";
-import { readPlainFile } from "../packages/hyperframes/packages/cli/src/utils/projectRecords";
-import { localizeExternalAssets } from "../packages/hyperframes/packages/cli/src/utils/publishProject";
-import { snapshotBeforeWrite } from "../packages/hyperframes/packages/studio-server/src/helpers/backupJournal";
-import { resolveFrom } from "../packages/remotion/packages/cli/src/resolve-from";
+import { readPlainFile } from "../hyperframes/cli/src/utils/projectRecords";
+import { localizeExternalAssets } from "../hyperframes/cli/src/utils/publishProject";
+import { snapshotBeforeWrite } from "../hyperframes/studio-server/src/helpers/backupJournal";
+import { resolveFrom } from "../remotion/cli/src/resolve-from";
 
 const work = mkdtempSync(join(tmpdir(), "bun-video-byte-contracts-"));
 const project = join(work, "project");

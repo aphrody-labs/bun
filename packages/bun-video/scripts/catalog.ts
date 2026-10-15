@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 const root = resolve(import.meta.dir, "..");
 const entries: { project: string; path: string; sha256: string; kind: string }[] = [];
 for (const project of ["remotion", "hyperframes"]) {
-  const projectRoot = resolve(root, "packages", project);
+  const projectRoot = resolve(root, project);
   for (const pattern of ["**/*.md", "**/*.mdx"]) {
     for await (const path of new Bun.Glob(pattern).scan({ cwd: projectRoot, onlyFiles: true })) {
       const normalized = path.replaceAll("\\", "/");
@@ -11,7 +11,7 @@ for (const project of ["remotion", "hyperframes"]) {
       const content = await Bun.file(resolve(projectRoot, path)).arrayBuffer();
       entries.push({
         project,
-        path: `packages/${project}/${normalized}`,
+        path: `${project}/${normalized}`,
         sha256: new Bun.CryptoHasher("sha256").update(content).digest("hex"),
         kind: normalized.endsWith("SKILL.md") ? "skill" : "documentation",
       });

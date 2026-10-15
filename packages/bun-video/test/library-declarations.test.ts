@@ -89,10 +89,7 @@ test("the installed canonical compiler rolls inferred public types across a work
 
 test("the pinned Linkedom declarations describe its partial DOM and preserve parsing", async () => {
   const { compiler: ts } = await declarationTools();
-  const owner = Bun.resolveSync(
-    "linkedom/package.json",
-    join(import.meta.dir, "../packages/hyperframes/packages/core"),
-  );
+  const owner = Bun.resolveSync("linkedom/package.json", join(import.meta.dir, "../hyperframes/core"));
   const root = join(owner, "..");
   const source = await mkdtemp(join(tmpdir(), "bun-video-linkedom-types-"));
   const file = join(source, "consumer.ts");
@@ -113,9 +110,7 @@ test("the pinned Linkedom declarations describe its partial DOM and preserve par
     }),
   );
   expect(diagnostics.map(diagnostic => ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"))).toEqual([]);
-  const { DOMParser } = await import(
-    Bun.resolveSync("linkedom", join(import.meta.dir, "../packages/hyperframes/packages/core"))
-  );
+  const { DOMParser } = await import(Bun.resolveSync("linkedom", join(import.meta.dir, "../hyperframes/core")));
   const document = new DOMParser().parseFromString(
     '<html><body><a href="/video">Bun Video</a></body></html>',
     "text/html",

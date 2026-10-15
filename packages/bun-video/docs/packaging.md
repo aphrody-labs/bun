@@ -6,7 +6,7 @@ Remotion 4.0.534 and HyperFrames 0.8.144 use their official npm distributions;
 only the bounded native capture adapters and orchestration are copied locally.
 The published HyperFrames engine does not export native-webview-capture.
 
-The files allowlist contains src, docs, labs, assets, README.md, LICENSE,
+The files allowlist contains src, docs, assets, README.md, LICENSE,
 and THIRD_PARTY_NOTICES.md. Tests, protected session inputs, temporary output,
 node_modules and the repository's vendor tree are excluded. Publication must
 also inspect the actual packed listing: an allowlisted directory must never

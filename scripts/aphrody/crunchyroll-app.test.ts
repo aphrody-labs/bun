@@ -5,7 +5,7 @@ import {
   crunchyrollAppMain,
   planChromeSiteApp,
   selectActiveGoogleChromeRoot,
-} from "../../packages/bun-video/labs/crunchyroll-app";
+} from "../../packages/bun-video/src/apps/crunchyroll-app";
 import { planChromeSiteApp as compatibilityPlan } from "./crunchyroll-app";
 
 test("default application delegates the official HTTPS page to the native profile owner", async () => {

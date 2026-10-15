@@ -82,7 +82,7 @@ export class UnifiedVideoPipeline {
     return openVideoPipeline(options);
   }
   async capture(url = "https://www.crunchyroll.com/", options: { check?: boolean; endpoint?: string } = {}) {
-    const { runNetworkWindow } = await import("../labs/network-window");
+    const { runNetworkWindow } = await import("../src/apps/network-window");
     return runNetworkWindow(url, options);
   }
   async importCapture(path: string) {

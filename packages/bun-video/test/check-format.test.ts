@@ -6,15 +6,14 @@ import { formatSourcePaths } from "../scripts/check-format";
 
 test("native format inputs retain JS and nested TSX without selecting unsupported HTML or vendor", async () => {
   const root = await mkdtemp(join(tmpdir(), "bun-video-format-"));
-  await mkdir(join(root, "labs", "nested"), { recursive: true });
-  await mkdir(join(root, "src"));
+  await mkdir(join(root, "src", "nested"), { recursive: true });
   await mkdir(join(root, "packages", "vendor"), { recursive: true });
-  await writeFile(join(root, "labs", "nested", "view.tsx"), "export const View=()=> <p>Video</p>;\n");
+  await writeFile(join(root, "src", "nested", "view.tsx"), "export const View=()=> <p>Video</p>;\n");
   await writeFile(join(root, "src", "runtime.js"), "export const enabled=true;\n");
-  await writeFile(join(root, "labs", "page.html"), "<p>Capture</p>\n");
+  await writeFile(join(root, "src", "page.html"), "<p>Capture</p>\n");
   await writeFile(join(root, "packages", "vendor", "engine.ts"), "export const engine=1;\n");
   const paths = await formatSourcePaths(root);
-  expect(paths.map(path => path.replaceAll("\\", "/"))).toEqual(["labs/nested/view.tsx", "src/runtime.js"]);
+  expect(paths.map(path => path.replaceAll("\\", "/"))).toEqual(["src/nested/view.tsx", "src/runtime.js"]);
   const child = Bun.spawn([process.execPath, "fmt", "--check", ...paths], {
     cwd: root,
     stdout: "pipe",

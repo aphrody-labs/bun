@@ -1,5 +1,6 @@
 import { isBuiltin } from "node:module";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { absorbedFamilies, familyModules } from "./modules";
 
 type Manifest = {
   name: string;
@@ -39,17 +40,11 @@ export async function runtimeClosure(root: string) {
     packages: Record<string, [string, ...unknown[]]>;
   };
   const owners = [{ directory: root, manifest }];
-  for await (const name of new Bun.Glob("packages/{remotion,hyperframes}/packages/*/package.json").scan({
-    cwd: root,
-    onlyFiles: true,
-    followSymlinks: false,
-  })) {
-    const path = join(root, name);
-    owners.push({ directory: dirname(path), manifest: await Bun.file(path).json() });
-  }
+  for (const family of absorbedFamilies)
+    for (const module of await familyModules(join(root, family))) owners.push(module as (typeof owners)[number]);
   owners.push({
-    directory: join(root, "packages/mediabunny"),
-    manifest: await Bun.file(join(root, "packages/mediabunny/package.json")).json(),
+    directory: join(root, "mediabunny"),
+    manifest: await Bun.file(join(root, "mediabunny/package.json")).json(),
   });
   owners.sort((a, b) => b.directory.length - a.directory.length);
   const paths: Record<string, string[]> = {};
@@ -95,7 +90,7 @@ export async function runtimeClosure(root: string) {
       const path = join(owner.directory, "src/index.ts");
       if (!(await regular(path))) throw new Error("The absorbed Mediabunny source is absent");
       entries.set("mediabunny", path);
-      paths.mediabunny = ["./packages/mediabunny/src/index.ts"];
+      paths.mediabunny = ["./mediabunny/src/index.ts"];
     }
   }
   const dependencies = { ...manifest.dependencies };
@@ -195,6 +190,7 @@ export async function runtimeClosure(root: string) {
         .filter(([name]) => usedAliases.has(name))
         .sort(([a], [b]) => a.localeCompare(b)),
     ),
+    modulePaths: Object.fromEntries(Object.entries(paths).sort(([a], [b]) => a.localeCompare(b))),
     dependencies: Object.fromEntries(Object.entries(dependencies).sort(([a], [b]) => a.localeCompare(b))),
     sourceFiles: scanned.size,
     sourceFileNames: [...scanned].map(path => relative(root, path).replaceAll("\\", "/")).sort(),
