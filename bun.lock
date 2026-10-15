@@ -134,7 +134,7 @@
     },
     "packages/bun-runtime-sdk": {
       "name": "@aphrody/bun-runtime-sdk",
-      "version": "1.4.6",
+      "version": "1.4.10",
     },
     "packages/bun-tauri": {
       "name": "@aphrody/tauri",
