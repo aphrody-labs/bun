@@ -76,9 +76,10 @@ runs:
             "${GH_TOKEN:+header = \"Authorization: Bearer $GH_TOKEN\"}" |
             curl -fsSL --retry 5 -K - "https://api.github.com/repos/$repo/$1"
         }
+        # Newest first; later entries are fallbacks for hosts the newest build cannot run on.
         latest() {
           api "releases?per_page=50" |
-            jq -r '[.[] | select((.draft | not) and (.prerelease | not) and (.tag_name | test("^(bun-v|aphrody-v)")))][0].tag_name // empty'
+            jq -r '[.[] | select((.draft | not) and (.prerelease | not) and (.tag_name | test("^(bun-v|aphrody-v)")))][:5][].tag_name'
         }
 
         version="${BUN_VERSION:-latest}"
@@ -101,8 +102,10 @@ runs:
         esac
         [ -n "$tag" ] || { echo "::error::no $repo release found"; exit 1; }
 
-        base="https://github.com/$repo/releases/download/$tag"
         cd "$RUNNER_TEMP"
+        install() {
+        local tag="$1" base="https://github.com/$repo/releases/download/$1"
+        rm -rf "$RUNNER_TEMP/.bun/bin"
         curl -fsSLO --retry 5 "$base/$target.zip"
         curl -fsSLO --retry 5 "$base/SHA256SUMS.txt"
         want=$(awk -v f="$target.zip" '$2 == f || $2 == "*" f { print $1 }' SHA256SUMS.txt)
@@ -123,7 +126,19 @@ runs:
           chmod +x "$RUNNER_TEMP"/.bun/bin/*
           ln -fs "$RUNNER_TEMP/.bun/bin/bun" "$RUNNER_TEMP/.bun/bin/bunx"
         fi
-        revision=$("$RUNNER_TEMP/.bun/bin/bun" --revision)
+        }
+
+        # A release built against a newer libc than the runner cannot start; when the
+        # tag was not pinned, fall back to the next release instead of failing.
+        selected=""
+        for candidate in $tag; do
+          install "$candidate"
+          if revision=$("$RUNNER_TEMP/.bun/bin/bun" --revision 2>bootstrap-error.txt); then selected="$candidate"; break; fi
+          echo "::warning::$repo $candidate ($target) does not run on this host: $(head -c 300 bootstrap-error.txt)"
+        done
+        rm -f bootstrap-error.txt
+        [ -n "$selected" ] || { echo "::error::no $repo release runs on this host"; exit 1; }
+        tag="$selected"
         EXPECTED_PLATFORM="$os" EXPECTED_ARCH="$arch" EXPECTED_TAG="$tag" EXPECTED_REPO="$repo" \
           "$RUNNER_TEMP/.bun/bin/bun" -e '
             const expectedArch = process.env.EXPECTED_ARCH === "aarch64" ? "arm64" : "x64";
