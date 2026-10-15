@@ -49,13 +49,20 @@ test("publication isolates portable qualification from all other and mixed selec
     await Bun.file(new URL("../../.github/workflows/aphrody-publish-crates.yml", import.meta.url)).text(),
   ) as any;
   const steps = workflow.jobs.publish.steps;
+  const prepare = steps.findIndex((step: any) => step.run?.includes("provisionRustDependencies"));
   const qualify = steps.findIndex((step: any) => step.run?.includes("release-portable-crate.ts qualify"));
   const verify = steps.findIndex((step: any) => step.run?.includes("release-portable-crate.ts verify"));
   const publish = steps.findIndex((step: any) => step.name === "Publish");
-  expect(qualify).toBeGreaterThanOrEqual(0);
+  expect(prepare).toBeGreaterThanOrEqual(0);
+  expect(qualify).toBeGreaterThan(prepare);
   expect(verify).toBeGreaterThan(qualify);
   expect(publish).toBeGreaterThan(verify);
   expect(steps[qualify].if).toBe("inputs.only == 'crates/aphrody-jev'");
+  expect(steps[prepare].if).toBe(steps[qualify].if);
+  expect(steps[prepare].run).toContain('from "./scripts/aphrody/native-ci.ts"');
+  expect(steps[prepare].run).toContain("await provisionRustDependencies(process.cwd()");
+  expect(steps[prepare].run).toContain("return child.exited");
+  expect(steps[prepare].run).not.toContain("configureRustDependencies");
   expect(steps[verify].if).toBe("inputs.only == 'crates/aphrody-jev'");
   expect(steps.find((step: any) => step.run?.includes("download-verify")).if).toBe(
     "inputs.dry-run != true && inputs.only != 'crates/aphrody-jev'",

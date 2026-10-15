@@ -46,6 +46,16 @@ jobs:
           bun-version: latest
       - name: Install Rust stable
         run: rustup toolchain install stable --profile minimal
+      - name: Prepare pinned Rust workspace sources for portable qualification
+        if: inputs.only == 'crates/aphrody-jev'
+        run: |
+          bun -e '
+            import { provisionRustDependencies } from "./scripts/aphrody/native-ci.ts";
+            await provisionRustDependencies(process.cwd(), async command => {
+              const child = Bun.spawn(command, { stdout: "inherit", stderr: "inherit" });
+              return child.exited;
+            });
+          '
       - name: Qualify the exact portable Rust crate selection
         if: inputs.only == 'crates/aphrody-jev'
         run: bun scripts/aphrody/release-portable-crate.ts qualify "$RUNNER_TEMP/portable-crate" "$GITHUB_SHA"
