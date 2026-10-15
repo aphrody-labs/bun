@@ -257,3 +257,7 @@ src/runtime/hawk_root.rs
 
 # Local Cloudflare request/TLS cache
 /packages/bun-cloudflare/app/.wrangler/
+
+# Native command receipts and explicitly bootstrapped Curl sources stay local.
+/var/
+/src/runtime/curl/upstream/
