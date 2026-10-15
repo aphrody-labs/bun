@@ -30,12 +30,14 @@ To configure a client by hand, run `bun mcp` as a stdio server:
 }
 ```
 
+`command` may also be a versioned binary such as `~/.bun/bin/bun-1.4.4`; `mcp` is dispatched before `package.json` scripts, so a project script named `mcp` does not shadow the server.
+
 ## Transports
 
 - **stdio** (default): one JSON-RPC message per line on stdin and stdout.
 - **Streamable HTTP**: `bun mcp --http <port>` listens on `127.0.0.1:<port>/mcp` (`--http 0` picks a free port and prints it on stderr). `POST` carries a JSON-RPC message and gets an `application/json` reply, or `202` for a notification. Requests with a non-local `Origin` are refused.
 
-The server speaks protocol revisions `2025-06-18`, `2025-03-26` and `2024-11-05`. It starts before the JavaScript runtime, so it answers `initialize` in a few milliseconds.
+The server speaks protocol revisions `2025-11-25`, `2025-06-18`, `2025-03-26` and `2024-11-05`. It starts before the JavaScript runtime, so it answers `initialize` in a few milliseconds. It also answers `server/discover` (2026-07-28 draft) with its supported versions, capabilities and server info, without negotiating a session.
 
 ## Response budget
 

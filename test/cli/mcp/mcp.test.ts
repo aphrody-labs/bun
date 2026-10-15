@@ -1,12 +1,12 @@
 import { describe, expect, test } from "bun:test";
-import { existsSync, readFileSync } from "fs";
+import { existsSync, readFileSync, symlinkSync } from "fs";
 import { bunEnv, bunExe, tempDir } from "harness";
 import { join } from "path";
 
 type Json = any;
 
 /** `bun mcp` over stdio with an isolated home, agent directory and memory database. */
-function mcp(cwd: string, home: string, extraEnv: Record<string, string> = {}, args: string[] = []) {
+function mcp(cwd: string, home: string, extraEnv: Record<string, string> = {}, args: string[] = [], exe = bunExe()) {
   const env: Record<string, string | undefined> = {
     ...bunEnv,
     HOME: home,
@@ -21,7 +21,7 @@ function mcp(cwd: string, home: string, extraEnv: Record<string, string> = {}, a
   for (const k of ["CLAUDECODE", "CLAUDE_CODE_ENTRYPOINT", "REDIS_URL", "VALKEY_URL", "BUN_MCP_MAX_TOKENS"])
     if (!(k in extraEnv)) delete env[k];
   const proc = Bun.spawn({
-    cmd: [bunExe(), "mcp", ...args],
+    cmd: [exe, "mcp", ...args],
     cwd,
     env,
     stdin: "pipe",
@@ -122,6 +122,28 @@ describe.concurrent("bun mcp", () => {
     expect((await server.request("no/such/method")).error.code).toBe(-32601);
   });
 
+  test("a versioned argv0 such as bun-1.4.4 dispatches mcp inside a project", async () => {
+    using dir = tempDir("mcp-versioned-argv0", {
+      "project/package.json": JSON.stringify({ name: "p", scripts: { start: "echo start" } }),
+    });
+    const exe = join(String(dir), "bun-1.4.4");
+    symlinkSync(bunExe(), exe);
+    await using server = mcp(join(String(dir), "project"), String(dir), {}, [], exe);
+    const reply = await server.initialize();
+    expect(reply.result.serverInfo.name).toBe("bun");
+    expect(reply.result.protocolVersion).toBe("2025-06-18");
+  });
+
+  test("server/discover lists versions and capabilities without initialize", async () => {
+    using dir = tempDir("mcp-discover", {});
+    await using server = mcp(String(dir), String(dir));
+    const { result } = await server.request("server/discover");
+    expect(result.supportedVersions).toEqual(["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"]);
+    expect(Object.keys(result.capabilities).sort()).toEqual(["logging", "prompts", "resources", "tools"]);
+    expect(result.instructions).toContain("profile generic");
+    expect(result._meta["io.modelcontextprotocol/serverInfo"].name).toBe("bun");
+  });
+
   test("an unknown protocol version gets the latest one", async () => {
     using dir = tempDir("mcp-version", {});
     await using server = mcp(String(dir), String(dir));
@@ -129,7 +151,7 @@ describe.concurrent("bun mcp", () => {
       protocolVersion: "1999-01-01",
       capabilities: {},
     });
-    expect(reply.result.protocolVersion).toBe("2025-06-18");
+    expect(reply.result.protocolVersion).toBe("2025-11-25");
   });
 
   test("tools/list is paginated", async () => {
@@ -687,7 +709,7 @@ const jevFixtureRequest = {
   minimum_confidence: 0.8,
 };
 
-describe("native MCP Jev", () => {
+describe("native MCP Yolo", () => {
   test("aliases share Rust validation, abstention and the process budget", async () => {
     using dir = tempDir("mcp-jev", {});
     let calls = 0;
@@ -722,8 +744,8 @@ describe("native MCP Jev", () => {
         TYPESAFE_BASE_URL: provider.url.href,
       });
       await server.initialize();
-      for (const alias of ["yolo_decide", "jev_decide"]) {
-        const output = await server.call(alias, jevFixtureRequest);
+      for (let i = 0; i < 2; i++) {
+        const output = await server.call("yolo_decide", jevFixtureRequest);
         expect(output.isError).toBe(false);
         const decision = JSON.parse(output.content[0].text);
         expect(decision.selections.tool).toBeNull();
@@ -741,7 +763,7 @@ describe("native MCP Jev", () => {
       expect(invalid.isError).toBe(true);
       expect(calls).toBe(2);
       for (let i = calls; i < 20; i++) {
-        expect((await server.call("jev_decide", jevFixtureRequest)).isError).toBe(false);
+        expect((await server.call("yolo_decide", jevFixtureRequest)).isError).toBe(false);
       }
       const exhausted = await server.call("yolo_decide", jevFixtureRequest);
       expect(exhausted.isError).toBe(true);
@@ -758,8 +780,8 @@ describe("native MCP Jev", () => {
     await server.initialize();
     const missing = await server.call("yolo_decide", jevFixtureRequest);
     expect(missing.isError).toBe(true);
-    expect(missing.content[0].text).toContain("Jev authentication or configuration is unavailable");
-    const invalid = await server.call("jev_decide", {
+    expect(missing.content[0].text).toContain("Yolo authentication or configuration is unavailable");
+    const invalid = await server.call("yolo_decide", {
       ...jevFixtureRequest,
       minimum_confidence: "0.8",
     });
@@ -785,9 +807,9 @@ describe("native MCP Jev", () => {
         TYPESAFE_BASE_URL: provider.url.href,
       });
       await server.initialize();
-      const output = await server.call("jev_decide", jevFixtureRequest);
+      const output = await server.call("yolo_decide", jevFixtureRequest);
       expect(output.isError).toBe(true);
-      expect(output.content[0].text).toContain("Jev authentication or configuration is unavailable");
+      expect(output.content[0].text).toContain("Yolo authentication or configuration is unavailable");
       expect(output.content[0].text).not.toContain("fixture-key");
       expect(output.content[0].text).not.toContain("credential.example.invalid");
       expect(output.content[0].text).not.toContain(provider.url.href);

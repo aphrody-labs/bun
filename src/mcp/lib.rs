@@ -1,4 +1,4 @@
-//! `bun mcp`: a Model Context Protocol server (protocol revision 2025-06-18) built into the
+//! `bun mcp`: a Model Context Protocol server (protocol revision 2025-11-25) built into the
 //! binary. It runs before the JavaScript runtime starts, speaks JSON-RPC over stdio (default) or
 //! streamable HTTP (`--http <port>`), and bounds every response to a token budget, paging the rest
 //! behind a cursor.

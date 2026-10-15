@@ -153,6 +153,7 @@ pub fn main(args: Vec<OsString>, extra: &[&'static [Tool]]) -> i32 {
 fn stdio(server: &Server) -> i32 {
     let stdin = std::io::stdin();
     let mut input = stdin.lock();
+    let mut out = std::io::BufWriter::new(std::io::stdout().lock());
     let mut line = String::new();
     loop {
         line.clear();
@@ -175,10 +176,11 @@ fn stdio(server: &Server) -> i32 {
             ),
         };
         if let Some(reply) = reply {
-            let mut out = std::io::stdout().lock();
-            let mut bytes = reply.to_string().into_bytes();
-            bytes.push(b'\n');
-            if out.write_all(&bytes).and_then(|()| out.flush()).is_err() {
+            let written = serde_json::to_writer(&mut out, &reply)
+                .map_err(std::io::Error::from)
+                .and_then(|()| out.write_all(b"\n"))
+                .and_then(|()| out.flush());
+            if written.is_err() {
                 return 0;
             }
         }

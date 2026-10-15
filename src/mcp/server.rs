@@ -8,7 +8,7 @@ use crate::budget::{OutputStore, budget_bytes};
 use crate::registry::{Args, Context, Registry, ToolError};
 use crate::tools::{docs, skills};
 
-pub(crate) const PROTOCOL_VERSIONS: [&str; 3] = ["2025-06-18", "2025-03-26", "2024-11-05"];
+pub(crate) const PROTOCOL_VERSIONS: [&str; 4] = ["2025-11-25", "2025-06-18", "2025-03-26", "2024-11-05"];
 const RESOURCE_PAGE: usize = 200;
 
 pub(crate) struct Server {
@@ -62,18 +62,20 @@ impl Server {
             let replies: Vec<Value> = batch.into_iter().filter_map(|m| self.handle(m)).collect();
             return (!replies.is_empty()).then_some(Value::Array(replies));
         }
+        let invalid_request = || {
+            json!({"jsonrpc": "2.0", "id": Value::Null, "error": {"code": -32600, "message": "invalid request"}})
+        };
+        let Value::Object(mut msg) = msg else {
+            return Some(invalid_request());
+        };
+        let id = msg.remove("id");
+        let params = msg.remove("params").unwrap_or(Value::Null);
         let Some(method) = msg.get("method").and_then(Value::as_str) else {
-            if msg.get("id").is_some()
-                && (msg.get("result").is_some() || msg.get("error").is_some())
-            {
+            if id.is_some() && (msg.contains_key("result") || msg.contains_key("error")) {
                 return None;
             }
-            return Some(
-                json!({"jsonrpc": "2.0", "id": Value::Null, "error": {"code": -32600, "message": "invalid request"}}),
-            );
+            return Some(invalid_request());
         };
-        let id = msg.get("id").cloned();
-        let params = msg.get("params").cloned().unwrap_or(Value::Null);
         let result = self.dispatch(method, &params);
         let id = id?;
         Some(match result {
@@ -87,6 +89,7 @@ impl Server {
     fn dispatch(&self, method: &str, params: &Value) -> RpcResult {
         match method {
             "initialize" => Ok(self.initialize(params)),
+            "server/discover" => Ok(self.discover()),
             "ping" | "logging/setLevel" => Ok(json!({})),
             "tools/list" => self.tools_list(params),
             "tools/call" => self.tools_call(params),
@@ -141,6 +144,18 @@ impl Server {
             "instructions": format!(
                 "Bun's built-in MCP server (profile {agent}).{native_tools} test and run use this fork. Each tool result is capped at about {tokens} tokens; a truncated result ends with a cursor: call the same tool with {{\"cursor\": ...}} for the rest. Bun questions: docs_search then docs_read; Bun code to write: examples_search. Conventions: skills_list/skill_read, memory_search. Code: graph_symbols, graph_callers, graph_query."
             ),
+        })
+    }
+
+    /// `server/discover` (2026-07-28): the initialize result without negotiating a version.
+    fn discover(&self) -> Value {
+        let mut init = self.initialize(&Value::Null);
+        let info = init["serverInfo"].take();
+        json!({
+            "supportedVersions": PROTOCOL_VERSIONS,
+            "capabilities": init["capabilities"].take(),
+            "instructions": init["instructions"].take(),
+            "_meta": {"io.modelcontextprotocol/serverInfo": info},
         })
     }
 

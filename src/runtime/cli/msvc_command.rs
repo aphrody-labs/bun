@@ -40,7 +40,17 @@ pub(crate) fn is_bun_argv0(name: &[u8]) -> bool {
             | b"bun-valgrind"
             | b"bun-asan-valgrind"
             | b"bun-assertions"
-    )
+    ) || is_versioned_bun_argv0(name)
+}
+
+/// Versioned installs such as `bun-1.4.4`, which agent plugins launch directly.
+fn is_versioned_bun_argv0(name: &[u8]) -> bool {
+    name.strip_prefix(b"bun-").is_some_and(|version| {
+        version.first().is_some_and(u8::is_ascii_digit)
+            && version
+                .iter()
+                .all(|b| b.is_ascii_alphanumeric() || matches!(b, b'.' | b'-' | b'+'))
+    })
 }
 
 pub(crate) fn fail(message: core::fmt::Arguments<'_>) -> ! {

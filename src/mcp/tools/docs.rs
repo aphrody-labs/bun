@@ -46,6 +46,9 @@ fn index() -> &'static Index {
         }
         let mut postings: HashMap<String, Vec<(u32, f32)>> = HashMap::new();
         let mut lengths = Vec::with_capacity(docs.len());
+        // Allocates only for a page's distinct words: building over every page runs on the
+        // first docs call, and per-word allocation made that take seconds in debug builds.
+        let mut lower = String::new();
         for (i, doc) in docs.iter().enumerate() {
             let mut tf: HashMap<String, f32> = HashMap::new();
             let mut len = 0f32;
@@ -55,8 +58,27 @@ fn index() -> &'static Index {
                 (doc.path.as_str(), 3.0),
                 (doc.body, 1.0),
             ] {
-                for w in words(text) {
-                    *tf.entry(w).or_default() += weight;
+                for w in text.split(|c: char| !c.is_alphanumeric()) {
+                    if w.len() < 2 {
+                        continue;
+                    }
+                    let key = if !w.is_ascii() {
+                        lower = w.to_lowercase();
+                        lower.as_str()
+                    } else if w.bytes().any(|b| b.is_ascii_uppercase()) {
+                        lower.clear();
+                        lower.push_str(w);
+                        lower.make_ascii_lowercase();
+                        lower.as_str()
+                    } else {
+                        w
+                    };
+                    match tf.get_mut(key) {
+                        Some(f) => *f += weight,
+                        None => {
+                            tf.insert(key.to_owned(), weight);
+                        }
+                    }
                     len += 1.0;
                 }
             }

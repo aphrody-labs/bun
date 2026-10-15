@@ -1,4 +1,4 @@
-//! Streamable HTTP transport (MCP 2025-06-18): `POST /mcp` carries one JSON-RPC message and gets
+//! Streamable HTTP transport (MCP 2025-11-25): `POST /mcp` carries one JSON-RPC message and gets
 //! one `application/json` reply (202 for notifications); `GET` has no server-initiated stream
 //! (405); `DELETE` ends the session. Bound to 127.0.0.1, browser origins other than localhost are
 //! refused.
