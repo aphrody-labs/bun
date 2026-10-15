@@ -9,7 +9,6 @@ license = "Apache-2.0"
 authors = { workspace = true }
 repository = { workspace = true }
 homepage = "https://github.com/aphrody-labs/bun/tree/main/src/migrate"
-readme = "README.md"
 
 [lib]
 path = "lib.rs"

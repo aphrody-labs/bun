@@ -12,7 +12,6 @@ autoexamples = false
 autotests = false
 autobenches = false
 description = "A CommonMark + GFM parser that produces a span-faithful, style-preserving typed AST."
-readme = "README.md"
 keywords = ["parser", "markdown", "commonmark"]
 categories = ["parser-implementations", "text-processing"]
 license = "MIT"
@@ -112,7 +111,7 @@ priority = -1
 absolute_paths_not_starting_with_crate = "warn"
 non_ascii_idents = "warn"
 tail_expr_drop_order = "warn"
-unit-bindings = "warn"
+unit_bindings = "warn"
 unsafe_op_in_unsafe_fn = "warn"
 unused_unsafe = "warn"
 

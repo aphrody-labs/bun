@@ -13,7 +13,6 @@ autoexamples = false
 autotests = false
 autobenches = false
 description = "Newtype-style helpers for `Vec` and `usize`."
-readme = "README.md"
 keywords = ["newtype", "vec", "index", "indexed", "usize"]
 categories = ["data-structures", "no-std", "rust-patterns"]
 license = "MIT"
@@ -70,7 +69,7 @@ priority = -1
 [lints.rust]
 absolute_paths_not_starting_with_crate = "warn"
 non_ascii_idents = "warn"
-unit-bindings = "warn"
+unit_bindings = "warn"
 
 [lints.rust.unexpected_cfgs]
 level = "warn"

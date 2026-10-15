@@ -9,7 +9,6 @@ edition = "2024"
 homepage = "https://github.com/casey/just"
 keywords = ["command-line", "task", "runner", "development", "utility"]
 license = "CC0-1.0"
-readme = "README.md"
 repository = "https://github.com/aphrody-labs/just"
 rust-version = "1.89.0"
 publish = false

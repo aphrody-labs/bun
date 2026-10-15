@@ -12,7 +12,6 @@ autoexamples = false
 autotests = false
 autobenches = false
 description = "A YAML 1.2 parser that produces a comment-preserving typed AST."
-readme = "README.md"
 keywords = ["parser", "yaml"]
 categories = ["parser-implementations", "text-processing"]
 license = "MIT"
@@ -116,7 +115,7 @@ priority = -1
 absolute_paths_not_starting_with_crate = "warn"
 non_ascii_idents = "warn"
 tail_expr_drop_order = "warn"
-unit-bindings = "warn"
+unit_bindings = "warn"
 unsafe_op_in_unsafe_fn = "warn"
 unused_unsafe = "warn"
 
