@@ -19,6 +19,7 @@ import { syncDataset } from "./dataset.ts";
 import { generate, inputFiles, type Files } from "./generate.ts";
 import { isAphrodyBun } from "./hooks/common.ts";
 import { ALL_TARGETS, install, uninstall, type Target } from "./install.ts";
+import { probeMcp } from "./mcp-probe.ts";
 import { forbiddenIn, sanitizeText } from "./sanitize.ts";
 
 const pkg = resolve(import.meta.dir, "..");
@@ -231,6 +232,7 @@ export async function main(argv: string[]) {
         aphrody: isAphrodyBun(),
         installed: installed ?? null,
         current: installed ? installed.bunVersion === Bun.version : false,
+        mcp: installed ? await probeMcp(root) : null,
       };
       if (a.json) console.log(JSON.stringify(report, null, 2));
       else {
@@ -243,7 +245,13 @@ export async function main(argv: string[]) {
             : "plugin: not installed (bun agent-plugin install)",
         );
       }
-      if (!report.aphrody) process.exitCode = 1;
+      if (report.mcp && !a.json)
+        console.log(
+          report.mcp.ok
+            ? `mcp: ${report.mcp.command} ${report.mcp.args.join(" ")} answers initialize`
+            : `mcp: FAILING ${report.mcp.command} ${report.mcp.args.join(" ")}: ${report.mcp.error} (bun agent-plugin install --update)`,
+        );
+      if (!report.aphrody || (report.mcp && !report.mcp.ok)) process.exitCode = 1;
       return;
     }
     case "":

@@ -6,7 +6,7 @@
 // under ~/.gemini. Other plugins and settings are left as they are; `uninstall` takes back exactly what was added.
 
 import { spawnSync } from "node:child_process";
-import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join } from "node:path";
 import { isAphrodyBun } from "./hooks/common.ts";
@@ -141,13 +141,34 @@ function detected(home: string, real: boolean): Target[] {
   return out;
 }
 
+// Prefer a `bun` link resolving to this executable: a versioned file name (bun-1.4.4) is
+// read as argv0 and breaks subcommands such as `bun mcp`, and links survive upgrades.
+export function stableExecutable(execPath: string = process.execPath): string {
+  const ext = process.platform === "win32" ? ".exe" : "";
+  let target: string;
+  try {
+    target = realpathSync(execPath);
+  } catch {
+    return execPath;
+  }
+  const candidates = [join(dirname(execPath), `bun${ext}`), Bun.which("bun") ?? ""];
+  if (process.env.BUN_INSTALL) candidates.push(join(process.env.BUN_INSTALL, "bin", `bun${ext}`));
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    try {
+      if (realpathSync(candidate) === target) return candidate;
+    } catch {}
+  }
+  return execPath;
+}
+
 export function install(files: Map<string, string | Uint8Array>, options: InstallOptions = {}): InstallReport {
   const home = options.home ?? homedir();
   const real = options.home === undefined;
   const p = paths(home, real);
   const meta = JSON.parse(str(files.get("meta.json") ?? files.get("claude/meta.json")));
   const previous = readJson(join(p.root, "install.json"));
-  const executable = typeof Bun !== "undefined" && isAphrodyBun() ? process.execPath : undefined;
+  const executable = typeof Bun !== "undefined" && isAphrodyBun() ? stableExecutable() : undefined;
   if (executable) {
     files = new Map(files);
     for (const path of [

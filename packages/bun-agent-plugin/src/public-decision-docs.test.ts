@@ -18,7 +18,8 @@ const transpiler = new Bun.Transpiler({ loader: "ts" });
 test("public decision guides use Bun terminology and the canonical generic route", async () => {
   for (const path of pages) {
     const text = await Bun.file(join(root, path)).text();
-    expect(text).not.toMatch(/\bjev\b/i);
+    // `jev-latest` is the provider wire model id, not product terminology.
+    expect(text).not.toMatch(/\bjev\b(?!-latest)/i);
     expect(text).not.toContain("/runtime/jev");
     for (const source of blocks(text)) expect(() => transpiler.transformSync(source)).not.toThrow();
   }
