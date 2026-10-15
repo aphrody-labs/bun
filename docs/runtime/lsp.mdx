@@ -17,7 +17,7 @@ description: "One language server for TypeScript, JavaScript, Python, Rust, C, C
 
 ## Editors
 
-Configure `bun lsp` as the language server of every language it handles. It reads requests on stdin and writes answers on stdout.
+Configure `bun lsp` as the language server of every language it handles. It reads requests on stdin and writes answers on stdout. Incoming messages are limited to 64 MiB of JSON and 8 KiB of framing headers, including blank lines and extension headers.
 
 ```json Zed settings.json icon="file-code"
 {

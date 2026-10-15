@@ -1,6 +1,6 @@
 //! LSP base protocol: `Content-Length` framing, `file://` URIs, and UTF-16 positions.
 
-use std::io::{self, BufRead, Write};
+use std::io::{self, BufRead, Read, Write};
 use std::path::{Path, PathBuf};
 
 use serde_json::Value;
@@ -8,13 +8,26 @@ use serde_json::Value;
 /// Larger messages are refused: a server that sends one is broken or hostile.
 pub const MAX_MESSAGE_BYTES: usize = 64 * 1024 * 1024;
 
+const MAX_HEADER_BYTES: usize = 8 * 1024;
+
 /// Reads one framed message. `Ok(None)` at the end of the stream.
 pub fn read_message(reader: &mut impl BufRead) -> io::Result<Option<Value>> {
     let mut length: Option<usize> = None;
     let mut line = String::new();
+    let mut header_bytes = 0;
     loop {
         line.clear();
-        if reader.read_line(&mut line)? == 0 {
+        let read = (&mut *reader)
+            .take((MAX_HEADER_BYTES + 1 - header_bytes) as u64)
+            .read_line(&mut line)?;
+        header_bytes += read;
+        if header_bytes > MAX_HEADER_BYTES {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!("LSP headers exceed the {MAX_HEADER_BYTES} byte limit"),
+            ));
+        }
+        if read == 0 {
             return match length {
                 None => Ok(None),
                 Some(_) => Err(io::Error::new(
@@ -236,6 +249,38 @@ mod tests {
             Some(serde_json::json!({ "a": "é" }))
         );
         assert_eq!(read_message(&mut reader).unwrap(), None);
+    }
+
+    #[test]
+    fn header_limit() {
+        for extra in [0, 1] {
+            let prefix = "Content-Length: 2\r\nX-Padding: ";
+            let suffix = "\r\n\r\n";
+            let padding = MAX_HEADER_BYTES - prefix.len() - suffix.len() + extra;
+            let input = format!("{prefix}{}{suffix}{{}}", "x".repeat(padding));
+            let mut reader = io::Cursor::new(input.as_bytes());
+            if extra == 0 {
+                assert_eq!(read_message(&mut reader).unwrap(), Some(serde_json::json!({})));
+                assert_eq!(read_message(&mut reader).unwrap(), None);
+            } else {
+                assert_eq!(
+                    read_message(&mut reader).unwrap_err().kind(),
+                    io::ErrorKind::InvalidData
+                );
+                assert_eq!(reader.position(), (MAX_HEADER_BYTES + 1) as u64);
+            }
+        }
+        for input in [
+            "x".repeat(MAX_HEADER_BYTES + 100),
+            "\r\n".repeat(MAX_HEADER_BYTES),
+        ] {
+            let mut reader = io::Cursor::new(input.as_bytes());
+            assert_eq!(
+                read_message(&mut reader).unwrap_err().kind(),
+                io::ErrorKind::InvalidData
+            );
+            assert_eq!(reader.position(), (MAX_HEADER_BYTES + 1) as u64);
+        }
     }
 
     #[test]

@@ -79,6 +79,25 @@ class Editor {
 const uri = (path: string) => Bun.pathToFileURL(path).href;
 
 describe("bun lsp --stdio", () => {
+  test("rejects oversized headers before dispatching initialize", async () => {
+    using dir = tempDir("lsp-header-limit", { "package.json": "{}" });
+    const body = JSON.stringify({ jsonrpc: "2.0", id: 1, method: "initialize", params: { capabilities: {} } });
+    await using proc = Bun.spawn({
+      cmd: [bunExe(), "lsp", "--stdio"],
+      env,
+      cwd: String(dir),
+      stdin: "pipe",
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    proc.stdin.end(
+      `X-Padding: ${Buffer.alloc(8192, "x").toString()}\r\nContent-Length: ${Buffer.byteLength(body)}\r\n\r\n${body}`,
+    );
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    expect({ stdout, stderr, exitCode }).toEqual({ stdout: "", stderr: "", exitCode: 0 });
+    expect(proc.signalCode).toBeNull();
+  });
+
   test("initialize, shutdown and exit", async () => {
     using dir = tempDir("lsp-init", { "package.json": "{}" });
     const editor = new Editor(String(dir));
