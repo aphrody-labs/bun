@@ -227,8 +227,9 @@ core.[0-9]*
 !src/migrate/
 !src/migrate/engine/github/
 !src/migrate/tests/fixtures/node-project/package-lock.json
-!packages/bun-video/packages/remotion/packages/core/
-!packages/bun-video/packages/hyperframes/packages/core/
+!packages/bun-video/remotion/core/
+!packages/bun-video/hyperframes/core/
+!packages/bun-video/hyperframes/cli/src/utils/agentDirs.generated.ts
 # Legacy codegen outputs (no longer written, but old build trees still have
 # them on disk; keep ignored so they don't show as untracked).
 src/jsc/bindings/GeneratedJS2Native.zig
