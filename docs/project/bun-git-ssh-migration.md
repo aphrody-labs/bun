@@ -1,6 +1,6 @@
 # SSH and Git integrated into Bun OS
 
-aphrody carried its own SSH client (russh, russh-sftp, fast_rsync in `crates/infra/ssh`) and Git/GitHub layer (gix, octocrab in `crates/infra/git`), next to many `Command::new("ssh" | "git" | "gh")` call sites. Bun OS owns these integration sources as `bun ssh` (`src/ssh`, crate `bun_ssh`) and `bun git` (`src/git`, crate `bun_git`). Each first detects and drives an installed tool:
+aphrody carried its own SSH client (russh, russh-sftp, fast_rsync in `crates/infra/ssh`) and Git/GitHub layer (gix, octocrab in `crates/infra/git`), next to many `Command::new("ssh" | "git" | "gh")` call sites. Bun OS owns these integration sources as `bun ssh` (`src/ssh`, crate `bun_ssh`); Git operations drive the installed `git` executable. Each first detects and drives an installed tool:
 
 - the system OpenSSH (`ssh`, `scp`, `sftp`, `ssh-keygen`, `ssh-add`, `sshd`): Windows `System32\OpenSSH`, Win32-OpenSSH, Git for Windows `usr\bin`, or the Linux/macOS system one;
 - `rsync`;

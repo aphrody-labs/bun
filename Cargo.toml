@@ -154,7 +154,6 @@ members = [
   "src/no_window",
   "src/ssh",
   "src/docker",
-  "src/git",
   "src/bunfig",
   "src/transpiler/ecma_api",
   "src/migrate",
