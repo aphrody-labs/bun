@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS requests (
  boost REAL NOT NULL DEFAULT 0,
  retries INTEGER NOT NULL DEFAULT 0,
  locked_at INTEGER,
+ lease_generation INTEGER NOT NULL DEFAULT 0,
  last_error TEXT,
  created_at INTEGER NOT NULL,
  fetch_count INTEGER NOT NULL DEFAULT 0,
@@ -88,6 +89,7 @@ CREATE TABLE IF NOT EXISTS sitemap_discovered_hosts (
 ";
 
 const REQUEST_MIGRATIONS: &[(&str, &str)] = &[
+    ("lease_generation", "INTEGER NOT NULL DEFAULT 0"),
     ("base_score", "REAL NOT NULL DEFAULT 0"),
     ("opic_cash", "REAL NOT NULL DEFAULT 1"),
     ("opic_history", "REAL NOT NULL DEFAULT 0"),
@@ -164,6 +166,7 @@ pub struct Lease {
     pub url: Url,
     pub depth: u32,
     pub retries: u32,
+    generation: i64,
 }
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, Eq)]
@@ -337,11 +340,14 @@ impl Frontier {
         let tx = self
             .db
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
-        let cash: f64 = tx.query_row(
-            "SELECT opic_cash FROM requests WHERE id=?1",
-            [parent.id],
-            |row| row.get(0),
-        )?;
+        let cash: f64 = tx
+            .query_row(
+                "SELECT opic_cash FROM requests WHERE id=?1 AND lease_generation=?2 AND state IN ('locked','done')",
+                params![parent.id, parent.generation],
+                |row| row.get(0),
+            )
+            .optional()?
+            .ok_or_else(|| rusqlite::Error::InvalidParameterName("lease is not locked".into()))?;
         let share = cash / unique.len() as f64;
         let mut inserted = 0;
         for (key, (url, anchor)) in unique {
@@ -425,9 +431,10 @@ impl Frontier {
             tx.commit()?;
             return Ok(None);
         };
-        tx.execute(
-            "UPDATE requests SET state='locked',locked_at=?2 WHERE id=?1",
+        let generation = tx.query_row(
+            "UPDATE requests SET state='locked',locked_at=?2,lease_generation=lease_generation+1 WHERE id=?1 RETURNING lease_generation",
             params![id, now_ms],
+            |row| row.get(0),
         )?;
         tx.execute(
             "INSERT INTO hosts(host,in_flight,next_allowed_at,last_locked_at) VALUES(?1,1,?2,?3)
@@ -448,6 +455,7 @@ impl Frontier {
             url,
             depth,
             retries,
+            generation,
         }))
     }
 
@@ -462,8 +470,8 @@ impl Frontier {
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
         let info = tx.query_row(
             "SELECT state,family,content_hash,fetch_count,change_count,first_fetched_at,opic_cash+opic_history
-             FROM requests WHERE id=?1",
-            [lease.id],
+             FROM requests WHERE id=?1 AND lease_generation=?2",
+            params![lease.id, lease.generation],
             |r| Ok((r.get::<_, String>(0)?,r.get::<_, String>(1)?,r.get::<_, Option<String>>(2)?,
                 r.get::<_, u32>(3)?,r.get::<_, u32>(4)?,r.get::<_, Option<i64>>(5)?,r.get::<_, f64>(6)?)),
         ).optional()?;
@@ -588,8 +596,8 @@ impl Frontier {
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
         let retries: Option<u32> = tx
             .query_row(
-                "SELECT retries FROM requests WHERE id=?1 AND state='locked'",
-                [lease.id],
+                "SELECT retries FROM requests WHERE id=?1 AND state='locked' AND lease_generation=?2",
+                params![lease.id, lease.generation],
                 |r| r.get(0),
             )
             .optional()?;
@@ -619,8 +627,8 @@ impl Frontier {
             .db
             .transaction_with_behavior(TransactionBehavior::Immediate)?;
         let updated = tx.execute(
-            "UPDATE requests SET state='failed',locked_at=NULL,last_error=?2 WHERE id=?1 AND state='locked'",
-            params![lease.id, reason],
+            "UPDATE requests SET state='failed',locked_at=NULL,last_error=?2 WHERE id=?1 AND state='locked' AND lease_generation=?3",
+            params![lease.id, reason, lease.generation],
         )?;
         if updated == 0 {
             return Err(rusqlite::Error::InvalidParameterName(
@@ -1093,6 +1101,145 @@ mod tests {
     }
 
     #[test]
+    fn stale_workers_cannot_mutate_replacement_leases() {
+        let mut frontier = Frontier::memory(FrontierOptions {
+            lock_timeout_ms: 10,
+            max_in_flight_per_host: 1,
+            ..FrontierOptions::default()
+        })
+        .unwrap();
+        frontier
+            .enqueue(AddRequest::seed("https://example.test/"), 0)
+            .unwrap();
+        let stale = frontier.lease_next(0).unwrap().unwrap();
+        let current = frontier.lease_next(10).unwrap().unwrap();
+        assert_eq!(stale.id, current.id);
+        let page = PageRecord {
+            title: "Current".into(),
+            markdown: "Current worker content".into(),
+            content_hash: "current".into(),
+            simhash: 123,
+        };
+        assert!(frontier.mark_done(&stale, &page, 10).is_err());
+        assert!(frontier.mark_failed(&stale, "late failure").is_err());
+        assert!(frontier.mark_rejected(&stale, "late rejection").is_err());
+        assert!(
+            frontier
+                .enqueue_children(
+                    &stale,
+                    [(
+                        Url::parse("https://example.test/stale").unwrap(),
+                        "Stale".into(),
+                    )],
+                    10,
+                )
+                .is_err()
+        );
+        assert!(frontier.page(current.url.as_str()).unwrap().is_none());
+        assert_eq!(
+            frontier.stats().unwrap(),
+            FrontierStats {
+                locked: 1,
+                ..FrontierStats::default()
+            }
+        );
+        let in_flight: i64 = frontier
+            .db
+            .query_row(
+                "SELECT in_flight FROM hosts WHERE host='example.test'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(in_flight, 1);
+        assert_eq!(
+            frontier.mark_done(&current, &page, 10).unwrap(),
+            StoredPage::New
+        );
+        assert_eq!(
+            frontier.page(current.url.as_str()).unwrap(),
+            Some((page.title, page.markdown))
+        );
+        assert_eq!(frontier.stats().unwrap().done, 1);
+    }
+
+    #[test]
+    fn retry_in_same_millisecond_issues_a_new_lease() {
+        let mut frontier = Frontier::memory(FrontierOptions::default()).unwrap();
+        frontier
+            .enqueue(AddRequest::seed("https://example.test/"), 0)
+            .unwrap();
+        let first = frontier.lease_next(0).unwrap().unwrap();
+        frontier.mark_failed(&first, "retry").unwrap();
+        let second = frontier.lease_next(0).unwrap().unwrap();
+        assert_ne!(first.generation, second.generation);
+        assert!(frontier.mark_rejected(&first, "late rejection").is_err());
+        frontier.mark_rejected(&second, "current rejection").unwrap();
+        assert_eq!(frontier.stats().unwrap().failed, 1);
+    }
+
+    #[test]
+    fn lease_generation_survives_reopening_persistent_frontier() {
+        struct Fixture(std::path::PathBuf);
+        impl Drop for Fixture {
+            fn drop(&mut self) {
+                let _ = std::fs::remove_dir_all(&self.0);
+            }
+        }
+        let fixture = Fixture(std::env::temp_dir().join(format!(
+            "bun-crawl-lease-{}-{}",
+            std::process::id(),
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_nanos()
+        )));
+        let path = fixture.0.join("frontier.sqlite");
+        let options = FrontierOptions {
+            lock_timeout_ms: 10,
+            ..FrontierOptions::default()
+        };
+        let mut frontier = Frontier::open(&path, options.clone(), 0).unwrap();
+        frontier
+            .enqueue(AddRequest::seed("https://example.test/"), 0)
+            .unwrap();
+        let old = frontier.lease_next(0).unwrap().unwrap();
+        drop(frontier);
+        let mut reopened = Frontier::open(&path, options, 10).unwrap();
+        let current = reopened.lease_next(10).unwrap().unwrap();
+        assert_eq!(old.id, current.id);
+        assert!(current.generation > old.generation);
+        assert!(reopened.mark_failed(&old, "old process").is_err());
+        reopened
+            .mark_rejected(&current, "current process")
+            .unwrap();
+        assert_eq!(reopened.stats().unwrap().failed, 1);
+    }
+
+    #[test]
+    fn exhausted_lease_generation_rolls_back_without_locking_request() {
+        let mut frontier = Frontier::memory(FrontierOptions::default()).unwrap();
+        frontier
+            .enqueue(AddRequest::seed("https://example.test/"), 0)
+            .unwrap();
+        frontier
+            .db
+            .execute("UPDATE requests SET lease_generation=?1", [i64::MAX])
+            .unwrap();
+        assert!(matches!(
+            frontier.lease_next(0),
+            Err(rusqlite::Error::InvalidColumnType(..))
+        ));
+        assert_eq!(
+            frontier.stats().unwrap(),
+            FrontierStats {
+                pending: 1,
+                ..FrontierStats::default()
+            }
+        );
+    }
+
+    #[test]
     fn exact_and_near_content_duplicates_are_not_indexed_twice() {
         let mut frontier = Frontier::memory(FrontierOptions::default()).unwrap();
         for path in ["a", "b", "c"] {
@@ -1245,6 +1392,14 @@ mod tests {
             CREATE TABLE pages(url TEXT PRIMARY KEY,title TEXT,markdown TEXT,content_hash TEXT,simhash INTEGER,fetched_at INTEGER);
             INSERT INTO pages VALUES('https://example.test/','One','Body','hash',4660,1);").unwrap();
         migrate_schema(&db).unwrap();
+        let generation_columns: i64 = db
+            .query_row(
+                "SELECT COUNT(*) FROM pragma_table_info('requests') WHERE name='lease_generation'",
+                [],
+                |row| row.get(0),
+            )
+            .unwrap();
+        assert_eq!(generation_columns, 1);
         let bands: (u16, u16) = db
             .query_row("SELECT band0,band1 FROM pages", [], |row| {
                 Ok((row.get(0)?, row.get(1)?))

@@ -63,19 +63,19 @@ impl RobotsCache {
             None => return true,
         };
 
-        for pattern in &rules.allowed {
-            if path_matches(path, pattern) {
-                return true;
-            }
+        // RFC 9309 2.2.2: longest rule wins, with Allow winning equal matches.
+        let longest = |patterns: &[String]| {
+            patterns
+                .iter()
+                .filter(|pattern| path_matches(path, pattern))
+                .map(|pattern| pattern.len())
+                .max()
+        };
+        match (longest(&rules.allowed), longest(&rules.disallowed)) {
+            (Some(allow), Some(disallow)) => allow >= disallow,
+            (None, Some(_)) => false,
+            _ => true,
         }
-
-        for pattern in &rules.disallowed {
-            if path_matches(path, pattern) {
-                return false;
-            }
-        }
-
-        true
     }
 }
 
@@ -110,73 +110,63 @@ fn parse_robots_txt(body: &str, our_agent: &str) -> RobotsRules {
         .filter(|token| !token.is_empty())
         .map(str::to_lowercase)
         .collect();
-    let mut disallowed = Vec::new();
-    let mut allowed = Vec::new();
-    let mut in_matching_section = false;
+    let mut specific = RobotsRules {
+        disallowed: Vec::new(),
+        allowed: Vec::new(),
+    };
+    let mut wildcard = specific.clone();
+    let mut group_specific = false;
+    let mut group_wildcard = false;
+    let mut has_rules = false;
     let mut found_specific = false;
 
     for line in body.lines() {
-        let line = line.trim();
-        if line.is_empty() || line.starts_with('#') {
+        let line = line.split('#').next().unwrap_or("").trim();
+        let Some((key, value)) = line.split_once(':') else {
             continue;
-        }
-
-        if let Some((key, value)) = line.split_once(':') {
-            let key = key.trim().to_lowercase();
-            let value = value.trim();
-
-            match key.as_str() {
-                "user-agent" => {
-                    let agent = value.to_lowercase();
-                    in_matching_section =
-                        agent == "*" || our_tokens.iter().any(|token| *token == agent);
-                    if agent != "*" && in_matching_section {
-                        found_specific = true;
-                    }
+        };
+        let value = value.trim();
+        match key.trim().to_ascii_lowercase().as_str() {
+            "user-agent" => {
+                // Consecutive headers share rules; a header after rules starts a group.
+                if has_rules {
+                    group_specific = false;
+                    group_wildcard = false;
+                    has_rules = false;
                 }
-                "disallow" if in_matching_section && !value.is_empty() => {
-                    disallowed.push(value.to_string());
-                }
-                "allow" if in_matching_section && !value.is_empty() => {
-                    allowed.push(value.to_string());
-                }
-                _ => {}
+                let matches = our_tokens
+                    .iter()
+                    .any(|token| token.eq_ignore_ascii_case(value));
+                group_specific |= matches;
+                group_wildcard |= value == "*";
+                found_specific |= matches;
             }
-        }
-    }
-
-    if !found_specific {
-        disallowed.clear();
-        allowed.clear();
-        in_matching_section = false;
-
-        for line in body.lines() {
-            let line = line.trim();
-            if line.is_empty() || line.starts_with('#') {
-                continue;
-            }
-            if let Some((key, value)) = line.split_once(':') {
-                let key = key.trim().to_lowercase();
-                let value = value.trim();
-                match key.as_str() {
-                    "user-agent" => {
-                        in_matching_section = value.trim() == "*";
+            key @ ("allow" | "disallow") => {
+                has_rules = true;
+                if !value.starts_with('/') {
+                    continue;
+                }
+                for (matches, rules) in [
+                    (group_specific, &mut specific),
+                    (group_wildcard, &mut wildcard),
+                ] {
+                    if matches {
+                        if key == "allow" {
+                            rules.allowed.push(value.to_string());
+                        } else {
+                            rules.disallowed.push(value.to_string());
+                        }
                     }
-                    "disallow" if in_matching_section && !value.is_empty() => {
-                        disallowed.push(value.to_string());
-                    }
-                    "allow" if in_matching_section && !value.is_empty() => {
-                        allowed.push(value.to_string());
-                    }
-                    _ => {}
                 }
             }
+            _ => {}
         }
     }
 
-    RobotsRules {
-        disallowed,
-        allowed,
+    if found_specific {
+        specific
+    } else {
+        wildcard
     }
 }
 
@@ -194,6 +184,43 @@ fn path_matches(path: &str, pattern: &str) -> bool {
 mod tests {
     use super::*;
 
+    #[test]
+    fn specific_groups_replace_wildcard_and_merge_shared_agent_headers() {
+        let cache = RobotsCache::new();
+        for body in [
+            "User-agent: *\nDisallow: /wild\nUser-agent: BunBrowser\nUser-agent: OtherBot\nDisallow: /shared\nUser-agent: BunBrowser\nDisallow: /second\n",
+            "User-agent: OtherBot\nUser-agent: BunBrowser # crawler\nDisallow: /shared # comment\nUser-agent: BunBrowser\nDisallow: /second\nUser-agent: *\nDisallow: /wild\n",
+        ] {
+            cache.parse_and_store("test", body, "BunBrowser");
+            assert!(cache.is_allowed("test", "/wild"));
+            assert!(!cache.is_allowed("test", "/shared/file"));
+            assert!(!cache.is_allowed("test", "/second"));
+            cache.parse_and_store("other", body, "UnknownBot");
+            assert!(!cache.is_allowed("other", "/wild"));
+            assert!(cache.is_allowed("other", "/shared"));
+        }
+    }
+
+    #[test]
+    fn longest_rule_wins_and_allow_breaks_ties() {
+        let cache = RobotsCache::new();
+        cache.parse_and_store("test", "User-agent: *\nAllow: /\nDisallow: /private\nAllow: /private/public\nDisallow: /tie\nAllow: /tie\n", "BunBrowser");
+        assert!(cache.is_allowed("test", "/page"));
+        assert!(!cache.is_allowed("test", "/private/secret"));
+        assert!(cache.is_allowed("test", "/private/public/file"));
+        assert!(cache.is_allowed("test", "/tie"));
+    }
+
+    #[test]
+    fn empty_specific_group_does_not_inherit_wildcard_rules() {
+        let cache = RobotsCache::new();
+        cache.parse_and_store(
+            "test",
+            "User-agent: *\nDisallow: /\nUser-agent: BunBrowser\n",
+            "BunBrowser",
+        );
+        assert!(cache.is_allowed("test", "/page"));
+    }
     #[test]
     fn test_parse_basic_robots() {
         let body = "User-agent: *\nDisallow: /private/\nDisallow: /admin\nAllow: /admin/public\n";

@@ -401,6 +401,56 @@ fn corrupt_files_are_detected_without_panicking() {
 }
 
 #[test]
+fn persisted_vectors_reject_invalid_numeric_values() {
+    for metric in [Metric::Cosine, Metric::L2] {
+        for quantization in [Quantization::None, Quantization::Int8] {
+            let index = Index::new(IndexParams {
+                metric,
+                quantization,
+                keep_float: true,
+                ..small_params(2)
+            })
+            .unwrap();
+            index.add(7, &[1.0, 0.0]).unwrap();
+            let path = temp_path(&format!("numeric-{metric:?}-{quantization:?}.bxcidx"));
+            index.save(&path).unwrap();
+            let original = std::fs::read(&path).unwrap();
+            let mut sections = vec![5];
+            if quantization == Quantization::Int8 {
+                sections.push(2);
+                if metric == Metric::L2 {
+                    sections.push(3);
+                }
+            }
+            for section in sections {
+                let base = 88 + section * 16;
+                let offset =
+                    u64::from_le_bytes(original[base..base + 8].try_into().unwrap()) as usize;
+                let mut invalid = vec![f32::NAN, f32::INFINITY, f32::NEG_INFINITY];
+                if section != 5 {
+                    invalid.push(-1.0);
+                }
+                for value in invalid {
+                    let mut bytes = original.clone();
+                    bytes[offset..offset + 4].copy_from_slice(&value.to_le_bytes());
+                    let end = bytes.len() - 8;
+                    let checksum = bun_browser_index::persist::xxh64(&bytes[..end], 0);
+                    bytes[end..].copy_from_slice(&checksum.to_le_bytes());
+                    assert!(
+                        matches!(corrupted_load(&path, &bytes), Err(IndexError::Corrupt(_))),
+                        "{metric:?} {quantization:?} section {section} value {value}"
+                    );
+                }
+            }
+            std::fs::write(&path, &original).unwrap();
+            let restored = Index::load(&path).unwrap();
+            assert_eq!(restored.search(&[1.0, 0.0], 1, None).unwrap()[0].0, 7);
+            std::fs::remove_file(path).unwrap();
+        }
+    }
+}
+
+#[test]
 fn concurrent_searches_during_inserts() {
     let dim = 32;
     let params = IndexParams {

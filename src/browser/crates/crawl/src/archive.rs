@@ -470,7 +470,7 @@ mod tests {
         );
         assert_eq!(
             db.query_row("SELECT COUNT(*) FROM archive_items", [], |row| row
-                .get::<_, usize>(0))
+                .get::<_, i64>(0))
                 .unwrap(),
             2
         );
@@ -547,7 +547,7 @@ mod tests {
         assert_eq!(finished.pages, 0);
         assert_eq!(
             db.query_row("SELECT COUNT(*) FROM archive_captures", [], |row| row
-                .get::<_, usize>(0))
+                .get::<_, i64>(0))
                 .unwrap(),
             2
         );
@@ -574,13 +574,13 @@ mod tests {
         );
         assert_eq!(
             db.query_row("SELECT COUNT(*) FROM archive_captures", [], |row| row
-                .get::<_, usize>(0))
+                .get::<_, i64>(0))
                 .unwrap(),
             0
         );
         assert_eq!(
             db.query_row("SELECT COUNT(*) FROM archive_checkpoints", [], |row| row
-                .get::<_, usize>(
+                .get::<_, i64>(
                 0
             ))
             .unwrap(),
@@ -693,7 +693,7 @@ mod tests {
         );
         assert_eq!(
             db.query_row("SELECT COUNT(*) FROM archive_checkpoints", [], |row| row
-                .get::<_, usize>(
+                .get::<_, i64>(
                 0
             ))
             .unwrap(),
@@ -738,7 +738,7 @@ mod tests {
         );
         assert_eq!(
             db.query_row("SELECT COUNT(*) FROM archive_captures", [], |row| row
-                .get::<_, usize>(0))
+                .get::<_, i64>(0))
                 .unwrap(),
             2
         );

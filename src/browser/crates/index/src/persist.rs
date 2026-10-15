@@ -549,9 +549,12 @@ pub(crate) fn load(path: &Path) -> Result<Inner> {
         }
     }
     for s in scales.as_slice().iter().chain(norms.as_slice()) {
-        if !s.is_finite() {
-            return Err(corrupt("non-finite quantisation scale"));
+        if !s.is_finite() || *s < 0.0 {
+            return Err(corrupt("invalid quantisation scale or norm"));
         }
+    }
+    if floats.as_slice().iter().any(|value| !value.is_finite()) {
+        return Err(corrupt("non-finite stored vector"));
     }
     let mut popcount = 0usize;
     for (w, &word) in tombstones.iter().enumerate() {

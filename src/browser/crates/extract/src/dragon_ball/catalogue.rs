@@ -39,7 +39,7 @@ pub struct Publication {
     pub price: Option<String>,
     #[serde(rename = "editeur")]
     pub publisher: Option<String>,
-    #[serde(rename = "lignes")]
+    #[serde(default, rename = "lignes")]
     pub lines: Vec<String>,
     #[serde(rename = "rubrique")]
     pub section: Option<String>,
@@ -295,6 +295,42 @@ pub fn parse_miscellaneous(html: &str, base: &Url) -> HashMap<String, Publicatio
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn historical_catalogue_publications_allow_absent_metadata_lines() {
+        let catalogue: Catalogue = serde_json::from_str(
+            r#"{
+                "source":"https://comic.dragonballcn.com/",
+                "releve_le":"2026-09-15T13:11:03.258Z",
+                "avertissement":"retained source inventory",
+                "collections":[{
+                    "slug":"original",
+                    "titre":"Original",
+                    "url":"https://comic.dragonballcn.com/original.htm",
+                    "ouvrages":[
+                        {"did":"0-1","url":"https://comic.dragonballcn.com/list/gain_1.php?did=0-1","libelle":"One"},
+                        {"did":"0-2","url":"https://comic.dragonballcn.com/list/gain_1.php?did=0-2","libelle":"Two","lignes":[]},
+                        {"did":"0-3","url":"https://comic.dragonballcn.com/list/gain_1.php?did=0-3","libelle":"Three","lignes":["Original metadata"]}
+                    ]
+                }]
+            }"#,
+        )
+        .unwrap();
+        let publications = &catalogue.collections[0].publications;
+        assert_eq!(publications.len(), 3);
+        assert_eq!(publications[0].did, "0-1");
+        assert_eq!(publications[0].label, "One");
+        assert!(publications[0].lines.is_empty());
+        assert!(publications[1].lines.is_empty());
+        assert_eq!(publications[2].lines, ["Original metadata"]);
+        assert!(
+            serde_json::from_str::<Publication>(
+                r#"{"did":"0-1","url":"https://comic.dragonballcn.com/","libelle":"One","lignes":null}"#,
+            )
+            .is_err()
+        );
+    }
+
     #[test]
     fn original_publisher_and_hong_kong_table_fields_survive() {
         let base = Url::parse("https://comic.dragonballcn.com/dragonball_jp_original.htm").unwrap();

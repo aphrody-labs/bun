@@ -27,6 +27,9 @@ webp = { workspace = true }
 tokio = { workspace = true }
 url = { workspace = true }
 
+[dev-dependencies]
+bun_browser_index = { workspace = true }
+
 # Retained library lint baseline during native graph integration.
 [lints.rust]
 "unsafe_op_in_unsafe_fn" = "deny"

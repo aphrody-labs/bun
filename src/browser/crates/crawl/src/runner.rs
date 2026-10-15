@@ -311,10 +311,11 @@ pub async fn crawl_bounded<T: CrawlTransport>(
             report.attempts += 1;
             if !domain_allowed(&lease.url, &allowed) {
                 frontier.mark_rejected(&lease, "URL is outside allowed_domains")?;
-                report.errors.push((
+                report.retain_error(
                     lease.url.to_string(),
                     "URL is outside allowed_domains".into(),
-                ));
+                    options,
+                );
                 continue;
             }
             if !url_matches_filters(&lease.url, &include_url_regex, &exclude_url_regex) {
@@ -709,10 +710,9 @@ async fn ingest_seed_sitemaps<T: CrawlTransport>(
                 if !seen.contains(nested.as_str())
                     && attempts + sitemap_queue.len() < limit
                     && queued.insert(nested.as_str().to_owned())
+                    && let Some((offset, false, previous_hash)) = frontier.sitemap_job(&nested)?
                 {
-                    if let Some((offset, false, previous_hash)) = frontier.sitemap_job(&nested)? {
-                        sitemap_queue.push_back((nested.to_string(), offset, previous_hash));
-                    }
+                    sitemap_queue.push_back((nested.to_string(), offset, previous_hash));
                 }
             }
         }
@@ -865,7 +865,13 @@ mod tests {
         let server = tokio::spawn(async move {
             let (mut socket, _) = listener.accept().await.unwrap();
             let mut request = [0; 4096];
-            socket.read(&mut request).await.unwrap();
+            let mut used = 0;
+            while !request[..used].windows(4).any(|bytes| bytes == b"\r\n\r\n") {
+                assert!(used < request.len(), "fixture request headers exceed bound");
+                let read = socket.read(&mut request[used..]).await.unwrap();
+                assert!(read > 0, "fixture request ended before headers");
+                used += read;
+            }
             socket.write_all(b"HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nTransfer-Encoding: chunked\r\nConnection: close\r\n\r\n").await.unwrap();
             let chunk = [b'a'; 32768];
             for _ in 0..288 {
@@ -892,6 +898,41 @@ mod tests {
                 .contains("Response body exceeded 8388608 byte limit")
         );
         server.await.unwrap();
+    }
+
+    #[tokio::test]
+    async fn rejected_domains_respect_report_limits_and_preserve_error_counts() {
+        for (detail_limit, byte_limit, retained) in [(1, usize::MAX, 1), (10, 0, 0)] {
+            let mut frontier = Frontier::memory(FrontierOptions::default()).unwrap();
+            for path in ["a", "b", "c"] {
+                frontier
+                    .enqueue(
+                        AddRequest::seed(format!("https://outside.test/{path}")),
+                        now_ms(),
+                    )
+                    .unwrap();
+            }
+            let options = CrawlOptions {
+                allowed_domains: vec!["allowed.test".into()],
+                report_detail_limit: detail_limit,
+                report_max_bytes: byte_limit,
+                ..CrawlOptions::default()
+            };
+            let report = crawl_bounded(&mut frontier, &Fixture(HashMap::new()), &options)
+                .await
+                .unwrap();
+            assert_eq!(report.attempts, 3);
+            assert_eq!(report.error_count, 3);
+            assert_eq!(report.errors.len(), retained);
+            assert_eq!(report.errors_dropped, 3 - retained);
+            assert_eq!(report.frontier.failed, 3);
+            for (_, error) in &report.errors {
+                assert_eq!(error, "URL is outside allowed_domains");
+            }
+            if byte_limit == 0 {
+                assert_eq!(report.report_bytes_retained, 0);
+            }
+        }
     }
 
     #[tokio::test]
