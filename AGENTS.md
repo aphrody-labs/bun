@@ -39,12 +39,28 @@ test runner and package manager.
 - Use the existing checkout. Do not create extra worktrees, workspaces or vendor
   copies unless requested. Reuse existing sources, dependencies and build outputs.
 - Use native Windows tools on this workstation; do not start WSL.
-- Keep CPU usage bounded: one build at a time, low parallelism, no unnecessary rebuilds.
+- Use the measured host budget instead of historical two-CPU or low-parallelism
+  limits. On `vps`, the owner authorizes 12 build jobs and 12 linker threads on
+  its 12 allocated CPUs and 45.93 GiB RAM. Recheck available memory, affinity and
+  free disk before execution; coordinate native builds through the existing
+  `/home/ubuntu/build/locks/heavy.lock` and reuse compiled outputs.
 - Read repository guidance before changes; preserve concurrent edits and staged work.
 - Report actual results and qualification limits. Never print or commit secrets.
 
 ## Runtime and builds
 
+- The shared artifact pool is `/home/ubuntu/build/storage`. Put heavy outputs,
+  caches, downloads, toolchains and transient files there. The older
+  `/home/ubuntu/src` and `/home/ubuntu/build` filesystem can fill independently
+  while the pool still has hundreds of GiB free; check both filesystems.
+- The existing Bun checkout is `/home/ubuntu/src/bun`; do not resurrect the
+  absent `/home/ubuntu/builds/bun-os-factory/sources/bun` checkout. The factory
+  policy lives in `tools/config/fusion-factory.json` and uses pooled directories.
+- Run `aphrody infra ssh exec` from `/home/ubuntu` so its relative `var/runs`
+  receipts use the root filesystem instead of the source filesystem. Plan
+  before apply and verify the host through the native Infra catalog each time.
+- Host budgets are independent: `dbfr` has 6 CPUs and about 11.40 GiB RAM and
+  serves production. Never apply the VPS's 45.93 GiB budget to it.
 - Use the Aphrody Bun fork for JavaScript, TypeScript and Python tooling.
   Check provenance with `bun agent-plugin doctor --json`.
 - Build and execute checkout changes with `bun bd [command]`; test with

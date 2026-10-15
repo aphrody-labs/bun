@@ -83,17 +83,26 @@ test("VPS release plan keeps execution with the serialized Infra resource owner"
   expect(plan.steps).toHaveLength(4);
   expect(plan.host).toBe("vps");
   expect(plan.parallelHeavyJobs).toBe(1);
-  expect(plan.reserveDiskGiB).toBe(8);
+  expect(plan.reserveDiskGiB).toBe(32);
+  expect(plan.reserveMemoryGiB).toBe(8);
+  expect(plan.memoryPerJobGiB).toBe(1);
+  expect(plan.maxJobs).toBe(12);
+  expect(plan.linkThreads).toBe(12);
+  expect(plan.source).toBe("/home/ubuntu/src/bun");
+  expect(plan.lock).toBe("/home/ubuntu/build/locks/heavy.lock");
   for (const step of plan.steps) {
     expect(step.command.slice(0, 3)).toEqual([
       "bun",
       "/home/ubuntu/src/aphrody/packages/infra/workspace/src/build-factory-cleanup.ts",
-      "/home/ubuntu/builds/bun-os-factory/sources/bun/tools/config/fusion-factory.json",
+      "/home/ubuntu/src/bun/tools/config/fusion-factory.json",
     ]);
-    expect(step.command).toContain("-j2");
+    expect(step.directory).toBe(plan.source);
+    expect(step.command).toContain("-j12");
+    expect(step.command).toContain("--link-threads=12");
+    expect(step.command).toContain("--cache-dir=/home/ubuntu/build/storage/bun/factory/cache");
     expect(
       step.command.some(arg =>
-        arg.startsWith("--build-dir=/home/ubuntu/builds/bun-os-factory/artifacts/runtime-release/"),
+        arg.startsWith("--build-dir=/home/ubuntu/build/storage/bun/factory/artifacts/runtime-release/"),
       ),
     ).toBe(true);
   }
@@ -102,10 +111,10 @@ test("VPS release plan keeps execution with the serialized Infra resource owner"
   expect(plan.mullvadSidecar.target).toBe("x86_64-unknown-linux-gnu");
   expect(plan.mullvadSidecar.workingDirectory).toBe(`${plan.source}/vendor/mullvad`);
   expect(plan.mullvadSidecar.lock).toBe("/home/ubuntu/build/locks/heavy.lock");
-  expect(plan.mullvadSidecar.outputDirectory).toBe("/home/ubuntu/builds/bun-os-factory/artifacts/runtime-release");
-  expect(plan.mullvadSidecar.workDirectory).toContain("/home/ubuntu/builds/bun-os-factory/transient/mullvad-");
+  expect(plan.mullvadSidecar.outputDirectory).toBe("/home/ubuntu/build/storage/bun/factory/artifacts/runtime-release");
+  expect(plan.mullvadSidecar.workDirectory).toContain("/home/ubuntu/build/storage/bun/factory/transient/mullvad-");
   expect(plan.mullvadSidecar.log).toBe(
-    "/home/ubuntu/builds/bun-os-factory/artifacts/runtime-release/mullvad-linux-x64.log",
+    "/home/ubuntu/build/storage/bun/factory/artifacts/runtime-release/mullvad-linux-x64.log",
   );
   expect(plan.mullvadSidecar.runtimeLinked).toBe(false);
   expect(plan.mullvadSidecar.performanceQualified).toBe(false);
@@ -116,4 +125,20 @@ test("VPS release plan keeps execution with the serialized Infra resource owner"
     `${plan.source}/vendor/mullvad/target/x86_64-unknown-linux-gnu/release/relay-list`,
     `${plan.mullvadSidecar.workDirectory}/relays.json`,
   ]);
+});
+
+test("VPS resource budgets share the factory config without changing generic native allocation", async () => {
+  const config = await Bun.file(new URL("../../tools/config/fusion-factory.json", import.meta.url)).json();
+  const plan = vpsRuntimeReleasePlan("a".repeat(40), ["windows-x64"]);
+  expect(plan.source).toBe(config.workspaceRoot);
+  expect(config.repositories["bun-os"]).toBe(plan.source);
+  expect(plan.maxJobs).toBe(config.rust.maxJobs);
+  expect(plan.reserveDiskGiB).toBe(config.resources.reserveDiskGiB);
+  expect(plan.reserveMemoryGiB).toBe(config.resources.reserveMemoryGiB);
+  expect(plan.memoryPerJobGiB).toBe(config.resources.memoryPerJobGiB);
+  const native = nativeFullReleasePlan("a".repeat(40));
+  expect(native.maxJobs).toBe(2);
+  expect(native.parallelHeavyJobsPerHost).toBe(1);
+  expect(native.targets.find(target => target.target === "windows-x64")!.command).toContain("-j2");
+  expect(native.targets.every(target => !target.command.includes("-j12"))).toBe(true);
 });

@@ -4,16 +4,16 @@
   "enabled": true,
   "target": "vps",
   "executionOnlyTargets": [],
-  "workspaceRoot": "/home/ubuntu/builds/bun-os-factory/sources/bun",
-  "cacheRoot": "/home/ubuntu/builds/bun-os-factory/cache",
-  "artifactRoot": "/home/ubuntu/builds/bun-os-factory/artifacts",
+  "workspaceRoot": "/home/ubuntu/src/bun",
+  "cacheRoot": "/home/ubuntu/build/storage/bun/factory/cache",
+  "artifactRoot": "/home/ubuntu/build/storage/bun/factory/artifacts",
   "lockPath": "/home/ubuntu/build/locks/heavy.lock",
   "hostEnvironment": {
     "name": "APHRODY_BUILD_HOST",
     "value": "vps"
   },
   "rust": {
-    "maxJobs": 6,
+    "maxJobs": 12,
     "serialized": true,
     "wrapper": "scripts/build/rust/cargo-serial.sh",
     "incremental": false,
@@ -24,13 +24,7 @@
     "frozenLockfile": true
   },
   "local": {
-    "allowed": [
-      "help",
-      "plan",
-      "inventory",
-      "source-edit",
-      "scoped-static-check"
-    ],
+    "allowed": ["help", "plan", "inventory", "source-edit", "scoped-static-check"],
     "heavyExecution": "remote"
   },
   "transport": {
@@ -53,11 +47,16 @@
     "cleanup": "existing-infra-allowlist-only"
   },
   "repositories": {
-    "bun-os": "/home/ubuntu/builds/bun-os-factory/sources/bun"
+    "bun-os": "/home/ubuntu/src/bun"
   },
   "cleanup": {
-    "transientRoot": "/home/ubuntu/builds/bun-os-factory/transient",
+    "transientRoot": "/home/ubuntu/build/storage/bun/factory/transient",
     "privilegeBinary": "/usr/bin/sudo-rs",
     "retiredOutputs": []
+  },
+  "resources": {
+    "reserveMemoryGiB": 8,
+    "reserveDiskGiB": 32,
+    "memoryPerJobGiB": 1
   }
 }

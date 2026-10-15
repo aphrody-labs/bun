@@ -4,6 +4,7 @@ import { buildArgs, findTarget, releaseTargets, type ReleaseTarget } from "./bui
 import { createMullvadBuildPlan } from "./mullvad-sidecar.ts";
 import { findWorkspaceRoot } from "./workspace-paths.ts";
 import bootstraps from "./release-bootstraps.json";
+import factory from "../../tools/config/fusion-factory.json";
 
 export type RuntimeFlavor = "perf" | "full";
 export type RuntimeReleaseTarget = ReleaseTarget & {
@@ -163,9 +164,9 @@ export function runtimeFlavorManifest(target: RuntimeReleaseTarget, revision: st
 /** Plan only: execution and live resources remain owned by the Infra factory. */
 export function vpsRuntimeReleasePlan(revision: string, targets: string[] = [], mullvadSource?: string) {
   if (!/^[a-f0-9]{40}$/.test(revision)) throw new Error("Factory source must be an immutable revision");
-  const source = "/home/ubuntu/builds/bun-os-factory/sources/bun";
-  const artifacts = "/home/ubuntu/builds/bun-os-factory/artifacts/runtime-release";
-  const mullvadWork = `/home/ubuntu/builds/bun-os-factory/transient/mullvad-${revision.slice(0, 12)}`;
+  const source = factory.workspaceRoot;
+  const artifacts = `${factory.artifactRoot}/runtime-release`;
+  const mullvadWork = `${factory.cleanup.transientRoot}/mullvad-${revision.slice(0, 12)}`;
   const resource = "/home/ubuntu/src/aphrody/packages/infra/workspace/src/build-factory-cleanup.ts";
   const config = source + "/tools/config/fusion-factory.json";
   const selected = runtimeReleaseMatrix(targets);
@@ -177,10 +178,12 @@ export function vpsRuntimeReleasePlan(revision: string, targets: string[] = [], 
     host: "vps",
     source,
     executionOwner: "aphrody infra ssh exec --host vps",
-    lock: "/home/ubuntu/build/locks/heavy.lock",
-    maxJobs: 2,
-    reserveDiskGiB: 8,
-    reserveMemoryGiB: 2,
+    lock: factory.lockPath,
+    maxJobs: factory.rust.maxJobs,
+    linkThreads: factory.rust.maxJobs,
+    reserveDiskGiB: factory.resources.reserveDiskGiB,
+    reserveMemoryGiB: factory.resources.reserveMemoryGiB,
+    memoryPerJobGiB: factory.resources.memoryPerJobGiB,
     parallelHeavyJobs: 1,
     requires: [
       "clean committed source at revision",
@@ -198,7 +201,9 @@ export function vpsRuntimeReleasePlan(revision: string, targets: string[] = [], 
         "bun",
         "scripts/build.ts",
         ...runtimeFlavorArgs(target),
-        "-j2",
+        `-j${factory.rust.maxJobs}`,
+        `--link-threads=${factory.rust.maxJobs}`,
+        `--cache-dir=${factory.cacheRoot}`,
         `--build-dir=${artifacts}/${target.triplet}`,
       ],
       qualification:
