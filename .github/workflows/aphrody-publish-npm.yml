@@ -47,9 +47,31 @@ jobs:
         with:
           bun-version: latest
       - name: Test publish script
-        run: bun test test/internal/aphrody-publish-npm.test.ts
+        run: bun test ./test/internal/aphrody-publish-npm.test.ts ./scripts/aphrody/release-portable-npm.test.ts
+      - name: Select exact publication qualification
+        id: qualification
+        env:
+          ONLY: ${{ inputs.only }}
+        run: |
+          route=$(bun scripts/aphrody/release-portable-npm.ts route --only "$ONLY")
+          printf 'kind=%s\n' "$route" >> "$GITHUB_OUTPUT"
+      - name: Qualify exact portable source archives and consumers
+        id: portable
+        if: inputs.dry-run != true && steps.qualification.outputs.kind == 'portable-source'
+        env:
+          ONLY: ${{ inputs.only }}
+        run: |
+          stable=""; case "$GITHUB_REF_NAME" in bun-v*) stable="--stable";; esac
+          bun scripts/aphrody/release-portable-npm.ts qualify --only "$ONLY" --source "$GITHUB_SHA" --out "$RUNNER_TEMP/portable-npm" $stable
+      - name: Retain portable source qualification evidence
+        if: always() && inputs.dry-run != true && steps.qualification.outputs.kind == 'portable-source'
+        uses: actions/upload-artifact@v6
+        with:
+          name: portable-npm-source-qualification
+          path: ${{ runner.temp }}/portable-npm
+          if-no-files-found: error
       - name: Verify eight native full release receipts before publication
-        if: inputs.dry-run != true
+        if: inputs.dry-run != true && steps.qualification.outputs.kind != 'portable-source'
         env:
           GH_TOKEN: ${{ secrets.APHRODY_SYNC_TOKEN || github.token }}
           QUALIFICATION_TAG: ${{ inputs.qualification-tag || github.ref_name }}
@@ -62,6 +84,7 @@ jobs:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           DRY_RUN: ${{ inputs.dry-run && '--dry-run' || '' }}
           ONLY: ${{ inputs.only }}
+          QUALIFICATION_KIND: ${{ steps.qualification.outputs.kind }}
         run: |
           auth_config=$(mktemp "$RUNNER_TEMP/aphrody-npmrc.XXXXXX")
           cleanup_auth() {
@@ -76,6 +99,10 @@ jobs:
           test ! -e "$HOME/.npmrc" && test ! -L "$HOME/.npmrc"
           ln -s "$auth_config" "$HOME/.npmrc"
           stable=""; case "$GITHUB_REF_NAME" in bun-v*) stable="--stable";; esac
-          bun scripts/aphrody/publish-npm.ts $DRY_RUN $stable ${ONLY:+--only "$ONLY"} --out "$RUNNER_TEMP/aphrody-npm"
+          portable_receipt=""
+          if [ "$QUALIFICATION_KIND" = portable-source ] && [ -z "$DRY_RUN" ]; then
+            portable_receipt="$RUNNER_TEMP/portable-npm/portable-npm-qualification.json"
+          fi
+          bun scripts/aphrody/publish-npm.ts $DRY_RUN $stable ${ONLY:+--only "$ONLY"} ${portable_receipt:+--portable-qualification "$portable_receipt"} --out "$RUNNER_TEMP/aphrody-npm"
           # A first publish of a new name leaves an npm 0.0.0-stage placeholder; deprecate it.
           bun scripts/aphrody/npm-placeholder.ts retire $DRY_RUN

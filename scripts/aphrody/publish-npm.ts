@@ -73,12 +73,44 @@ export function validateOutputDirectory(output: string, root = ROOT, temporary =
   return destination;
 }
 
-export async function exportTrackedPackage(root: string, revision: string, directory: string, destination: string) {
+export async function exportTrackedPackage(
+  root: string,
+  revision: string,
+  directory: string,
+  destination: string,
+  sourcePaths?: readonly string[],
+) {
   if (!/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/.test(revision) || !/^packages\/[^/\\:]+$/.test(directory))
     throw new Error("Expected an immutable source revision and one package directory");
   validateOutputDirectory(destination, root);
   if (existsSync(destination)) throw new Error("Package export destination must not exist");
-  const listing = run(["git", "ls-tree", "-rz", "--long", "--full-tree", revision, "--", directory], root);
+  if (
+    sourcePaths &&
+    (!sourcePaths.includes("package.json") ||
+      sourcePaths.some(
+        path =>
+          !path ||
+          /[\\:\0*?{}]/.test(path) ||
+          path.includes("[") ||
+          path.includes("]") ||
+          path.split("/").some(part => !part || part === "." || part === ".."),
+      ))
+  )
+    throw new Error("Expected exact package source paths including its manifest");
+  const listing = run(
+    [
+      "git",
+      "--literal-pathspecs",
+      "ls-tree",
+      "-rz",
+      "--long",
+      "--full-tree",
+      revision,
+      "--",
+      ...(sourcePaths ? sourcePaths.map(path => `${directory}/${path}`) : [directory]),
+    ],
+    root,
+  );
   const entries = listing
     .split("\0")
     .filter(Boolean)
@@ -163,6 +195,7 @@ export async function exportTrackedPackage(root: string, revision: string, direc
   return {
     sourceRevision: revision,
     directory,
+    ...(sourcePaths ? { sourcePaths } : {}),
     files: files.map(file => ({
       path: file.path,
       mode: file.mode,
@@ -183,6 +216,8 @@ export interface PackageSpec {
   /** Preparation invokes a build; excluded from no-build publication. */
   requiresBuild?: boolean;
   buildOutputs?: string[];
+  /** Exact source roots for source-only facades; manifest expansion must remain within them. */
+  sourcePaths?: readonly string[];
   /** Sources read by preparation outside the exported package. */
   sourceInputs?: (root: string) => string[];
   /** Read-only projections qualified by importing them on native Windows. */
@@ -340,9 +375,9 @@ export const PACKAGES: PackageSpec[] = [
   { dir: "bun-plugin-neon" },
   { dir: "bun-plugin-supabase" },
   { dir: "bun-runtime-sdk" },
-  { dir: "bun-supervisor", name: "supervisor" },
-  { dir: "bun-tools" },
-  { dir: "bun-tauri", name: "tauri" },
+  { dir: "bun-supervisor", name: "supervisor", sourcePaths: ["src", "systemd"] },
+  { dir: "bun-tools", sourcePaths: ["src"] },
+  { dir: "bun-tauri", name: "tauri", sourcePaths: ["js", "crates/tauri-plugin-aphrody/iife"] },
   { dir: "bun-nginx", bunVersion: true },
   // REST services and explicit credential adapters over the qualified bun:google builtin.
   { dir: "bun-google", bunVersion: true },
@@ -593,11 +628,64 @@ export async function verifyPreparedPackage(
   return outputs;
 }
 
-async function stage(spec: PackageSpec, out: string, base: string, sourceRevision: string): Promise<string> {
+export function facadeSourcePaths(
+  manifest: Record<string, any>,
+  declared: readonly string[],
+  rootNames: readonly string[],
+): string[] {
+  const metadata = rootNames.filter(name => /^(?:licen[cs]e|readme|notice)(?:[._-].*)?$/i.test(name));
+  const selected = ["package.json", ...declared, ...metadata];
+  const covered = (written: string) => {
+    const path = written.replace(/^\.\//, "");
+    if (!path || /[\\:\0]/.test(path) || path.split("/").some(part => part === ".." || part === ".")) return false;
+    if (!/[?*[{]/.test(path)) return selected.some(root => path === root || path.startsWith(root + "/"));
+    if (!path.includes("/")) {
+      const matches = rootNames.filter(name => new Bun.Glob(path).match(name));
+      return matches.length > 0 && matches.every(name => metadata.includes(name));
+    }
+    const firstGlob = path.search(/[?*[{]/);
+    const prefix = path.slice(0, path.lastIndexOf("/", firstGlob) + 1).replace(/\/$/, "");
+    return declared.some(root => prefix === root || prefix.startsWith(root + "/"));
+  };
+  if (
+    !Array.isArray(manifest.files) ||
+    !manifest.files.length ||
+    manifest.files.some(path => typeof path !== "string" || !covered(path))
+  )
+    throw new Error("Facade files exceed the qualified source closure");
+  const targets = (value: unknown): boolean => {
+    if (typeof value === "string") return covered(value);
+    if (value && typeof value === "object") return Object.values(value).every(targets);
+    return false;
+  };
+  for (const field of ["exports", "main", "module", "types", "bin"])
+    if (manifest[field] !== undefined && !targets(manifest[field]))
+      throw new Error("Facade entrypoints exceed the qualified source closure");
+  return [...new Set(selected)].sort();
+}
+
+export function packageSourcePaths(root: string, revision: string, spec: PackageSpec, manifest: Record<string, any>) {
+  if (!spec.sourcePaths) return undefined;
+  if (!/^[a-f0-9]{40}(?:[a-f0-9]{24})?$/.test(revision) || !/^[^/\\:]+$/.test(spec.dir))
+    throw new Error("Expected pinned package source selection");
+  const names = run(["git", "ls-tree", "--name-only", "-z", `${revision}:packages/${spec.dir}`], root)
+    .split("\0")
+    .filter(Boolean);
+  return facadeSourcePaths(manifest, spec.sourcePaths, names);
+}
+
+async function stage(
+  spec: PackageSpec,
+  out: string,
+  base: string,
+  sourceRevision: string,
+  manifest: Record<string, any>,
+): Promise<string> {
   const staging = join(out, spec.dir);
   validateOutputDirectory(staging);
   rmSync(staging, { recursive: true, force: true });
-  const receipt = await exportTrackedPackage(ROOT, sourceRevision, `packages/${spec.dir}`, staging);
+  const sourcePaths = packageSourcePaths(ROOT, sourceRevision, spec, manifest);
+  const receipt = await exportTrackedPackage(ROOT, sourceRevision, `packages/${spec.dir}`, staging, sourcePaths);
   await spec.prepare?.(staging, { base });
   const outputs = await verifyPreparedPackage(staging, receipt.files, spec.buildOutputs ?? []);
   if (!readdirSync(staging).some(f => /^licen[cs]e/i.test(f))) {
@@ -658,6 +746,7 @@ export async function publishAll(opts: {
   only?: string[];
   out?: string;
   registry?: string;
+  portableQualification?: string;
 }): Promise<Result[]> {
   if (opts.only?.some(dir => !PACKAGES.some(spec => spec.dir === dir)))
     throw new Error("Unknown package directory in --only");
@@ -738,8 +827,8 @@ export async function publishAll(opts: {
       throw new Error(`${name}: registry stable versions exceed the requested runtime ${base}`);
     }
 
-    const staging = await stage(spec, out, base, sourceRevision);
     const manifest = publishManifest(srcPkg, spec, next, resolved);
+    const staging = await stage(spec, out, base, sourceRevision, manifest);
     await Bun.write(join(staging, "package.json"), JSON.stringify(manifest, null, 2) + "\n");
     const tgz = pack(staging, join(out, "tarballs", spec.dir), opts.noBuild);
     if (!opts.dryRun) assertPublicationSources(ROOT, sourceRevision, sourcePaths);
@@ -791,6 +880,15 @@ export async function publishAll(opts: {
       });
       continue;
     }
+    if (opts.portableQualification) {
+      const { verifyPortableNpmPublication } = await import("./release-portable-npm.ts");
+      await verifyPortableNpmPublication(opts.portableQualification, {
+        source: sourceRevision,
+        only: opts.only?.join(",") ?? "",
+        directory: spec.dir,
+        archive: tgz,
+      });
+    }
     run(
       [
         process.execPath,
@@ -837,6 +935,7 @@ if (import.meta.main) {
     ...(value("--only") ? { only: value("--only")!.split(",") } : {}),
     ...(value("--out") ? { out: value("--out")! } : {}),
     ...(value("--registry") ? { registry: value("--registry")! } : {}),
+    ...(value("--portable-qualification") ? { portableQualification: value("--portable-qualification")! } : {}),
   });
   const reportPath = value("--report");
   if (reportPath) {

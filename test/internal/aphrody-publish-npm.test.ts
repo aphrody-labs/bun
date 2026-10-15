@@ -13,6 +13,7 @@ import {
   verifyPreparedPackage,
   assertPublicationSources,
   assertLatestVersionDoesNotRegress,
+  facadeSourcePaths,
 } from "../../scripts/aphrody/publish-npm.ts";
 import { tempDir } from "harness";
 import { join } from "node:path";
@@ -25,6 +26,29 @@ test("publication cannot downgrade independent Windows or SDK latest identities"
   expect(() => assertLatestVersionDoesNotRegress("1.4.11", "1.4.10")).not.toThrow();
   expect(() => assertLatestVersionDoesNotRegress("71.0.30-preview", "71.0.30-preview")).not.toThrow();
   expect(() => assertLatestVersionDoesNotRegress("1.4.4")).not.toThrow();
+});
+
+test("source facade selections retain metadata and reject new unqualified shipped roots", () => {
+  const manifest = {
+    files: ["js", "LICENSE-*", "README.md"],
+    exports: { ".": "./js/index.ts", "./api/*": "./js/api/*.ts" },
+  };
+  expect(
+    facadeSourcePaths(
+      manifest,
+      ["js"],
+      ["package.json", "README.md", "LICENSE-MIT", "LICENSE-APACHE-2.0", "NOTICE", "crates"],
+    ),
+  ).toEqual(["LICENSE-APACHE-2.0", "LICENSE-MIT", "NOTICE", "README.md", "js", "package.json"]);
+  expect(() => facadeSourcePaths({ ...manifest, files: [...manifest.files, "native"] }, ["js"], ["README.md"])).toThrow(
+    "source closure",
+  );
+  expect(() =>
+    facadeSourcePaths({ ...manifest, exports: { ".": "./assets/generated.js" } }, ["js"], ["README.md"]),
+  ).toThrow("source closure");
+  expect(() => facadeSourcePaths({ ...manifest, bin: { command: "native/cli" } }, ["js"], ["README.md"])).toThrow(
+    "source closure",
+  );
 });
 
 test("portable facade archives preserve exports and import without activating native payloads", async () => {
@@ -45,7 +69,7 @@ test("portable facade archives preserve exports and import without activating na
     await command([
       process.execPath,
       "-e",
-      `import{exportTrackedPackage}from${JSON.stringify(join(checkout, "scripts/aphrody/publish-npm.ts"))};await exportTrackedPackage(${JSON.stringify(checkout)},${JSON.stringify(revision)},${JSON.stringify(`packages/${dir}`)},${JSON.stringify(sourceRoot)});`,
+      `import{exportTrackedPackage,packageSourcePaths,PACKAGES}from${JSON.stringify(join(checkout, "scripts/aphrody/publish-npm.ts"))};const spec=PACKAGES.find(s=>s.dir===${JSON.stringify(dir)});const manifest=JSON.parse(Bun.spawnSync(["git","show",${JSON.stringify(`${revision}:packages/${dir}/package.json`)}],{cwd:${JSON.stringify(checkout)}}).stdout.toString());await exportTrackedPackage(${JSON.stringify(checkout)},${JSON.stringify(revision)},${JSON.stringify(`packages/${dir}`)},${JSON.stringify(sourceRoot)},packageSourcePaths(${JSON.stringify(checkout)},${JSON.stringify(revision)},spec,manifest));`,
     ]);
     const archive = join(root, `${dir}.tgz`);
     await command([process.execPath, "pm", "pack", "--ignore-scripts", "--filename", archive], sourceRoot);
