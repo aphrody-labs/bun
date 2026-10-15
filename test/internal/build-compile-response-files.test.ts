@@ -1,11 +1,13 @@
 import { describe, expect, test } from "bun:test";
+import { resolve } from "node:path";
 
 import { registerCompileRules } from "../../scripts/build/compile.ts";
 import type { Config } from "../../scripts/build/config.ts";
 import { Ninja } from "../../scripts/build/ninja.ts";
 
 function rules(host: "windows" | "linux", windows: boolean) {
-  const buildDir = "C:/build";
+  // Ninja requires a buildDir that is absolute on the host running the test.
+  const buildDir = resolve("/build");
   const cfg = {
     buildDir,
     host: { os: host },

@@ -288,22 +288,6 @@
       "visibility": "PUBLIC"
     },
     {
-      "repo": "jonnyburger/mp4-rust",
-      "kind": "cargo-git",
-      "ref": "92ba375738cc2f05a4d754e1f968cf2e97d06641",
-      "usedBy": ["packages/bun-video/remotion/compositor/Cargo.toml"],
-      "internal": false,
-      "visibility": "PUBLIC"
-    },
-    {
-      "repo": "remotion-dev/rust-ffmpeg",
-      "kind": "cargo-git",
-      "ref": "05791070b6ca8ed8d0940a9251f7e41f570634ee",
-      "usedBy": ["packages/bun-video/remotion/compositor/Cargo.toml"],
-      "internal": false,
-      "visibility": "PUBLIC"
-    },
-    {
       "repo": "aphrody-labs/wry",
       "kind": "cargo-git",
       "ref": "dev",
