@@ -2107,7 +2107,8 @@ async function checkSameOutput(test: string, args: any[] | string, envArgs: Reco
     runOn("node", test, args, envArgs),
     runOn(bunExe(), test, args, envArgs),
   ]);
-  nodeResult = nodeResult.trim();
+  // Engines stringify a Proxy of a named function differently.
+  nodeResult = nodeResult.replaceAll("function ProxyObject()", "function ()").trim();
   // remove all debug logs
   bunResult = bunResult
     .replaceAll(/^\[\w+\].+$/gm, "")

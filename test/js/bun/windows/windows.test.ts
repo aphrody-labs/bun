@@ -103,6 +103,20 @@ describe.skipIf(!isWindows)("bun:windows", () => {
     }
   });
 
+  test("theme", () => {
+    const t = windows.theme.get();
+    expect(t.mode).toBeOneOf(["light", "dark"]);
+    expect(t.systemMode).toBeOneOf(["light", "dark"]);
+    if (t.accent !== null) expect(t.accent).toMatch(/^#[0-9a-f]{6}$/);
+    for (const color of Object.values(t.palette)) expect(color).toMatch(/^#[0-9a-f]{6}$/);
+    if (t.palette.accent) expect(t.accent).toBe(t.palette.accent);
+    expect(() => windows.theme.applyWindow(0, { backdrop: "mica" })).toThrow();
+    expect(() => windows.theme.applyWindow(1n, { backdrop: "glass" as any })).toThrow();
+    const stop = windows.theme.watch(() => {});
+    expect(stop).toBeFunction();
+    stop();
+  });
+
   test("registry round-trip", () => {
     const key = `HKCU\\Software\\BunTest-${process.pid}`;
     const { registry } = windows;
