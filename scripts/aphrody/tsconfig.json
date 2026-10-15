@@ -1,0 +1,10 @@
+{
+  "extends": "../build/tsconfig.json",
+  "compilerOptions": {
+    // These orchestration scripts execute in Bun, including its test runner.
+    "lib": ["ESNext", "DOM"],
+    "erasableSyntaxOnly": false,
+    "types": ["../../packages/bun-types"]
+  },
+  "include": ["./**/*.ts"]
+}

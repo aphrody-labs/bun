@@ -21,4 +21,5 @@ export function findWorkspaceRoot(...starts: string[]): string | undefined {
       current = parent;
     }
   }
+  return undefined;
 }
