@@ -53,7 +53,8 @@ existing libav provider; GPU and mpv features remain disabled for this path.
 Build with `bun bd --video-native=on` to opt in; standard builds leave it off.
 
 ```ts
-if (!Bun.Video.available) throw new Error("This runtime has no native video provider");
+if (!Bun.Video.available)
+  throw new Error("This runtime has no native video provider");
 const video = new Bun.Video(Bun.file("/media/input.mp4"));
 const metadata = await video.metadata();
 const frame = await video.frame(12).resize(320, 180).png().bytes();
@@ -251,13 +252,17 @@ unqualified.
 ## Registry bindings replacement
 
 Registry archives checked on 2026-10-13 provide `ffmpeg-next =9.0.0` and
-`ffmpeg-sys-next =9.0.1`. Their checksums and source commits are recorded in
-the existing `vendor/ffmpeg-rs/UPSTREAM.json` and
-`vendor/ffmpeg-sys-rs/UPSTREAM.json`. The published wrapper already includes
+`ffmpeg-sys-next =9.0.1`, built from
+[zmwangx/rust-ffmpeg@3751e28](https://github.com/zmwangx/rust-ffmpeg/tree/3751e2800d5d2f0215d69031285aadebac5db8fc)
+and
+[zmwangx/rust-ffmpeg-sys@ba293c6](https://github.com/zmwangx/rust-ffmpeg-sys/tree/ba293c6ffa4a5f2f745df024c96b54b5c94abd84).
+Cargo records their checksums. The published wrapper already includes
 `StreamIo`, `from_read_seek` and `input_from_stream_with_interrupt`; moving
 those methods into a second implementation is unnecessary.
 
-The current wrapper source also contains six local compatibility changes for
+The former reference snapshot of
+[zmwangx/rust-ffmpeg@9b9c0b9](https://github.com/zmwangx/rust-ffmpeg/tree/9b9c0b9ba061a019d03807d339fcdd85e3ea9c97)
+carried six local compatibility changes for
 FFmpeg codec, pixel/sample format and side-data enums. The published 9.0.0
 wrapper does not include those additions. Its conversions use exhaustive
 matches; enabling `non-exhaustive-enums` introduces `unimplemented!()` for

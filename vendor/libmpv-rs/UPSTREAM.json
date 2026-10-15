@@ -1,6 +1,0 @@
-{
-  "repository": "https://github.com/kohsine/libmpv2-rs",
-  "commit": "d7ccfafff663d7c731d33383f6ec74247c8dd1dc",
-  "archiveSha256": "dc108260fcd090a20f9e38ffed86688491ca442e35eb135d8a5f3cc86cf503fc",
-  "role": "native API reference; not linked into Bun yet"
-}

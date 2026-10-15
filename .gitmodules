@@ -1,9 +1,6 @@
 [submodule "@aphrody/m3"]
 	path = packages/aphrody-migrated/m3/aphrody-m3
 	url = https://github.com/aphrody-labs/aphrody-m3.git
-[submodule "aphrody-worktrunk"]
-	path = vendor/worktrunk
-	url = https://github.com/aphrody-labs/worktrunk.git
 [submodule "vendor/fluentui"]
 	path = vendor/fluentui
 	url = https://github.com/aphrody-labs/fluentui.git
