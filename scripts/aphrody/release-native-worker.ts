@@ -1,5 +1,5 @@
-import { chmod, mkdir, statfs } from "node:fs/promises";
-import { freemem } from "node:os";
+import { chmod, lstat, mkdir, realpath, stat, statfs } from "node:fs/promises";
+import { availableParallelism, freemem } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve, posix } from "node:path";
 import { pins, locations } from "../build/ci-images/spec";
 import {
@@ -137,8 +137,49 @@ export async function nativeAvailableMemory(
   return budget;
 }
 
-export function nativeRuntimeBuildFlags(target: Parameters<typeof runtimeFlavorArgs>[0], sysroot?: string): string[] {
+export interface NativeRuntimeResources {
+  jobs: number;
+  linkThreads: number;
+}
+export function nativeRuntimeResources(
+  env: Readonly<Record<string, string | undefined>> = process.env,
+): NativeRuntimeResources {
+  const count = (value: string | undefined) => {
+    if (value === undefined) return 2;
+    if (!/^[1-9]\d{0,3}$/.test(value) || Number(value) > 1024)
+      throw Error("Invalid explicit native runtime resource budget");
+    return Number(value);
+  };
+  return { jobs: count(env.BUN_NATIVE_RUNTIME_JOBS), linkThreads: count(env.BUN_NATIVE_RUNTIME_LINK_THREADS) };
+}
+/** Ninja changes to the physical directory, so emitted relative inputs must use that same base. */
+export async function nativeRuntimeBuildDirectory(sourceRoot: string): Promise<string> {
+  const logical = join(resolve(sourceRoot), "build/release");
+  let info;
+  try {
+    info = await lstat(logical);
+  } catch (error) {
+    if ((error as { code?: string }).code === "ENOENT") return logical;
+    throw error;
+  }
+  if (!info.isDirectory() && !info.isSymbolicLink()) throw Error("Native runtime build directory is not a directory");
+  const physical = await realpath(logical);
+  if (!(await stat(physical)).isDirectory()) throw Error("Native runtime build target is not a directory");
+  return physical;
+}
+export function nativeRuntimeBuildFlags(
+  target: Parameters<typeof runtimeFlavorArgs>[0],
+  sysroot?: string,
+  options: Partial<NativeRuntimeResources> & { buildDir?: string } = {},
+): string[] {
   if (target.flavor !== "full") throw new Error("Native producer requires the full runtime profile");
+  const jobs = options.jobs ?? 2,
+    linkThreads = options.linkThreads ?? 2;
+  if (
+    ![jobs, linkThreads].every(value => Number.isSafeInteger(value) && value >= 1 && value <= 1024) ||
+    (options.buildDir !== undefined && !isAbsolute(options.buildDir))
+  )
+    throw Error("Invalid native runtime build options");
   return [
     ...runtimeFlavorArgs(target),
     "--ci=on",
@@ -148,24 +189,34 @@ export function nativeRuntimeBuildFlags(target: Parameters<typeof runtimeFlavorA
     "--curl-native=on",
     "--browser-crawl=on",
     "--browser-index=on",
-    "--link-threads=2",
-    "-j2",
+    "--google-search=on",
+    `--link-threads=${linkThreads}`,
+    `-j${jobs}`,
     ...(sysroot ? [`--linux-sysroot=${sysroot}`] : []),
+    ...(options.buildDir ? [`--build-dir=${options.buildDir}`] : []),
   ];
 }
 
-export function nativeCapacity(input: { freeDisk: number; freeMemory: number; cpus: number }) {
-  const required = { disk: 20 * GiB, memory: 6 * GiB, cpus: 2 };
+export function nativeCapacity(
+  input: { freeDisk: number; freeMemory: number; cpus: number },
+  resources: NativeRuntimeResources = { jobs: 2, linkThreads: 2 },
+) {
+  const threads = Math.max(2, resources.jobs, resources.linkThreads);
+  if (
+    ![resources.jobs, resources.linkThreads].every(value => Number.isSafeInteger(value) && value >= 1 && value <= 1024)
+  )
+    throw Error("Invalid explicit native runtime resource budget");
+  const required = { disk: 20 * GiB, memory: 6 * GiB, cpus: threads };
   if (
     !Object.values(input).every(Number.isFinite) ||
     input.freeDisk < required.disk ||
     input.freeMemory < required.memory ||
     input.cpus < required.cpus
   )
-    throw new Error(
-      `Native capacity insufficient: require ${required.disk / GiB} GiB free disk, 6 GiB available RAM and 2 native CPUs`,
+    throw Error(
+      `Native capacity insufficient: require ${required.disk / GiB} GiB free disk, ${required.memory / GiB} GiB available RAM and ${required.cpus} native CPUs`,
     );
-  return { ...input, required, maxJobs: 2 };
+  return { ...input, required, maxJobs: resources.jobs, linkThreads: resources.linkThreads };
 }
 
 export function nativeOwnerPrerequisites(target: string, plans?: MediaSDKDescriptor[]) {
@@ -286,11 +337,14 @@ async function preflight(input: WorkerInput) {
     throw new Error(`Runner cannot execute native ${input.target}; emulation and cross tests are insufficient`);
   await sourceIdentity(input, diagnostics);
   const disk = await statfs(input.output);
-  const capacity = nativeCapacity({
-    freeDisk: disk.bavail * disk.bsize,
-    freeMemory: await nativeAvailableMemory(),
-    cpus: navigator.hardwareConcurrency,
-  });
+  const capacity = nativeCapacity(
+    {
+      freeDisk: disk.bavail * disk.bsize,
+      freeMemory: await nativeAvailableMemory(),
+      cpus: availableParallelism(),
+    },
+    nativeRuntimeResources(),
+  );
   const missing = nativeOwnerPrerequisites(input.target);
   const observation = {
     schema: 1,
@@ -353,8 +407,15 @@ async function requireAVIO(prefix: string, input: WorkerInput) {
 async function produce(input: WorkerInput) {
   const diagnostics = await preflight(input);
   const target = mediaReleaseTarget(input.target);
-  if (target.abi === "musl" && !mediaSDKHostTarget().endsWith("-musl")) return produceMusl(input, diagnostics);
+  const resources = nativeRuntimeResources();
+  if (target.abi === "musl" && !mediaSDKHostTarget().endsWith("-musl")) {
+    if (resources.jobs !== 2 || resources.linkThreads !== 2)
+      throw Error("Explicit runtime budget requires a native runner; musl container retains its two-CPU allocation");
+    return produceMusl(input, diagnostics);
+  }
   if (mediaSDKHostTarget() !== target.sdkTarget) throw new Error("Native producer ABI differs from requested target");
+  const logicalBuildDir = join(input.root, "build/release");
+  const buildDir = await nativeRuntimeBuildDirectory(input.root);
   const run = async (id: string, argv: string[], timeout = 120_000, cwd = input.root) =>
     command(argv, cwd, join(diagnostics, `${id}.log`), { timeout });
   await run(
@@ -401,15 +462,38 @@ async function produce(input: WorkerInput) {
       : undefined;
   if (sysroot && !(await Bun.file(join(sysroot, "usr/include/stdio.h")).exists()))
     throw new Error(`Pinned target sysroot missing: ${sysroot}; scripts/build/ci-images/spec.ts owns its provisioning`);
-  const buildFlags = nativeRuntimeBuildFlags(target, sysroot);
+  if ((await nativeRuntimeBuildDirectory(input.root)) !== buildDir)
+    throw Error("Native runtime build directory changed");
+  const buildFlags = nativeRuntimeBuildFlags(target, sysroot, {
+    ...resources,
+    ...(buildDir !== logicalBuildDir ? { buildDir } : {}),
+  });
+  await Bun.write(
+    join(diagnostics, "runtime-build-layout.json"),
+    JSON.stringify(
+      {
+        schema: 1,
+        source: input.source,
+        sourceRoot: input.root,
+        logicalBuildDir,
+        physicalBuildDir: buildDir,
+        resources,
+        buildFlags,
+      },
+      null,
+      2,
+    ) + "\n",
+  );
   // bun bd owns its build lock; its build is intentionally not terminated by a command timeout.
   await command(
     [process.execPath, "--no-env-file", "bd", ...buildFlags, "--target=bun-profile"],
     input.root,
     join(diagnostics, "runtime-build.log"),
-    { env: { GIT_SHA: input.source } },
+    {
+      env: { GIT_SHA: input.source, CARGO_BUILD_JOBS: String(resources.jobs), OMP_NUM_THREADS: String(resources.jobs) },
+    },
   );
-  const runtime = join(input.root, "build/release", target.os === "windows" ? "bun-profile.exe" : "bun-profile");
+  const runtime = join(buildDir, target.os === "windows" ? "bun-profile.exe" : "bun-profile");
   const identity = JSON.parse(
     (
       await run("runtime-identity", [

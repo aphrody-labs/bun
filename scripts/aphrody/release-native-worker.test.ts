@@ -1,5 +1,7 @@
 import { expect, test } from "bun:test";
-import { join } from "node:path";
+import { mkdir, realpath, symlink } from "node:fs/promises";
+import { Ninja } from "../build/ninja";
+import { join, resolve } from "node:path";
 import { tempDir } from "../../test/harness";
 import {
   nativeCapacity,
@@ -8,6 +10,8 @@ import {
   nativeLinuxCPUs,
   nativeAvailableMemory,
   nativeRuntimeBuildFlags,
+  nativeRuntimeBuildDirectory,
+  nativeRuntimeResources,
 } from "./release-native-worker";
 import { nativeFullReleasePlan, runtimeReleaseMatrix } from "./release-matrix";
 import { qualifyNativeWinget } from "./release-native-install";
@@ -103,6 +107,7 @@ test("full native producer forwards every supported optional owner including vec
     "--curl-native=on",
     "--browser-crawl=on",
     "--browser-index=on",
+    "--google-search=on",
     "--lto=on",
     "--linux-sysroot=/qualified/sysroot",
     "--link-threads=2",
@@ -160,4 +165,63 @@ test("cgroup v1 and subtree mounts use actual process membership", async () => {
     "/sys/fs/cgroup/memory/memory.usage_in_bytes": String(8 * GiB),
   };
   expect(await nativeAvailableMemory("linux", GiB, memoryFixture(files))).toBe(4 * GiB);
+});
+
+test("relocated release output emits source paths from its physical Ninja cwd without configuring", async () => {
+  using directory = tempDir("native-worker-physical-output", {});
+  const root = join(String(directory), "source"),
+    physical = join(String(directory), "fast-output"),
+    logical = join(root, "build/release"),
+    source = join(root, "src/fixture.cpp");
+  await mkdir(join(root, "build"), { recursive: true });
+  await mkdir(join(root, "src"));
+  await mkdir(physical);
+  await Bun.write(source, "int fixture = 1;\n");
+  await Bun.write(join(physical, "configure.json"), "existing-recipe\n");
+  await symlink(physical, logical, process.platform === "win32" ? "junction" : "dir");
+  const buildDir = await nativeRuntimeBuildDirectory(root),
+    target = runtimeReleaseMatrix(["linux-x64"]).find(value => value.flavor === "full")!;
+  expect(buildDir).toBe(await realpath(physical));
+  const flags = nativeRuntimeBuildFlags(target, undefined, { buildDir, jobs: 12, linkThreads: 12 });
+  expect(flags).toContain("--build-dir=" + buildDir);
+  expect(flags).toContain("-j12");
+  expect(flags).toContain("--link-threads=12");
+  const relativeInput = new Ninja({ buildDir }).rel(source);
+  expect(resolve(await realpath(logical), relativeInput)).toBe(source);
+  expect(resolve(await realpath(logical), new Ninja({ buildDir: logical }).rel(source))).not.toBe(source);
+  expect(await Bun.file(join(physical, "configure.json")).text()).toBe("existing-recipe\n");
+});
+test("normal and absent release directories retain their owner while dangling or file aliases fail closed", async () => {
+  using directory = tempDir("native-worker-output-boundary", {});
+  const root = join(String(directory), "source"),
+    logical = join(root, "build/release");
+  await mkdir(join(root, "build"), { recursive: true });
+  expect(await nativeRuntimeBuildDirectory(root)).toBe(logical);
+  expect(await Bun.file(join(logical, "configure.json")).exists()).toBe(false);
+  await symlink(join(String(directory), "missing"), logical, process.platform === "win32" ? "junction" : "dir");
+  await expect(nativeRuntimeBuildDirectory(root)).rejects.toThrow();
+  const fileRoot = join(String(directory), "file-source");
+  await mkdir(join(fileRoot, "build"), { recursive: true });
+  await Bun.write(join(fileRoot, "build/release"), "not a directory");
+  await expect(nativeRuntimeBuildDirectory(fileRoot)).rejects.toThrow("not a directory");
+});
+test("explicit twelve-CPU runtime budget preserves defaults and existing RAM minimum without silent clamping", () => {
+  expect(nativeRuntimeResources({})).toEqual({ jobs: 2, linkThreads: 2 });
+  const resources = nativeRuntimeResources({ BUN_NATIVE_RUNTIME_JOBS: "12", BUN_NATIVE_RUNTIME_LINK_THREADS: "12" });
+  expect(resources).toEqual({ jobs: 12, linkThreads: 12 });
+  expect(nativeCapacity({ freeDisk: 500 * GiB, freeMemory: 26 * GiB, cpus: 12 }, resources)).toMatchObject({
+    maxJobs: 12,
+    linkThreads: 12,
+    required: { memory: 6 * GiB, cpus: 12 },
+  });
+  expect(() => nativeCapacity({ freeDisk: 500 * GiB, freeMemory: 26 * GiB, cpus: 11 }, resources)).toThrow(
+    "capacity insufficient",
+  );
+  expect(() => nativeCapacity({ freeDisk: 500 * GiB, freeMemory: 5 * GiB, cpus: 12 }, resources)).toThrow(
+    "capacity insufficient",
+  );
+  for (const value of ["", "0", "-1", "1.5", "12x", "1025"])
+    expect(() => nativeRuntimeResources({ BUN_NATIVE_RUNTIME_JOBS: value })).toThrow("resource budget");
+  const target = runtimeReleaseMatrix(["linux-x64"]).find(value => value.flavor === "full")!;
+  expect(() => nativeRuntimeBuildFlags(target, undefined, { buildDir: "relative" })).toThrow("build options");
 });
