@@ -52,12 +52,12 @@ Read the corresponding guide in `packages/bun-video/docs` before changing it.
 WGSL analysis and browser/GPU availability do not establish hardware video
 decoding, sustained encoding performance or DRM playback.
 
-`@aphrody/bun-video/webgpu` and `bun-video-webgpu` expose bounded compute:
+`@aphrody/bun-video/webgpu` and `bun-video webgpu` expose bounded compute:
 
 ```sh
-bun-video-webgpu info
-bun-video-webgpu probe
-bun-video-webgpu run shader.wgsl input.bin output.bin --backend native
+bun-video webgpu info
+bun-video webgpu probe
+bun-video webgpu run shader.wgsl input.bin output.bin --backend native
 ```
 
 Read `docs/runtime/video.mdx`, `docs/runtime/image.mdx` and the declarations in

@@ -1,7 +1,7 @@
 # Bun Video WebGPU
 
 `@aphrody/bun-video` exposes bounded WGSL compute for Bun video workflows through
-`@aphrody/bun-video/webgpu` and the `bun-video-webgpu` CLI.
+`@aphrody/bun-video/webgpu` and the `bun-video webgpu` CLI.
 
 ```ts
 import { runWebGpuJob } from "@aphrody/bun-video/webgpu";
