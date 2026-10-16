@@ -19,6 +19,8 @@ aphrody-jev.workspace = true
 bun_video_native = { package = "bun-video-native", path = "../../packages/bun-video/native", optional = true, default-features = false }
 bun_browser_dom.workspace = true
 bun_browser_crawl = { workspace = true, optional = true }
+bun_browser_detect.workspace = true
+bun_browser_ssrf.workspace = true
 bun_browser_index = { workspace = true, optional = true }
 bun_quality.workspace = true
 bun_ecma_api.workspace = true

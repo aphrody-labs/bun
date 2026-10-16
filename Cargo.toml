@@ -570,7 +570,7 @@ bun_workspace = { path = "src/workspace" }
 "fs4" = "1.1.0"
 "bun_browser_service" = { "path" = "src/browser/crates/service", "version" = "1.4.4" }
 "bun_browser_crawl" = { "path" = "src/browser/crates/crawl", "version" = "1.4.4" }
-"bun_browser_detect" = { "path" = "src/browser/crates/detect", "version" = "1.4.4" }
+"bun_browser_detect" = { "path" = "src/browser/crates/detect", "version" = "1.4.4", "default-features" = false }
 "bun_browser_index" = { "path" = "src/browser/crates/index", "version" = "1.4.4" }
 
 rust-argon2 = { path = "vendor/rust-argon2" }

@@ -8,7 +8,7 @@ mod challenge;
 mod rules;
 mod strategy;
 
-use std::{collections::BTreeMap, net::IpAddr, time::Duration};
+use std::{collections::BTreeMap, net::IpAddr};
 
 pub use challenge::{Challenge, ChallengeProvider, Confidence, Recommendation};
 pub use strategy::{ScrapeProfile, SiteShape, Strategy, WaitFor, suggest_strategy};
@@ -151,10 +151,13 @@ pub enum DetectError {
     Scheme,
     #[error("URL has no hostname")]
     Hostname,
+    #[cfg(feature = "fetch")]
     #[error("failed to build HTTP client: {0}")]
     Client(#[source] reqwest::Error),
+    #[cfg(feature = "fetch")]
     #[error("HTTP request failed: {0}")]
     Request(#[source] reqwest::Error),
+    #[cfg(feature = "fetch")]
     #[error("HTTP body read failed: {0}")]
     Body(#[source] reqwest::Error),
 }
@@ -187,6 +190,7 @@ pub fn detect_response(input: &DetectionInput) -> Result<DetectionReport, Detect
 ///
 /// CNAME, NS and PTR collection require a dedicated DNS resolver and can be
 /// supplied to `detect_response` by callers that already have those records.
+#[cfg(feature = "fetch")]
 pub async fn detect_url(url: &str) -> Result<DetectionReport, DetectError> {
     let parsed = Url::parse(url)?;
     if !matches!(parsed.scheme(), "http" | "https") {
@@ -196,7 +200,7 @@ pub async fn detect_url(url: &str) -> Result<DetectionReport, DetectError> {
     let port = parsed.port_or_known_default().ok_or(DetectError::Scheme)?;
     let _ = rustls::crypto::ring::default_provider().install_default();
     let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(20))
+        .timeout(std::time::Duration::from_secs(20))
         .user_agent("bun-browser/1.4.4")
         .build()
         .map_err(DetectError::Client)?;
@@ -228,6 +232,7 @@ pub async fn detect_url(url: &str) -> Result<DetectionReport, DetectError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[cfg(feature = "fetch")]
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
 
     #[test]
@@ -259,6 +264,7 @@ mod tests {
         assert!(matches!(detect_response(&input), Err(DetectError::Scheme)));
     }
 
+    #[cfg(feature = "fetch")]
     #[tokio::test]
     async fn fetches_local_http_and_detects_response() {
         let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();

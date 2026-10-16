@@ -1,0 +1,43 @@
+---
+title: Web detection
+description: Offline technology and anti-bot challenge detection for fetched responses, and the browser SSRF deny-set
+---
+
+`Bun.WebDetect` exposes the detection engine shared by Bun's browser and crawler.
+It performs no I/O: pass evidence from a response you already fetched.
+
+```ts
+const response = await fetch(url);
+const report = Bun.WebDetect.detect({
+  url,
+  status: response.status,
+  headers: Object.fromEntries(response.headers),
+  body: await response.text(),
+});
+
+if (report.challenge.provider !== "none") {
+  // e.g. "cloudflare-turnstile", recommendation "max": retry with Bun.WebView
+}
+console.log(report.findings.map(f => `${f.bucket}: ${f.name}`));
+```
+
+The report contains technology `findings` (CDN, framework, server, ...), a
+`challenge` (provider, `high`/`medium`/`low` confidence, a recommended scraping
+profile `static`, `fast`, `stealth`, `max`, `wait` or `abort`, and evidence) and a
+suggested crawl `strategy`. Only `http:` and `https:` URLs are accepted. Headers
+may be strings or arrays of strings; `set-cookie` is commonly repeated.
+
+## SSRF deny-set
+
+`Bun.WebDetect.isForbiddenAddress(ip)` returns `true` for addresses that an
+outbound request from untrusted input should never reach: loopback, RFC 1918,
+link-local and cloud metadata (`169.254.169.254`, `100.100.100.200`), CGNAT,
+benchmarking, documentation, multicast, reserved and unspecified addresses, and
+IPv6 forms embedding any of them (mapped, compatible, NAT64, 6to4, Teredo).
+Brackets around IPv6 literals are accepted. Check every resolved address, not
+only the hostname, before connecting.
+
+```ts
+const addresses = await Bun.dns.lookup(new URL(url).hostname, { family: 0 });
+if (addresses.some(a => Bun.WebDetect.isForbiddenAddress(a.address))) throw new Error("blocked");
+```

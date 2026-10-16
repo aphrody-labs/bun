@@ -9,14 +9,20 @@ license = "Apache-2.0"
 description = "Native technology and challenge detection for Bun"
 
 [dependencies]
-reqwest.workspace = true
-rustls.workspace = true
+reqwest = { workspace = true, optional = true }
+rustls = { workspace = true, optional = true }
 serde.workspace = true
 thiserror.workspace = true
-tokio.workspace = true
+tokio = { workspace = true, optional = true }
 url.workspace = true
 
+[features]
+default = ["fetch"]
+# `detect_url`: bounded HTTP fetch and A/AAAA lookup. The runtime only needs `detect_response`.
+fetch = ["dep:reqwest", "dep:rustls", "dep:tokio"]
+
 [dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt", "net", "io-util"] }
 serde_json = { workspace = true, features = ["std"] }
 
 [lints.rust]

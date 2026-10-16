@@ -76,6 +76,7 @@ pub(crate) mod generated_js2native; // include!()s ${BUN_CODEGEN_DIR}/generated_
 pub(crate) mod generated_jssink; // include!()s ${BUN_CODEGEN_DIR}/generated_jssink.rs
 
 pub(crate) mod crawl;
+pub(crate) mod web_detect;
 pub(crate) mod vector_index;
 pub(crate) mod curl;
 pub(crate) mod dns_jsc;

@@ -9626,6 +9626,56 @@ declare module "bun" {
   }
 
   /** Optional native libcurl transfers; disabled providers reject with ERR_CURL_PROVIDER_UNAVAILABLE. */
+  /** Offline technology and anti-bot challenge detection, plus the browser SSRF deny-set. */
+  export class WebDetect {
+    private constructor();
+    /** Analyze an already fetched response. No network access occurs. */
+    static detect(input: WebDetectInput): WebDetectReport;
+    /** True for loopback, private, link-local, cloud metadata, reserved and IPv4-embedding IPv6 addresses. */
+    static isForbiddenAddress(ip: string): boolean;
+  }
+  export interface WebDetectInput {
+    /** `http:` or `https:` URL. */
+    url: string;
+    finalUrl?: string;
+    /** @default 200 */
+    status?: number;
+    headers?: Record<string, string | string[]>;
+    body?: string;
+    resolvedIps?: string[];
+    cnameChain?: string[];
+    nsRecords?: string[];
+  }
+  export interface WebDetectFinding {
+    name: string;
+    bucket: string;
+    evidence: string;
+    source: string;
+    confidence: number;
+    version: string | null;
+  }
+  export type WebDetectChallengeProvider =
+    | "none" | "cloudflare-block" | "cloudflare-challenge" | "cloudflare-turnstile"
+    | "akamai-bot-manager" | "perimeter-x" | "data-dome" | "kasada" | "incapsula"
+    | "aws-waf" | "sucuri" | "js-required" | "soft-block" | "rate-limit";
+  export interface WebDetectReport {
+    url: string;
+    finalUrl: string;
+    httpStatus: number;
+    hostname: string;
+    resolvedIps: string[];
+    cnameChain: string[];
+    nsRecords: string[];
+    findings: WebDetectFinding[];
+    challenge: {
+      provider: WebDetectChallengeProvider;
+      confidence: "high" | "medium" | "low";
+      recommendation: "static" | "fast" | "stealth" | "max" | "wait" | "abort";
+      evidence: string[];
+    };
+    strategy: Record<string, unknown>;
+  }
+
   /** Optional native archive indexing and persistent crawl scheduler. */
   export class Crawl {
     private constructor();

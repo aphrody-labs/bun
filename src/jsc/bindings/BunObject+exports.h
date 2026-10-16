@@ -14,6 +14,7 @@
     macro(Video) \
     macro(Curl) \
     macro(Crawl) \
+    macro(WebDetect) \
     macro(VectorIndex) \
     macro(JSON5) \
     macro(JSONC) \

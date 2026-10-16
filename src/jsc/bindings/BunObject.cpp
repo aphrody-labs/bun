@@ -929,6 +929,7 @@ JSC_DEFINE_HOST_FUNCTION(functionFileURLToPath, (JSC::JSGlobalObject * globalObj
     Video                                          BunObject_lazyPropCb_wrap_Video                                     DontDelete|PropertyCallback
     Curl                                           BunObject_lazyPropCb_wrap_Curl                                      DontDelete|PropertyCallback
     Crawl                                          BunObject_lazyPropCb_wrap_Crawl                                     DontDelete|PropertyCallback
+    WebDetect                                      BunObject_lazyPropCb_wrap_WebDetect                                 DontDelete|PropertyCallback
     VectorIndex                                    BunObject_lazyPropCb_wrap_VectorIndex                               DontDelete|PropertyCallback
     MD4                                            BunObject_lazyPropCb_wrap_MD4                                       DontDelete|PropertyCallback
     MD5                                            BunObject_lazyPropCb_wrap_MD5                                       DontDelete|PropertyCallback
