@@ -1,7 +1,7 @@
 //! The file system.
 
 use crate::paths;
-use bun_core::ZStr;
+use bun_core::{ZStr, strings};
 use bun_paths::resolve_path::z;
 use bun_paths::{MAX_PATH_BYTES, PathBuffer, path_buffer_pool};
 use bun_sema::util::FxHashSet;
@@ -62,7 +62,7 @@ pub(crate) fn tracked_quality_source(cwd: &[u8], path: &[u8]) -> Option<(Vec<u8>
         return None;
     }
     let relative = paths::relative(&root, path);
-    let components: Vec<_> = relative.split(|byte| *byte == b'/').collect();
+    let components: Vec<_> = strings::split(&relative, b"/").collect();
     if !components.contains(&&b".aphrody"[..])
         || components.iter().any(|name| {
             (is_protected_quality_component(name) && *name != b".aphrody")

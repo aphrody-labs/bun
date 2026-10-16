@@ -19,6 +19,8 @@ test("Rust sources linked into Bun do not use the streams of the standard librar
 
   // Not compiled into a release build: tests, debug output, Windows debug macros, and the message of the allocator.
   const known = new Map([
+    // Readiness output lives only in archive.rs #[cfg(test)] mod tests.
+    ["src/browser/crates/crawl/src/archive.rs", 2],
     ["src/bun_alloc/lib.rs", 1],
     ["src/bun_core/Global.rs", 2],
     ["src/libuv_sys/libuv.rs", 1],
@@ -36,7 +38,6 @@ test("Rust sources linked into Bun do not use the streams of the standard librar
     ["src/browser/crates/dom/src/serialize.rs", 1],
     ["src/browser/crates/dom/src/tree.rs", 6],
     ["src/browser/crates/extract/src/extract.rs", 1],
-    ["src/bun_vpn/src/lib.rs", 7],
     ["src/docker/cli.rs", 2],
     ["src/host/environment.rs", 1],
     ["src/just/src/cache.rs", 2],

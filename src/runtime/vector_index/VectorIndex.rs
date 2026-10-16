@@ -103,7 +103,7 @@ mod native {
             let path = std::str::from_utf8(path.slice())
                 .map_err(|_| invalid(global, "path must be UTF-8"))?;
             if path.is_empty()
-                || path.as_bytes().contains(&0)
+                || bun_core::strings::contains_char(path.as_bytes(), 0)
                 || !std::path::Path::new(path).is_absolute()
             {
                 return Err(invalid(

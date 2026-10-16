@@ -23,21 +23,25 @@ pub(crate) fn dispatch() -> Option<i32> {
     }
     #[cfg(not(feature = "google_search"))]
     {
+        use bun_sys::{Fd, File};
+
         if args
             .iter()
             .skip(2)
             .any(|arg| arg == "--help" || arg == "-h")
         {
-            print!(
-                "{}",
+            let _ = File::stdout().write_all(
                 include_str!(
                     "../../../packages/bun-google/aphrody/crates/google/src/search/help.txt"
                 )
+                .as_bytes(),
             );
-            println!("This build requires --google-search=on to execute searches.");
+            let _ = File::stdout()
+                .write_all(b"This build requires --google-search=on to execute searches.\n");
             Some(0)
         } else {
-            eprintln!("bun search requires a build with --google-search=on");
+            let _ = File::from_fd(Fd::stderr())
+                .write_all(b"bun search requires a build with --google-search=on\n");
             Some(2)
         }
     }

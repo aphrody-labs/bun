@@ -5,6 +5,8 @@
 #[cfg(not(target_os = "android"))]
 mod cli_input;
 
+use bun_sys::{Fd, File};
+
 pub use mullvad_management_interface::Error;
 pub use mullvad_types::states::TunnelState;
 pub type EmbeddedDaemon = mullvad_daemon::Daemon;
@@ -73,7 +75,7 @@ impl VpnClient {
 /// Mullvad's management interface has no Android client.
 #[cfg(target_os = "android")]
 pub fn cli(_args: &[String]) -> i32 {
-    eprintln!("bun vpn: not supported on Android");
+    let _ = File::from_fd(Fd::stderr()).write_all(b"bun vpn: not supported on Android\n");
     1
 }
 
@@ -84,7 +86,7 @@ pub fn cli(args: &[String]) -> i32 {
     let command = match cli_input::command(args) {
         Ok(command) => command,
         Err(usage) => {
-            eprintln!("{usage}");
+            let _ = File::from_fd(Fd::stderr()).write_all(format!("{usage}\n").as_bytes());
             return 2;
         }
     };
@@ -94,7 +96,9 @@ pub fn cli(args: &[String]) -> i32 {
     {
         Ok(runtime) => runtime,
         Err(error) => {
-            eprintln!("bun vpn: failed to start native async runtime: {error}");
+            let _ = File::from_fd(Fd::stderr()).write_all(
+                format!("bun vpn: failed to start native async runtime: {error}\n").as_bytes(),
+            );
             return 1;
         }
     };
@@ -102,7 +106,8 @@ pub fn cli(args: &[String]) -> i32 {
         return match runtime.block_on(run_embedded_daemon()) {
             Ok(()) => 0,
             Err(error) => {
-                eprintln!("bun vpn: {error}");
+                let _ =
+                    File::from_fd(Fd::stderr()).write_all(format!("bun vpn: {error}\n").as_bytes());
                 1
             }
         };
@@ -111,7 +116,8 @@ pub fn cli(args: &[String]) -> i32 {
         let account = match cli_input::read_account(std::io::stdin().lock()) {
             Ok(account) => account,
             Err(error) => {
-                eprintln!("bun vpn: {error}");
+                let _ =
+                    File::from_fd(Fd::stderr()).write_all(format!("bun vpn: {error}\n").as_bytes());
                 return 2;
             }
         };
@@ -119,11 +125,11 @@ pub fn cli(args: &[String]) -> i32 {
             .block_on(async move { VpnClient::connect().await?.login_account(account).await })
         {
             Ok(()) => {
-                println!("account login completed");
+                let _ = File::stdout().write_all(b"account login completed\n");
                 0
             }
             Err(_) => {
-                eprintln!("bun vpn: account login failed");
+                let _ = File::from_fd(Fd::stderr()).write_all(b"bun vpn: account login failed\n");
                 1
             }
         };
@@ -144,11 +150,11 @@ pub fn cli(args: &[String]) -> i32 {
         }
     }) {
         Ok(output) => {
-            println!("{output}");
+            let _ = File::stdout().write_all(format!("{output}\n").as_bytes());
             0
         }
         Err(error) => {
-            eprintln!("bun vpn: {error}");
+            let _ = File::from_fd(Fd::stderr()).write_all(format!("bun vpn: {error}\n").as_bytes());
             1
         }
     }

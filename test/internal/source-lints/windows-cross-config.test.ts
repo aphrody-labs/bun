@@ -77,12 +77,12 @@ function resolveWindowsCross(partial: PartialConfig = {}, toolchain = mockToolch
 }
 
 describe.skipIf(isWindows)("Windows cross-compile LTO config (non-windows host)", () => {
-  test("FFmpeg delay imports and native loader hook are scoped to video-enabled Windows builds", () => {
+  test("native video uses an adjacent engine without FFmpeg delay imports", () => {
     const disabled = computeFlags(resolveWindowsCross({ buildType: "Debug", videoNative: false }));
     const enabled = computeFlags(resolveWindowsCross({ buildType: "Debug", videoNative: true }));
     for (const dll of ["avcodec-63.dll", "avformat-63.dll", "avutil-61.dll", "swscale-10.dll"]) {
       expect(disabled.ldflags).not.toContain(`/DELAYLOAD:${dll}`);
-      expect(enabled.ldflags).toContain(`/DELAYLOAD:${dll}`);
+      expect(enabled.ldflags).not.toContain(`/DELAYLOAD:${dll}`);
     }
     expect(disabled.defines).not.toContain("BUN_VIDEO_NATIVE=1");
     expect(enabled.defines).toContain("BUN_VIDEO_NATIVE=1");

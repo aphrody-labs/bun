@@ -5270,6 +5270,7 @@ dependencies = [
 name = "bun_vpn"
 version = "1.4.4"
 dependencies = [
+ "bun_sys",
  "log",
  "mullvad-api",
  "mullvad-daemon",

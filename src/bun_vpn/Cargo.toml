@@ -9,6 +9,7 @@ publish = false
 workspace = true
 
 [dependencies]
+bun_sys.workspace = true
 log.workspace = true
 mullvad-api = { path = "../../vendor/mullvad/mullvad-api" }
 mullvad-daemon = { path = "../../vendor/mullvad/mullvad-daemon", default-features = false, features = ["embedded"] }

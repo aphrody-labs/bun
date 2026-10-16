@@ -77,7 +77,7 @@ pub(crate) fn permits_protected_source(environment: &Environment<'_>, path: &[u8
     let Some(entry) = finished.stdout.strip_suffix(b"\0") else {
         return false;
     };
-    let Some(tab) = entry.iter().position(|byte| *byte == b'\t') else {
+    let Some(tab) = strings::index_of_char_usize(entry, b'\t') else {
         return false;
     };
     let (metadata, name) = entry.split_at(tab);
