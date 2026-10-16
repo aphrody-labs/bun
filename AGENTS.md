@@ -49,6 +49,12 @@ test runner and package manager.
 
 ## Runtime and builds
 
+- VPS factory layout (Google style, see `docs/project/vps-factory.md`):
+  `~/depot_tools` (daily `depot-tools-update.timer`), checkouts in
+  `~/src/<project>` (chromium, chromiumos, cef, brave-core, bun), GN outputs in
+  `~/build/out/<project>/<config>`, shared caches in
+  `~/build/storage/google/cache`, services in `~/apps`. Drive it with
+  `bun factory sync|gen|build|all <target>`, which holds `heavy.lock`.
 - The shared artifact pool is `/home/ubuntu/build/storage`. Put heavy outputs,
   caches, downloads, toolchains and transient files there. The older
   `/home/ubuntu/src` and `/home/ubuntu/build` filesystem can fill independently

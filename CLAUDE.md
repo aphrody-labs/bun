@@ -36,6 +36,12 @@ test runner and package manager.
 
 ## Runtime and builds
 
+- VPS factory layout (Google style, see `docs/project/vps-factory.md`):
+  `~/depot_tools` (daily `depot-tools-update.timer`), checkouts in
+  `~/src/<project>` (chromium, chromiumos, cef, brave-core, bun), GN outputs in
+  `~/build/out/<project>/<config>`, shared caches in
+  `~/build/storage/google/cache`, services in `~/apps`. Drive it with
+  `bun factory sync|gen|build|all <target>`, which holds `heavy.lock`.
 - Use the Aphrody Bun fork for JavaScript, TypeScript and Python tooling.
   Check provenance with `bun agent-plugin doctor --json`.
 - Build and execute checkout changes with `bun bd [command]`; test with

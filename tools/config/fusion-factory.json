@@ -58,5 +58,48 @@
     "reserveMemoryGiB": 8,
     "reserveDiskGiB": 32,
     "memoryPerJobGiB": 1
+  },
+  "google": {
+    "home": "/home/ubuntu",
+    "depotTools": "/home/ubuntu/depot_tools",
+    "srcRoot": "/home/ubuntu/src",
+    "outRoot": "/home/ubuntu/build/out",
+    "cacheRoot": "/home/ubuntu/build/storage/google/cache",
+    "jobs": 12,
+    "targets": {
+      "chromium": {
+        "kind": "gclient",
+        "checkout": "/home/ubuntu/src/chromium",
+        "url": "https://chromium.googlesource.com/chromium/src.git",
+        "source": "src",
+        "revision": "e20c553087353010f4b71143841c189447ac1628",
+        "configs": {
+          "release": "is_debug=false is_component_build=true symbol_level=0 blink_symbol_level=0 v8_symbol_level=0 use_remoteexec=false"
+        },
+        "ninjaTargets": ["chrome"]
+      },
+      "chromiumos": {
+        "kind": "repo",
+        "checkout": "/home/ubuntu/src/chromiumos",
+        "url": "https://chromium.googlesource.com/chromiumos/manifest",
+        "branch": "stable",
+        "configs": {},
+        "ninjaTargets": []
+      },
+      "cef": {
+        "kind": "gclient",
+        "checkout": "/home/ubuntu/src/cef",
+        "url": "https://bitbucket.org/chromiumembedded/cef.git",
+        "source": "cef",
+        "configs": {},
+        "ninjaTargets": []
+      },
+      "brave-core": {
+        "kind": "external",
+        "checkout": "/home/ubuntu/src/brave-core",
+        "configs": {},
+        "ninjaTargets": []
+      }
+    }
   }
 }
