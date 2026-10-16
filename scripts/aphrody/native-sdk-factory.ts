@@ -355,7 +355,16 @@ export function zlibConsumerCommands(input: {
       ...input.includes.flatMap(path => (input.windows ? [`/I${path}`] : ["-I", path])),
       input.consumer,
       ...input.libraries,
-      ...(input.windows ? [`/Fe:${input.executable}`] : ["-fuse-ld=lld", "-lm", "-o", input.executable]),
+      ...(input.windows
+        ? [`/Fe:${input.executable}`]
+        : [
+            "-fuse-ld=lld",
+            // Match the dependency objects' explicitly non-PIE code model.
+            ...(input.flags.includes("-fno-pie") ? ["-Wl,-no-pie"] : []),
+            "-lm",
+            "-o",
+            input.executable,
+          ]),
     ]),
     execute: native([input.executable]),
   };

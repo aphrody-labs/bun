@@ -179,3 +179,38 @@ test("Windows zlib consumer compiles and executes through the canonical MSVC env
     expect(commands.compile).not.toContain("-fuse-ld=lld");
   }
 });
+
+test("Linux zlib consumer links with the code model of its canonical dependency flags", async () => {
+  const { zlibConsumerCommands } = await import("./native-sdk-factory");
+  for (const arch of ["x64", "aarch64"] as const) {
+    for (const { flags, linkFlags } of [
+      { flags: ["-fno-pic", "-fno-pie"], linkFlags: ["-Wl,-no-pie"] },
+      { flags: ["-fPIC"], linkFlags: [] },
+    ]) {
+      const commands = zlibConsumerCommands({
+        windows: false,
+        arch,
+        cc: "/toolchain/clang",
+        flags,
+        includes: ["/zlib/include"],
+        libraries: ["/zlib/deflate.o"],
+        consumer: "/job/consumer.c",
+        executable: "/job/consumer",
+      });
+      expect(commands.compile).toEqual([
+        "/toolchain/clang",
+        ...flags,
+        "-I",
+        "/zlib/include",
+        "/job/consumer.c",
+        "/zlib/deflate.o",
+        "-fuse-ld=lld",
+        ...linkFlags,
+        "-lm",
+        "-o",
+        "/job/consumer",
+      ]);
+      expect(commands.execute).toEqual(["/job/consumer"]);
+    }
+  }
+});
