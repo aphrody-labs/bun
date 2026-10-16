@@ -361,6 +361,15 @@
       "visibility": "PUBLIC"
     },
     {
+      "repo": "protocolbuffers/protobuf",
+      "kind": "toolchain",
+      "ref": "v31.0",
+      "usedBy": ["setup (Windows)", "build (Windows)", "scripts/build/ci-images/spec.ts"],
+      "note": "Host x64 protoc; official release archive and executable pinned by SHA256 in ci-images/spec.ts",
+      "internal": false,
+      "visibility": "PUBLIC"
+    },
+    {
       "repo": "rust-lang/rustup",
       "kind": "toolchain",
       "ref": "nightly-2026-09-15",

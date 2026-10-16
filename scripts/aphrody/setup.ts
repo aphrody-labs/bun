@@ -21,7 +21,8 @@
 // directory for the next run. The one-liner launchers are install-dev.sh and install-dev.ps1 next to this file.
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, rmSync } from "node:fs";
-import { homedir, tmpdir } from "node:os";
+import { readdir, stat } from "node:fs/promises";
+import { availableParallelism, homedir, tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { findWorkspaceRoot } from "./workspace-paths.ts";
 import { WINFW_SOURCE_ARCHIVES, winfwSourceFetchCommands } from "../build/deps/winfw.ts";
@@ -241,6 +242,7 @@ type Pins = {
   msvcToolset: string;
   cmake: string;
   bun: string;
+  protoc: WindowsProtocPin;
 };
 
 async function readPins(checkout: string): Promise<Pins> {
@@ -254,6 +256,7 @@ async function readPins(checkout: string): Promise<Pins> {
     msvcToolset: pins.windowsSysroot.crt.split(".").slice(0, 2).join("."),
     cmake: pins.cmake.version,
     bun: pins.bun.version,
+    protoc: pins.protoc,
   };
 }
 
@@ -343,6 +346,100 @@ const WINGET_PACKAGES: { id: string; exe: string; dirs: string[] }[] = [
   { id: "NASM.NASM", exe: "nasm", dirs: ["C:\\Program Files\\NASM"] },
   { id: "Microsoft.PowerShell", exe: "pwsh", dirs: ["C:\\Program Files\\PowerShell\\7"] },
 ];
+
+export type WindowsProtocPin = {
+  version: string;
+  windows: { url: string; assetId: number; bytes: number; sha256: string; binarySHA256: string };
+};
+
+export function windowsProtocPlan(
+  pin: WindowsProtocPin,
+  hostArch = process.arch,
+  base = process.env.LOCALAPPDATA ?? homedir(),
+) {
+  if (hostArch !== "x64" && hostArch !== "arm64") throw Error("Windows protoc requires an x64 or ARM64 host");
+  const directory = join(base, "bun", "toolchain", `protoc-${pin.version}-win64`);
+  // protoc is executed by the host, including when an x64 host targets Windows ARM64.
+  return {
+    version: pin.version,
+    hostArch,
+    binaryArch: "x64" as const,
+    directory,
+    executable: join(directory, "bin/protoc.exe"),
+    include: join(directory, "include"),
+    source: pin.windows,
+  };
+}
+
+export async function windowsProtocInstallation(
+  plan: ReturnType<typeof windowsProtocPlan>,
+  env: Record<string, string | undefined> = process.env,
+  probe: (argv: string[]) => string | undefined = capture,
+) {
+  const candidates = env.PROTOC ? [env.PROTOC] : [plan.executable, Bun.which("protoc") ?? undefined];
+  for (const executable of candidates) {
+    if (
+      !executable ||
+      !(await Bun.file(executable).exists()) ||
+      (await sha256File(executable)) !== plan.source.binarySHA256
+    )
+      continue;
+    const include = env.PROTOC_INCLUDE ?? join(dirname(dirname(executable)), "include");
+    if (
+      !(await Bun.file(join(include, "google/protobuf/descriptor.proto")).exists()) ||
+      !(await Bun.file(join(include, "google/protobuf/empty.proto")).exists()) ||
+      !(await Bun.file(join(include, "google/protobuf/timestamp.proto")).exists()) ||
+      probe([executable, "--version"])?.trim() !== `libprotoc ${plan.version}`
+    )
+      continue;
+    return { executable, include, version: plan.version, binarySHA256: plan.source.binarySHA256 };
+  }
+  return undefined;
+}
+
+function protocStep(pin: WindowsProtocPin): Step {
+  const plan = windowsProtocPlan(pin);
+  return {
+    id: "protoc",
+    title: `Host Protocol Buffers compiler ${plan.version} (Windows x64)`,
+    async check() {
+      const installation = await windowsProtocInstallation(plan);
+      if (!installation) return undefined;
+      process.env.PROTOC = installation.executable;
+      process.env.PROTOC_INCLUDE = installation.include;
+      prependPath(dirname(installation.executable));
+      return `libprotoc ${installation.version}: ${installation.executable}`;
+    },
+    async run() {
+      if (process.env.PROTOC)
+        throw Error(`PROTOC must identify the pinned libprotoc ${plan.version} executable and includes`);
+      const archive = await download(plan.source.url, plan.source.sha256);
+      if (!dryRun && Bun.file(archive).size !== plan.source.bytes) throw Error("Pinned protoc archive size differs");
+      const staging = `${plan.directory}.extract-${process.pid}`;
+      if (!dryRun) {
+        rmSync(staging, { recursive: true, force: true });
+        mkdirSync(staging, { recursive: true });
+      }
+      try {
+        await exec([
+          join(process.env.SystemRoot ?? "C:\\Windows", "System32", "tar.exe"),
+          "-xf",
+          archive,
+          "-C",
+          staging,
+        ]);
+        if (dryRun) return;
+        const staged = { PROTOC: join(staging, "bin/protoc.exe"), PROTOC_INCLUDE: join(staging, "include") };
+        if (!(await windowsProtocInstallation(plan, staged)))
+          throw Error("Extracted protoc failed its pinned executable/version/include probe");
+        rmSync(plan.directory, { recursive: true, force: true });
+        renameSync(staging, plan.directory);
+      } finally {
+        if (!dryRun) rmSync(staging, { recursive: true, force: true });
+      }
+    },
+  };
+}
 
 /** apt.llvm.org's signing key (llvm-snapshot.gpg.key). */
 const APT_LLVM_KEY_FINGERPRINT = "6084F3CF814B57C1CF12EFD515CF4D18AF4F7421";
@@ -892,6 +989,35 @@ export type Dependency = {
 };
 export type Inventory = { comment: string; dependencies: Dependency[] };
 
+export async function cargoDependencyManifests(checkout: string): Promise<string[]> {
+  const pending = ["packages"];
+  const manifests: string[] = [];
+  const concurrency = Math.min(64, availableParallelism() * 4);
+  if (!existsSync(join(checkout, "packages"))) return manifests;
+  while (pending.length) {
+    await Promise.all(
+      pending.splice(-concurrency).map(async directory => {
+        for (const entry of await readdir(join(checkout, directory), { withFileTypes: true })) {
+          // Match the previous glob's hidden/symlink policy and prune before reading installed trees.
+          if (entry.name.startsWith(".") || /^(?:fixtures?|tests?|node_modules|target)$/.test(entry.name)) continue;
+          const path = `${directory}/${entry.name}`;
+          if (entry.isDirectory()) pending.push(path);
+          else if (entry.isFile() && entry.name === "Cargo.toml") manifests.push(path);
+          else if (entry.isSymbolicLink() && entry.name === "Cargo.toml") {
+            // The glob names this final segment literally, so file links are followed.
+            try {
+              if ((await stat(join(checkout, path))).isFile()) manifests.push(path);
+            } catch (error) {
+              if (!["ENOENT", "ENOTDIR", "ELOOP"].includes((error as NodeJS.ErrnoException).code ?? "")) throw error;
+            }
+          }
+        }
+      }),
+    );
+  }
+  return manifests.sort();
+}
+
 export async function collectDependencies(checkout: string): Promise<Dependency[]> {
   const deps: Dependency[] = [];
   const add = (d: Omit<Dependency, "internal">) =>
@@ -966,9 +1092,7 @@ export async function collectDependencies(checkout: string): Promise<Dependency[
 
   // Cargo git dependencies outside the root workspace (its Cargo.lock has none).
   const gitDeps = new Map<string, Dependency>();
-  const glob = new Bun.Glob("packages/**/Cargo.toml");
-  for (const manifest of [...glob.scanSync({ cwd: checkout })].map(p => p.replaceAll("\\", "/")).sort()) {
-    if (/\/(fixtures?|test|tests|node_modules|target)\//.test(manifest)) continue;
+  for (const manifest of await cargoDependencyManifests(checkout)) {
     const text = readFileSync(join(checkout, manifest), "utf8");
     for (const line of text.split("\n")) {
       if (line.trimStart().startsWith("#")) continue;
@@ -1027,6 +1151,13 @@ export async function collectDependencies(checkout: string): Promise<Dependency[
     ref: `llvmorg-${pins.llvm}`,
     usedBy: ["setup", "build"],
     note: "apt.llvm.org (Debian/Ubuntu), edge/main (Alpine), brew llvm@N (macOS), release tarball (Windows)",
+  });
+  add({
+    repo: "protocolbuffers/protobuf",
+    kind: "toolchain",
+    ref: `v${pins.protoc.version}`,
+    usedBy: ["setup (Windows)", "build (Windows)", "scripts/build/ci-images/spec.ts"],
+    note: "Host x64 protoc; official release archive and executable pinned by SHA256 in ci-images/spec.ts",
   });
   add({
     repo: "rust-lang/rustup",
@@ -1145,6 +1276,7 @@ async function main() {
   const steps: Step[] = [];
   if (o.system) steps.push(systemStep());
   steps.push(bunStep(), llvmStep(pins), rustupStep(), rustToolchainStep(dir, pins));
+  if (windows) steps.push(protocStep(pins.protoc));
   if (windows) steps.push(msvcStep(dir, pins));
   steps.push(bunInstallStep(dir), vendorStep(dir));
   if (o.packages) steps.push(packagesStep(dir));

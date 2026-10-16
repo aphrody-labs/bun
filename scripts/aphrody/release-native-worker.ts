@@ -46,6 +46,7 @@ import { qualifyMediaELFs } from "./media-sdk-abi";
 import { mediaBuildTarget } from "./media-sdk-build";
 import { strippedELFVerificationSpec } from "../build/verify-binary";
 import { buildGNUX64RuntimeSDK, runtimeSDKCargoArgs } from "./runtime-sdk-build";
+import { windowsProtocInstallation, windowsProtocPlan } from "./setup";
 
 type WorkerInput = { target: string; source: string; version: string; output: string; root: string };
 const root = resolve(import.meta.dir, "../..");
@@ -698,6 +699,10 @@ export async function prepareNativeRuntimeCore(
   return { artifact, runtime, identity, buildDir };
 }
 
+export function nativeRuntimeProtocPlan(target: string, hostArch = process.arch) {
+  return mediaReleaseTarget(target).os === "windows" ? windowsProtocPlan(pins.protoc, hostArch) : undefined;
+}
+
 async function prepareNativeRuntimeToolchain(input: WorkerInput, diagnostics: string) {
   const target = mediaReleaseTarget(input.target);
   const run = async (id: string, argv: string[], timeout = 120_000) =>
@@ -734,6 +739,31 @@ async function prepareNativeRuntimeToolchain(input: WorkerInput, diagnostics: st
   process.env.BUN_TOOLCHAIN_LLVM = dirname(dirname(toolchain.cc));
   const rust = (await run("rust-pin", ["rustup", "show", "active-toolchain"])).stdout;
   if (!rust.startsWith(pins.rust.channel)) throw new Error("Rust toolchain differs from committed pin");
+  const protocPlan = nativeRuntimeProtocPlan(input.target);
+  if (protocPlan) {
+    const protoc = await windowsProtocInstallation(protocPlan);
+    if (!protoc) throw Error(`Pinned host libprotoc ${protocPlan.version} is unavailable after setup`);
+    process.env.PROTOC = protoc.executable;
+    process.env.PROTOC_INCLUDE = protoc.include;
+    const version = (await run("protoc-pin", [protoc.executable, "--version"])).stdout.trim();
+    if (version !== `libprotoc ${protoc.version}`) throw Error("Host protoc version changed after setup");
+    await Bun.write(
+      join(diagnostics, "protoc-pin.json"),
+      JSON.stringify(
+        {
+          schema: 1,
+          target: input.target,
+          hostArch: process.arch,
+          binaryArch: protocPlan.binaryArch,
+          ...protoc,
+          source: protocPlan.source,
+          nativeReleaseQualified: false,
+        },
+        null,
+        2,
+      ) + "\n",
+    );
+  }
   return toolchain;
 }
 

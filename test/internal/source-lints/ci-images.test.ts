@@ -11,10 +11,34 @@ import {
   imageKey,
   images,
   macosMachines,
+  locations,
   pins,
   recordedTool,
   tools,
 } from "../../../scripts/build/ci-images/spec.ts";
+
+test("both Windows images provision the same checksum-verified host protoc before compilation", () => {
+  using dir = tempDir("ci-images-protoc", {});
+  const sections = images
+    .filter(image => image.os === "windows")
+    .map(image => {
+      const script = readFileSync(join(generateImage(image, String(dir)).directory, "bootstrap.ps1"), "utf8");
+      const start = script.indexOf("# ---- protoc\n");
+      expect(start).toBeGreaterThanOrEqual(0);
+      const end = script.indexOf("# ---- ", start + 1);
+      const section = script.slice(start, end);
+      expect(section).toContain(pins.protoc.windows.url);
+      expect(section).toContain(pins.protoc.windows.sha256);
+      expect(section.indexOf("Get-FileHash")).toBeGreaterThanOrEqual(0);
+      expect(section.indexOf("Get-FileHash")).toBeLessThan(section.indexOf("Expand-Archive"));
+      expect(section).toContain("SetEnvironmentVariable('PROTOC'");
+      expect(section).toContain("SetEnvironmentVariable('PROTOC_INCLUDE'");
+      expect(section).toContain(locations.protoc);
+      return section;
+    });
+  expect(sections).toHaveLength(2);
+  expect(sections[0]).toBe(sections[1]);
+});
 
 test("every image of the spec generates, with its tools in the spec's order", () => {
   using dir = tempDir("ci-images", {});

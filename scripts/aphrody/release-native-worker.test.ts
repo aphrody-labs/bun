@@ -12,6 +12,7 @@ import {
   nativeRuntimeBuildFlags,
   nativeRuntimeBuildDirectory,
   nativeRuntimeResources,
+  nativeRuntimeProtocPlan,
   command,
   nativeRuntimeRegressionPlan,
   assertRuntimeArtifactAbsent,
@@ -21,6 +22,42 @@ import { nativeFullReleasePlan, runtimeReleaseMatrix } from "./release-matrix";
 import { qualifyNativeWinget } from "./release-native-install";
 import { nativeNginxRecipe } from "./release-native-nginx";
 import { mediaSDKPlan } from "../../packages/bun-video/src/sdk";
+
+test("Windows ARM64 cross targets retain the x64 host protoc and non-Windows toolchains remain independent", () => {
+  const x64 = nativeRuntimeProtocPlan("windows-x64", "x64");
+  const arm64 = nativeRuntimeProtocPlan("windows-aarch64", "x64");
+  expect(arm64).toEqual(x64);
+  expect(arm64).toMatchObject({ hostArch: "x64", binaryArch: "x64", version: "31.0" });
+  expect(arm64!.source.url).toEndWith("protoc-31.0-win64.zip");
+  expect(nativeRuntimeProtocPlan("linux-x64", "x64")).toBeUndefined();
+  expect(nativeRuntimeProtocPlan("darwin-aarch64", "arm64")).toBeUndefined();
+});
+
+test("native worker forwards its resolved host protoc to child build commands", async () => {
+  using directory = tempDir("native-command-protoc", {});
+  const previous = { PROTOC: process.env.PROTOC, PROTOC_INCLUDE: process.env.PROTOC_INCLUDE };
+  try {
+    process.env.PROTOC = join(String(directory), "host compiler", "protoc.exe");
+    process.env.PROTOC_INCLUDE = join(String(directory), "host compiler", "include");
+    const { stdout } = await command(
+      [
+        process.execPath,
+        "--no-env-file",
+        "-e",
+        "console.log(JSON.stringify({PROTOC:process.env.PROTOC,PROTOC_INCLUDE:process.env.PROTOC_INCLUDE}))",
+      ],
+      String(directory),
+      join(String(directory), "environment.log"),
+      { timeout: 5000 },
+    );
+    expect(JSON.parse(stdout)).toEqual({ PROTOC: process.env.PROTOC, PROTOC_INCLUDE: process.env.PROTOC_INCLUDE });
+  } finally {
+    for (const name of ["PROTOC", "PROTOC_INCLUDE"] as const) {
+      if (previous[name] === undefined) delete process.env[name];
+      else process.env[name] = previous[name];
+    }
+  }
+});
 
 test("runtime component qualifies the canonical stripped subject while full media retains profile output", () => {
   const directory = resolve("build/release");

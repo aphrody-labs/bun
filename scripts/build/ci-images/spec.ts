@@ -84,6 +84,7 @@ export const locations = {
   scoop: "C:\\Scoop",
   intelSde: "C:\\intel-sde",
   ccache: "C:\\Program Files\\ccache",
+  protoc: "C:\\Program Files\\Protoc",
   openssh: "C:\\Program Files\\OpenSSH",
 } as const;
 
@@ -105,6 +106,17 @@ export const pins = {
   buildkiteAgent: { version: "3.114.0" },
   cmake: { version: "3.30.5" },
   llvm: { version: "23.1.1" },
+  // Existing gRPC fixture version; hashes computed from the official GitHub asset (API digest is absent).
+  protoc: {
+    version: "31.0",
+    windows: {
+      url: "https://github.com/protocolbuffers/protobuf/releases/download/v31.0/protoc-31.0-win64.zip",
+      assetId: 254644982,
+      bytes: 3371703,
+      sha256: "d7edee5d0d5d6786c92e77a4f511e4698a5aa922c6390b6d08c3a79935a651b0",
+      binarySHA256: "51d3d99b5e04eaa7fe39bc6f6ad42a9a9bd34a7f334eef295c8d6de30a6d3e44",
+    },
+  },
   rust: {
     rustup: "1.28.2",
     channel: "nightly-2026-09-15",
@@ -657,6 +669,20 @@ function bunNinja(image: Image): Tool {
       into: locations.bunNinja[image.os],
       ...(image.os === "windows" ? {} : { only: ["ninja"] }),
     }),
+  };
+}
+
+function protoc(): Tool {
+  const { version, windows: source } = pins.protoc;
+  return {
+    name: "protoc",
+    identity: pinned(`${version} host-x64 sha256:${source.sha256}`),
+    steps: [
+      ...unpackedArchive({ url: source.url, sha256: source.sha256, file: "protoc.zip", into: locations.protoc }),
+      addToPath(`${locations.protoc}/bin`),
+      setEnvironment("PROTOC", `${locations.protoc}/bin/protoc.exe`),
+      setEnvironment("PROTOC_INCLUDE", `${locations.protoc}/include`),
+    ],
   };
 }
 
@@ -1725,6 +1751,7 @@ export function tools(image: Image): readonly Tool[] {
       openssh(image),
       bun(image),
       bunNinja(image),
+      protoc(),
       curlH3(image),
       ccache(image),
       rust(image),
@@ -2010,7 +2037,7 @@ function renderValue(value: Value, c: Context, asExpression = false): string {
 
   if (literal) {
     const s = parts.join("");
-    return /^[A-Za-z0-9_@%+=:,.\/-]+$/.test(s) ? s : `'${s.replace(/'/g, `'\\''`)}'`;
+    return /^[A-Za-z0-9_@%+=:,./-]+$/.test(s) ? s : `'${s.replace(/'/g, `'\\''`)}'`;
   }
   let out = "";
   let quoted = "";
