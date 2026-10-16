@@ -44,6 +44,12 @@ const processSetAffinityNative = $newRustFunction("windows/host.rs", "jsProcessS
 const processSetPriorityNative = $newRustFunction("windows/host.rs", "jsProcessSetPriority", 2);
 const processSetEcoModeNative = $newRustFunction("windows/host.rs", "jsProcessSetEcoMode", 2);
 const processTrimWorkingSetNative = $newRustFunction("windows/host.rs", "jsProcessTrimWorkingSet", 1);
+const dllLoadedNative = $newRustFunction("windows/host.rs", "jsDllLoaded", 1);
+const dllAddDirectoryNative = $newRustFunction("windows/host.rs", "jsDllAddDirectory", 1);
+const dllRemoveDirectoryNative = $newRustFunction("windows/host.rs", "jsDllRemoveDirectory", 1);
+const dllDirectoriesNative = $newRustFunction("windows/host.rs", "jsDllDirectories", 0);
+const dllResolveNative = $newRustFunction("windows/host.rs", "jsDllResolve", 2);
+const dllDiagnoseNative = $newRustFunction("windows/host.rs", "jsDllDiagnose", 1);
 const jobCreateNative = $newRustFunction("windows/host.rs", "jsJobCreate", 1);
 const jobSetLimitsNative = $newRustFunction("windows/host.rs", "jsJobSetLimits", 6);
 const jobAssignNative = $newRustFunction("windows/host.rs", "jsJobAssign", 2);
@@ -175,7 +181,7 @@ function decodeValue(entry) {
   return entry;
 }
 
-function registryGet(path, name = "", options) {
+function registryGet(path, name = "", options = undefined) {
   ensureSupported();
   const { root, subKey } = parseKeyPath(path);
   validateString(name, "name");
@@ -540,6 +546,54 @@ const processes = Object.freeze({
   trimWorkingSet(pid) {
     ensureSupported();
     processTrimWorkingSetNative(pidOf(pid, "pid"));
+  },
+});
+
+// DLLs
+
+function dllPathArg(value, name) {
+  validateString(value, name);
+  if (value.length === 0 || value.includes("\0")) {
+    throw $ERR_INVALID_ARG_VALUE(name, value, "must be non-empty and contain no NUL");
+  }
+  return value;
+}
+
+const dll = Object.freeze({
+  loaded(pid) {
+    ensureSupported();
+    return JSON.parse(dllLoadedNative(pid === undefined ? 0 : pidOf(pid, "pid")));
+  },
+  addDirectory(directory) {
+    ensureSupported();
+    const resolved = require("node:path").resolve(dllPathArg(directory, "directory"));
+    const id = dllAddDirectoryNative(resolved);
+    let removed = false;
+    const remove = () => {
+      if (removed) return false;
+      removed = true;
+      return dllRemoveDirectoryNative(id);
+    };
+    return Object.freeze({ path: resolved, remove, [Symbol.dispose]: remove });
+  },
+  directories() {
+    ensureSupported();
+    return JSON.parse(dllDirectoriesNative()).map(entry => entry.path);
+  },
+  resolve(name, options) {
+    ensureSupported();
+    dllPathArg(name, "name");
+    let from;
+    if (options !== undefined) {
+      validateObject(options, "options");
+      if (options.from !== undefined) from = require("node:path").resolve(dllPathArg(options.from, "options.from"));
+    }
+    return dllResolveNative(name, from);
+  },
+  diagnose(file) {
+    ensureSupported();
+    const json = dllDiagnoseNative(require("node:path").resolve(dllPathArg(file, "file")));
+    return json === null ? null : JSON.parse(json);
   },
 });
 
@@ -1086,7 +1140,7 @@ function themeGet() {
   const apps = readDword(PERSONALIZE, "AppsUseLightTheme");
   const system = readDword(PERSONALIZE, "SystemUsesLightTheme");
   const colorPrevalence = readDword(PERSONALIZE, "ColorPrevalence");
-  const palette = { __proto__: null };
+  const palette: Record<string, string> = { __proto__: null } as never;
   const bytes = registryGet(ACCENT, "AccentPalette")?.value;
   if (bytes instanceof Uint8Array && bytes.length >= 28) {
     for (let i = 0; i < accentNames.length; i++) {
@@ -1130,7 +1184,7 @@ const backdropTypes = { auto: 0, none: 1, mica: 2, acrylic: 3, tabbed: 4 };
 let dwmapi;
 
 // DWMWA_USE_IMMERSIVE_DARK_MODE = 20, DWMWA_SYSTEMBACKDROP_TYPE = 38 (Windows 11 22H2+).
-function themeApplyWindow(hwnd, options = {}) {
+function themeApplyWindow(hwnd, options: { backdrop?: string; dark?: boolean } = {}) {
   ensureSupported();
   validateObject(options, "options");
   const handle = typeof hwnd === "bigint" ? hwnd : typeof hwnd === "number" ? BigInt(hwnd) : undefined;
@@ -1146,7 +1200,9 @@ function themeApplyWindow(hwnd, options = {}) {
     cell[0] = value;
     const hr = dwmapi.DwmSetWindowAttribute(handle, attribute, cell, 4);
     if (hr !== 0) {
-      const error = new Error(`DwmSetWindowAttribute(${attribute}) failed: 0x${(hr >>> 0).toString(16)}`);
+      const error = new Error(`DwmSetWindowAttribute(${attribute}) failed: 0x${(hr >>> 0).toString(16)}`) as Error & {
+        hresult?: number;
+      };
       error.code = "ERR_BUN_WINDOWS_HRESULT";
       error.hresult = hr >>> 0;
       throw error;
@@ -1177,6 +1233,7 @@ export default {
   knownFolders,
   knownFolder,
   processes,
+  dll,
   conpty,
   gpu,
   Job,

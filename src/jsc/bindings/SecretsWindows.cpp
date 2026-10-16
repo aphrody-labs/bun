@@ -35,7 +35,7 @@ public:
         if (loaded) return true;
 
         // Load advapi32.dll which contains the Credential Manager API
-        handle = LoadLibraryW(L"advapi32.dll");
+        handle = LoadLibraryExW(L"advapi32.dll", nullptr, LOAD_LIBRARY_SEARCH_SYSTEM32);
         if (!handle) {
             return false;
         }

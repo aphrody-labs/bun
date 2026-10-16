@@ -321,6 +321,52 @@ win_host_fn! {
 }
 
 win_host_fn! {
+    /// `dllLoaded(pid)` → JSON array of the modules of `pid` (0: this process).
+    js_dll_loaded(global, frame) {
+        let json = check(global, sys::dll::loaded_json(u32_arg(frame, 0)))?;
+        string(global, &json)
+    }
+}
+
+win_host_fn! {
+    /// `dllAddDirectory(path)` → id.
+    js_dll_add_directory(global, frame) {
+        let id = check(global, sys::dll::add_directory(&str_arg(global, frame, 0)?))?;
+        Ok(JSValue::js_number(f64::from(id)))
+    }
+}
+
+win_host_fn! {
+    /// `dllRemoveDirectory(id)` → whether `id` was a directory added by `dllAddDirectory`.
+    js_dll_remove_directory(global, frame) {
+        Ok(JSValue::js_boolean(sys::dll::remove_directory(u32_arg(frame, 0))))
+    }
+}
+
+win_host_fn! {
+    /// `dllDirectories()` → JSON array.
+    js_dll_directories(global, frame) {
+        string(global, &sys::dll::directories_json())
+    }
+}
+
+win_host_fn! {
+    /// `dllResolve(name, from)` → path or `null`.
+    js_dll_resolve(global, frame) {
+        let name = str_arg(global, frame, 0)?;
+        let from = opt_str_arg(global, frame, 1)?;
+        opt_string(global, sys::dll::resolve(&name, from.as_deref()))
+    }
+}
+
+win_host_fn! {
+    /// `dllDiagnose(path)` → JSON or `null` when `path` is not a PE image.
+    js_dll_diagnose(global, frame) {
+        opt_string(global, sys::dll::diagnose_json(&str_arg(global, frame, 0)?))
+    }
+}
+
+win_host_fn! {
     /// `processList()` → JSON array.
     js_process_list(global, frame) {
         let json = check(global, sys::process::list_json())?;

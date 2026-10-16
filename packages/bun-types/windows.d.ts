@@ -296,6 +296,73 @@ declare module "bun:windows" {
     function trimWorkingSet(pid: number | { pid: number }): void;
   }
 
+  interface LoadedModule {
+    /** File name, such as `"kernel32.dll"`. */
+    name: string;
+    path: string;
+    /** Load address. */
+    base: number;
+    /** Size of the mapped image in bytes. */
+    size: number;
+  }
+
+  /** A directory added to the DLL search order by {@link dll.addDirectory}. */
+  interface DllDirectory extends Disposable {
+    readonly path: string;
+    /** Removes the directory from the search order; `false` when it was already removed. */
+    remove(): boolean;
+  }
+
+  interface DllProblem {
+    /**
+     * - `"missing"`: no DLL named `module` is found in the search order.
+     * - `"export"`: `path` does not export `symbol` (`#<ordinal>` for an ordinal import).
+     * - `"machine"`: `path` is built for another architecture (`machine`) than Bun.
+     */
+    kind: "missing" | "export" | "machine";
+    /** The DLL as its importer names it. */
+    module: string;
+    /** Where `module` was found; absent when it is missing. */
+    path?: string;
+    symbol?: string;
+    machine?: string;
+    /** The module whose import table names `module`; absent for the diagnosed file itself. */
+    requiredBy?: string;
+  }
+
+  interface DllDiagnosis {
+    /** Architecture of the diagnosed file: `"x64"`, `"arm64"`, `"x86"`… */
+    machine: string;
+    /** Empty when every import resolves. Delay-loaded imports are not checked. */
+    problems: DllProblem[];
+  }
+
+  /** DLL loading, shared by `bun:ffi` `dlopen` and `process.dlopen`. */
+  namespace dll {
+    /** The modules loaded in a process (default: this process). */
+    function loaded(pid?: number | { pid: number }): LoadedModule[];
+    /**
+     * Adds a directory to the search order of DLLs loaded afterwards by `bun:ffi` and
+     * `process.dlopen` (`AddDllDirectory`), for a bare name and for the dependencies of a
+     * DLL loaded by path.
+     */
+    function addDirectory(directory: string): DllDirectory;
+    /** The directories added with {@link addDirectory}, oldest first. */
+    function directories(): string[];
+    /**
+     * The file the loader maps for the DLL `name`: a module already loaded, then the directory
+     * `from`, Bun's directory, the added directories, System32, the Windows directory, the
+     * working directory and `PATH`. API set names (`api-ms-…`) come back unchanged; `null`
+     * when nothing is found.
+     */
+    function resolve(name: string, options?: { from?: string }): string | null;
+    /**
+     * Reads the import tables of `file` and of its dependencies outside the Windows directory
+     * and reports what keeps it from loading; `null` when `file` is not a PE image.
+     */
+    function diagnose(file: string): DllDiagnosis | null;
+  }
+
   interface JobLimits {
     /** Terminate every process of the job when the last handle to the job closes. */
     killOnClose?: boolean;

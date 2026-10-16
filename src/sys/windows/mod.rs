@@ -1639,15 +1639,11 @@ pub(crate) extern "C" fn Bun__LoadLibraryBunString(str_: &bun_core::String) -> *
     // The path is JS-supplied; over-length input must surface as the same
     // `null + GetLastError()` shape `LoadLibraryExW` itself would yield, not
     // a Rust panic unwinding across the `extern "C"` boundary.
-    if str_.encode_into_utf16_buf_z(buf.as_mut_slice()).is_none() {
+    let Some(len) = str_.encode_into_utf16_buf_z(buf.as_mut_slice()) else {
         kernel32::SetLastError(DWORD::from(Win32Error::FILENAME_EXCED_RANGE.int()));
         return ptr::null_mut();
-    }
-    const LOAD_WITH_ALTERED_SEARCH_PATH: DWORD = 0x00000008;
-    // SAFETY: buf NUL-terminated by `encode_into_utf16_buf_z`.
-    unsafe {
-        kernel32::LoadLibraryExW(buf.as_ptr(), ptr::null_mut(), LOAD_WITH_ALTERED_SEARCH_PATH)
-    }
+    };
+    dll::load(&buf[..len])
 }
 
 pub use bun_windows_sys::externs::windows_enable_stdio_inheritance;
@@ -1895,6 +1891,7 @@ pub fn GetEnvironmentVariableW(
     Ok(rc)
 }
 
+pub mod dll;
 pub mod env;
 
 // ──────────────────────────────────────────────────────────────────────────

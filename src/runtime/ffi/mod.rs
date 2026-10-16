@@ -94,24 +94,33 @@ mod dom_call_slowpath {
 
 /// Get the last dynamic-library loading error message in a cross-platform way.
 /// On POSIX systems, this calls `dlerror()`.
-/// On Windows, this uses `GetLastError()` and formats the error code.
+/// On Windows, this formats `GetLastError()` and adds what the import tables of the first
+/// of `paths` that is a PE image say about the failure (missing DLL, export, architecture).
 /// Returns an owned byte string (heap-copied since `dlerror()`'s storage is
 /// not stable across calls).
-///
-/// Note: never fails — `Vec` write! is infallible and the POSIX path is
-/// unconditional.
-pub(crate) fn get_dl_error() -> Box<[u8]> {
+pub(crate) fn get_dl_error(paths: &[&[u8]]) -> Box<[u8]> {
     #[cfg(windows)]
     {
         use std::io::Write as _;
-        let err = bun_sys::windows::GetLastError();
-        let err_int = err as u32;
+        let err = bun_sys::windows::GetLastError() as u32;
         let mut v = Vec::new();
-        write!(&mut v, "error code {}", err_int).ok();
+        let text = crate::windows::sys::message(err);
+        if !text.is_empty() {
+            let _ = write!(&mut v, "{text} ");
+        }
+        let _ = write!(&mut v, "(error code {err})");
+        if let Some(detail) = paths
+            .iter()
+            .find_map(|path| bun_sys::windows::dll::describe_failure(path, err))
+        {
+            v.extend_from_slice(b": ");
+            v.extend_from_slice(&detail);
+        }
         v.into_boxed_slice()
     }
     #[cfg(not(windows))]
     {
+        let _ = paths;
         // SAFETY: dlerror is safe to call from any thread
         let msg: &[u8] = unsafe {
             let p = libc::dlerror();

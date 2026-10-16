@@ -14,6 +14,7 @@
 
 pub(crate) mod clipboard;
 pub(crate) mod conpty;
+pub(crate) mod dll;
 pub(crate) mod eventlog;
 pub(crate) mod folders;
 pub(crate) mod gpu;

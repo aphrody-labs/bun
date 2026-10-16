@@ -443,6 +443,9 @@ extern "C" size_t Bun__process_dlopen_count;
 extern "C" void CrashHandler__setDlOpenAction(const char* action);
 extern "C" bool Bun__VM__allowAddons(void* vm);
 extern "C" int32_t Bun__addonNeedsGlibcOnMusl(const char* path, size_t len, char* soname_out, size_t soname_cap);
+#if OS(WINDOWS)
+extern "C" size_t Bun__windowsDllFailure(const char* path, size_t len, uint32_t code, char* out, size_t out_cap);
+#endif
 
 JSC_DEFINE_HOST_FUNCTION_WITH_ATTRIBUTES(Process_functionDlopen, __attribute__((minsize)), (JSC::JSGlobalObject * globalObject_, JSC::CallFrame* callFrame))
 {
@@ -603,6 +606,15 @@ JSC_DEFINE_HOST_FUNCTION_WITH_ATTRIBUTES(Process_functionDlopen, __attribute__((
         } else {
             errorBuilder.append("error code "_s);
             errorBuilder.append(WTF::String::number(errorId));
+        }
+
+        // Name the dependency, export or architecture behind the system text.
+        char detail[2048];
+        size_t detailLength = Bun__windowsDllFailure(utf8.legacyCStringPointer(), utf8.length(), errorId, detail, sizeof(detail));
+        if (detailLength > 0) {
+            // The system text ends with a period; "error code N" does not.
+            errorBuilder.append(messageBuffer && charCount > 0 && messageBuffer[charCount - 1] == L'.' ? " "_s : ": "_s);
+            errorBuilder.append(WTF::String::fromUTF8ReplacingInvalidSequences(std::span { reinterpret_cast<const Latin1Character*>(detail), detailLength }));
         }
 
         WTF::String msg = errorBuilder.toString();

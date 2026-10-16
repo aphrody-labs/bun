@@ -926,8 +926,7 @@ fn factory() -> Result<ComPtr<IWICImagingFactory>, BackendError> {
 fn load_factory() {
     // Resolve the one flat C export first; if windowscodecs.dll isn't present
     // we never attempt CoCreateInstance and the whole backend stays disabled.
-    // SAFETY: literal C string; LoadLibraryA is safe to call from any thread.
-    let dll = unsafe { windows::LoadLibraryA(c"windowscodecs.dll".as_ptr()) };
+    let dll = windows::dll::load_system("windowscodecs.dll");
     if dll.is_null() {
         return;
     }

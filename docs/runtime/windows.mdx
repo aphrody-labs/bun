@@ -199,6 +199,54 @@ A `pid` argument also accepts an object with a `pid` property, such as the `Subp
 
 ---
 
+## DLLs
+
+`bun:ffi` `dlopen` and `process.dlopen` load DLLs the same way:
+
+- For a DLL loaded by absolute path, its dependencies are searched in its own directory, Bun's directory, the directories added with `windows.dll.addDirectory` and System32.
+- When a dependency is not in those directories, the load is retried with the Windows directory, the working directory and `PATH`.
+- A bare name such as `"sqlite3.dll"` keeps the standard Windows search order. When directories were added, Bun's directory, the added directories and System32 are searched first.
+
+When a load fails, the error names the cause read from the import tables:
+
+```txt
+Failed to open library "C:\app\native.dll": The specified module could not be found (error code 126): vcruntime140.dll is missing (required by native.dll). Install the Microsoft Visual C++ Redistributable: https://aka.ms/vs/17/release/vc_redist.x64.exe
+```
+
+The cause is one of:
+
+- a dependency that is missing, at any depth;
+- a symbol that a dependency does not export (error 127);
+- a DLL built for another architecture (error 193).
+
+`process.dlopen` adds the same detail to its `ERR_DLOPEN_FAILED` message.
+
+```ts
+const dir = windows.dll.addDirectory("vendor/bin"); // AddDllDirectory
+const lib = dlopen("C:/app/native.dll", { run: { args: [], returns: "i32" } });
+dir.remove(); // or `using dir = ...`
+
+windows.dll.directories(); // ["C:\\app\\vendor\\bin"]
+windows.dll.resolve("zlib1.dll", { from: "C:/app" }); // path the loader would map, or null
+windows.dll.loaded(); // [{ name, path, base, size }, ...] for this process
+windows.dll.loaded(1234); // modules of another process
+
+windows.dll.diagnose("C:/app/native.dll");
+// { machine: "x64", problems: [{ kind: "missing", module: "vcruntime140.dll", requiredBy: "C:\\app\\native.dll" }] }
+```
+
+### `windows.dll.diagnose`
+
+`windows.dll.diagnose` reads the PE import tables of the file and of every dependency outside the Windows directory. It reads up to 64 modules and reports up to 32 problems:
+
+- `kind: "missing"`: no file named `module` is found.
+- `kind: "export"`: `path` does not export `symbol`. An ordinal import is shown as `#<n>`.
+- `kind: "machine"`: `path` is built for `machine`.
+
+`windows.dll.diagnose` returns `null` when the file is not a PE image. API set contracts (`api-ms-win-…`, `ext-ms-…`) count as present. Delay-loaded imports are not checked: a missing one only fails when it is first called.
+
+---
+
 ## Job Objects
 
 A Job Object groups processes under shared limits and accounting. Children of an assigned process join the job.

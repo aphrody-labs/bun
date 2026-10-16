@@ -1,7 +1,8 @@
+import { dlopen } from "bun:ffi";
 import { describe, expect, test } from "bun:test";
 import windows from "bun:windows";
 import { bunEnv, bunExe, isWindows, tempDir } from "harness";
-import { readFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
 import { win32 as windowsPath } from "node:path";
 
 function errorCode(fn: () => unknown): string | undefined {
@@ -29,6 +30,7 @@ describe.skipIf(isWindows)("non-Windows", () => {
     expect(errorCode(() => windows.memory.status())).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
     expect(errorCode(() => windows.toolchain())).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
     expect(errorCode(() => windows.processes.setPriority(0, "normal"))).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
+    expect(errorCode(() => windows.dll.loaded())).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
     expect(errorCode(() => new windows.Job())).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
     expect(errorCode(() => new windows.ntfs.Volume())).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
     expect(errorCode(() => windows.pe.catalogFile("C:\\x"))).toBe("ERR_BUN_WINDOWS_UNSUPPORTED");
@@ -174,6 +176,117 @@ describe.skipIf(!isWindows)("bun:windows", () => {
     expect(self).toBeDefined();
     expect(self!.threads).toBeGreaterThan(0);
     expect(windows.processes.path(process.pid).toLowerCase()).toBe(process.execPath.toLowerCase());
+  });
+
+  describe("dll", () => {
+    const system32 = windowsPath.join(process.env.SystemRoot!, "System32");
+    const versionDll = windowsPath.join(system32, "version.dll");
+    const symbols = { GetFileVersionInfoSizeW: { args: ["ptr", "ptr"], returns: "u32" } } as const;
+
+    // A copy of version.dll, edited so that it cannot load.
+    function brokenCopy(dir: string, name: string, edit: (bytes: Buffer) => void) {
+      const bytes = readFileSync(versionDll);
+      edit(bytes);
+      const file = windowsPath.join(dir, name);
+      writeFileSync(file, bytes);
+      return file;
+    }
+
+    // Renames every imported API set so that none of them resolves.
+    function renameApiSets(bytes: Buffer) {
+      for (let at = bytes.indexOf("api-ms-win-core-"); at !== -1; at = bytes.indexOf("api-ms-win-core-", at + 1)) {
+        bytes.write("bun", at, "latin1");
+      }
+    }
+
+    function dlopenError(file: string) {
+      try {
+        dlopen(file, symbols).close();
+      } catch (error) {
+        return (error as Error).message;
+      }
+      return undefined;
+    }
+
+    test("loaded modules and resolution", () => {
+      const kernel32 = windowsPath.join(system32, "kernel32.dll").toLowerCase();
+      const modules = windows.dll.loaded();
+      expect(modules.find(m => m.name.toLowerCase() === "kernel32.dll")?.path.toLowerCase()).toBe(kernel32);
+      expect(modules.some(m => m.path.toLowerCase() === process.execPath.toLowerCase())).toBe(true);
+      expect(windows.dll.loaded(process.pid).length).toBe(modules.length);
+
+      expect(windows.dll.resolve("kernel32.dll")?.toLowerCase()).toBe(kernel32);
+      expect(windows.dll.resolve("api-ms-win-core-synch-l1-2-0.dll")).toBe("api-ms-win-core-synch-l1-2-0.dll");
+      expect(windows.dll.resolve("bun-no-such-library.dll")).toBeNull();
+      expect(windows.dll.diagnose(versionDll)).toEqual({
+        machine: process.arch === "arm64" ? "arm64" : "x64",
+        problems: [],
+      });
+      expect(windows.dll.diagnose(process.env.SystemRoot!)).toBeNull();
+      expect(errorCode(() => windows.dll.resolve(""))).toBe("ERR_INVALID_ARG_VALUE");
+    });
+
+    test("added directories are searched for a bare name", () => {
+      using dir = tempDir("bun-windows-dll", {});
+      const directory = windowsPath.resolve(String(dir));
+      writeFileSync(windowsPath.join(directory, "bun-dll-plain.dll"), readFileSync(versionDll));
+      expect(windows.dll.resolve("bun-dll-plain.dll")).toBeNull();
+
+      const added = windows.dll.addDirectory(directory);
+      expect(added.path).toBe(directory);
+      expect(windows.dll.directories()).toContain(directory);
+      expect(windows.dll.resolve("bun-dll-plain.dll")?.toLowerCase()).toBe(
+        windowsPath.join(directory, "bun-dll-plain.dll").toLowerCase(),
+      );
+      const lib = dlopen("bun-dll-plain.dll", symbols);
+      expect(typeof lib.symbols.GetFileVersionInfoSizeW).toBe("function");
+      lib.close();
+
+      expect(added.remove()).toBe(true);
+      expect(added.remove()).toBe(false);
+      expect(windows.dll.directories()).not.toContain(directory);
+    });
+
+    test("a missing dependency is named", () => {
+      using dir = tempDir("bun-windows-dll", {});
+      const file = brokenCopy(String(dir), "bun-dll-missing.dll", renameApiSets);
+      const diagnosis = windows.dll.diagnose(file)!;
+      const missing = diagnosis.problems.filter(p => p.kind === "missing");
+      expect(missing.length).toBeGreaterThan(0);
+      expect(missing[0]).toEqual({
+        kind: "missing",
+        module: expect.stringMatching(/^bun-ms-win-core-/),
+        requiredBy: file,
+      });
+
+      const message = dlopenError(file);
+      expect(message).toContain(`Failed to open library "${file}"`);
+      expect(message).toContain("(error code 126)");
+      expect(message).toContain(`${missing[0].module} is missing (required by bun-dll-missing.dll)`);
+
+      let error: any;
+      try {
+        process.dlopen({ exports: {} }, file);
+      } catch (e) {
+        error = e;
+      }
+      expect(error?.code).toBe("ERR_DLOPEN_FAILED");
+      expect(error?.message).toContain(`${missing[0].module} is missing (required by bun-dll-missing.dll)`);
+    });
+
+    test("another architecture is named", () => {
+      using dir = tempDir("bun-windows-dll", {});
+      const file = brokenCopy(String(dir), "bun-dll-x86.dll", bytes => {
+        bytes.writeUInt16LE(0x14c, bytes.readUInt32LE(0x3c) + 4);
+      });
+      expect(windows.dll.diagnose(file)).toEqual({
+        machine: "x86",
+        problems: [{ kind: "machine", module: "bun-dll-x86.dll", path: file, machine: "x86" }],
+      });
+      expect(dlopenError(file)).toContain(
+        `bun-dll-x86.dll is built for x86, but this Bun runs as ${process.arch === "arm64" ? "arm64" : "x64"}`,
+      );
+    });
   });
 
   test("process controls", () => {

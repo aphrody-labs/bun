@@ -41,6 +41,8 @@ const {
 console.log(`SQLite 3 version: ${sqlite3_libversion()}`);
 ```
 
+On Windows, the dependencies of a DLL opened by path are found in its own directory first. A failed `dlopen` names the missing dependency, export or architecture. `windows.dll` in [`bun:windows`](/runtime/windows#dlls) adds directories to the search order and diagnoses a DLL.
+
 ---
 
 ## Performance

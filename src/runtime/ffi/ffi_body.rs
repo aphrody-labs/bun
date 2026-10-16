@@ -1603,7 +1603,7 @@ impl FFI {
                         Ok(d) => break 'brk d,
                         Err(_) => {
                             // Then, if that fails, report an error with the library name and system error
-                            let dlerror_msg = get_dl_error();
+                            let dlerror_msg = get_dl_error(&[backup_name, name]);
 
                             let mut msg = Vec::new();
                             let _ = write!(

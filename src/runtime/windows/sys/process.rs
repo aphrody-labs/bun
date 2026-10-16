@@ -25,7 +25,7 @@ struct ProcessEntry32W {
 
 #[link(name = "kernel32")]
 unsafe extern "system" {
-    fn CreateToolhelp32Snapshot(flags: u32, pid: u32) -> HANDLE;
+    pub(crate) fn CreateToolhelp32Snapshot(flags: u32, pid: u32) -> HANDLE;
     fn Process32FirstW(snapshot: HANDLE, entry: *mut ProcessEntry32W) -> BOOL;
     fn Process32NextW(snapshot: HANDLE, entry: *mut ProcessEntry32W) -> BOOL;
     pub(crate) fn OpenProcess(access: u32, inherit: BOOL, pid: u32) -> HANDLE;
