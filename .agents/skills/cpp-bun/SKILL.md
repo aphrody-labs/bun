@@ -128,7 +128,7 @@ structured-clone object fast paths.
 
 ## Class definitions (`*.classes.ts`)
 
-40 files match `src/**/*.classes.ts`, in `src/jsc` (1), `src/runtime/api` (22), `src/runtime/crawl` (1), `src/runtime/crypto` (1), `src/runtime/curl` (1), `src/runtime/ffi` (1), `src/runtime/image` (1), `src/runtime/nginx` (1), `src/runtime/node` (1), `src/runtime/node/quic` (1), `src/runtime/server` (1), `src/runtime/socket` (1), `src/runtime/test_runner` (1), `src/runtime/valkey_jsc` (1), `src/runtime/vector_index` (1), `src/runtime/video` (1), `src/runtime/webcore` (3).
+42 files match `src/**/*.classes.ts`, in `src/jsc` (1), `src/runtime/adblock` (1), `src/runtime/api` (22), `src/runtime/crawl` (1), `src/runtime/crypto` (1), `src/runtime/curl` (1), `src/runtime/ffi` (1), `src/runtime/image` (1), `src/runtime/nginx` (1), `src/runtime/node` (1), `src/runtime/node/quic` (1), `src/runtime/server` (1), `src/runtime/socket` (1), `src/runtime/test_runner` (1), `src/runtime/valkey_jsc` (1), `src/runtime/vector_index` (1), `src/runtime/video` (1), `src/runtime/web_detect` (1), `src/runtime/webcore` (3).
 
 ## Read next
 
