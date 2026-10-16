@@ -80,7 +80,7 @@ bun scripts/aphrody/setup.ts deps --write   # regenerate, visibility from `gh re
 bun scripts/aphrody/setup.ts deps --check   # what test/internal/aphrody-setup.test.ts checks
 ```
 
-The repository has no git submodules. The build fetches the native dependencies itself as GitHub archives at pinned commits. `vendor/uv`, `vendor/find-msvc-tools` and `vendor/windows-rs` are committed. npm dependencies, including `tailwindcss`, come from the registry through `bun.lock`.
+The build fetches the native dependencies itself as GitHub archives at pinned commits. Committed vendor sources, optional checkouts (`bun run vendor:setup`) and the remaining submodules are listed in [vendor.md](./vendor.md). npm dependencies, including `tailwindcss`, come from the registry through `bun.lock`.
 
 ## Manual setup
 

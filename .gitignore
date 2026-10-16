@@ -157,17 +157,12 @@ tmp
 codegen-for-zig-team.tar.gz
 
 # Dependencies
+# Inventory and re-setup: docs/project/vendor.md, scripts/aphrody/vendor-setup.ts
 /vendor/*
-!/vendor/cef/
-!/vendor/cef/**
 !/vendor/uv/
 !/vendor/find-msvc-tools/
 !/vendor/windows-rs/
 !/vendor/russh-sftp/
-!/vendor/terminal/
-!/vendor/terminal/**
-!/vendor/powershell/
-!/vendor/powershell/**
 
 # Dependencies (before CMake)
 # These can be removed in the far future
