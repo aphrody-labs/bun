@@ -1306,7 +1306,9 @@ describe.concurrent("bun lint with plugins in JavaScript", () => {
           const name = it.filename.replaceAll("\\", "/");
           counts.set(name, (counts.get(name) ?? 0) + 1);
         }
-        const expected = Array.from({ length: 300 }, (_, i) => [`src/${i}.ts`, i % 5] as const).filter(it => it[1] > 0);
+        const expected = Array.from({ length: 300 }, (_, i) => [`src/${i}.ts`, i % 5] as [string, number]).filter(
+          it => it[1] > 0,
+        );
         expect([...counts].sort()).toEqual([...expected].sort());
         expect(exitCode).toBe(1);
       }

@@ -292,6 +292,7 @@ test.concurrent("trustedDependencies added on a later install still matches the 
   expect(await exists(join(packageDir, "node_modules", "esbuild", "package.json"))).toBeTrue();
   expect(await exists(join(packageDir, "node_modules", "esbuild", "what-bin.txt"))).toBeFalse();
   expect(await exited).toBe(0);
+<<<<<<< HEAD
 
   await writeFile(
     packageJson,
@@ -511,6 +512,28 @@ snapshots:
 
     await expectMigrationKeepsTrust(env, packageDir, "pnpm-lock.yaml");
   });
+=======
+
+  await writeFile(
+    packageJson,
+    JSON.stringify({ name: "foo", version: "1.0.0", dependencies, trustedDependencies: ["esbuild"] }),
+  );
+
+  ({ stdout, stderr, exited } = spawn({
+    cmd: [bunExe(), "install"],
+    cwd: packageDir,
+    stdout: "pipe",
+    stdin: "ignore",
+    stderr: "pipe",
+    env,
+  }));
+
+  err = await stderr.text();
+  out = await stdout.text();
+  expect(err).not.toContain("error:");
+  expect(await exists(join(packageDir, "node_modules", "esbuild", "what-bin.txt"))).toBeFalse();
+  expect(await exited).toBe(0);
+>>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
 });
 
 test.concurrent("node-gyp shim directory added to lifecycle script PATH gets a randomized name", async () => {
@@ -1212,6 +1235,7 @@ test.concurrent("trustedDependencies entries for non-npm dependencies only apply
   expect(
     await exists(join(packageDir, "node_modules", "middle", "node_modules", "trusted-native-addon", "preinstall.txt")),
   ).toBeFalse();
+<<<<<<< HEAD
 
   // The same tarball declared by the root itself under the trusted alias still
   // runs its lifecycle scripts.
@@ -2634,6 +2658,41 @@ describe.concurrent.each(["hoisted", "isolated"] as const)(
     });
   },
 );
+=======
+
+  // The same tarball declared by the root itself under the trusted alias still
+  // runs its lifecycle scripts.
+  await rm(join(packageDir, "node_modules"), { recursive: true, force: true });
+  await rm(join(packageDir, "bun.lock"), { force: true });
+  await writeFile(
+    packageJson,
+    JSON.stringify({
+      name: "foo",
+      version: "1.0.0",
+      dependencies: {
+        "trusted-native-addon": tarballUrl,
+      },
+      trustedDependencies: ["trusted-native-addon"],
+    }),
+  );
+
+  ({ stdout, stderr, exited } = spawn({
+    cmd: [bunExe(), "install"],
+    cwd: packageDir,
+    stdout: "pipe",
+    stdin: "ignore",
+    stderr: "pipe",
+    env,
+  }));
+
+  err = await stderr.text();
+  out = await stdout.text();
+  expect(err).not.toContain("error:");
+  expect(out).not.toContain("Blocked");
+  expect(await exited).toBe(0);
+  expect(await exists(join(packageDir, "node_modules", "trusted-native-addon", "preinstall.txt"))).toBeTrue();
+});
+>>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
 
 // Bun skips the install scripts of sharp from 0.33.0 on, which gets its binary from `@img/sharp-*` packages.
 describe.concurrent.each(["hoisted", "isolated"] as const)("scripts that bun skips by itself (%s)", linker => {

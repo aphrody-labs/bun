@@ -1350,13 +1350,18 @@ describe("`bun audit` report", () => {
     expect(await pkgJsonText(dir)).toBe(pkgJsonBefore);
   });
 
+<<<<<<< HEAD
   test.concurrent("`bun audit --fix` is not `bun audit fix`: the unknown flag is rejected", async () => {
+=======
+  test.concurrent("`bun audit --fix` is not `bun audit fix`: the unknown flag is ignored and a plain audit runs", async () => {
+>>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
     const bulkHits = { count: 0 };
     await using server = startRegistry({ "a-dep": [adv("<1.0.4")] }, { bulkHits });
     using dir = await setup(server, { name: "foo", dependencies: { "a-dep": "1.0.2" } });
     const lockBefore = await lock(dir);
     const pkgJsonBefore = await pkgJsonText(dir);
 
+<<<<<<< HEAD
     const withFix = await audit(dir, "--fix");
     expect(withFix.stdout).toBe("");
     expect(withFix.stderr).toBe(
@@ -1364,6 +1369,18 @@ describe("`bun audit` report", () => {
     );
     expect(withFix.exitCode).toBe(1);
     expect(bulkHits.count).toBe(0);
+=======
+    const plain = await audit(dir);
+    expect(plain.stdout).toContain("1 vulnerability (1 high)");
+    expect(plain.exitCode).toBe(1);
+    expect(bulkHits.count).toBe(1);
+
+    const withFix = await audit(dir, "--fix");
+    expect(withFix.stdout).toBe(plain.stdout);
+    expect(withFix.stderr).not.toContain("--fix");
+    expect(withFix.exitCode).toBe(1);
+    expect(bulkHits.count).toBe(2);
+>>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
     expect(await lock(dir)).toBe(lockBefore);
     expect(await pkgJsonText(dir)).toBe(pkgJsonBefore);
   });
@@ -2407,6 +2424,7 @@ describe("`bun audit fix`", () => {
       dependencies: { "one-optional-peer-dep": "1.0.2", "one-range-dep": "1.0.0" },
     });
     expect(await lock(dir)).toContain('"no-deps@1.0.0"');
+<<<<<<< HEAD
 
     const { stdout, exitCode } = await auditFix(dir);
     expect(stdout).toContain("  ^ no-deps 1.0.0 -> 1.0.1");
@@ -2469,10 +2487,25 @@ describe("`bun audit fix`", () => {
       const lockfile = await lock(dir);
       expect(lockfile).toContain(`"no-deps-backward-tags@${fixed}"`);
       expect(lockfile).not.toContain(installed);
+=======
 
-      await runBunInstall(installEnv(dir), dir, { frozenLockfile: true });
-    },
-  );
+    const { stdout, exitCode } = await auditFix(dir);
+    expect(stdout).toContain("  ^ no-deps 1.0.0 -> 1.0.1");
+    expect(stdout).toContain("Fixed 1 vulnerability in 1 package");
+    expect(exitCode).toBe(0);
+
+    const lockfile = await lock(dir);
+    expect(lockfile).toContain('"no-deps": ["no-deps@1.0.1"');
+    expect(lockfile).not.toContain('"no-deps@1.0.0"');
+    expect(lockfile).not.toContain('"one-range-dep/no-deps"');
+    expect(await installedVersion(dir, "no-deps")).toBe("1.0.1");
+
+    const recheck = await audit(dir);
+    expectClean(recheck, 3);
+>>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
+
+    await runBunInstall(installEnv(dir), dir, { frozenLockfile: true });
+  });
 
   test.concurrent("advisories that match no installed version are listed, not just counted", async () => {
     await using server = startRegistry(
@@ -3179,6 +3212,7 @@ describe("`bun audit fix`", () => {
     await expectInstall(dir, "--frozen-lockfile", "--minimum-release-age", "3153600000");
   });
 
+<<<<<<< HEAD
   test.concurrent("a fix version listed in minimumReleaseAgeExcludes is not newer than the gate", async () => {
     await using server = startRegistry({ "a-dep": [adv("<1.0.4")] });
     using dir = await setupVulnerableADep(server);
@@ -3203,6 +3237,15 @@ describe("`bun audit fix`", () => {
     );
     using dir = await setupVulnerableADep(server);
 
+=======
+  test.concurrent("the lowest safe release is taken even when only it is newer than --minimum-release-age", async () => {
+    await using server = startRegistry(
+      { "a-dep": [adv("<1.0.4")] },
+      { rewriteTime: { "a-dep": { "1.0.4": new Date().toISOString() } } },
+    );
+    using dir = await setupVulnerableADep(server);
+
+>>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
     const { stdout, exitCode } = await auditFix(dir, "--minimum-release-age", "86400");
     expect(stdout).toContain("  ^ a-dep 1.0.2 -> 1.0.4 (newer than --minimum-release-age)");
     expect(stdout).not.toContain("1.0.5");

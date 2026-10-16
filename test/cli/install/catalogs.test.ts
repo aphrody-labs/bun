@@ -1375,7 +1375,11 @@ describe.concurrent("errors", () => {
     expect(err).toContain("no-deps@catalog: failed to resolve");
     expect(exitCode).not.toBe(0);
 
+<<<<<<< HEAD
     await runBunInstall(installEnv(workspace.packageDir), workspace.packageDir);
+=======
+    await runBunInstall(bunEnv, workspace.packageDir);
+>>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
     expect((await file(join(workspace.packageDir, "node_modules", "no-deps", "package.json")).json()).version).toBe(
       "1.1.0",
     );

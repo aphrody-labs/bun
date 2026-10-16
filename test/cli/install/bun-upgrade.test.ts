@@ -349,6 +349,13 @@ function makeZipStored(entryName: string, data: Buffer, unixMode: number): Buffe
 // enough because `unzip` preserves the mode bits; on Windows the verify step
 // spawns `bun.exe` directly, so the archive has to carry a real PE image.
 async function writeFakeReleaseZip(outPath: string, version: string): Promise<void> {
+<<<<<<< HEAD
+=======
+  const os = process.platform === "win32" ? "windows" : process.platform === "darwin" ? "darwin" : "linux";
+  const arch = process.arch === "arm64" ? "aarch64" : "x64";
+  const abi = isMusl ? "-musl" : "";
+  const folder = `bun-${os}-${arch}${abi}`;
+>>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
   if (isWindows) {
     const exe = Buffer.from(await Bun.file(bunExe()).arrayBuffer());
     await writeFile(outPath, makeZipStored(`${releaseFolder}/bun.exe`, exe, 0o755));
@@ -417,6 +424,7 @@ describe.concurrent(() => {
       env,
     });
 
+<<<<<<< HEAD
     const [out, err, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
     expect(out).toBe("");
     expect(normalizeBunSnapshot(err)).toMatchInlineSnapshot(`
@@ -424,6 +432,11 @@ describe.concurrent(() => {
       note: Use \`bun update bun-types --dev\` instead."
     `);
     expect(exitCode).toBe(1);
+=======
+    const err = await proc.stderr.text();
+    expect(err.split(/\r?\n/)).toContain("error: This command updates Bun itself, and does not take package names.");
+    expect(err.split(/\r?\n/)).toContain("note: Use `bun update bun-types --dev` instead.");
+>>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
   });
 
   it("two invalid arguments flipped, should display error message and suggest command", async () => {
@@ -437,6 +450,7 @@ describe.concurrent(() => {
       env,
     });
 
+<<<<<<< HEAD
     const [out, err, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
     expect(out).toBe("");
     expect(normalizeBunSnapshot(err)).toMatchInlineSnapshot(`
@@ -444,6 +458,11 @@ describe.concurrent(() => {
       note: Use \`bun update --dev bun-types\` instead."
     `);
     expect(exitCode).toBe(1);
+=======
+    const err = await proc.stderr.text();
+    expect(err.split(/\r?\n/)).toContain("error: This command updates Bun itself, and does not take package names.");
+    expect(err.split(/\r?\n/)).toContain("note: Use `bun update --dev bun-types` instead.");
+>>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
   });
 
   it("one invalid argument, should display error message and suggest command", async () => {
@@ -457,6 +476,7 @@ describe.concurrent(() => {
       env,
     });
 
+<<<<<<< HEAD
     const [out, err, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
     expect(out).toBe("");
     expect(normalizeBunSnapshot(err)).toMatchInlineSnapshot(`
@@ -464,6 +484,11 @@ describe.concurrent(() => {
       note: Use \`bun update bun-types\` instead."
     `);
     expect(exitCode).toBe(1);
+=======
+    const err = await proc.stderr.text();
+    expect(err.split(/\r?\n/)).toContain("error: This command updates Bun itself, and does not take package names.");
+    expect(err.split(/\r?\n/)).toContain("note: Use `bun update bun-types` instead.");
+>>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
   });
 
   it("one valid argument, should succeed", async () => {
@@ -645,6 +670,7 @@ it.concurrent("verifies the downloaded release archive against the digest report
     };
   };
 
+<<<<<<< HEAD
   const [mismatched, matched] = await Promise.all([
     runUpgrade("bun-v9.9.7", wrongDigest),
     runUpgrade("bun-v9.9.8", correctDigest),
@@ -665,6 +691,15 @@ it.concurrent("verifies the downloaded release archive against the digest report
   expect(matched.stderr).not.toContain("did not match the checksum");
   expect(matched.stderr).toEndWith(unpackFailure);
   expect(matched.staged).toEqual(["9.9.8"]);
+=======
+  const mismatched = await runUpgrade("bun-v9.9.7", wrongDigest);
+  expect(mismatched.stderr).toContain("did not match the checksum reported by the GitHub API for this release");
+  expect(mismatched.exitCode).toBe(1);
+
+  const matched = await runUpgrade("bun-v9.9.8", correctDigest);
+  expect(matched.stderr).toContain("9.9.8");
+  expect(matched.stderr).not.toContain("did not match the checksum reported by the GitHub API for this release");
+>>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
   expect(matched.exitCode).toBe(1);
 });
 

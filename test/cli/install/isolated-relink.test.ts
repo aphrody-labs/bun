@@ -238,15 +238,24 @@ test.concurrent("re-linking a store entry does not re-run its lifecycle scripts"
 });
 
 test.concurrent("a real directory in a store entry's dependency slot is left alone and not counted as a change", async () => {
+<<<<<<< HEAD
   using packageDir = project(oneRangeDep());
   const link = join(storeNodeModules(packageDir, "one-range-dep", "1.0.0"), "no-deps");
 
   expect(await install(packageDir)).toEqual(installed("+ one-range-dep@1.0.0\n\n2 packages installed"));
   expect(await layout(packageDir)).toEqual(oneRangeDepLayout("1.1.0"));
+=======
+  const { packageDir, packageJson } = await registry.createTestDir({ bunfigOpts: { linker: "isolated" } });
+
+  await write(packageJson, oneRangeDep());
+  await installOk(packageDir);
+  const link = await nestedNoDeps(packageDir);
+>>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
 
   await unlink(link);
   await mkdir(link);
   await write(join(link, "package.json"), JSON.stringify({ name: "no-deps", version: "0.0.0-local-edit" }));
+<<<<<<< HEAD
   const withLocalEdit = {
     ...oneRangeDepLayout("1.1.0"),
     ".bun/one-range-dep@1.0.0/node_modules/no-deps": "no-deps@0.0.0-local-edit",
@@ -254,6 +263,13 @@ test.concurrent("a real directory in a store entry's dependency slot is left alo
 
   expect(await install(packageDir)).toEqual(noChanges);
   expect(await layout(packageDir)).toEqual(withLocalEdit);
+=======
+
+  const out = await installOk(packageDir);
+  expect(out).toContain("(no changes)");
+  expect((await lstat(link)).isDirectory()).toBeTrue();
+  expect(await nestedNoDepsPackageJson(link)).toStrictEqual({ name: "no-deps", version: "0.0.0-local-edit" });
+>>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
 });
 
 test.concurrent.skipIf(!isWindows)("junction-mode warm install reports no changes", async () => {

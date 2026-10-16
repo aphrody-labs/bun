@@ -3378,9 +3378,15 @@ it.concurrent("should allow use of custom timeout", async () => {
     const res = await fetch(new URL(pathname, server.url.origin));
     expect(res.status).toBe(200);
     if (success) {
+<<<<<<< HEAD
       await expect(res.text()).resolves.toBe("Hello, World!");
     } else {
       await expect(res.text()).rejects.toThrow(/The socket connection was closed unexpectedly./);
+=======
+      expect(res.text()).resolves.toBe("Hello, World!");
+    } else {
+      expect(res.text()).rejects.toThrow(/The socket connection was closed unexpectedly./);
+>>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
     }
   }
   await Promise.all([testTimeout("/ok", true), testTimeout("/timeout", false)]);
@@ -3468,7 +3474,11 @@ it.concurrent("allow custom timeout per request", async () => {
   expect(server.timeout).toBeFunction();
   const res = await fetch(new URL("/long-timeout", server.url.origin));
   expect(res.status).toBe(200);
+<<<<<<< HEAD
   await expect(res.text()).resolves.toBe("Hello, World!");
+=======
+  expect(res.text()).resolves.toBe("Hello, World!");
+>>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
 }, 20_000);
 
 it.concurrent("TLS: reaps every zero-byte pre-handshake connection in a burst", async () => {

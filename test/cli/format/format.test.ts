@@ -377,7 +377,9 @@ describe.concurrent("bun fmt", () => {
     ["-l", "--write"],
     ["--check", "--write", "--log-level", "warn"],
   ])("standard input with %s %s: nothing is said, and nothing is printed", async (...args) => {
-    const result = await format({ ".prettierrc": "{}" }, [...args, "--stdin-filepath", "a.js"], { stdin: ugly });
+    const result = await format({ ".prettierrc": "{}" }, [...(args as string[]), "--stdin-filepath", "a.js"], {
+      stdin: ugly,
+    });
     expect({ stdout: result.raw, stderr: result.stderr, exitCode: result.exitCode }).toEqual({
       stdout: "",
       stderr: "",
@@ -771,7 +773,9 @@ describe.concurrent("bun fmt", () => {
     expect(stdin.exitCode).toBe(2);
     // The configuration of another tool makes no difference.
     for (const configuration of [{ ".prettierrc": "{}\n" }, { ".oxfmtrc.json": "{}\n" }]) {
-      const result = await format({ ...configuration, "b.css": files["b.css"] }, ["b.css"]);
+      const result = await format({ ...(configuration as object), "b.css": files["b.css"] } as Record<string, string>, [
+        "b.css",
+      ]);
       expect(result.stderr).toStartWith(problem("b.css", "Unclosed string", [7, 6, '  e: "f']) + "\n\n");
       expect(result.exitCode).toBe(2);
     }
@@ -3910,7 +3914,7 @@ try {
         const run = (text: (index: number) => string) =>
           format(
             {
-              ...configuration,
+              ...(configuration as object),
               ...Object.fromEntries(texts.map((_, index) => [`${index}.${extension}`, text(index)])),
             },
             ["--check", "--log-level", "silent"],
@@ -4499,7 +4503,11 @@ try {
     test.each([{ args: [] }, { args: ["."] }, { args: ["**/x.js"] }])(
       "in and below the working directory each directory tells: %j",
       async ({ args }) => {
-        expect(await run(args)).toEqual({ ran: all("empty/below"), different: Object.keys(kinds).length, exitCode: 1 });
+        expect(await run([...args])).toEqual({
+          ran: all("empty/below"),
+          different: Object.keys(kinds).length,
+          exitCode: 1,
+        });
       },
     );
 
@@ -5667,7 +5675,7 @@ describe.concurrent("what an ignore file has is not written, however it is come 
     "%s, of which every file is ignored, is no error",
     async (...args) => {
       const files = { ".prettierignore": "src/a.js\nsrc/b.js\n", "src/a.js": ugly, "src/b.js": ugly };
-      const result = await format(files, ["--check", ...args], { reads: ["src/a.js"] });
+      const result = await format(files, ["--check", ...(args as string[])], { reads: ["src/a.js"] });
       expect(result.stderr).not.toMatch(anError);
       expect(result.files).toEqual({ "src/a.js": ugly });
       expect(result.exitCode).toBe(0);

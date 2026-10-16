@@ -1233,6 +1233,7 @@ describe.skipIf(!isWindows).each([
       }
     }
   }, 30000);
+<<<<<<< HEAD
 });
 
 // The script runner never passes the default .env* files into package.json
@@ -1325,6 +1326,8 @@ describe.each([
       exitCode: 0,
     });
   });
+=======
+>>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
 });
 
 describe("output timing", () => {

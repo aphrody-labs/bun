@@ -970,15 +970,26 @@ describe("yarn berry migration", () => {
   });
 
   test.concurrent("__archiveUrl under the configured registry keeps its URL and gets the manifest's integrity", async () => {
+<<<<<<< HEAD
     const { packageDir: dir } = await testRegistry.createTestDir({
+=======
+    const { packageDir: dir } = await verdaccio.createTestDir({
+>>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
       bunfigOpts: { linker: "hoisted" },
       files: {
         "package.json": JSON.stringify({ name: "berry-registries", dependencies: { "a-dep": "^1.0.1" } }),
         // the same registry bun is configured with; the scope is one the lockfile does not use
+<<<<<<< HEAD
         ".yarnrc.yml": `npmRegistryServer: "${testRegistry.registryUrl()}"\nnpmScopes:\n  unused:\n    npmRegistryServer: "\${UNUSED_REGISTRY}"\n`,
         "yarn.lock": yarnLock({
           "a-dep@npm:^1.0.1": [
             `resolution: "a-dep@npm:1.0.2::__archiveUrl=${encodeURIComponent(`${testRegistry.registryUrl()}a-dep/-/a-dep-1.0.2.tgz`)}"`,
+=======
+        ".yarnrc.yml": `npmRegistryServer: "${verdaccio.registryUrl()}"\nnpmScopes:\n  unused:\n    npmRegistryServer: "\${UNUSED_REGISTRY}"\n`,
+        "yarn.lock": yarnLock({
+          "a-dep@npm:^1.0.1": [
+            `resolution: "a-dep@npm:1.0.2::__archiveUrl=${encodeURIComponent(`${verdaccio.registryUrl()}a-dep/-/a-dep-1.0.2.tgz`)}"`,
+>>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
           ],
           "berry-registries@workspace:.": [
             `resolution: "berry-registries@workspace:."`,
@@ -2035,7 +2046,11 @@ catalogs:
   });
 
   test.concurrent("what real lockfiles hold: a range that ends in a space, dev over prod, packageExtensions", async () => {
+<<<<<<< HEAD
     const { packageDir: dir } = await testRegistry.createTestDir({
+=======
+    const { packageDir: dir } = await verdaccio.createTestDir({
+>>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
       bunfigOpts: { linker: "hoisted" },
       files: {
         "package.json": JSON.stringify({
@@ -2046,6 +2061,7 @@ catalogs:
         }),
         // yarn adds `one-fixed-dep` to `one-range-dep` when it installs; yarn.lock has the entry, not the edge
         // (a second extension that matches adds nothing for a name the first one added)
+<<<<<<< HEAD
         ".yarnrc.yml": `packageExtensions:
   one-range-dep@1:
     dependencies:
@@ -2062,6 +2078,9 @@ catalogs:
     dependencies:
       a-dep: 1.0.1
 `,
+=======
+        ".yarnrc.yml": `packageExtensions:\n  one-range-dep@1:\n    dependencies:\n      one-fixed-dep: 1.0.0\n  one-range-dep@*:\n    dependencies:\n      one-fixed-dep: 2.0.0\n  one-range-dep@^2.0.0:\n    dependencies:\n      a-dep: 1.0.1\n`,
+>>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
         "yarn.lock": yarnLock({
           "a-dep@npm:~1.0.2": [`version: 1.0.3`, `resolution: "a-dep@npm:1.0.3"`],
           "berry-real@workspace:.": [
@@ -2104,6 +2123,7 @@ catalogs:
     expect(bunLock).toContain(`"a-dep": "^1.0.1 || ^2.0.0",`);
     expect(bunLock).toContain(`"devDependencies": {\n        "a-dep": "~1.0.2",\n      },`);
     expect(bunLock).toContain(
+<<<<<<< HEAD
       `"one-range-dep@1.0.0", "http://localhost:1234/one-range-dep/-/one-range-dep-1.0.0.tgz", { "dependencies": { "no-deps": "^1.0.0 ", "one-fixed-dep": "1.0.0" }, "peerDependencies": { "a-dep": "*" }, "optionalPeers": ["a-dep"] }`,
     );
     // bun.lock says which edges an extension added, and the extensions go where bun reads them
@@ -2120,11 +2140,16 @@ catalogs:
       "one-range-dep@*": { dependencies: { "one-fixed-dep": "2.0.0" } },
       "one-range-dep@^2.0.0": { dependencies: { "a-dep": "1.0.1" } },
     });
+=======
+      `"one-range-dep@1.0.0", "http://localhost:1234/one-range-dep/-/one-range-dep-1.0.0.tgz", { "dependencies": { "no-deps": "^1.0.0 ", "one-fixed-dep": "1.0.0" } }`,
+    );
+>>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
     await expectFrozenInstall(dir);
     const again = await run(dir, "install");
     expect(again.stderr).not.toContain("Saved lockfile");
     expect(await bunLockOf(dir)).toBe(bunLock);
   });
+<<<<<<< HEAD
 
   test.concurrent("packageExtensions keep working after the migration", async () => {
     const { packageDir: dir } = await testRegistry.createTestDir({
@@ -2172,6 +2197,8 @@ catalogs:
     expect(extended(bunLock)).toBe(`    "a-dep@1.0.10": { "dependencies": ["no-deps"] },`);
     await expectFrozenInstall(dir);
   });
+=======
+>>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
 
   test.concurrent("workspaces in both dependency groups, and a link: to a workspace's own folder", async () => {
     const { packageDir: dir } = await testRegistry.createTestDir({

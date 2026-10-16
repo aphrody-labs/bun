@@ -393,6 +393,7 @@ describe.each(linkers)("linker: %s", linker => {
   test.concurrent("turbo output: peer-held package survives --frozen-lockfile although turbo dropped trustedDependencies and the workspace bin from bun.lock", async () => {
     const { packageDir, pruned } = await prunedTree(linker);
 
+<<<<<<< HEAD
     await frozen(packageDir, linker, []);
 
     expect(await lockText(packageDir)).toBe(pruned);
@@ -415,6 +416,33 @@ describe.each(linkers)("linker: %s", linker => {
     const second = await frozen(packageDir, linker, []);
 
     expect(normalizeBunSnapshot(second.stdout)).toMatch(noChanges);
+=======
+    await frozen(packageDir, linker, 0);
+
+    expect(await lockText(packageDir)).toBe(pruned);
+    const noDeps =
+      linker === "hoisted"
+        ? join(packageDir, "node_modules", "no-deps", "package.json")
+        : join(packageDir, "packages", "shared", "node_modules", "no-deps", "package.json");
+    expect(await file(noDeps).json()).toStrictEqual({ name: "no-deps", version: "1.0.0" });
+  });
+
+  test.concurrent("turbo output: plain bun install writes only trustedDependencies back and keeps the peer-held package", async () => {
+    const { packageDir } = await prunedTree(linker);
+
+    const { stderr } = await install(packageDir, linker);
+
+    expect(stderr).toContain("Saved lockfile");
+    const lock = await lockText(packageDir);
+    expect(lock).toContain('"trustedDependencies": [\n    "a-dep",\n  ],');
+    expect(lock).toContain('"no-deps": ["no-deps@1.0.0"');
+    expect(lock).not.toContain('"other"');
+    expect(lock).not.toContain('"left-pad"');
+
+    const second = await frozen(packageDir, linker, 0);
+
+    expect(second.stderr).not.toContain("Saved lockfile");
+>>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
     expect(await lockText(packageDir)).toBe(lock);
   });
 
@@ -698,6 +726,7 @@ describe.each(linkers)("linker: %s", linker => {
   test.concurrent("a plain install reports a survivor depending on a missing workspace with the same error", async () => {
     const { packageDir, full } = await verbatimScenario(linker, survivorTree, survivors);
 
+<<<<<<< HEAD
     await fails(packageDir, linker, ["install"], [survivorError("app"), survivorNote]);
 
     expect(await lockText(packageDir)).toBe(full);
@@ -921,6 +950,18 @@ describe.each(linkers)("linker: %s", linker => {
       expect(await lockText(packageDir)).toBe(full);
       await expectAppGets(packageDir, "2.0.0");
     });
+=======
+    const { stderr, exitCode } = await raw(packageDir, linker, ["install"]);
+
+    expect(stderr).toContain(survivorError("app"));
+    expect(stderr).toContain(survivorNote);
+    expect(stderr).not.toContain('Workspace dependency "other" not found');
+    expect(stderr).not.toContain("failed to resolve");
+    expect(stderr).not.toContain("Saved lockfile");
+    expect(await lockText(packageDir)).toBe(full);
+    expect(await exists(join(packageDir, "node_modules"))).toBeFalse();
+    expect(exitCode).toBe(1);
+>>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
   });
 
   test.concurrent("a catalog entry only the pruned workspace used may be missing from bun.lock", async () => {
@@ -1226,6 +1267,7 @@ describe("hoisted", () => {
 
   // pnpm#11364: not on disk and not in bun.lock is a broken workspaces list, not a pruned checkout.
   test.concurrent("explicitly listed workspace missing from disk and from a turbo-pruned bun.lock fails --frozen-lockfile", async () => {
+<<<<<<< HEAD
     const { full } = await fullInstall(linker, explicitMonorepo);
     const pruned = turboPrune(full);
     const { packageDir } = await registry.createTestDir({ bunfigOpts: { linker } });
@@ -1240,11 +1282,24 @@ describe("hoisted", () => {
         error: Workspace not found "packages/other"
             at <dir>/package.json:1:63"
       `);
+=======
+    const { full } = await fullInstall("hoisted", explicitMonorepo);
+    const pruned = turboPrune(full);
+    const { packageDir } = await registry.createTestDir({ bunfigOpts: { linker: "hoisted" } });
+    await writeTree(packageDir, explicitMonorepo, survivors);
+    await write(join(packageDir, "bun.lock"), pruned);
+
+    const { stderr, exitCode } = await raw(packageDir, "hoisted", ["install", "--frozen-lockfile"]);
+
+    expect(stderr).toContain('Workspace not found "packages/other"');
+    expect(stderr).not.toContain("not on disk");
+>>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
     expect(await lockText(packageDir)).toBe(pruned);
     expect(await exists(join(packageDir, "node_modules"))).toBeFalse();
     expect(exitCode).toBe(1);
   });
 
+<<<<<<< HEAD
   test.concurrent("--frozen-lockfile tolerates a workspace pruned from disk but still rejects an unknown one listed next to it", async () => {
     const tree: Tree = {
       root: { name: "mono", workspaces: ["packages/app", "packages/shared"] },
@@ -1283,6 +1338,17 @@ describe("hoisted", () => {
     expect(await exists(join(packageDir, "packages", "app", "bun.lock"))).toBeFalse();
     expect((await lstat(join(packageDir, "node_modules", "app"))).isSymbolicLink()).toBeTrue();
     expect(await installedPackages(packageDir, linker)).toEqual(survivorsOnDisk);
+=======
+  test.concurrent("explicitly listed workspace missing: --frozen-lockfile from inside a surviving workspace", async () => {
+    const { packageDir, full } = await verbatimScenario("hoisted", explicitMonorepo, survivors);
+
+    await run(packageDir, "hoisted", ["install", "--frozen-lockfile"], 0, join(packageDir, "packages", "app"));
+
+    expect(await lockText(packageDir)).toBe(full);
+    expect(await exists(join(packageDir, "packages", "app", "bun.lock"))).toBeFalse();
+    expect((await lstat(join(packageDir, "node_modules", "app"))).isSymbolicLink()).toBeTrue();
+    expect(await exists(join(packageDir, "node_modules", "other"))).toBeFalse();
+>>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
   });
 
   test.concurrent("explicitly listed workspace missing from disk still errors on a non-frozen install", async () => {
@@ -1366,6 +1432,7 @@ describe("hoisted", () => {
 
   // The one sanctioned frozen write: the bun.lockb -> bun.lock migration recipe from the docs.
   test.concurrent("--save-text-lockfile --frozen-lockfile --lockfile-only still migrates a pruned bun.lockb", async () => {
+<<<<<<< HEAD
     const [lockb, { packageDir }] = await Promise.all([
       fullLockb(),
       registry.createTestDir({ bunfigOpts: lockbBunfig }),
@@ -1379,6 +1446,25 @@ describe("hoisted", () => {
       ["install", "--save-text-lockfile", "--frozen-lockfile", "--lockfile-only"],
       [prunedNote, savedLockfile],
     );
+=======
+    const tree: Tree = {
+      root: rootPackageJson,
+      packages: {
+        "packages/app": { name: "app", version: "1.0.0", dependencies: { "a-dep": "1.0.1" } },
+        "packages/other": { name: "other", version: "1.0.0", dependencies: { "left-pad": "1.0.0" } },
+      },
+    };
+    const bunfigOpts = { linker: "hoisted", saveTextLockfile: false } as const;
+    const { packageDir: fullDir } = await registry.createTestDir({ bunfigOpts });
+    await writeTree(fullDir, tree);
+    await install(fullDir, "hoisted");
+    const lockb = await file(join(fullDir, "bun.lockb")).bytes();
+    const { packageDir } = await registry.createTestDir({ bunfigOpts });
+    await writeTree(packageDir, tree, ["packages/app"]);
+    await write(join(packageDir, "bun.lockb"), lockb);
+
+    await frozen(packageDir, "hoisted", 0, ["install", "--save-text-lockfile", "--frozen-lockfile", "--lockfile-only"]);
+>>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
 
     expect(await exists(join(packageDir, "bun.lockb"))).toBeFalse();
     const lock = await lockText(packageDir);
@@ -1446,14 +1532,21 @@ describe("hoisted", () => {
     expect(await installedPackages(productionDir, linker)).toEqual(survivorsOnDisk);
   });
 
+<<<<<<< HEAD
   // pnpm#5794: a pruned bun.lock whose dependency rows a plain install would rewrite also fails frozen. The locked a-dep
   // is what package.json asks for, so no package moves.
   test.concurrent("a hand-edited specifier in the pruned bun.lock fails frozen and is rewritten by a plain install", async () => {
     const { packageDir, pruned, full } = await prunedTree(linker);
+=======
+  // pnpm#5794: a pruned bun.lock a plain install would rewrite also fails frozen (the two checks are the same comparison).
+  test.concurrent("a hand-edited specifier in the pruned bun.lock fails frozen and is rewritten by a plain install", async () => {
+    const { packageDir, pruned } = await prunedTree("hoisted");
+>>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
     const edited = pruned.replace('"a-dep": "1.0.1"', '"a-dep": "1.0.0"');
     expect(edited).not.toBe(pruned);
     await write(join(packageDir, "bun.lock"), edited);
 
+<<<<<<< HEAD
     await frozenFails(packageDir, linker, frozenFailure(changedSectionNote("dependencies")));
     expect(await lockText(packageDir)).toBe(edited);
     expect(await exists(join(packageDir, "node_modules"))).toBeFalse();
@@ -1462,6 +1555,15 @@ describe("hoisted", () => {
 
     expect(await lockText(packageDir)).toBe(withoutOther(full));
     expect(await installedPackages(packageDir, linker)).toEqual(survivorsOnDisk);
+=======
+    await frozen(packageDir, "hoisted", 1);
+    expect(await lockText(packageDir)).toBe(edited);
+
+    const { stderr } = await install(packageDir, "hoisted");
+
+    expect(stderr).toContain("Saved lockfile");
+    expect(await lockText(packageDir)).toContain('"a-dep": "1.0.1"');
+>>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
   });
 
   test.concurrent("--frozen-lockfile run from inside a surviving workspace", async () => {
@@ -1606,7 +1708,11 @@ describe("hoisted", () => {
   });
 
   test.concurrent("a dependency-free workspace on disk but missing from bun.lock still fails --frozen-lockfile", async () => {
+<<<<<<< HEAD
     const { packageDir, pruned } = await prunedTree(linker);
+=======
+    const { packageDir, pruned } = await prunedTree("hoisted");
+>>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
     await write(
       join(packageDir, "packages", "newpkg", "package.json"),
       JSON.stringify({ name: "newpkg", version: "1.0.0" }),
@@ -1616,10 +1722,16 @@ describe("hoisted", () => {
       JSON.stringify({ ...rootPackageJson, workspaces: [...survivors, "packages/newpkg"] }),
     );
 
+<<<<<<< HEAD
     await frozenFails(packageDir, linker, frozenFailure());
 
     expect(await lockText(packageDir)).toBe(pruned);
     expect(await exists(join(packageDir, "node_modules"))).toBeFalse();
+=======
+    await frozen(packageDir, "hoisted", 1);
+
+    expect(await lockText(packageDir)).toBe(pruned);
+>>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
   });
 
   // app depends on shared, whose optional peer slot holds no-deps: app's edit is no reason to read shared again.
@@ -1653,6 +1765,7 @@ describe("hoisted", () => {
     expect(await exists(join(packageDir, "node_modules"))).toBeFalse();
   });
 
+<<<<<<< HEAD
   // The root no longer lists "other", and bun.lock lists it at `otherPath(packageDir)`.
   async function relocatedOtherTree(otherPath: (packageDir: string) => string, onDisk: string[]) {
     const [full, { packageDir }] = await Promise.all([
@@ -1732,6 +1845,37 @@ describe("hoisted", () => {
 
     expect(await lockText(packageDir)).toBe(pruned);
     expect(await installedPackages(packageDir, linker)).toEqual(["no-deps", "optional-peer-deps"]);
+=======
+  test.concurrent("single-package project: trustedDependencies stripped from bun.lock does not drop a peer-held package under --frozen-lockfile", async () => {
+    const single: Tree = {
+      root: {
+        name: "single",
+        dependencies: { "optional-peer-deps": "1.0.0", "no-deps": "1.0.0" },
+        trustedDependencies: ["optional-peer-deps"],
+      },
+      packages: {},
+    };
+    const { full } = await fullInstall("hoisted", single);
+    expect(full).toContain('"trustedDependencies"');
+    // The 8-space row is the root's declared dependency; the package entry stays, held only by optional-peer-deps' peer slot.
+    const pruned = full.replace(/\n        "no-deps": "1\.0\.0",/, "").replace(trustedDependenciesSection, "");
+    expect(pruned).not.toBe(full);
+    expect(pruned).toContain('"no-deps": ["no-deps@1.0.0"');
+    const { packageDir } = await registry.createTestDir({ bunfigOpts: { linker: "hoisted" } });
+    await write(
+      join(packageDir, "package.json"),
+      JSON.stringify({
+        name: "single",
+        dependencies: { "optional-peer-deps": "1.0.0" },
+        trustedDependencies: ["optional-peer-deps"],
+      }),
+    );
+    await write(join(packageDir, "bun.lock"), pruned);
+
+    await frozen(packageDir, "hoisted", 0);
+
+    expect(await lockText(packageDir)).toBe(pruned);
+>>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
     expect(await file(join(packageDir, "node_modules", "no-deps", "package.json")).json()).toStrictEqual({
       name: "no-deps",
       version: "1.0.0",
@@ -1827,13 +1971,18 @@ describe("hoisted", () => {
         },
       },
     };
+<<<<<<< HEAD
     const { packageDir, full } = await verbatimScenario(linker, tree, ["packages/app"]);
+=======
+    const { packageDir, full } = await verbatimScenario("hoisted", tree, ["packages/app"]);
+>>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
     const trimmed = full.replace(/\n  "catalogs": \{\n(?:    [^\n]*\n)*  \},/, "");
     expect(full).toContain('"catalogs"');
     expect(trimmed).not.toContain('"catalogs"');
     expect(trimmed).toContain('"catalog": {\n    "a-dep": "1.0.1",\n  },');
     await write(join(packageDir, "bun.lock"), trimmed);
 
+<<<<<<< HEAD
     await frozen(packageDir, linker, [prunedNote, catalogNote("left-pad", "no-deps")]);
 
     expect(await lockText(packageDir)).toBe(trimmed);
@@ -1841,6 +1990,18 @@ describe("hoisted", () => {
     expect(await file(join(packageDir, "node_modules", "a-dep", "package.json")).json()).toMatchObject({
       version: "1.0.1",
     });
+=======
+    const { stderr } = await frozen(packageDir, "hoisted", 0);
+
+    expect(stderr).toContain(prunedNote);
+    expect(stderr).toContain(catalogNote("left-pad", "no-deps"));
+    expect(await lockText(packageDir)).toBe(trimmed);
+    expect(await file(join(packageDir, "node_modules", "a-dep", "package.json")).json()).toMatchObject({
+      version: "1.0.1",
+    });
+    expect(await exists(join(packageDir, "node_modules", "left-pad"))).toBeFalse();
+    expect(await exists(join(packageDir, "node_modules", "no-deps"))).toBeFalse();
+>>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
   });
 
   test.concurrent("a whole named catalog group a surviving workspace uses must stay in bun.lock", async () => {

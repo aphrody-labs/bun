@@ -128,7 +128,7 @@ async function lint(files: Record<string, string>, args: string[], options: Opti
     stdout: normalizeBunSnapshot(stdout, String(dir)),
     stderr: normalizeBunSnapshot(stderr, String(dir)),
     exitCode,
-    files: Object.fromEntries((options.reads ?? []).map(name => [name, read(name)])),
+    files: Object.fromEntries((options.reads ?? []).map(name => [name, read(name)])) as Record<string, string>,
   };
 }
 
@@ -689,7 +689,11 @@ describe.concurrent("bun lint", () => {
     const config = { categories: { correctness: "off" }, rules: { "no-undef": "error" } };
     const { raw } = await lint({ ".oxlintrc.json": JSON.stringify(config), ...files }, ["-f", "json"]);
     const found: Record<string, string> = Object.fromEntries(cases.map(({ name }) => [name, "the operator"]));
-    for (const { filename, code, message } of JSON.parse(raw).diagnostics as Diagnostic[]) {
+    for (const { filename, code, message } of JSON.parse(raw).diagnostics as {
+      filename: string;
+      code?: string;
+      message: string;
+    }[]) {
       if (code !== "eslint(no-undef)") found[filename] = message;
       else if (message === "'await' is not defined.") found[filename] = "a name";
     }
@@ -1037,11 +1041,11 @@ describe.concurrent("bun lint", () => {
       "",
     ]);
     type Label = { span: { offset: number; length: number } };
-    const diagnostics = (JSON.parse(json).diagnostics as { labels: Label[] }[]).map(it => ({
+    const diagnostics = (JSON.parse(json).diagnostics as { labels: Label[]; [key: string]: unknown }[]).map(it => ({
       ...it,
       labels: it.labels.map(({ span }) => [span.offset, span.length]),
     }));
-    expect(diagnostics).toEqual([
+    expect(diagnostics as unknown[]).toEqual([
       {
         "message": "Constructor implementation is missing.",
         "code": "TS(2390)",
@@ -8297,7 +8301,7 @@ export default { meta: { name: "q" }, rules: { marks, marked } };\n`,
         const config = files["eslint.config.js"].replace(/rules: \{.*\}/, `rules: { "no-debugger": "error" }`);
         expect(
           await notes(version, untyped ? { "eslint.config.js": config } : {}, ...(quiet ? ["--quiet"] : [])),
-        ).toEqual(expected);
+        ).toEqual([...expected]);
       },
     );
 
@@ -9170,7 +9174,7 @@ export default { meta: { name: "q" }, rules: { marks, marked } };\n`,
           );
         }
         if (isWindows) rows.push([withSmallDrive(root), []], [root, ["src\\a.ts"]]);
-        const results = [];
+        const results: unknown[] = [];
         for (const [cwd, args] of rows) {
           const { found, exitCode } = await problems(cwd, args);
           results.push({ cwd, args, found, exitCode });
@@ -9203,7 +9207,7 @@ export default { meta: { name: "q" }, rules: { marks, marked } };\n`,
       "--fix in several passes, and --stdin, however the path is spelled",
       async () => {
         const names = foldsCase ? ["src/a.ts", "SRC/A.ts"] : ["src/a.ts"];
-        const results = [];
+        const results: unknown[] = [];
         for (const name of names) {
           using dir = tempDir("bun-lint", respelled("declare const text: string;\nexport const a = text!!;\n"));
           const fixed = await problems(String(dir), ["--fix", name]);
@@ -9244,7 +9248,7 @@ export default { meta: { name: "q" }, rules: { marks, marked } };\n`,
         const root = String(dir);
         const args = ["-c", join(root, ".oxlintrc.json"), "--type-aware", "-f", "unix", join(root, "a.ts")];
         const from = [root, parse(root).root, ...(isWindows ? [inUpperCase(root), withSmallDrive(root)] : [])];
-        const results = [];
+        const results: unknown[] = [];
         for (const cwd of from) {
           await using proc = spawn({ cmd: [...command, ...args], env, cwd, stdout: "pipe", stderr: "pipe" });
           const [stdout, exitCode] = await Promise.all([proc.stdout.text(), proc.exited]);
@@ -10380,7 +10384,7 @@ describe.concurrent("a lint script in package.json", () => {
   test("does not replace the reserved linter; bun run lint executes it explicitly", async () => {
     const native = await lint(files, ["-f", "unix", "a.js"], { reads: ["a.js", "ran.txt"] });
     expect(native.stdout).toBe("<dir>/a.js:1:1: Unexpected 'debugger' statement. [Error/no-debugger]\n\n1 problem");
-    expect(native.files).toEqual({ "a.js": "debugger;\n", "ran.txt": null });
+    expect(native.files as Record<string, unknown>).toEqual({ "a.js": "debugger;\n", "ran.txt": null });
     expect(native.exitCode).toBe(1);
     const explicit = await lint(files, [], { runCommand: "lint", reads: ["a.js", "ran.txt"] });
     expect(explicit.stdout).toBe("the script");
@@ -10431,7 +10435,7 @@ describe.concurrent("a lint script in package.json", () => {
       const fixture = { ...rest, ...more };
       const native = await lint(fixture, ["-f", "unix", "a.js"], { before, reads: ["a.js", "ran.txt"] });
       expect(native.stdout).toBe("<dir>/a.js:1:1: Unexpected 'debugger' statement. [Error/no-debugger]\n\n1 problem");
-      expect(native.files).toEqual({ "a.js": "debugger;\n", "ran.txt": null });
+      expect(native.files as Record<string, unknown>).toEqual({ "a.js": "debugger;\n", "ran.txt": null });
       expect(native.exitCode).toBe(1);
       const explicit = await lint(fixture, [], { runCommand: "lint", before, reads: ["a.js", "ran.txt"] });
       expect(explicit.stdout).toBe(printed);
@@ -10456,7 +10460,7 @@ describe.concurrent("a lint script in package.json", () => {
       expect(native.stdout).toBe(
         "<dir>/sub/b.js:1:1: Unexpected 'debugger' statement. [Error/no-debugger]\n\n1 problem",
       );
-      expect(native.files).toEqual({ "sub/b.js": "debugger;\n", "sub/ran.txt": null });
+      expect(native.files as Record<string, unknown>).toEqual({ "sub/b.js": "debugger;\n", "sub/ran.txt": null });
       expect(native.exitCode).toBe(1);
       const explicit = await lint(fixture, [], { ...options, runCommand: "lint" });
       expect(explicit.stdout).toBe("the executable");
@@ -10535,7 +10539,11 @@ describe.concurrent("what bun lint takes from Bun", () => {
   };
 
   /** `bun ...args` in a directory with `files`. */
-  async function bun(files: Record<string, string>, args: string[], variables: Record<string, string> = {}) {
+  async function bun(
+    files: Record<string, string>,
+    args: string[],
+    variables: Record<string, string | undefined> = {},
+  ) {
     using dir = tempDir("bun-lint-process", files);
     await using proc = spawn({
       cmd: [bunExe(), ...args],
@@ -10556,7 +10564,7 @@ describe.concurrent("what bun lint takes from Bun", () => {
       bun(files, ["lint", "-f", "unix", "sub"], { BUN_OPTIONS: "--silent --no-install" }),
     ]);
     const expected = "<dir>/sub/b.js:1:1: Unexpected 'debugger' statement. [Error/no-debugger]\n\n1 problem";
-    expect(results).toEqual(results.map(() => ({ stdout: expected, exitCode: 1 })));
+    expect<unknown[]>(results).toEqual(results.map(() => ({ stdout: expected, exitCode: 1 })));
   });
 
   // The process that runs the configuration file starts in that directory. With BUN_OPTIONS it would look for `sub` in `sub`.
@@ -11567,8 +11575,10 @@ describe.concurrent("nativePluginRules", () => {
   };
 
   /** For each rule that reports: whether it is that of the package. */
-  async function who(files: Record<string, string>, args: string[] = []) {
-    const { raw, stderr, exitCode } = await lint(files, ["-f", "json", ...args, "a.js"], { mayFail: true });
+  async function who(files: Record<string, string | undefined>, args: string[] = []) {
+    const { raw, stderr, exitCode } = await lint(files as Record<string, string>, ["-f", "json", ...args, "a.js"], {
+      mayFail: true,
+    });
     if (exitCode !== 1) return { stderr, exitCode };
     const messages: { ruleId: string; message: string }[] = JSON.parse(raw)[0].messages;
     return Object.fromEntries(

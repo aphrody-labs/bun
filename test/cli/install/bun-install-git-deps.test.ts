@@ -342,12 +342,17 @@ function expectedGitPackages(
 test.concurrent("installs every git dependency when many branches of one repo appear directly and transitively", async () => {
   using dir = tempDir("git-dep-dup", {});
   const root = String(dir);
+<<<<<<< HEAD
   const dependencies = Object.fromEntries(letters.map(l => [nameOf(l), `${sharedRepoUrl}#pkg-${l}`]));
+=======
+  const project = writeProject(root, Object.fromEntries(letters.map(l => [nameOf(l), `${sharedRepoUrl}#pkg-${l}`])));
+>>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
   const { resolutions, locked } = expectedGitPackages(sharedRepoUrl, sharedCommits, letters, {
     [nameOf("a")]: sharedTransitive,
   });
 
   // the race depends on threadpool scheduling; two fresh-cache attempts to
+<<<<<<< HEAD
   // make the failure reliable on the unfixed code. Each has a project and a
   // cache of its own so that both run at once: a cold install of 16 git
   // packages spawns about 60 git processes, which is slow on Windows.
@@ -359,6 +364,13 @@ test.concurrent("installs every git dependency when many branches of one repo ap
     }),
   );
   for (const { project, stdout, stderr, exitCode } of attempts) {
+=======
+  // make the failure reliable on the unfixed code
+  for (let attempt = 0; attempt < 2; attempt++) {
+    rmSync(join(project, "node_modules"), { recursive: true, force: true });
+    rmSync(join(project, "bun.lock"), { force: true });
+    const { stdout, stderr, exitCode } = await runInstall(project, join(root, `cache-${attempt}`), {});
+>>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
     expect(normalizeBunSnapshot(stderr)).toMatchInlineSnapshot(`
         "Resolving dependencies
         Resolved, downloaded and extracted [17]
@@ -493,6 +505,7 @@ test.concurrent("installs every github: dependency that appears directly and tra
     expect(exitCode).toBe(0);
   }
 }, 30_000);
+<<<<<<< HEAD
 
 // The URL parser hands back the committish of a GitHub dependency
 // percent-decoded, and one that was written with an escape was then dropped
@@ -960,6 +973,8 @@ test.concurrent("isolated linker reuses a locked tarball-URL package for a depen
   });
   expect(exitCode).toBe(0);
 }, 30_000);
+=======
+>>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
 
 // issue #35420 bug 2: installing from a complete lockfile with a cold cache
 // only checked out the single dependency stored on the shared clone task; the
@@ -986,6 +1001,19 @@ test.concurrent("installs every git dependency from a lockfile on a cold cache w
     expect(await lockedPackages(project)).toEqual(locked);
     expect(exitCode).toBe(0);
   }
+<<<<<<< HEAD
+=======
+
+  // simulate a fresh machine: keep bun.lock, drop node_modules + cache
+  rmSync(join(project, "node_modules"), { recursive: true });
+  const { stdout, stderr, exitCode } = await runInstall(project, join(root, "cache-cold"), {}, "--frozen-lockfile");
+  expect(stderr).toBe("");
+  expectInstalled(stdout, resolutions);
+  expect(await installedVersions(project, [nameOf("m"), nameOf("n")])).toEqual(markers(["m", "n"]));
+  expect(await lockedPackages(project)).toEqual(locked);
+  expect(exitCode).toBe(0);
+}, 30_000);
+>>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
 
   // simulate a fresh machine: keep bun.lock, drop node_modules + cache
   rmSync(join(project, "node_modules"), { recursive: true });
@@ -1063,6 +1091,7 @@ for (const linker of ["hoisted", "isolated"] as const) {
     expect(await lockedPackages(project)).toEqual(locked);
     expect(exitCode).toBe(0);
   }, 30_000);
+<<<<<<< HEAD
 }
 
 // A registry that has version 1.0.0 of each package: name -> the rest of its
@@ -1099,6 +1128,8 @@ async function lockedResolutions(project: string): Promise<Record<string, unknow
   return Object.fromEntries(
     Object.entries(await lockedPackages(project)).map(([key, [resolution]]) => [key, resolution]),
   );
+=======
+>>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
 }
 
 // Where the isolated linker installed the `name` that `dir` resolves: the
