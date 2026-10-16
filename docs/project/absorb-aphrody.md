@@ -49,7 +49,7 @@ Statuts : `fait` (déjà dans Bun), `en cours (autre agent)`, `à faire`,
 
 | Source aphrody | Cible Bun | Statut |
 | --- | --- | --- |
-| crates/infra/git (`aphrody git api/graphql/repo/search/inspect`) | crate `bun_git` dans src/git + sous-commande `bun git` | à faire (lot 2) |
+| crates/infra/git (`aphrody git …`) | src/git (`bun_git`) | fait (lot 2) ; sous-commande `bun git` à faire (lot 9) |
 | crates/compat/bun-docs (`aphrody docs search`) | `bun mcp` docs_search/docs_read | reste aphrody : sous-système du kernel MCP (IA), doublon des outils docs de `bun mcp` |
 | CLI `aphrody scan` | src/graph (`bun graph`) + `bun mcp` graph_* | supprimer (doublon de src/graph) |
 | CLI `aphrody graph` (graphe de code non IA) | src/graph | fait |
@@ -111,7 +111,7 @@ Statuts : `fait` (déjà dans Bun), `en cours (autre agent)`, `à faire`,
 
 | Source aphrody | Cible Bun | Statut |
 | --- | --- | --- |
-| crates/infra/git (`aphrody git api/graphql/repo/search/inspect`) | crate `bun_git` dans src/git + sous-commande `bun git` | à faire (lot 2) |
+| crates/infra/git (`aphrody git …`) | src/git (`bun_git`) | fait (lot 2) ; sous-commande `bun git` à faire (lot 9) |
 | crates/compat/bun-docs (`aphrody docs search`) | `bun mcp` docs_search/docs_read (existant) | supprimer (doublon) |
 | CLI `aphrody scan` | src/graph (`bun graph`) + `bun mcp` graph_* | supprimer (doublon de src/graph) |
 | CLI `aphrody graph` (graphe de code non IA) | src/graph | fait |
