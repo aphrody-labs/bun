@@ -17,7 +17,7 @@ import type { Sources } from "../glob-sources.ts";
 import { binaryExpectations, exportList, shimExpectations } from "./binary-expectations.ts";
 import { emitCodegen, type CodegenOutputs } from "./codegen.ts";
 import { cc, cxx, link, pch } from "./compile.ts";
-import { bunExeName, shouldStrip, type Config } from "./config.ts";
+import { bunExeName, shouldStrip, SYSTEM_DEP_LIBS, type Config } from "./config.ts";
 import { generateDepVersionsHeader } from "./depVersionsHeader.ts";
 import { dotnetHostRustSources } from "./deps/dotnet-host.ts";
 import { allDeps } from "./deps/index.ts";
@@ -88,6 +88,8 @@ function systemLibs(cfg: Config): string[] {
     if (cfg.webkit === "local" && cfg.abi !== "android") {
       libs.push("-licudata", "-licui18n", "-licuuc");
     }
+    // --system-deps: distribution zlib/zstd/brotli instead of the pinned builds.
+    for (const name of cfg.systemDeps) libs.push(...SYSTEM_DEP_LIBS[name]!);
   }
 
   if (cfg.darwin) {

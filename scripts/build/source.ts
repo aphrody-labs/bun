@@ -824,6 +824,11 @@ export function resolveDep(
   if (dep.enabled && !dep.enabled(cfg)) {
     return null;
   }
+  // --system-deps: the distribution library replaces the pinned build; bun.ts
+  // links SYSTEM_DEP_LIBS and system headers come from the default include path.
+  if (cfg.systemDeps.includes(dep.name)) {
+    return { name: dep.name, libs: [], objects: [], includes: [], defines: [], sources: [], outputs: [], checks: [] };
+  }
 
   const source = depSource(cfg, dep);
   const buildSpec = dep.build(cfg);

@@ -130,6 +130,13 @@ export interface Config {
   staticSqlite: boolean;
   staticLibatomic: boolean;
   /**
+   * Deps linked from the distribution instead of built from the pinned source
+   * (`--system-deps=zlib,zstd,brotli,sqlite3`, Linux glibc only). Their build is
+   * skipped and `SYSTEM_DEP_LIBS` is linked; `sqlite3` turns off staticSqlite
+   * so bun:sqlite dlopens the system libsqlite3. Bun OS packages use this.
+   */
+  systemDeps: string[];
+  /**
    * linux-musl only: absolute path of the aphrody-libc overlay archive
    * (`libaphrody_libc.a` from the `aphrody-libc-dev` apk), linked just before
    * `-lc` so its SIMD memcmp/strlen/strchr/strcmp/memchr/qsort replace musl's.
@@ -387,6 +394,8 @@ export interface PartialConfig {
   versionTag?: string;
   staticSqlite?: boolean;
   staticLibatomic?: boolean;
+  /** Comma-separated dep names. See `Config.systemDeps`. */
+  systemDeps?: string;
   /** Path to libaphrody_libc.a, or `off`. See `Config.aphrodyLibc`. */
   aphrodyLibc?: string;
   tinycc?: boolean;
@@ -1106,7 +1115,8 @@ export function resolveConfig(partial: PartialConfig, toolchain: Toolchain): Con
   // defaults to dlopen so both APIs share Apple's libsqlite3 (one library,
   // one POSIX-lock inode map — howtocorrupt.html §2.2.1); Linux/Windows
   // link the bundled amalgamation.
-  const staticSqlite = partial.staticSqlite ?? !darwin;
+  const systemDeps = parseSystemDeps(partial.systemDeps, linux && abi !== "android" && abi !== "musl");
+  const staticSqlite = systemDeps.includes("sqlite3") ? false : (partial.staticSqlite ?? !darwin);
 
   // Static libatomic: on by default. Arch/Manjaro don't ship libatomic.a —
   // those users pass --static-libatomic=off. Not auto-detected: the link
@@ -1385,6 +1395,7 @@ export function resolveConfig(partial: PartialConfig, toolchain: Toolchain): Con
     smol,
     staticSqlite,
     staticLibatomic,
+    systemDeps,
     aphrodyLibc,
     tinycc,
     valgrind,
@@ -1615,6 +1626,32 @@ export function findRepoRoot(): string {
     }
     dir = parent;
   }
+}
+
+/** Link flags of each dep that `--system-deps` may take from the distribution. */
+export const SYSTEM_DEP_LIBS: Readonly<Record<string, readonly string[]>> = {
+  zlib: ["-lz"],
+  zstd: ["-lzstd"],
+  brotli: ["-lbrotlienc", "-lbrotlidec", "-lbrotlicommon"],
+  // dlopened at runtime (LAZY_LOAD_SQLITE=1): nothing to link.
+  sqlite3: [],
+};
+
+function parseSystemDeps(spec: string | undefined, supported: boolean): string[] {
+  const names = (spec ?? "")
+    .split(",")
+    .map(name => name.trim())
+    .filter(Boolean);
+  for (const name of names)
+    if (!(name in SYSTEM_DEP_LIBS))
+      throw new BuildError(`--system-deps: unsupported dep '${name}'`, {
+        hint: `Supported: ${Object.keys(SYSTEM_DEP_LIBS).join(", ")}`,
+      });
+  if (names.length && !supported)
+    throw new BuildError("--system-deps: only linux-gnu targets link distribution libraries", {
+      hint: "Drop --system-deps for this target",
+    });
+  return [...new Set(names)];
 }
 
 /**

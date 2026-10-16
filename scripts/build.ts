@@ -632,6 +632,7 @@ const configFlags: {
   buildkite: "boolean",
   webkit: "string",
   localDeps: "string",
+  systemDeps: "string",
   packageManager: "string",
   buildDir: "string",
   binaryDir: "string",
