@@ -15,6 +15,7 @@ directories in `~` (`~/factory`, `~/builds`, `~/aphrody-build`,
 | `~/src/<project>`                                        | gclient/repo checkouts: `chromium`, `chromiumos`, `cef`, `brave-core`, `bun`, ...       |
 | `~/build/out/<project>/<config>`                         | GN output directories (symlink into the pool, `~/build/storage/out`)                    |
 | `~/build/storage/google/cache/{git,sccache,ccache,siso}` | Shared caches: gclient git cache, compiler caches, Siso                                 |
+| `/mnt/aphrody-storage/disk500/bun/install-cache`         | The single Bun install cache and global store (`BUN_INSTALL_CACHE_DIR`)                 |
 | `~/build/locks/heavy{,.1,.2}.lock`                       | Build slots; every sync, gen and build holds one or more under `flock`                  |
 | `~/apps`                                                 | Services (Docker compose, Gitea, Komodo, control plane)                                 |
 
@@ -22,6 +23,15 @@ Mounts: `~/src`, `~/apps` and `~/build/storage` are mergerfs pools over
 `sdb1` (`~/build`) and `sdc1` (`/mnt/aphrody-storage/disk500`). Heavy outputs and
 caches belong in the pool, never on `/`. Check free space on `/`, `~/build` and
 the pool before a large sync.
+
+The Bun install cache sits on the `sdc1` branch itself, not behind the
+mergerfs pool: the global store hardlinks cache files into `links/`, and a
+mergerfs path may put the source and the link on different branches (`EXDEV`).
+`BUN_INSTALL_CACHE_DIR` (`~/.config/aphrody/host.sh`) and `install.cache` in
+`~/.bunfig.toml` both name it; `~/.bun/install/cache` is a symlink to it (the
+former `~/build/cache/bun` copy is gone), and `~/.bun/install/global` lives beside it in
+`/mnt/aphrody-storage/disk500/bun/install-global`, so global installs hardlink
+from the cache instead of copying.
 
 ## Tool
 
