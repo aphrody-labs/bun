@@ -11,7 +11,7 @@
  * that apply uniformly to bun's own C/C++ sources.
  */
 
-import { basename, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { bunExeName, type Config } from "./config.ts";
 import { quote, slash } from "./shell.ts";
 import { ucrtServicingLibDir } from "./winsysroot.ts";
@@ -1368,6 +1368,9 @@ export const linkerFlags: Flag[] = [
       // -l:libunwind.a (driver-emitted) searches -L paths; point at the NDK's
       // own per-arch runtime dir so it resolves regardless of resource-dir layout.
       `-L${join(c.androidNdkRuntimeDir!, c.arm64 ? "aarch64" : "x86_64")}`,
+      // Resolve compiler-rt builtins from the NDK's own resource dir (flat layout), so the
+      // link works without writing into a host clang install that may not be writable.
+      `-resource-dir=${dirname(dirname(c.androidNdkRuntimeDir!))}`,
     ],
     when: c => c.linux && c.abi === "android",
     desc: "Android link: target/sysroot + compiler-rt/libunwind + static libc++",

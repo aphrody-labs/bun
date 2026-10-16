@@ -286,3 +286,14 @@ fn use_mimalloc_in_dependencies() {
         );
     }
 }
+
+/// Exported entry for embedders that `dlopen` the runtime (Android `libbun.so`).
+///
+/// # Safety
+/// Same contract as [`main`].
+#[cfg(unix)]
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn bun_main(argc: c_int, argv: *const *const c_char) -> c_int {
+    // SAFETY: forwarded unchanged under the caller's contract.
+    unsafe { main(argc, argv) }
+}

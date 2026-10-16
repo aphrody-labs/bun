@@ -668,9 +668,7 @@ pub unsafe fn spawn_process_posix(
         if options.detached {
             #[cfg(any(target_os = "linux", target_os = "android"))]
             {
-                // glibc/musl/bionic <spawn.h> all define POSIX_SPAWN_SETSID as 0x80;
-                // the libc crate only exposes it for `target_os = "linux"`.
-                f |= 0x80;
+                f |= libc::POSIX_SPAWN_SETSID as _;
             }
             #[cfg(target_os = "macos")]
             {

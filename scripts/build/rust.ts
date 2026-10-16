@@ -599,6 +599,13 @@ export function cargoBuildInvocation(cfg: Config): CargoInvocation {
       unitEnv[`PKG_CONFIG_ALLOW_CROSS_${nativeToolTriple}`] = "1";
     }
   }
+  if (cfg.linux && cfg.abi === "android" && cfg.sysroot !== undefined && cfg.crossTarget !== undefined) {
+    // cc-rs build scripts (ring, aws-lc, zstd, blake3) need the NDK sysroot and API-level target too.
+    const flags = `--target=${cfg.crossTarget} --sysroot=${quote(cfg.sysroot, false)}`;
+    unitEnv.CC_SHELL_ESCAPED_FLAGS = "1";
+    unitEnv[`CFLAGS_${nativeToolTriple}`] = flags;
+    unitEnv[`CXXFLAGS_${nativeToolTriple}`] = flags;
+  }
   // Darwin cross-compile from a non-darwin host: point anything in the dep graph that cares about the Apple SDK at
   // the extracted sysroot. rustc itself doesn't need it for a staticlib, but cc-rs (build scripts compiling target C)
   // honours CFLAGS_<triple>/SDKROOT, and MACOSX_DEPLOYMENT_TARGET keeps the LC_BUILD_VERSION minos rustc stamps into
@@ -880,6 +887,7 @@ export function emitRust(n: Ninja, cfg: Config, inputs: RustBuildInputs): { rlib
  */
 function hostLinker(cfg: Config, targetTriple: string, targetLinker: string): string | undefined {
   if (cfg.rustHostTriple === targetTriple) return targetLinker;
-  if (cfg.host.os === "windows") return cfg.msvcLinker ?? cfg.ld;
+  // Cross builds from Windows may have no MSVC linker configured: let rustc discover link.exe itself.
+  if (cfg.host.os === "windows") return cfg.msvcLinker || cfg.ld || undefined;
   return cfg.hostCxx;
 }

@@ -92,30 +92,6 @@ export const workarounds: Workaround[] = [
       `this entry. Keep macho-postlink.c itself — it still owns the entitlements embedding and ` +
       `the post-edit re-sign.`,
   },
-  {
-    id: "android-posix-spawn-setsid-const",
-    issue: "https://github.com/rust-lang/libc/pull/5104",
-    description:
-      "The libc crate doesn't expose POSIX_SPAWN_SETSID for target_os = android, so the " +
-      "linux+android cfg arm in spawn_sys hardcodes 0x80 (the value glibc/musl/bionic share).",
-    // Cleanup is a source-code change, not a build-config change — once
-    // Cargo.lock's libc has the constant, the local 0x80 can go regardless
-    // of which target is being built. Gate to android so the threshold-bump
-    // hint doesn't bother host-only builds.
-    applies: cfg => cfg.abi === "android",
-    expectedToBeFixed: cfg => {
-      // PR #5104 targets `main` with `stable-nominated`; a 0.2.x cherry-pick
-      // follows. Best guess for the first 0.2.x with it — bump if the
-      // constant isn't actually there yet.
-      const FIXED_IN_LIBC = "0.2.187";
-      const v = lockedCrateVersion(cfg, "libc");
-      return v !== undefined && satisfiesRange(v, `>=${FIXED_IN_LIBC}`);
-    },
-    cleanup:
-      `In src/spawn_sys/posix_spawn.rs (Attr::set) and src/spawn_sys/spawn_process.rs ` +
-      `(options.detached block), replace the local 0x80 with libc::POSIX_SPAWN_SETSID, ` +
-      `drop the explanatory comments, and delete this entry.`,
-  },
 ];
 
 /**

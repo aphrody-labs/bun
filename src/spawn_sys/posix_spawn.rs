@@ -231,10 +231,7 @@ pub mod bun_spawn {
             // that define it are enumerated explicitly.)
             #[cfg(any(target_os = "linux", target_os = "android"))]
             {
-                // glibc/musl/bionic <spawn.h> all define POSIX_SPAWN_SETSID as 0x80;
-                // the libc crate only exposes it for `target_os = "linux"`.
-                const POSIX_SPAWN_SETSID: u16 = 0x80;
-                self.detached = (flags & POSIX_SPAWN_SETSID) != 0;
+                self.detached = (flags & libc::POSIX_SPAWN_SETSID as u16) != 0;
             }
             #[cfg(target_os = "macos")]
             {

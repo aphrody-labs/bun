@@ -292,8 +292,8 @@ checksum = "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470"
 name = "aphrody-google"
 version = "1.4.4"
 dependencies = [
- "bun_browser_dom",
  "chrono",
+ "obscura-dom",
  "regex",
  "reqwest",
  "rustls",
@@ -13378,6 +13378,13 @@ dependencies = [
  "objc2-core-foundation",
  "objc2-foundation",
  "objc2-security",
+]
+
+[[package]]
+name = "obscura-dom"
+version = "1.4.4"
+dependencies = [
+ "bun_browser_dom",
 ]
 
 [[package]]
