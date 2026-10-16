@@ -119,5 +119,13 @@
       "src/bun-os/native"
     ],
     "status": "blocked"
+  },
+  {
+    "id": "audit-untracked-crate-1",
+    "goal": "untracked-crate: src/bun-os/pkg/core crate not committed",
+    "paths": [
+      "src/bun-os/pkg/core"
+    ],
+    "status": "blocked"
   }
 ]
