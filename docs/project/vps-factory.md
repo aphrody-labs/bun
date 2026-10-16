@@ -46,18 +46,24 @@ bun factory sync|gen|build|all chromium [--config release] [--dry-run]
 `builds` in `tools/config/fusion-factory.json` splits the 12 CPUs into 3 slots
 of 4 (`"mode": "multi"`). Slot 0 is `heavy.lock` (CPUs 0-3), slot 1
 `heavy.1.lock` (4-7), slot 2 `heavy.2.lock` (8-11). A step takes the first free
-set of slots with `flock -n`, runs under `taskset` on their CPUs, so `nproc`,
-ninja and cargo see only those, and waits when every set is taken. Locks are
+slots it needs and every other free one, so a build alone uses all 12 CPUs.
+It runs under `taskset` on the CPUs of its slots, so `nproc`, ninja and cargo
+see only those, with `BUN_FACTORY_JOBS`, `CARGO_BUILD_JOBS` and
+`CMAKE_BUILD_PARALLEL_LEVEL` set to their jobs; a build started later takes
+what is left, or waits for its fewest slots. Locks are
 always taken in ascending order, so concurrent builds cannot deadlock. A target
-may hold more slots with `"slots": n` (Chromium builds in 2 slots, 8 jobs).
+needs at least `"slots": n` and at most `"maxSlots": n`; Chromium builds in
+exactly 2 slots (8 jobs), so one slot always stays free for Bun.
 Scripts that still `flock heavy.lock` directly hold slot 0.
 
 ```sh
 bun factory slots                          # which slots are taken
-bun factory run -- bun bd                  # any heavy command in one free slot
-bun factory run --slots 2 -- cargo build   # in two slots, 8 CPUs
+bun factory run -- bun bd                  # every free slot, 12 CPUs when alone
+bun factory run --slots 2 -- cargo build   # at least two slots
+bun factory run --max-slots 1 -- bun bd    # one slot, 4 CPUs
 BUN_FACTORY_MODE=single bun factory build chromium   # one exclusive build, 12 jobs
 ```
 
 Each slot has about 12 GiB of RAM once `resources.reserveMemoryGiB` is kept
-free; give memory-heavy links two slots.
+free; give memory-heavy links two slots. The caches may grow to
+`builds.sccacheGiB` (150) and `builds.ccacheGiB` (100) in the pool.

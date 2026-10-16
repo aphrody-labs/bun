@@ -15,7 +15,9 @@
   "builds": {
     "mode": "multi",
     "slots": 3,
-    "jobsPerSlot": 4
+    "jobsPerSlot": 4,
+    "sccacheGiB": 150,
+    "ccacheGiB": 100
   },
   "rust": {
     "maxJobs": 12,
@@ -82,6 +84,7 @@
           "release": "is_debug=false is_component_build=true symbol_level=0 blink_symbol_level=0 v8_symbol_level=0 use_remoteexec=false"
         },
         "slots": 2,
+        "maxSlots": 2,
         "ninjaTargets": ["chrome"]
       },
       "chromiumos": {

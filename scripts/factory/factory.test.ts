@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 import factory from "../../tools/config/fusion-factory.json";
-import { cpuList, jobs, multi, plan, slotLocks, slotSets, wrap } from "./factory.ts";
+import { JOBS, choose, cpuList, jobs, multi, plan, slotLocks, slotSets, withJobs, wrap } from "./factory.ts";
 
 test("multi mode splits the host into slots of jobsPerSlot CPUs", () => {
   expect(multi("multi")).toBe(true);
@@ -54,12 +54,23 @@ test("wrap takes every held slot, then pins and renices the command", () => {
   ]);
 });
 
+test("a step alone takes every free slot, within its bounds", () => {
+  if (!multi()) return;
+  expect(choose([0, 1, 2], 1)).toEqual([0, 1, 2]);
+  expect(choose([1, 2], 1)).toEqual([1, 2]);
+  expect(choose([0, 1, 2], 2, 2)).toEqual([0, 1]);
+  expect(choose([2], 2)).toBeUndefined();
+  expect(choose([], 1)).toBeUndefined();
+  expect(withJobs(["ninja", "-j", JOBS], 3)).toEqual(["ninja", "-j", "12"]);
+});
+
 test("chromium builds in two slots, syncs and generates in one", () => {
   if (!multi()) return;
   const steps = plan("chromium");
   const build = steps.find(s => s.argv[0] === "autoninja")!;
   expect(build.slots).toBe(2);
-  expect(build.argv).toContain("8");
+  expect(build.maxSlots).toBe(2);
+  expect(build.argv).toContain(JOBS);
   for (const s of steps.filter(s => s.argv[0] === "gclient" && s.argv[1] === "sync")) expect(s.slots).toBe(1);
   expect(steps.find(s => s.argv[0] === "gn")!.slots).toBe(1);
 });

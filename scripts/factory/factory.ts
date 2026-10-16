@@ -2,7 +2,8 @@
 // Google-style build factory for the VPS: depot_tools, gclient/repo sync, gn gen, autoninja.
 // Heavy steps take build slots from tools/config/fusion-factory.json. In multi mode, slot i is a
 // flock on `heavy.lock` (i = 0) or `heavy.<i>.lock` and owns `jobsPerSlot` CPUs through taskset,
-// so concurrent builds run side by side; scripts that flock `heavy.lock` hold slot 0.
+// so concurrent builds run side by side. A step also takes every other free slot, so a build alone
+// uses all CPUs. Scripts that flock `heavy.lock` hold slot 0.
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { posix } from "node:path";
 
@@ -18,10 +19,15 @@ type Target = {
   branch?: string;
   configs: Record<string, string>;
   slots?: number;
+  maxSlots?: number;
   ninjaTargets: string[];
 };
-/** `slots` is how many build slots the step holds; 0 runs it without a lock. */
-export type Step = { cwd: string; argv: string[]; slots: number };
+/**
+ * `slots` is the fewest build slots the step needs (0 runs it without a lock); it also takes every
+ * other free slot up to `maxSlots`. A `JOBS` argument becomes the jobs of the slots it holds.
+ */
+export type Step = { cwd: string; argv: string[]; slots: number; maxSlots?: number };
+export const JOBS = "{jobs}";
 
 const google = factory.google;
 const targets = google.targets as Record<string, Target>;
@@ -43,8 +49,8 @@ const HELP = `Usage: bun scripts/factory/factory.ts <command> [target] [--config
   build <target>  autoninja the configured ninja targets
   all <target>    sync, gen and build
   slots           Print which build slots are taken
-  run [--slots <n>] -- <command...>
-                  Run a heavy command (bun bd, cargo, ninja) in free build slots
+  run [--slots <n>] [--max-slots <n>] -- <command...>
+                  Run a heavy command (bun bd, cargo, ninja) in build slots; alone, it takes all CPUs
 Mode: ${builds.mode} (BUN_FACTORY_MODE=single|multi), ${builds.slots} slots of ${builds.jobsPerSlot} jobs
 Targets: ${Object.keys(targets).join(", ")}`;
 
@@ -84,6 +90,8 @@ export function env(): Record<string, string> {
     SCCACHE_DIR: join(cache, "sccache"),
     CCACHE_DIR: join(cache, "ccache"),
     SISO_CACHE_DIR: join(cache, "siso"),
+    SCCACHE_CACHE_SIZE: `${builds.sccacheGiB}G`,
+    CCACHE_MAXSIZE: `${builds.ccacheGiB}G`,
   };
 }
 
@@ -108,7 +116,7 @@ export function plan(name: string, config = "release"): Step[] {
         argv: ["repo", "init", "-u", t.url!, "-b", t.branch ?? "stable", "--depth=1"],
         slots: 0,
       });
-    steps.push({ cwd: t.checkout, argv: ["repo", "sync", "-c", "-j", String(jobs(1))], slots: 1 });
+    steps.push({ cwd: t.checkout, argv: ["repo", "sync", "-c", "-j", JOBS], slots: 1 });
     return steps;
   }
   if (!existsSync(join(t.checkout, ".gclient")))
@@ -124,7 +132,7 @@ export function plan(name: string, config = "release"): Step[] {
       ],
       slots: 0,
     });
-  const sync = ["gclient", "sync", "--no-history", "-j", String(jobs(1))];
+  const sync = ["gclient", "sync", "--no-history", "-j", JOBS];
   if (t.revision) sync.push("--revision", `${t.source}@${t.revision}`);
   steps.push({ cwd: t.checkout, argv: sync, slots: 1 });
   const args = t.configs[config];
@@ -132,40 +140,64 @@ export function plan(name: string, config = "release"): Step[] {
   const out = join(google.outRoot, name, config);
   const src = join(t.checkout, t.source!);
   steps.push({ cwd: src, argv: ["gn", "gen", out, `--args=${args}`], slots: 1 });
-  const weight = clamp(t.slots ?? 1);
   if (t.ninjaTargets.length)
     steps.push({
       cwd: src,
-      argv: ["autoninja", "-C", out, "-j", String(jobs(weight)), ...t.ninjaTargets],
-      slots: weight,
+      argv: ["autoninja", "-C", out, "-j", JOBS, ...t.ninjaTargets],
+      slots: clamp(t.slots ?? 1),
+      maxSlots: t.maxSlots,
     });
   return steps;
 }
 
-const show = (s: Step) => (s.slots ? wrap(s.argv, slotSets(clamp(s.slots))[0]!, true) : s.argv).join(" ");
+/** `argv` with `JOBS` replaced by the jobs of `held` slots. */
+export const withJobs = (argv: string[], held: number) => argv.map(a => (a === JOBS ? String(jobs(held)) : a));
 
-function spawn(cwd: string, argv: string[]) {
-  return Bun.spawnSync(argv, { cwd, env: env(), stdio: ["inherit", "inherit", "inherit"] }).exitCode;
+const show = (s: Step) =>
+  (s.slots ? wrap(withJobs(s.argv, clamp(s.slots)), slotSets(clamp(s.slots))[0]!, true) : s.argv).join(" ");
+
+/** The slots to take: every free one, at least `min` and at most `max`, or none if too few are free. */
+export function choose(free: number[], min: number, max = slotCount()): number[] | undefined {
+  const lo = clamp(min);
+  const hi = Math.max(lo, clamp(max));
+  return free.length >= lo ? free.slice(0, hi) : undefined;
 }
 
-/** Runs `step` in the first free set of slots, or waits for one when all are taken. */
+function spawn(cwd: string, argv: string[], held: number) {
+  const n = String(jobs(held));
+  const vars = { BUN_FACTORY_JOBS: n, CARGO_BUILD_JOBS: n, CMAKE_BUILD_PARALLEL_LEVEL: n };
+  return Bun.spawnSync(argv, {
+    cwd,
+    env: { ...env(), ...(held ? vars : {}) },
+    stdio: ["inherit", "inherit", "inherit"],
+  }).exitCode;
+}
+
+/** Runs `step` in every free slot it may take, or waits for its fewest slots when too few are free. */
 export function run(step: Step, dry: boolean) {
-  const label = step.slots ? `[${clamp(step.slots)} slot(s), ${jobs(step.slots)} jobs] ` : "";
-  console.log(`$ ${label}(cd ${step.cwd} && ${step.argv.join(" ")})`);
+  console.log(`$ (cd ${step.cwd} && ${step.argv.join(" ")})`);
   if (dry) return;
   mkdirSync(step.cwd, { recursive: true });
   let code: number | null = BUSY;
-  if (!step.slots) code = spawn(step.cwd, step.argv);
+  if (!step.slots) code = spawn(step.cwd, step.argv, 0);
   else {
-    const sets = slotSets(clamp(step.slots));
-    for (const held of sets) {
-      code = spawn(step.cwd, wrap(step.argv, held, false));
-      if (code !== BUSY) break;
+    for (let attempt = 0; attempt < 3 && code === BUSY; attempt++) {
+      const held = choose(
+        slots().flatMap((s, i) => (s.taken ? [] : [i])),
+        step.slots,
+        step.maxSlots,
+      );
+      if (!held) break;
+      console.log(
+        `factory: ${held.length} slot(s), CPUs ${multi() ? cpuList(held) : "all"}, ${jobs(held.length)} jobs`,
+      );
+      code = spawn(step.cwd, wrap(withJobs(step.argv, held.length), held, false), held.length);
     }
     if (code === BUSY) {
+      const sets = slotSets(clamp(step.slots));
       const held = sets[process.pid % sets.length]!;
-      console.log(`factory: every slot is taken, waiting for ${held.map(i => slotLocks()[i]).join(", ")}`);
-      code = spawn(step.cwd, wrap(step.argv, held, true));
+      console.log(`factory: too few free slots, waiting for ${held.map(i => slotLocks()[i]).join(", ")}`);
+      code = spawn(step.cwd, wrap(withJobs(step.argv, held.length), held, true), held.length);
     }
   }
   if (code !== 0) throw new Error(`exit ${code}: ${step.argv.join(" ")}`);
@@ -219,7 +251,9 @@ export function main(argv = process.argv.slice(2)) {
     return i >= 0 ? args[i + 1] : undefined;
   };
   const config = value("--config") ?? "release";
-  const [cmd, name] = args.filter((a, i) => !a.startsWith("--") && !["--config", "--slots"].includes(args[i - 1]!));
+  const [cmd, name] = args.filter(
+    (a, i) => !a.startsWith("--") && !["--config", "--slots", "--max-slots"].includes(args[i - 1]!),
+  );
   switch (cmd) {
     case "layout":
       console.log(JSON.stringify({ ...google, builds, locks: slotLocks() }, null, 2));
@@ -237,7 +271,8 @@ export function main(argv = process.argv.slice(2)) {
     case "run": {
       if (!command.length) throw new Error("run needs a command after --");
       const n = clamp(Number(value("--slots") ?? 1));
-      return run({ cwd: process.cwd(), argv: command, slots: n }, dry);
+      const max = value("--max-slots");
+      return run({ cwd: process.cwd(), argv: command, slots: n, maxSlots: max ? Number(max) : undefined }, dry);
     }
     case "sync":
     case "gen":
