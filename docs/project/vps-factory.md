@@ -2,8 +2,10 @@
 
 The VPS (`vps`, Ubuntu, 12 CPUs, about 46 GiB RAM) is a Google-style build
 factory for Chromium, Chromium OS, CEF, Brave and Bun. Production stays on
-`dbfr`. The legacy layout (`~/factory`, `~/builds`, `~/aphrody-build`,
-`~/shenron-release`, ad-hoc `vendor/depot_tools` copies) is retired.
+`dbfr`. The legacy layout is retired: do not create new top-level build
+directories in `~` (`~/factory`, `~/builds`, `~/aphrody-build`,
+`~/shenron-release`) or extra `vendor/depot_tools` copies. Large data such as
+`~/.aphrody/models` lives in the pool behind a symlink.
 
 ## Layout
 
