@@ -26,7 +26,23 @@ export interface NativeSDKReceipt {
 }
 
 export interface NativeSDKAsset extends NativeSDKReceipt {
-  asset: { url: string; sha256: string; bytes: number; format: "zip" };
+  /** `npm`: a registry tarball whose members sit under `package/`, beside its `package.json`. */
+  asset: { url: string; sha256: string; bytes: number; format: "zip" | "npm" };
+}
+
+/** `@aphrody/bun-native-sdk-<dep>-<os>-<arch>[-musl]`: the registry package of one SDK. */
+export function nativeSDKPackageName(component: string, os: string, arch: string, abi?: string): string {
+  const cpu = arch === "aarch64" ? "arm64" : arch;
+  return `@aphrody/bun-native-sdk-${component.toLowerCase()}-${os}-${cpu}${abi === "musl" ? "-musl" : ""}`;
+}
+
+/** Where an asset downloads from: `BUN_NATIVE_SDK_REGISTRY` mirrors npm assets, the SHA-256 pin stays. */
+export function nativeSDKAssetURL(asset: NativeSDKAsset["asset"], registry = process.env.BUN_NATIVE_SDK_REGISTRY) {
+  if (asset.format !== "npm" || !registry) return asset.url;
+  const base = new URL(registry.endsWith("/") ? registry : `${registry}/`);
+  if (base.protocol !== "https:" && base.hostname !== "127.0.0.1" && base.hostname !== "localhost")
+    throw new Error("BUN_NATIVE_SDK_REGISTRY must be an https registry");
+  return new URL(new URL(asset.url).pathname.slice(1), base).href;
 }
 
 function stable(value: unknown): string {
@@ -175,7 +191,7 @@ export function validateNativeSDKAsset(value: NativeSDKAsset): void {
     url.password ||
     url.hash ||
     url.search ||
-    value.asset.format !== "zip" ||
+    !(value.asset.format === "zip" || (value.asset.format === "npm" && url.pathname.endsWith(".tgz"))) ||
     !/^[a-f0-9]{64}$/.test(value.asset.sha256) ||
     !Number.isSafeInteger(value.asset.bytes) ||
     value.asset.bytes < 1 ||
@@ -321,13 +337,14 @@ export async function fetchNativeSDK(descriptor: string, directory: string): Pro
   const asset = (await Bun.file(descriptor).json()) as NativeSDKAsset;
   validateNativeSDKAsset(asset);
   if (existsSync(directory)) return verifyNativeSDKDirectory(directory, asset);
+  const npm = asset.asset.format === "npm";
   const staging = `${directory}.${process.pid}.${crypto.randomUUID()}.staging`;
-  const archiveFile = `${staging}.zip`;
+  const archiveFile = `${staging}.${npm ? "tgz" : "zip"}`;
   await mkdir(resolve(directory, ".."), { recursive: true });
   await mkdir(staging, { recursive: false });
   try {
     await downloadWithRetry(
-      asset.asset.url,
+      nativeSDKAssetURL(asset.asset),
       archiveFile,
       asset.component,
       undefined,
@@ -336,9 +353,13 @@ export async function fetchNativeSDK(descriptor: string, directory: string): Pro
     );
     const members = await new Bun.Archive(await Bun.file(archiveFile).arrayBuffer()).files();
     let bytes = 0;
-    if (members.size !== Object.keys(asset.files).length + 1)
+    // A registry tarball adds its package.json; everything else sits under package/.
+    if (members.size !== Object.keys(asset.files).length + (npm ? 2 : 1))
       throw new Error("Native SDK archive member count mismatch");
-    for (const [name, member] of members) {
+    for (const [entry, member] of members) {
+      if (npm && entry === "package/package.json") continue;
+      if (npm && !entry.startsWith("package/")) throw new Error("Native SDK package member is outside package/");
+      const name = npm ? entry.slice("package/".length) : entry;
       if (!nativeSDKMember(name) || (name !== "bun-native-sdk.json" && !asset.files[name]))
         throw new Error("Native SDK archive contains an unregistered member");
       bytes += member.size;

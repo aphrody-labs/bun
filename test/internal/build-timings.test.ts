@@ -8,7 +8,7 @@
  */
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { tempDir } from "harness";
-import { mkdirSync, utimesSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, utimesSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 
 import { BuildError } from "../../scripts/build/error.ts";
@@ -18,12 +18,21 @@ import {
   validateNativeSDKGate,
   type NativeSDKGate,
 } from "../../scripts/aphrody/native-sdk-factory";
+import {
+  mergeNativeSDKIndex,
+  nativeSDKTarballURL,
+  nativeSDKVersion,
+  npmPlatform,
+} from "../../scripts/aphrody/native-sdk-registry.ts";
 import { rustcPhasesPath } from "../../scripts/build/rust/units.ts";
 import {
   assertNativeSDKCompatible,
   compatibleNativeSDK,
+  fetchNativeSDK,
+  nativeSDKAssetURL,
   nativeSDKHash,
   nativeSDKMember,
+  nativeSDKPackageName,
   registerNativeSDKRoot,
   validateNativeSDKAsset,
   verifyNativeSDKDirectory,
@@ -295,6 +304,101 @@ describe("native SDK consumer", () => {
     writeFileSync(join(String(dir), "source/include/fixture.h"), "header");
     writeFileSync(join(String(dir), "source/include/unregistered.h"), "extra");
     await expect(verifyNativeSDKDirectory(String(dir), asset)).rejects.toThrow("unregistered member");
+  });
+
+  test("names registry packages, versions and tarballs per target", () => {
+    expect(nativeSDKPackageName("boringssl", "linux", "aarch64", "musl")).toBe(
+      "@aphrody/bun-native-sdk-boringssl-linux-arm64-musl",
+    );
+    expect(nativeSDKPackageName("zlib", "windows", "x64")).toBe("@aphrody/bun-native-sdk-zlib-windows-x64");
+    expect(nativeSDKVersion("a".repeat(40), "b".repeat(64))).toBe("0.0.0-caaaaaaaaaaaa.abbbbbbbbbbbbbbbb");
+    expect(() => nativeSDKVersion("main", "b".repeat(64))).toThrow("commit and an identity");
+    expect(nativeSDKTarballURL("@aphrody/bun-native-sdk-zlib-linux-x64", "0.0.0-c1.a2")).toBe(
+      "https://registry.npmjs.org/@aphrody/bun-native-sdk-zlib-linux-x64/-/bun-native-sdk-zlib-linux-x64-0.0.0-c1.a2.tgz",
+    );
+    expect([
+      npmPlatform({ os: "linux", arch: "aarch64", abi: "musl" }),
+      npmPlatform({ os: "linux", arch: "x64", abi: "gnu" }),
+      npmPlatform({ os: "windows", arch: "x64", abi: undefined }),
+    ]).toEqual([
+      { os: ["linux"], cpu: ["arm64"], libc: ["musl"] },
+      { os: ["linux"], cpu: ["x64"], libc: ["glibc"] },
+      { os: ["win32"], cpu: ["x64"] },
+    ]);
+  });
+
+  test("accepts registry tarballs and mirrors only them", () => {
+    const asset = fixture();
+    const url = "https://registry.npmjs.org/@aphrody/bun-native-sdk-boringssl-linux-x64/-/fixture.tgz";
+    asset.asset = { ...asset.asset, url, format: "npm" };
+    expect(() => validateNativeSDKAsset(asset)).not.toThrow();
+    expect(nativeSDKAssetURL(asset.asset, "https://mirror.example/npm")).toBe(
+      "https://mirror.example/npm/@aphrody/bun-native-sdk-boringssl-linux-x64/-/fixture.tgz",
+    );
+    expect(nativeSDKAssetURL(asset.asset, "")).toBe(url);
+    expect(() => nativeSDKAssetURL(asset.asset, "http://mirror.example")).toThrow("https registry");
+    const zip = fixture();
+    expect(nativeSDKAssetURL(zip.asset, "https://mirror.example/npm")).toBe(zip.asset.url);
+    asset.asset.url = url.replace(".tgz", ".zip");
+    expect(() => validateNativeSDKAsset(asset)).toThrow("checksum pins");
+  });
+
+  test("a newer pack replaces the index entry of the same component, target and ABI", () => {
+    const old = fixture();
+    const newer = { ...fixture(), asset: { ...old.asset, sha256: "d".repeat(64) } };
+    const zlib = { ...fixture(), component: "zlib" };
+    const otherABI = { ...fixture(), buildABI: { ...old.buildABI, lto: true } };
+    expect(mergeNativeSDKIndex([zlib, old], [newer, otherABI])).toEqual([newer, otherABI, zlib]);
+    expect(() => mergeNativeSDKIndex([], [{ ...newer, asset: { ...newer.asset, bytes: 0 } }])).toThrow("checksum pins");
+  });
+
+  test("downloads an npm package from a registry mirror and rejects members outside package/", async () => {
+    const asset = fixture();
+    const { asset: _distribution, ...receipt } = asset;
+    const path = "/@aphrody/bun-native-sdk-boringssl-linux-x64/-/fixture.tgz";
+    let tarball = new Uint8Array();
+    using server = Bun.serve({
+      port: 0,
+      fetch: req => (new URL(req.url).pathname === path ? new Response(tarball) : new Response("", { status: 404 })),
+    });
+    using dir = tempDir("native-sdk-npm", {});
+    const descriptor = join(String(dir), "descriptor.json");
+    async function fetchPackage(members: Record<string, string>, directory: string) {
+      tarball = await new Bun.Archive(members, { compress: "gzip" }).bytes();
+      asset.asset = {
+        url: `https://registry.npmjs.org${path}`,
+        bytes: tarball.byteLength,
+        sha256: new Bun.CryptoHasher("sha256").update(tarball).digest("hex"),
+        format: "npm",
+      };
+      await Bun.write(descriptor, JSON.stringify(asset));
+      return fetchNativeSDK(descriptor, join(String(dir), directory));
+    }
+    const members = {
+      "package/package.json": JSON.stringify({ name: "fixture", version: "0.0.0" }),
+      "package/bun-native-sdk.json": JSON.stringify(receipt),
+      "package/lib/libfixture.a": "library",
+      "package/source/include/fixture.h": "header",
+      "package/licenses/LICENSE": "license",
+    };
+    const registry = process.env.BUN_NATIVE_SDK_REGISTRY;
+    process.env.BUN_NATIVE_SDK_REGISTRY = server.url.href;
+    try {
+      await fetchPackage(members, "sdk");
+      const { "package/package.json": _manifest, ...rest } = members;
+      await expect(fetchPackage({ ...rest, "outside/package.json": "{}" }, "escaped")).rejects.toThrow(
+        "outside package/",
+      );
+    } finally {
+      if (registry === undefined) delete process.env.BUN_NATIVE_SDK_REGISTRY;
+      else process.env.BUN_NATIVE_SDK_REGISTRY = registry;
+    }
+    const sdk = join(String(dir), "sdk");
+    expect({
+      header: await Bun.file(join(sdk, "source/include/fixture.h")).text(),
+      manifest: existsSync(join(sdk, "package.json")),
+      escaped: existsSync(join(String(dir), "escaped")),
+    }).toEqual({ header: "header", manifest: false, escaped: false });
   });
 });
 

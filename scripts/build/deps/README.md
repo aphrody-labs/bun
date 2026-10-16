@@ -176,8 +176,10 @@ ninja prunes everything after it.
 
 ## Qualified native SDKs
 
-`scripts/build/native-sdk-index.json` owns immutable normalized ZIP assets. Its
-initial `assets` list is empty; no downloaded SDK or vendor replacement is yet
+`scripts/build/native-sdk-index.json` owns immutable normalized assets: a ZIP
+(`format: "zip"`) or an npm registry tarball (`format: "npm"`, members under
+`package/` beside its `package.json`). Its `assets` list is empty until the
+first registry pack is published; no downloaded SDK or vendor replacement is yet
 qualified by that list. A supported direct C/C++ dependency prefers a matching
 asset in `BUN_NATIVE_SDK_MODE=auto` (the default). `source` explicitly uses the
 existing source build; `sdk` requires an indexed SDK. Automatic selection uses
@@ -198,3 +200,29 @@ paths such as BoringSSL's `include/` without reading a second vendor tree.
 
 Only a linked, tested factory receipt may enter the index. Source vendors remain
 until the published asset, consumer build and target runtime are qualified.
+
+### From the npm registry
+
+`scripts/aphrody/native-sdk-registry.ts` turns the dependencies a build
+compiled into npm packages, one per dependency and target:
+`@aphrody/bun-native-sdk-<dep>-<os>-<arch>[-musl]`, version
+`0.0.0-c<commit 12>.a<archive sha256 16>`, with npm `os`/`cpu`/`libc`.
+
+```sh
+bun factory run -- bun bd --profile=release      # on the VPS: link and test bun
+bun scripts/aphrody/native-sdk-registry.ts pack --build build/release [--deps zlib,zstd]
+bun scripts/aphrody/native-sdk-registry.ts publish --out build/release/native-sdk-registry [--dry-run]
+bun scripts/aphrody/native-sdk-registry.ts record --out build/release/native-sdk-registry
+bun scripts/aphrody/native-sdk-registry.ts status --build build/release
+```
+
+`pack` requires every dependency up to date in that build and the linked bun to
+pass `native-sdk-smoke.ts` (zlib, libdeflate, zstd, brotli, BoringSSL,
+libarchive and SQLite roundtrips); it skips a dependency the build already
+downloaded. `publish` skips a version already on the registry. `record` adds an
+asset to the index only once the registry serves its exact bytes. Builds then
+download the tarball and check its size and SHA-256 pins; `BUN_NATIVE_SDK_REGISTRY`
+points npm assets at an https mirror (or a localhost one) under the same pins.
+Each pack matches only builds with its exact ABI: the same compiler identity,
+flags, LTO, sanitizer and system headers, so a factory pack serves the builds of
+that factory image.

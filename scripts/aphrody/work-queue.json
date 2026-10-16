@@ -102,6 +102,17 @@
     "status": "done"
   },
   {
+    "id": "N-native-sdk",
+    "goal": "Deps C/C++ téléchargées depuis npm au lieu d'être compilées : pack sur le VPS, publish et record à la passe finale",
+    "paths": [
+      "scripts/aphrody/native-sdk-registry.ts",
+      "scripts/aphrody/native-sdk-smoke.ts",
+      "scripts/build/native-sdk.ts",
+      "scripts/build/native-sdk-index.json"
+    ],
+    "status": "active"
+  },
+  {
     "id": "audit-untracked-crate-0",
     "goal": "untracked-crate: src/bun-os/native crate not committed",
     "paths": [

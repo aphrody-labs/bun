@@ -19,7 +19,10 @@ patches without a prebuilt. Everything else is fetched at a pinned revision.
 cares, highway, libarchive, libdeflate, libjpeg-turbo, libspng, libuv, libwebp,
 lolhtml, lshpack, lsqpack, lsquic, mimalloc, nginx, ngx-rust, picohttpparser,
 rust-argon2, tinycc, uutils, zlib, zstd, hdrhistogram) as archives at the commits
-listed in `scripts/aphrody/deps.json`. WebKit comes as a checksum-verified prebuilt.
+listed in `scripts/aphrody/deps.json`. WebKit comes as a prebuilt identified by
+its release URL (`.identity` stamp), without a checksum pin. A direct C/C++
+dependency downloads instead of compiling once a matching registry pack is
+indexed (`scripts/build/deps/README.md`, "Qualified native SDKs").
 Deleting these directories is safe: the next `bun bd` refetches them.
 
 ## Optional source checkouts (`bun run vendor:setup <name|all|list>`)
