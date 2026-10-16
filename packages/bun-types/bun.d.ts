@@ -1134,6 +1134,81 @@ declare module "bun" {
      * Does not fetch resources, minify, or apply a DOM cascade.
      */
     function parseCSS(source: string): Array<{ prelude: string; body: string | null }>;
+    /**
+     * Extract the main article of a page with the readability engine of Brave Speedreader.
+     * Nothing is fetched or executed. Returns `null` when no article candidate is found.
+     *
+     * @example
+     * ```ts
+     * const article = Bun.HTML.readability(html, { url: "https://example.com/post" });
+     * console.log(article?.title, article?.text);
+     * ```
+     */
+    function readability(
+      markup: string | ArrayBufferLike | ArrayBufferView,
+      options?: ReadabilityOptions,
+    ): ReadabilityArticle | null;
+    /**
+     * Read attributes of the elements matched by CSS selectors (Brave web-discovery document extractor).
+     * Use the attribute name `"textContent"` to read text. One result is returned per matched element.
+     */
+    function extract(markup: string | ArrayBufferLike | ArrayBufferView, requests: HTMLExtractRequest[]): HTMLExtractResult[];
+  }
+
+  interface ReadabilityOptions {
+    /** URL of the document. Defaults to `https://example.com/`. */
+    url?: string;
+    /** Return `null` when the article text is shorter than this many characters. */
+    minLength?: number;
+    /** Also return the Speedreader reader page as `page`. */
+    page?: boolean;
+    /** `data-theme` of the reader page. */
+    theme?: string;
+    /** `data-font-family` of the reader page. */
+    fontFamily?: string;
+    /** `data-font-size` of the reader page. */
+    fontSize?: string;
+    /** `data-column-width` of the reader page. */
+    columnWidth?: string;
+  }
+
+  interface ReadabilityArticle {
+    title: string;
+    byline: string | null;
+    excerpt: string | null;
+    /** `lang` attribute of the `<html>` element. */
+    lang: string | null;
+    /** Cleaned article HTML. */
+    content: string;
+    /** Text content of the cleaned article. */
+    text: string;
+    /** Number of characters in `text`. */
+    length: number;
+    /** Mozilla readability score of the original document. */
+    score: number;
+    /** Whether `score` reaches the Speedreader threshold (20). */
+    readable: boolean;
+    /** Speedreader reader page, when `page: true`. */
+    page?: string;
+  }
+
+  interface HTMLExtractRequest {
+    /** Selector of the elements to read. */
+    selector: string;
+    attributes: Array<{
+      /** Key of the value in `values`. */
+      key: string;
+      /** Attribute name, or `"textContent"`. */
+      attribute: string;
+      /** Optional selector of a descendant to read from instead of the element itself. */
+      selector?: string;
+    }>;
+  }
+
+  interface HTMLExtractResult {
+    selector: string;
+    /** Values by key; `""` when the attribute or descendant is missing. */
+    values: Record<string, string>;
   }
 
   interface HTMLDocument {

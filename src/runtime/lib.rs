@@ -81,11 +81,13 @@ pub(crate) mod vector_index;
 pub(crate) mod curl;
 pub(crate) mod dns_jsc;
 pub(crate) mod image;
+pub(crate) mod adblock;
 pub(crate) mod nginx;
 pub(crate) mod test_runner;
 pub(crate) mod valkey_jsc;
 pub(crate) mod video;
 pub(crate) mod yolo;
+pub(crate) mod privacy;
 
 // ─── crate-root re-exports for `cli/` submodules ────────────────────────────
 // Modules under `src/runtime/cli/**` use crate-root paths

@@ -157,6 +157,7 @@ const errors: ErrorCodeMapping = [
   ["ERR_MODULE_LINK_MISMATCH", TypeError],
   ["ERR_MODULE_NOT_FOUND", Error],
   ["ERR_MULTIPLE_CALLBACK", Error],
+  ["ERR_ADBLOCK_BLOCKED", TypeError],
   ["ERR_NGINX_PROVIDER_UNAVAILABLE", Error],
   ["ERR_NGINX_TIMEOUT", Error],
   ["ERR_NGINX_CONFIG", Error],

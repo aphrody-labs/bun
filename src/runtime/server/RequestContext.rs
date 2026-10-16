@@ -1888,8 +1888,7 @@ where
             AnyBlob::Blob(b) => (b.size.get(), b.offset.get()),
             _ => unreachable!(),
         };
-        let stat_size: BlobSizeType =
-            BlobSizeType::try_from(super::nonnegative_stat_size(&stat)).unwrap();
+        let stat_size: BlobSizeType = super::nonnegative_stat_size(&stat);
         if let AnyBlob::Blob(b) = blob_ref {
             b.size.set(if is_regular {
                 stat_size

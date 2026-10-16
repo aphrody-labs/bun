@@ -49,6 +49,8 @@ pub(crate) mod glob;
 pub(crate) mod hash_object;
 #[path = "api/HTMLObject.rs"]
 pub(crate) mod html_object;
+#[path = "api/HTMLReadability.rs"]
+pub(crate) mod html_readability;
 #[path = "api/html_rewriter.rs"]
 pub(crate) mod html_rewriter;
 #[path = "api/js_bundle_completion_task.rs"]

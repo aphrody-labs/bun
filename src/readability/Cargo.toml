@@ -1,0 +1,25 @@
+[package]
+name = "bun_readability"
+description = "Brave Speedreader readability and web-discovery document extractor, absorbed into Bun."
+version.workspace = true
+edition = "2018"
+publish = false
+# Brave sources are MPL-2.0; readability and kuchikiki are MIT (see LICENSE-*).
+license = "MPL-2.0 AND MIT"
+
+[lib]
+path = "src/lib.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+bitflags.workspace = true
+bun_browser_dom.workspace = true
+html5ever.workspace = true
+indexmap = "2"
+lol_html.workspace = true
+regex.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+url.workspace = true

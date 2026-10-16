@@ -1,0 +1,87 @@
+---
+title: Adblock
+description: Match network requests and cosmetic filters with Brave's adblock-rust engine, built into Bun.
+---
+
+`bun:adblock` exposes the filter engine of Brave's [adblock-rust](https://github.com/brave/adblock-rust) (MPL-2.0), compiled into Bun as the `bun_adblock` crate. It parses Adblock Plus, uBlock Origin and hosts-file lists and needs no network: you pass the list text. Nothing is loaded until the first `new Engine()`.
+
+```ts
+import { Engine } from "bun:adblock";
+
+const engine = new Engine({ rules: await Bun.file("easylist.txt").text() });
+
+engine.check("https://ads.example.com/a.js", "https://news.example/", "script");
+// => { matched: true, blocked: true, important: false }
+```
+
+## Building an engine
+
+```ts
+new Engine({
+  rules: "||ads.example.com^\n##.ad-banner", // or an array with one rule per element
+  format: "standard", // or "hosts" for "0.0.0.0 host" lines
+  debug: false, // true keeps the raw rule text in `filter` / `exception`
+  resources: [], // optional redirect/scriptlet resources (adblock-rust resource JSON)
+});
+```
+
+Parsing a large list takes time and memory. Cache the compiled form with `serialize()` and rebuild it with `Engine.deserialize()`; the format is tied to the Bun version that wrote it.
+
+```ts
+await Bun.write("engine.dat", engine.serialize());
+const cached = Engine.deserialize(await Bun.file("engine.dat").bytes());
+```
+
+## Network requests
+
+`check(url, sourceUrl?, requestType?, method?)` returns:
+
+| Field          | Meaning                                                                       |
+| -------------- | ----------------------------------------------------------------------------- |
+| `matched`      | A blocking rule matched                                                       |
+| `blocked`      | The request must be blocked (`important`, or `matched` without an exception) |
+| `important`    | An `$important` rule matched; exceptions do not apply                         |
+| `filter`       | The matched blocking rule (raw text with `debug: true`)                       |
+| `exception`    | The matched exception rule (raw text with `debug: true`)                      |
+| `redirect`     | `data:` URL of a `$redirect` resource, when `resources` provides it           |
+| `rewrittenUrl` | The URL after `$removeparam` rules                                            |
+
+`sourceUrl` defaults to `url` (a first-party request); `requestType` is one of `document`, `subdocument`, `script`, `stylesheet`, `image`, `font`, `media`, `object`, `xmlhttprequest`, `websocket`, `ping` or `other` (the default).
+
+## Cosmetic filters
+
+```ts
+const page = engine.urlCosmeticResources("https://example.org/");
+page.hideSelectors; // selectors specific to this host
+page.injectedScript; // scriptlets to inject
+// Generic rules for the classes and ids present in the page:
+engine.hiddenClassIdSelectors(["ad-banner"], ["sidebar-ad"], page.exceptions);
+```
+
+## `fetch()`
+
+Pass an engine as `adblock` to check a request before any I/O. A blocking match rejects with a `TypeError` whose `code` is `ERR_ADBLOCK_BLOCKED`:
+
+```ts
+await fetch("https://ads.example.com/a.js", { adblock: engine }); // rejects
+```
+
+The request type is `xmlhttprequest`; the source URL is the `Referer` header, or the request URL. `redirect` and `rewrittenUrl` are not applied by `fetch()`: use `check()` to act on them. Redirects followed by `fetch()` are not re-checked.
+
+## `Bun.WebView`
+
+`attachWebView(view, engine)` blocks the matching requests of a Chrome-protocol view (`backend: "chrome"` and the `bun-webview-host` backends) through the DevTools `Fetch` domain. Call it after the first `navigate()`; it resolves to a function that detaches the engine. The WebKit backend has no DevTools bridge and throws.
+
+```ts
+import { Engine, attachWebView } from "bun:adblock";
+
+const view = new Bun.WebView({ backend: "chrome" });
+await view.navigate("about:blank");
+const detach = await attachWebView(view, engine);
+await view.navigate("https://example.com");
+await detach();
+```
+
+## License
+
+The engine sources in `src/adblock` come from adblock-rust and stay under the Mozilla Public License 2.0 (`src/adblock/LICENSE`).

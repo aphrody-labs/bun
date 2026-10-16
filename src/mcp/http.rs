@@ -16,7 +16,8 @@ const MAX_BODY: usize = 8 * 1024 * 1024;
 pub(crate) fn serve(server: &Arc<Server>, port: u16) -> std::io::Result<()> {
     let listener = TcpListener::bind(("127.0.0.1", port))?;
     let addr = listener.local_addr()?;
-    eprintln!("bun mcp: listening on http://{addr}/mcp");
+    bun_core::Output::print_errorln(format_args!("bun mcp: listening on http://{addr}/mcp"));
+    bun_core::Output::flush();
     let session = format!("{:016x}", {
         use std::hash::{BuildHasher, RandomState};
         RandomState::new().hash_one(std::process::id())

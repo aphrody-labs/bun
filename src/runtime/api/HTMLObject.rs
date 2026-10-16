@@ -12,6 +12,8 @@ pub(crate) fn create(global: &JSGlobalObject) -> JSValue {
         &[
             ("parse", __jsc_host_parse, 1),
             ("parseCSS", __jsc_host_parse_css, 1),
+            ("readability", super::html_readability::__jsc_host_readability, 2),
+            ("extract", super::html_readability::__jsc_host_extract, 2),
         ],
     )
 }

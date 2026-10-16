@@ -18,6 +18,7 @@ aphrody-google = { workspace = true, optional = true }
 aphrody-jev.workspace = true
 bun_video_native = { package = "bun-video-native", path = "../../packages/bun-video/native", optional = true, default-features = false }
 bun_browser_dom.workspace = true
+bun_readability.workspace = true
 bun_browser_crawl = { workspace = true, optional = true }
 bun_browser_detect.workspace = true
 bun_browser_ssrf.workspace = true
@@ -101,6 +102,7 @@ bun_libdeflate_sys.workspace = true
 bun_ast.workspace = true
 bun_ast_jsc.workspace = true
 lol_html.workspace = true
+bun_adblock.workspace = true
 bun_lsp.workspace = true
 bun_md.workspace = true
 bun_no_window.workspace = true
@@ -122,6 +124,7 @@ bun_safety.workspace = true
 bun_semver.workspace = true
 bun_semver_jsc.workspace = true
 bun_sha_hmac.workspace = true
+bun_privacy.workspace = true
 bun_shell_parser.workspace = true
 bun_simdutf_sys.workspace = true
 bun_sourcemap.workspace = true

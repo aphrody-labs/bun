@@ -22,14 +22,10 @@ test("Rust sources linked into Bun do not use the streams of the standard librar
     // Readiness output lives only in archive.rs #[cfg(test)] mod tests.
     ["src/browser/crates/crawl/src/archive.rs", 2],
     ["src/bun_alloc/lib.rs", 1],
-    ["src/bun_core/Global.rs", 2],
+    ["src/bun_core/Global.rs", 1],
     ["src/libuv_sys/libuv.rs", 1],
-    // The uutils applets write with the streams of the standard library anyway.
+    // The uutils applets buffer in the stdout of the standard library, which only it can flush.
     ["src/coreutils/lib.rs", 3],
-    // bun mcp speaks JSON-RPC on the process streams.
-    ["src/mcp/cli.rs", 8],
-    ["src/mcp/http.rs", 1],
-    ["src/mcp/install.rs", 3],
     ["src/react_compiler/pipeline.rs", 4],
     ["src/router/lib.rs", 4],
   ]);
@@ -82,13 +78,13 @@ test("Rust sources linked into Bun do not use the streams of the standard librar
     ["src/runtime/cli/toolchain_command.rs", 1],
     ["src/runtime/cli/tools_command.rs", 2],
   ]);
-  // Programs of their own.
+  // Programs of their own; `tests/` and `examples/` hold Cargo targets built as separate binaries.
   const programs = ["src/sema/standalone/"];
   const isLinked = (file: string) =>
     !file.endsWith("/build.rs") &&
     !file.includes("/benches/") &&
-    !file.includes("/tests/") &&
     !file.includes("/examples/") &&
+    !file.includes("/tests/") &&
     isInLinkedCrate(file) &&
     !programs.some(it => file.startsWith(it));
 

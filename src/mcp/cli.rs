@@ -1,10 +1,11 @@
 //! Command line of `bun mcp`.
 
 use std::ffi::OsString;
-use std::io::{BufRead, Write};
+use std::io::BufRead;
 use std::path::PathBuf;
 use std::sync::Arc;
 
+use bun_core::Output;
 use serde_json::{Value, json};
 
 use crate::profile::Profile;
@@ -52,7 +53,7 @@ struct Options {
 }
 
 fn usage_error(msg: &str) -> i32 {
-    eprintln!("error: {msg}\n\n{HELP}");
+    Output::print_errorln(format_args!("error: {msg}\n\n{HELP}"));
     2
 }
 
@@ -77,7 +78,7 @@ pub fn main(args: Vec<OsString>, extra: &[&'static [Tool]]) -> i32 {
         Some("uninstall") => return crate::install::run(&registry(extra), false, &args[1..], &cwd),
         Some("tools") => return print_tools(&registry(extra), &args[1..]),
         Some("help" | "-h" | "--help") => {
-            print!("{HELP}");
+            Output::print(format_args!("{HELP}"));
             return 0;
         }
         _ => {}
@@ -142,7 +143,7 @@ pub fn main(args: Vec<OsString>, extra: &[&'static [Tool]]) -> i32 {
         Some(port) => match crate::http::serve(&server, port) {
             Ok(()) => 0,
             Err(e) => {
-                eprintln!("error: bun mcp --http {port}: {e}");
+                Output::print_errorln(format_args!("error: bun mcp --http {port}: {e}"));
                 1
             }
         },
@@ -153,7 +154,6 @@ pub fn main(args: Vec<OsString>, extra: &[&'static [Tool]]) -> i32 {
 fn stdio(server: &Server) -> i32 {
     let stdin = std::io::stdin();
     let mut input = stdin.lock();
-    let mut out = std::io::BufWriter::new(std::io::stdout().lock());
     let mut line = String::new();
     loop {
         line.clear();
@@ -161,7 +161,7 @@ fn stdio(server: &Server) -> i32 {
             Ok(0) => return 0,
             Ok(_) => {}
             Err(e) => {
-                eprintln!("error: bun mcp: stdin: {e}");
+                Output::print_errorln(format_args!("error: bun mcp: stdin: {e}"));
                 return 1;
             }
         }
@@ -176,11 +176,9 @@ fn stdio(server: &Server) -> i32 {
             ),
         };
         if let Some(reply) = reply {
-            let written = serde_json::to_writer(&mut out, &reply)
-                .map_err(std::io::Error::from)
-                .and_then(|()| out.write_all(b"\n"))
-                .and_then(|()| out.flush());
-            if written.is_err() {
+            let mut bytes = reply.to_string().into_bytes();
+            bytes.push(b'\n');
+            if bun_sys::File::stdout().write_all(&bytes).is_err() {
                 return 0;
             }
         }
@@ -190,12 +188,12 @@ fn stdio(server: &Server) -> i32 {
 fn print_tools(registry: &Registry, args: &[String]) -> i32 {
     let descriptors = registry.descriptors();
     if args.iter().any(|a| a == "--markdown") {
-        print!("{}", markdown(descriptors));
+        Output::print(format_args!("{}", markdown(descriptors)));
     } else if args.iter().any(|a| a == "--json") {
-        println!(
+        Output::println(format_args!(
             "{}",
             serde_json::to_string_pretty(descriptors).unwrap_or_default()
-        );
+        ));
     } else {
         for d in descriptors {
             let name = d["name"].as_str().unwrap_or("");
@@ -205,7 +203,7 @@ fn print_tools(registry: &Registry, args: &[String]) -> i32 {
                 .next()
                 .unwrap_or(desc)
                 .trim_end_matches('.');
-            println!("{name:<16} {first}");
+            Output::println(format_args!("{name:<16} {first}"));
         }
     }
     0

@@ -1,0 +1,75 @@
+---
+title: Readability
+description: Extract the main article of an HTML page and read attributes with CSS selectors
+---
+
+`Bun.HTML.readability` extracts the main article of an HTML document with the readability engine of [Brave Speedreader](https://github.com/brave/brave-core/tree/master/components/speedreader). `Bun.HTML.extract` reads element attributes with CSS selectors, like the Brave web-discovery document extractor. Both run natively, never fetch resources and never execute scripts.
+
+---
+
+## `Bun.HTML.readability`
+
+```ts
+const html = await Bun.file("post.html").text();
+const article = Bun.HTML.readability(html, { url: "https://example.com/post" });
+
+if (article) {
+  console.log(article.title); // "Reading mode in Bun"
+  console.log(article.byline); // "Ada Lovelace"
+  console.log(article.text); // article text without navigation, ads or footer
+}
+```
+
+The input is a string, an `ArrayBuffer` or a `TypedArray` of UTF-8 bytes. The result is `null` when no article candidate is found, or when the text is shorter than `minLength`.
+
+| Field      | Type             | Description                                                     |
+| ---------- | ---------------- | --------------------------------------------------------------- |
+| `title`    | `string`         | Title from JSON-LD, `<meta>` tags or `<title>`, without the site name |
+| `byline`   | `string \| null` | Author from JSON-LD or `<meta name="author">`                   |
+| `excerpt`  | `string \| null` | Description, or the first sentence of the article               |
+| `lang`     | `string \| null` | `lang` attribute of `<html>`                                    |
+| `content`  | `string`         | Cleaned article HTML                                            |
+| `text`     | `string`         | Text content of the cleaned article                             |
+| `length`   | `number`         | Number of characters in `text`                                  |
+| `score`    | `number`         | Mozilla readability score of the original document              |
+| `readable` | `boolean`        | `score` is above the Speedreader threshold (20)                 |
+| `page`     | `string`         | Speedreader reader page, only with `page: true`                 |
+
+### Options
+
+| Option        | Description                                                      |
+| ------------- | ---------------------------------------------------------------- |
+| `url`         | URL of the document (default `https://example.com/`). An invalid URL throws |
+| `minLength`   | Return `null` when the article text is shorter                   |
+| `page`        | Also serialize the reader page, a complete HTML document         |
+| `theme`, `fontFamily`, `fontSize`, `columnWidth` | `data-*` attributes of the reader page's `<html>` |
+
+```ts
+const { page } = Bun.HTML.readability(html, { url, page: true, theme: "dark" })!;
+return new Response(page, { headers: { "Content-Type": "text/html; charset=utf-8" } });
+```
+
+---
+
+## `Bun.HTML.extract`
+
+Each request selects elements with `selector` and reads one value per attribute request. The attribute `"textContent"` reads text. An attribute request with its own `selector` reads from the first matching descendant; a missing attribute or descendant gives `""`. Requests with an invalid selector are skipped.
+
+```ts
+const results = Bun.HTML.extract(html, [
+  {
+    selector: ".result",
+    attributes: [
+      { key: "url", selector: "a", attribute: "href" },
+      { key: "title", selector: "a", attribute: "textContent" },
+    ],
+  },
+]);
+// [{ selector: ".result", values: { url: "https://a.example/", title: "First" } }, ...]
+```
+
+---
+
+## Implementation
+
+The readability engine is Brave's Speedreader (MPL-2.0, derived from the MIT `readability` and `kuchikiki` crates), absorbed into Bun as the `bun_readability` crate. It parses with the same html5ever parser as `Bun.HTML.parse`; `Bun.HTML.extract` uses the `Bun.HTML` DOM and selector engine. `Bun.HTML` is created on first access, so neither API costs anything at startup. For streaming transformations without a DOM, use [`HTMLRewriter`](/runtime/html-rewriter).

@@ -1,0 +1,80 @@
+---
+title: Privacy cryptography
+description: STAR threshold aggregation, Privacy Pass tokens and OPAQUE password authentication in bun:privacy
+---
+
+`bun:privacy` exposes privacy-preserving protocols originally written for the Brave browser. The module loads on first import; inputs accept strings (UTF-8), `ArrayBuffer` and typed arrays, and outputs are `Uint8Array`.
+
+```ts
+import { star, randomness, privacyPass, opaque } from "bun:privacy";
+```
+
+## STAR
+
+STAR (Distributed Secret Sharing for Threshold Aggregation Reporting) lets clients send measurements that the server can only decrypt once at least `threshold` clients have reported the same value for an epoch.
+
+```ts
+const options = { threshold: 2, epoch: "2026-10" };
+const a = star.encode("example.com", { ...options, aux: "client a" });
+const b = star.encode("example.com", options);
+
+a.tag; // equal for equal measurements, used to group messages
+const { measurement, aux } = star.recover([a.message, b.message], options);
+new TextDecoder().decode(measurement); // "example.com"
+```
+
+`star.recover` throws when fewer than `threshold` messages share a tag. `star.parse(message)` returns `{ ciphertext, share, tag }`.
+
+Without `randomness`, `star.encode` uses STARLite (randomness derived locally from the measurement). With a STAR randomness server, derive it obliviously:
+
+```ts
+const { blinded, blind } = randomness.blind("example.com");
+// send `blinded`, receive { evaluated, proof } for epoch 7 and the server public key
+if (!randomness.verify({ publicKey, blinded, evaluated, proof, epoch: 7 })) throw new Error("bad proof");
+const r = randomness.finalize("example.com", 7, randomness.unblind(evaluated, blind));
+star.encode("example.com", { threshold: 2, epoch: "7", randomness: r });
+```
+
+## Privacy Pass
+
+Unlinkable tokens signed by a server through a verifiable OPRF on Ristretto255 (challenge-bypass-ristretto).
+
+```ts
+const key = privacyPass.createSigningKey();
+const publicKey = privacyPass.publicKey(key);
+
+const tokens = privacyPass.createTokens(3);
+const blinded = privacyPass.blind(tokens);
+const { signed, proof } = privacyPass.sign(key, blinded); // server
+const unblinded = privacyPass.unblind({ tokens, blinded, signed, proof, publicKey });
+
+const redemption = privacyPass.redeem(unblinded[0], "GET /resource");
+privacyPass.verify(key, redemption, "GET /resource"); // true, server side
+```
+
+## OPAQUE
+
+OPAQUE is an asymmetric password-authenticated key exchange: the server never sees the password. The cipher suite matches Brave Account (Ristretto255, TripleDH, Argon2id). Each step returns serialized state that the caller keeps until the next round trip.
+
+```ts
+const setup = opaque.createServerSetup(); // server, keep secret and stable
+
+// Registration
+const reg = opaque.clientRegistrationStart(password);
+const regResponse = opaque.serverRegistrationStart(setup, reg.request, "alice");
+const { upload } = opaque.clientRegistrationFinish(reg.state, password, regResponse);
+const passwordFile = opaque.serverRegistrationFinish(upload); // store
+
+// Login
+const login = opaque.clientLoginStart(password);
+const server = opaque.serverLoginStart(setup, passwordFile, login.request, "alice");
+const client = opaque.clientLoginFinish(login.state, password, server.response);
+const sessionKey = opaque.serverLoginFinish(server.state, client.finalization);
+// sessionKey equals client.sessionKey
+```
+
+A wrong password throws an error with `code: "ERR_OPAQUE_INVALID_LOGIN"`. Pass `null` as the password file for unknown users: the server runs an indistinguishable dummy flow. Argon2id runs synchronously on the calling thread.
+
+## Licenses
+
+STAR, the PPOPRF and OPAQUE wiring are MPL-2.0; challenge-bypass-ristretto is MPL-2.0 and adss/sharks are Apache-2.0 or MIT. Source files keep their upstream headers under `src/privacy`.

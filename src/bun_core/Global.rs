@@ -706,7 +706,7 @@ unsafe extern "C" {
     #[cfg(any(unix, windows))]
     #[link_name = "raise"]
     safe fn libc_raise(sig: c_int) -> c_int;
-    #[cfg(unix)]
+    #[cfg(not(windows))]
     #[link_name = "exit"]
     safe fn libc_exit(code: c_int) -> !;
     #[cfg(all(unix, not(target_os = "macos")))]
@@ -744,7 +744,7 @@ pub fn exit(code: u32) -> ! {
     }
     #[cfg(not(any(unix, windows)))]
     {
-        std::process::exit(code as i32)
+        libc_exit(code as i32)
     }
     #[cfg(all(unix, not(target_os = "macos")))]
     {

@@ -21,6 +21,7 @@ members = [
   "src/browser/crates/index",
   "src/bun_vpn",
   "src/opaque",
+  "src/adblock",
   "src/analytics",
   "src/api",
   "src/base64",
@@ -40,6 +41,7 @@ members = [
   "src/libarchive",
   "src/lsp",
   "src/md",
+  "src/readability",
   "src/host",
   "src/mcp",
   "src/agent_tools",
@@ -105,6 +107,7 @@ members = [
   "src/patch",
   "src/platform",
   "src/sha_hmac",
+  "src/privacy",
   "src/sys_jsc",
   "src/zlib_sys",
   "src/dispatch",
@@ -305,6 +308,13 @@ split-debuginfo = "unpacked"
 # `bun winmd` parses and emits whole Windows metadata files: unoptimized, it takes several seconds.
 [profile.dev.package.windows-bindgen]
 opt-level = 2
+
+# OPAQUE key stretching (Argon2id, 19 MiB) is unusably slow unoptimized.
+[profile.dev.package.argon2]
+opt-level = 3
+
+[profile.dev.package.blake2]
+opt-level = 3
 
 # Release with debuginfo retained for `perf record` / flamegraphs. Same opt
 # level as release; binary is large but profilable.
@@ -601,6 +611,7 @@ itoa = "1"
 encoding_rs = "0.8.35"
 # Vendored, not crates.io — see the `exclude = ["vendor"]` note above.
 lol_html = { path = "vendor/lolhtml" }
+bun_adblock = { path = "src/adblock" }
 bun_opaque = { path = "src/opaque" }
 bun_analytics = { path = "src/analytics" }
 bun_api = { path = "src/api" }
@@ -618,6 +629,7 @@ bun_io = { path = "src/io" }
 bun_libarchive = { path = "src/libarchive" }
 bun_lsp = { path = "src/lsp" }
 bun_md = { path = "src/md" }
+bun_readability = { path = "src/readability" }
 bun_host = { path = "src/host" }
 bun_mcp = { path = "src/mcp" }
 bun_agent_tools = { path = "src/agent_tools" }
@@ -681,6 +693,7 @@ bun_coreutils = { path = "src/coreutils" }
 bun_patch = { path = "src/patch" }
 bun_platform = { path = "src/platform" }
 bun_sha_hmac = { path = "src/sha_hmac" }
+bun_privacy = { path = "src/privacy" }
 bun_sys_jsc = { path = "src/sys_jsc" }
 bun_zlib_sys = { path = "src/zlib_sys" }
 bun_dispatch = { path = "src/dispatch" }

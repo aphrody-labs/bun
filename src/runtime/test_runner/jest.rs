@@ -930,7 +930,7 @@ pub(crate) fn format_label(
                     idx += 1;
                 }
                 b'$' => {
-                    write!(&mut list, "{}", test_idx + 1).unwrap();
+                    write!(&mut list, "{}", test_idx + 1).expect("Vec<u8> write is infallible");
                     idx += 1;
                 }
                 b'%' => {

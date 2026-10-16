@@ -11,6 +11,7 @@
 
 use std::path::{Path, PathBuf};
 
+use bun_core::Output;
 use serde_json::{Map, Value, json};
 
 use crate::registry::Registry;
@@ -202,17 +203,17 @@ pub(crate) fn run(registry: &Registry, install: bool, args: &[String], cwd: &Pat
     for agent in &agents {
         match apply(agent, install, project, cwd) {
             Ok(path) => {
-                println!(
+                Output::println(format_args!(
                     "{} {agent}: {path}",
                     if install { "installed" } else { "removed" }
-                );
+                ));
                 recorded.retain(|a| a != agent);
                 if install && !project {
                     recorded.push(agent.clone());
                 }
             }
             Err(e) => {
-                eprintln!("error: {e}");
+                Output::print_errorln(format_args!("error: {e}"));
                 code = 1;
             }
         }
@@ -220,7 +221,7 @@ pub(crate) fn run(registry: &Registry, install: bool, args: &[String], cwd: &Pat
     recorded.sort();
     recorded.dedup();
     if let Err(e) = write_manifest(registry, &recorded) {
-        eprintln!("error: {e}");
+        Output::print_errorln(format_args!("error: {e}"));
         code = 1;
     }
     code

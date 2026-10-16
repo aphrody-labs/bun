@@ -33,12 +33,16 @@ pub enum HardcodedModule {
     BunGraphIndex,
     #[strum(serialize = "bun:graphx")]
     BunGraphx,
+    #[strum(serialize = "bun:adblock")]
+    BunAdblock,
     #[strum(serialize = "bun:nginx")]
     BunNginx,
     #[strum(serialize = "bun:yolo")]
     BunYolo,
     #[strum(serialize = "bun:python")]
     BunPython,
+    #[strum(serialize = "bun:privacy")]
+    BunPrivacy,
     #[strum(serialize = "bun:jsc")]
     BunJsc,
     #[strum(serialize = "bun:linux")]
@@ -271,9 +275,11 @@ bun_core::comptime_string_map! {
         b"bun:graph-native" => HardcodedModule::BunGraphNative,
         b"bun:graph-index" => HardcodedModule::BunGraphIndex,
         b"bun:graphx" => HardcodedModule::BunGraphx,
+        b"bun:adblock" => HardcodedModule::BunAdblock,
         b"bun:nginx" => HardcodedModule::BunNginx,
         b"bun:yolo" => HardcodedModule::BunYolo,
         b"bun:python" => HardcodedModule::BunPython,
+        b"bun:privacy" => HardcodedModule::BunPrivacy,
         b"bun:jsc" => HardcodedModule::BunJsc,
         b"bun:linux" => HardcodedModule::BunLinux,
         b"bun:main" => HardcodedModule::BunMain,
@@ -818,6 +824,7 @@ const BUN_EXTRA_ALIAS_KVS: &[AliasKv] = &[
     entry!("bun:graph-native"),
     entry!("bun:graph-index"),
     entry!("bun:graphx"),
+    entry!("bun:adblock"),
     entry!("bun:nginx"),
     entry!("bun:yolo"),
     (
@@ -839,6 +846,7 @@ const BUN_EXTRA_ALIAS_KVS: &[AliasKv] = &[
         },
     ),
     entry!("bun:python"),
+    entry!("bun:privacy"),
     (
         b"buv:python",
         Alias {

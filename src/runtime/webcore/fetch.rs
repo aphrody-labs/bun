@@ -1486,6 +1486,47 @@ fn fetch_impl<const ALLOW_GET_BODY: bool>(
         }
     }
 
+    // adblock: Engine from `bun:adblock`; a blocking match rejects before any I/O.
+    for obj in [
+        options_object.unwrap_or_default(),
+        request_init_object.unwrap_or_default(),
+    ] {
+        if obj.is_empty() {
+            continue;
+        }
+        let Some(value) = obj.get(global_this, "adblock")? else {
+            continue;
+        };
+        if value.is_undefined_or_null() {
+            continue;
+        }
+        let Some(engine) = <crate::adblock::AdblockEngine as bun_jsc::JsClass>::from_js(value)
+        else {
+            let err = global_this.to_type_error(
+                jsc::ErrorCode::INVALID_ARG_TYPE,
+                format_args!("fetch() option \"adblock\" must be an Engine from \"bun:adblock\""),
+            );
+            return reject_before_send(global_this, &mut body, err);
+        };
+        let href = String::from_utf8_lossy(url.href).into_owned();
+        let source = headers
+            .as_ref()
+            .and_then(|h| h.get(b"referer"))
+            .map(|v| String::from_utf8_lossy(v).into_owned())
+            .unwrap_or_else(|| href.clone());
+        let method_name = method.as_str().to_ascii_lowercase();
+        // SAFETY: from_js verified the class; the options object roots the wrapper for this call.
+        let decision = unsafe { (*engine).blocks(&href, &source, "xmlhttprequest", &method_name) };
+        if decision == Some(true) {
+            let err = jsc::ErrorCode::ERR_ADBLOCK_BLOCKED.fmt(
+                global_this,
+                format_args!("fetch() to {href} was blocked by the adblock engine"),
+            );
+            return reject_before_send(global_this, &mut body, err);
+        }
+        break;
+    }
+
     if headers.is_none() && body.has_body() && body.has_content_type_from_user() {
         headers = Some(from_fetch_headers(
             None,

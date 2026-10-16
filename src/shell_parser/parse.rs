@@ -3417,7 +3417,7 @@ impl<'bump, const ENCODING: StringEncoding> Lexer<'bump, ENCODING> {
                         return Ok(TextRange { start, end: self.j });
                     }
                     c if c == u32::from(b'?') && !escaped => {
-                        self.eat().unwrap();
+                        self.eat().expect("peeked");
                         self.append_char_to_str_pool(char)?;
                         return Ok(TextRange { start, end: self.j });
                     }

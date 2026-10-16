@@ -1482,12 +1482,10 @@ impl UpgradeCommand {
                     )
                     .expect("oom");
                     // Owned NUL-terminated string.
-                    outdated_filename = Some(bun_core::ZBox::from_vec(buf));
-                    let _ = sys::unlink(outdated_filename.as_deref().unwrap());
-                    if let Err(err) = sys::rename(
-                        destination_executable_z,
-                        outdated_filename.as_deref().unwrap(),
-                    ) {
+                    let outdated: &bun_core::ZStr =
+                        outdated_filename.insert(bun_core::ZBox::from_vec(buf));
+                    let _ = sys::unlink(outdated);
+                    if let Err(err) = sys::rename(destination_executable_z, outdated) {
                         let _ = save_dir_.delete_tree(&version_name);
                         bun_core::pretty_errorln!(
                             "<r><red>error:<r> Failed to rename current executable {}",

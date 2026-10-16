@@ -2086,6 +2086,13 @@ interface BunFetchRequestInit extends RequestInit {
   unix?: string;
 
   /**
+   * Check the request against a `bun:adblock` engine before any I/O. A blocking match rejects
+   * with `ERR_ADBLOCK_BLOCKED`. The request type is `xmlhttprequest`; the source URL is the
+   * `Referer` header, or the request URL itself.
+   */
+  adblock?: import("bun:adblock").Engine;
+
+  /**
    * Force the underlying HTTP version. `"http2"` advertises only `h2` in
    * the TLS ALPN list and the request fails with `HTTP2Unsupported` if the
    * server doesn't select it. `"http3"` sends the request over HTTP/3
