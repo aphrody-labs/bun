@@ -25,7 +25,7 @@ import { ar, cc, cxx, nasm } from "./compile.ts";
 import type { BuildType, Config } from "./config.ts";
 import { assert } from "./error.ts";
 import { computeSourceIdentity, fetchCliPath } from "./fetch-cli.ts";
-import { computeDepFlags } from "./flags.ts";
+import { computeDepFlags, computeDepPICFlags } from "./flags.ts";
 import { writeIfChanged } from "./fs.ts";
 import type { Ninja } from "./ninja.ts";
 import { quote, quoteArgs, slash } from "./shell.ts";
@@ -1307,16 +1307,12 @@ function emitNestedCmake(
   //
   // Windows has no PIC concept (all code is relocatable), so every branch
   // is guarded — no-op there.
-  if (spec.pic || cfg.abi === "android") {
-    if (!cfg.windows) {
-      cflags += " -fPIC";
-      cxxflags += " -fPIC";
-    }
-    if (spec.pic) args.push(`-DCMAKE_POSITION_INDEPENDENT_CODE=ON`);
-  } else if (cfg.unix) {
-    cflags += " -fno-pic -fno-pie";
-    cxxflags += " -fno-pic -fno-pie";
+  const picFlags = computeDepPICFlags(cfg, spec.pic);
+  if (picFlags.length) {
+    cflags += " " + picFlags.join(" ");
+    cxxflags += " " + picFlags.join(" ");
   }
+  if (spec.pic) args.push(`-DCMAKE_POSITION_INDEPENDENT_CODE=ON`);
 
   // Dep-specific extra flags. Appended to globals, not replacing them.
   if (spec.extraCFlags) cflags += " " + spec.extraCFlags.join(" ");
@@ -1610,12 +1606,7 @@ function emitDirect(
   // Fedora, Alpine, Homebrew) default to PIE, which made every dep PIC when
   // built there (.data.rel.ro 541 KB instead of 109 KB, 4-7% more pages
   // touched at startup) while CI's apt.llvm.org clang did not.
-  const picFlags: string[] = [];
-  if (spec.pic || cfg.abi === "android") {
-    if (!cfg.windows) picFlags.push("-fPIC");
-  } else if (cfg.unix) {
-    picFlags.push("-fno-pic", "-fno-pie");
-  }
+  const picFlags = computeDepPICFlags(cfg, spec.pic);
 
   const incFlags = (spec.includes ?? []).map(i => `-I${q(resolve(srcDir, i))}`);
   const defFlags = Object.entries(spec.defines ?? {}).map(([k, v]) => defineFlag(k, v));

@@ -1955,6 +1955,12 @@ export function computeDepFlags(cfg: Config): { cflags: string[]; cxxflags: stri
   return { cflags, cxxflags };
 }
 
+/** Code model shared by direct dependencies, nested CMake and their SDK consumers. */
+export function computeDepPICFlags(cfg: Pick<Config, "abi" | "windows" | "unix">, pic = false): string[] {
+  if (pic || cfg.abi === "android") return cfg.windows ? [] : ["-fPIC"];
+  return cfg.unix ? ["-fno-pic", "-fno-pie"] : [];
+}
+
 /**
  * Just the -march/-mcpu/-mtune flags. For deps (WebKit) whose own build system
  * sets -O/-g/sanitizer flags but never sets a CPU target, so without this they

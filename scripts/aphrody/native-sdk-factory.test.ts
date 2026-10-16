@@ -4,6 +4,7 @@ import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { tempDir } from "../../test/harness";
 import { computeSourceIdentity } from "../build/fetch-cli";
+import { computeDepPICFlags } from "../build/flags";
 import { verifyZlibSDKSource } from "./native-sdk-factory";
 
 const commit = "12731092979c6d07f42da27da673a9f6c7b13586";
@@ -183,10 +184,11 @@ test("Windows zlib consumer compiles and executes through the canonical MSVC env
 test("Linux zlib consumer links with the code model of its canonical dependency flags", async () => {
   const { zlibConsumerCommands } = await import("./native-sdk-factory");
   for (const arch of ["x64", "aarch64"] as const) {
-    for (const { flags, linkFlags } of [
-      { flags: ["-fno-pic", "-fno-pie"], linkFlags: ["-Wl,-no-pie"] },
-      { flags: ["-fPIC"], linkFlags: [] },
+    for (const { pic, expectedFlags, linkFlags } of [
+      { pic: false, expectedFlags: ["-fno-pic", "-fno-pie"], linkFlags: ["-Wl,-no-pie"] },
+      { pic: true, expectedFlags: ["-fPIC"], linkFlags: [] },
     ]) {
+      const flags = computeDepPICFlags({ abi: "gnu", windows: false, unix: true }, pic);
       const commands = zlibConsumerCommands({
         windows: false,
         arch,
@@ -199,7 +201,7 @@ test("Linux zlib consumer links with the code model of its canonical dependency 
       });
       expect(commands.compile).toEqual([
         "/toolchain/clang",
-        ...flags,
+        ...expectedFlags,
         "-I",
         "/zlib/include",
         "/job/consumer.c",
@@ -213,4 +215,12 @@ test("Linux zlib consumer links with the code model of its canonical dependency 
       expect(commands.execute).toEqual(["/job/consumer"]);
     }
   }
+});
+
+test("dependency PIC policy preserves Windows and Android code models", () => {
+  for (const pic of [false, true]) {
+    expect(computeDepPICFlags({ abi: undefined, windows: true, unix: false }, pic)).toEqual([]);
+    expect(computeDepPICFlags({ abi: "android", windows: false, unix: true }, pic)).toEqual(["-fPIC"]);
+  }
+  expect(computeDepPICFlags({ abi: "gnu", windows: false, unix: true })).toEqual(["-fno-pic", "-fno-pie"]);
 });

@@ -8,7 +8,7 @@ import { depSource, depSourceDir } from "../build/source";
 import { hashSDKFile } from "../../packages/bun-video/src/sdk";
 import type { MediaSDKTarget } from "../../packages/bun-video/src/sdk";
 import { mediaSourceTree } from "./media-sdk-source";
-import { computeDepFlags } from "../build/flags";
+import { computeDepFlags, computeDepPICFlags } from "../build/flags";
 import { computeSourceIdentity } from "../build/fetch-cli";
 import { mediaSDKTool } from "./media-sdk-source";
 import { ensureNinja } from "../build/ninja-release";
@@ -237,6 +237,8 @@ export async function qualifyZlibNativeSDK(
   )
     throw new Error("Zlib consumer requires the matching native Linux or Windows ABI and unsanitized existing build");
   const dependency = allDeps.find(dep => dep.name === "zlib")!;
+  const specification = dependency.build(cfg);
+  if (specification.kind !== "direct") throw new Error("Zlib consumer requires its canonical direct build");
   for (const owner of [cfg.cwd, build, depSourceDir(cfg, "zlib")]) {
     const path = relative(owner, outputDirectory);
     if (!path || (path !== ".." && !path.startsWith("../") && !path.startsWith("..\\") && !isAbsolute(path)))
@@ -281,7 +283,7 @@ export async function qualifyZlibNativeSDK(
     windows: cfg.windows,
     arch: cfg.arch,
     cc: cfg.cc,
-    flags: computeDepFlags(cfg).cflags,
+    flags: [...computeDepFlags(cfg).cflags, ...computeDepPICFlags(cfg, specification.pic)],
     includes: include,
     libraries,
     consumer,
