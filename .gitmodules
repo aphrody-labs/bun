@@ -16,3 +16,7 @@
 [submodule "vendor/roslyn"]
 	path = vendor/roslyn
 	url = https://github.com/aphrody-labs/roslyn.git
+[submodule "vendor/brave-core"]
+	path = vendor/brave-core
+	url = https://github.com/aphrody-labs/brave-core.git
+	shallow = true
