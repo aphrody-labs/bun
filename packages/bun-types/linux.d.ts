@@ -269,6 +269,21 @@ declare module "bun:linux" {
      * @throws `ENOENT` if the file does not exist.
      */
     function read(path: string, file: string): string;
+
+    /**
+     * Sends `SIGKILL` to every process of the cgroup and its descendants by writing
+     * `cgroup.kill` (Linux 5.14+). This is the counterpart of terminating a Windows job.
+     *
+     * @throws `ENOENT` if the cgroup does not exist or the kernel lacks `cgroup.kill`.
+     */
+    function kill(path: string): void;
+
+    /**
+     * Freezes (`true`, the default) or thaws the processes of a cgroup through `cgroup.freeze`.
+     *
+     * @throws `ENOENT` if the cgroup does not exist.
+     */
+    function freeze(path: string, frozen?: boolean): void;
   }
 
   /** Process capabilities (`capget(2)`, `capset(2)`) and related `prctl(2)` calls. */

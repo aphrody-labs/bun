@@ -502,8 +502,22 @@ function cgroupRead(path, file) {
   return cgroupReadNative(relative, file);
 }
 
+// Kills every process of the cgroup and its descendants (cgroup.kill, Linux 5.14+);
+// the Linux counterpart of terminating a Windows job object.
+function cgroupKill(path) {
+  cgroupWriteNative(cgroupPath(path, "path", false), "cgroup.kill", "1");
+}
+
+function cgroupFreeze(path, frozen = true) {
+  const relative = cgroupPath(path, "path", false);
+  if (typeof frozen !== "boolean") throw $ERR_INVALID_ARG_TYPE("frozen", "boolean", frozen);
+  cgroupWriteNative(relative, "cgroup.freeze", frozen ? "1" : "0");
+}
+
 const cgroup = {
   create: cgroupCreate,
+  kill: cgroupKill,
+  freeze: cgroupFreeze,
   setLimits: cgroupSetLimits,
   attach: cgroupAttach,
   remove: cgroupRemove,

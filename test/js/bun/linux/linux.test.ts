@@ -228,6 +228,9 @@ describe.skipIf(!isLinux)("bun:linux", () => {
     expect(() => linux.cgroup.create("a/../b")).toThrow();
     expect(() => linux.cgroup.create("")).toThrow();
     expect(() => linux.cgroup.remove("/")).toThrow();
+    expect(() => linux.cgroup.kill("/")).toThrow();
+    expect(() => linux.cgroup.kill("a/../b")).toThrow();
+    expect(() => linux.cgroup.freeze("ok", "yes" as any)).toThrow();
     expect(() => linux.cgroup.read("a/../../b", "memory.current")).toThrow();
     expect(() => linux.cgroup.create("ok", { bogus: 1 } as any)).toThrow();
     expect(() => linux.cgroup.create("ok", { memoryMax: -1 })).toThrow();
@@ -297,8 +300,9 @@ describe.skipIf(!isRoot)("bun:linux as root", () => {
       });
       linux.cgroup.attach(name, proc.pid);
       expect(linux.cgroup.current(proc.pid)).toBe(`/${name}`);
-      proc.kill("SIGKILL");
-      await proc.exited;
+      linux.cgroup.kill(name);
+      expect(await proc.exited).not.toBe(0);
+      expect(proc.signalCode).toBe("SIGKILL");
     } finally {
       // The kernel empties the cgroup asynchronously after the process exits.
       const deadline = Date.now() + 5000;
