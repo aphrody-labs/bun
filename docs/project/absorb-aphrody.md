@@ -50,68 +50,6 @@ Statuts : `fait` (déjà dans Bun), `en cours (autre agent)`, `à faire`,
 | Source aphrody | Cible Bun | Statut |
 | --- | --- | --- |
 | crates/infra/git (`aphrody git …`) | src/git (`bun_git`) | fait (lot 2) ; sous-commande `bun git` à faire (lot 9) |
-| crates/compat/bun-docs (`aphrody docs search`) | `bun mcp` docs_search/docs_read | reste aphrody : sous-système du kernel MCP (IA), doublon des outils docs de `bun mcp` |
-| CLI `aphrody scan` | src/graph (`bun graph`) + `bun mcp` graph_* | supprimer (doublon de src/graph) |
-| CLI `aphrody graph` (graphe de code non IA) | src/graph | fait |
-| CLI `aphrody n2b` | src/migrate (`bun n2b`) | en cours (autre agent) |
-| crates/ai/code-graph | — | reste aphrody (IA) |
-
-### Shell et terminal
-
-| Source aphrody | Cible Bun | Statut |
-| --- | --- | --- |
-| crates/shell/nu (`aphrody shell eval`) | Bun Shell (`Bun.# Absorption d'aphrody dans Bun
-
-Directive du 2026-10-16 : Bun (`aphrody-labs/bun`, `main`) est le produit unique.
-Tout code utile de `aphrody-labs/aphrody` (`C:\src\aphrody`, inventaire au commit
-`ac1f1bce8b`) est absorbé dans Bun, sans shim ni chemin legacy.
-
-## Périmètre
-
-Deux couches **restent dans aphrody** et consomment Bun (pas d'absorption) :
-
-- **IA** : modèles, agents, mémoire, A2A, MCP et outils IA (`crates/ai/*`,
-  `crates/contracts/*`, `crates/ml/*`, `crates/engine/yolo-runtime`,
-  `crates/infra/yolo`, `packages/ai/*`, `packages/engine/*`, `packages/os/a2a`).
-- **Infra** : hôtes, ssh, déploiement, services VPS/dbfr, quality/pipeline, cloud
-  (`crates/infra/{infra,ssh,certificates,ovh,discord,remote-desktop,wireguard,vpn}`,
-  `packages/infra/{ovh,update,product}`, `packages/discord/kit`).
-
-Tout le reste (web, google, search, git, docs, scan, n2b, shell, graph non IA,
-OS et plateforme, CLI généraliste) devient Bun.
-
-## Zones en cours (autre agent) — ne pas toucher
-
-`src/adblock`, `src/runtime/adblock`, `src/privacy`, `src/runtime/privacy.rs`,
-`src/readability`, `src/runtime/api/HTMLReadability.rs`, `src/runtime/web_detect`,
-`src/browser/crates/detect`, `packages/web/rust` (absorption web/google, reçu
-`packages/web/rust/transfer-receipt.json`), `scripts/aphrody/chromium*.ts`,
-`patches/chromium`, `src/migrate` (n2b), `packages/bun-types/*.d.ts` modifiés.
-
-## Inventaire : source → cible → statut
-
-Statuts : `fait` (déjà dans Bun), `en cours (autre agent)`, `à faire`,
-`supprimer` (doublon ou mort), `reste aphrody`.
-
-### Web, Google, recherche
-
-| Source aphrody | Cible Bun | Statut |
-| --- | --- | --- |
-| packages/web/agent-browser | packages/web/rust/packages/agent-browser | en cours (autre agent) ; supprimer côté aphrody après bascule |
-| packages/web/fuzzy | packages/web/rust/packages/fuzzy | en cours (autre agent) |
-| packages/web/qr | packages/web/rust/packages/qr | en cours (autre agent) |
-| packages/web/timeline | packages/web/rust/packages/timeline | en cours (autre agent) |
-| packages/web/webos-wasm | packages/web/rust/packages/webos-wasm | en cours (autre agent) |
-| packages/web/x | packages/web/rust/packages/x | en cours (autre agent) |
-| packages/google/google, crates/google/* | packages/bun-google/aphrody | en cours (autre agent) |
-| CLI `aphrody web`, `aphrody search` | `bun web` / src/browser/crates/{crawl,extract,service} | en cours (autre agent) |
-| crates/shell/web, packages/shell/web | packages/web (site, worker) | à faire (lot 4) |
-
-### Git, docs, scan, graph, n2b
-
-| Source aphrody | Cible Bun | Statut |
-| --- | --- | --- |
-| crates/infra/git (`aphrody git …`) | src/git (`bun_git`) | fait (lot 2) ; sous-commande `bun git` à faire (lot 9) |
 | crates/compat/bun-docs (`aphrody docs search`) | `bun mcp` docs_search/docs_read (existant) | supprimer (doublon) |
 | CLI `aphrody scan` | src/graph (`bun graph`) + `bun mcp` graph_* | supprimer (doublon de src/graph) |
 | CLI `aphrody graph` (graphe de code non IA) | src/graph | fait |
@@ -122,7 +60,7 @@ Statuts : `fait` (déjà dans Bun), `en cours (autre agent)`, `à faire`,
 
 | Source aphrody | Cible Bun | Statut |
 | --- | --- | --- |
-) | reste aphrody : outil `nu_eval` du kernel MCP (couche IA/infra) |
+| crates/shell/nu (`aphrody shell eval`) | Bun Shell (`Bun.$`) | reste aphrody : outil `nu_eval` du kernel MCP (couche IA/infra) |
 | crates/shell/aphrody-term | src/vt (grille et parseur déjà portés) | reste aphrody : pty et computer_use servent agent-tools (IA) |
 | crates/shell/term-caps | — | supprimé (sans consommateur), aphrody `4b50cb3e2d` |
 | crates/shell/terminal-backend | — | reste aphrody : dépend d’aphrody-a2a-coord (IA) |
