@@ -14,10 +14,59 @@ import {
   assertPublicationSources,
   assertLatestVersionDoesNotRegress,
   facadeSourcePaths,
+  publishAll,
 } from "../../scripts/aphrody/publish-npm.ts";
 import { tempDir } from "harness";
 import { join } from "node:path";
-import { mkdirSync } from "node:fs";
+import { mkdirSync, existsSync } from "node:fs";
+
+test("plugin publication library refuses missing or foreign proofs before any package write", async () => {
+  using directory = tempDir("plugin-publication-no-write", {});
+  for (const only of [["bun-agent-plugin"], ["bun-tools", "bun-agent-plugin"], undefined]) {
+    const out = join(String(directory), only?.join("-") ?? "all");
+    await expect(publishAll({ only, out, registry: "http://127.0.0.1:1" })).rejects.toThrow("--plugin-qualification");
+    expect(existsSync(out)).toBe(false);
+  }
+  await expect(publishAll({ only: ["bun-tools"], pluginQualification: "unused" })).rejects.toThrow(
+    "without bun-agent-plugin",
+  );
+  const invalid = join(String(directory), "invalid.json");
+  await Bun.write(invalid, JSON.stringify({ kind: "bun-portable-npm-source-qualification" }));
+  const out = join(String(directory), "invalid-proof");
+  await expect(
+    publishAll({ only: ["bun-agent-plugin"], pluginQualification: invalid, out, registry: "http://127.0.0.1:1" }),
+  ).rejects.toThrow("Invalid plugin");
+  expect(existsSync(out)).toBe(false);
+});
+
+test("plugin publication CLI enforces the library proof guard for mixed and plugin selections", async () => {
+  using directory = tempDir("plugin-cli-no-write", {});
+  for (const only of ["bun-agent-plugin", "bun-tools,bun-agent-plugin"]) {
+    const out = join(String(directory), only);
+    const child = Bun.spawn(
+      [
+        process.execPath,
+        "scripts/aphrody/publish-npm.ts",
+        "--only",
+        only,
+        "--out",
+        out,
+        "--registry",
+        "http://127.0.0.1:1",
+      ],
+      {
+        cwd: join(import.meta.dir, "../.."),
+        stdout: "pipe",
+        stderr: "pipe",
+      },
+    );
+    const [stdout, stderr, code] = await Promise.all([child.stdout.text(), child.stderr.text(), child.exited]);
+    expect(stderr).toContain("requires --plugin-qualification");
+    expect(stdout).toBe("");
+    expect(code).not.toBe(0);
+    expect(existsSync(out)).toBe(false);
+  }
+});
 
 test("publication cannot downgrade independent Windows or SDK latest identities", () => {
   expect(nextVersion("1.4.10", ["1.4.10"])).toEqual({ next: "1.4.10-aphrody.1", previous: "1.4.10" });

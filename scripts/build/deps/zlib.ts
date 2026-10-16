@@ -216,6 +216,8 @@ export const zlib: Dependency = {
 
     const spec: DirectBuild = {
       kind: "direct",
+      // The native SDK is also linked into FFmpeg's shared libraries.
+      pic: true,
       sources,
       defines,
       includes: [".", "arch/generic", `arch/${archDir}`],

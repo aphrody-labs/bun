@@ -10,6 +10,13 @@ import {
   verifyQualifiedPortableNpmArchive,
   verifyPortableNpmMetadata,
   type PortableNpmProof,
+  npmSourceQualificationRoute,
+  npmSelectionIncludesPlugin,
+  inspectPluginNpmArchive,
+  validatePluginNpmProof,
+  verifyPluginNpmPublication,
+  type PluginNpmProof,
+  verifyPluginTestSummary,
 } from "./release-portable-npm";
 
 test("portable source qualification never substitutes for native or mixed selections", () => {
@@ -28,6 +35,20 @@ test("portable source qualification never substitutes for native or mixed select
     "bun-tools,",
   ])
     expect(portableNpmSelection(only)).toBeNull();
+});
+
+test("plugin gate summaries refuse exit-zero no-tests, skipped suites and absent owner paths", () => {
+  const suite = "./test/cli/mcp/mcp.test.ts";
+  const log = "test/cli/mcp/mcp.test.ts:\n29 pass\n0 fail\nRan 29 tests across 1 file.";
+  expect(() => verifyPluginTestSummary(log, [suite])).not.toThrow();
+  for (const changed of [
+    "[exit_status:0]",
+    log.replace("29 pass", "0 pass"),
+    log.replace("0 fail", "1 fail"),
+    log + "\n1 skip",
+    log.replace("test/cli/mcp/mcp.test.ts:", "foreign.test.ts:"),
+  ])
+    expect(() => verifyPluginTestSummary(changed, [suite])).toThrow("complete test suites");
 });
 
 const fixture = (changes: Record<string, string> = {}, pkg: Record<string, unknown> = {}) =>
@@ -147,6 +168,8 @@ test("CI routes only exact qualified source selections away from the native rele
   using directory = tempDir("portable-npm-workflow-route", {});
   for (const [only, expected] of [
     ["bun-tools,bun-tauri", "portable-source"],
+    ["bun-agent-plugin", "plugin-source"],
+    ["bun-tools,bun-agent-plugin", "native-full"],
     ["bun-tools,bun-runtime-sdk", "native-full"],
     ["", "native-full"],
     ["bun-tools,bun-tools", "native-full"],
@@ -168,13 +191,15 @@ test("CI routes only exact qualified source selections away from the native rele
     expect(stdout).toBe("");
     expect(stderr).toBe("");
     expect(code).toBe(0);
-    expect(await Bun.file(output).text()).toBe(`kind=${expected}\n`);
+    expect(await Bun.file(output).text()).toBe(
+      `kind=${expected}\nplugin=${npmSelectionIncludesPlugin(only)}\nruntime-version=${(await Bun.file(join(import.meta.dir, "../../package.json")).json()).version}\n`,
+    );
   }
   expect(steps.find(step => step.id === "portable")?.if).toBe(
     "inputs.dry-run != true && steps.qualification.outputs.kind == 'portable-source'",
   );
   expect(steps.find(step => step.run?.includes("download-verify"))?.if).toBe(
-    "inputs.dry-run != true && steps.qualification.outputs.kind != 'portable-source'",
+    "inputs.dry-run != true && steps.qualification.outputs.kind != 'portable-source' && steps.qualification.outputs.kind != 'plugin-source'",
   );
   const publish = steps.findIndex(step => step.name === "Publish");
   expect(publish).toBeGreaterThan(steps.findIndex(step => step.id === "portable"));
@@ -248,3 +273,121 @@ test.each(["bun-supervisor", "bun-tools", "bun-tauri"] as const)(
   },
   60_000,
 );
+
+test("plugin source route is exact while mixed and all retain native-full plus plugin evidence", () => {
+  expect(npmSourceQualificationRoute("bun-agent-plugin")).toBe("plugin-source");
+  expect(portableNpmSelection("bun-agent-plugin")).toBeNull();
+  for (const only of [undefined, "", "bun-tools,bun-agent-plugin", "bun-agent-plugin,bun-agent-plugin"]) {
+    expect(npmSourceQualificationRoute(only)).toBe("native-full");
+    expect(npmSelectionIncludesPlugin(only)).toBe(true);
+  }
+  for (const only of ["bun-tools", " bun-agent-plugin", "bun-agent-plugin-extra"])
+    expect(npmSelectionIncludesPlugin(only)).toBe(false);
+});
+
+function pluginFixture() {
+  const files = new Map<string, string | Uint8Array>([
+    [
+      "package/package.json",
+      JSON.stringify({
+        name: "@aphrody/bun-agent-plugin",
+        version: "1.4.5",
+        engines: { bun: ">=1.4.5" },
+        exports: {
+          ".": "./src/cli.ts",
+          "./rewrite": "./src/hooks/rewrite.ts",
+          "./decision": "./src/decision.ts",
+          "./package.json": "./package.json",
+        },
+        bin: { "bun-agent-plugin": "./bin/bun-agent-plugin.ts" },
+      }),
+    ],
+    ["package/src/cli.ts", "export const main = () => {};"],
+    ["package/src/hooks/rewrite.ts", "export const rewrite = () => {};"],
+    ["package/src/decision.ts", "export const decide = () => {};"],
+    ["package/bin/bun-agent-plugin.ts", "console.log('controlled bin');"],
+    ["package/plugins/codex/AGENTS.md", "# Controlled generated instructions"],
+    ["package/README.md", "controlled README"],
+    ["package/LICENSE.md", "controlled license"],
+  ]);
+  const archive = (members = files) =>
+    new Bun.Archive(Object.fromEntries(members), { format: "tar", compress: "gzip" }).bytes();
+  return { files, archive };
+}
+
+test("plugin archive checks exact generated, source, exports, bin and license bytes before extraction", async () => {
+  const { files, archive } = pluginFixture();
+  const actual = await inspectPluginNpmArchive(await archive(), files, "1.4.5");
+  expect(actual.members.length).toBe(files.size);
+  expect(actual.archive.name).toBe("@aphrody/bun-agent-plugin");
+  for (const path of [
+    "package/plugins/codex/AGENTS.md",
+    "package/src/cli.ts",
+    "package/LICENSE.md",
+    "package/bin/bun-agent-plugin.ts",
+  ]) {
+    const changed = new Map(files);
+    changed.set(path, "altered member");
+    await expect(inspectPluginNpmArchive(await archive(changed), files, "1.4.5")).rejects.toThrow("member differs");
+    changed.delete(path);
+    await expect(inspectPluginNpmArchive(await archive(changed), files, "1.4.5")).rejects.toThrow("closure differs");
+  }
+  for (const path of ["package/private/secret.json", "package/src/lib.so", "package/src/.env"]) {
+    const changed = new Map(files).set(path, "must not ship");
+    await expect(inspectPluginNpmArchive(await archive(changed), changed, "1.4.5")).rejects.toThrow("source closure");
+  }
+  const foreign = new Map(files);
+  const pkg = JSON.parse(String(files.get("package/package.json")));
+  foreign.set("package/package.json", JSON.stringify({ ...pkg, dependencies: { foreign: "1.0.0" } }));
+  await expect(inspectPluginNpmArchive(await archive(foreign), foreign, "1.4.5")).rejects.toThrow("dependency closure");
+  foreign.set("package/package.json", JSON.stringify({ ...pkg, bin: { other: "./src/cli.ts" } }));
+  await expect(inspectPluginNpmArchive(await archive(foreign), foreign, "1.4.5")).rejects.toThrow("exports, bin");
+});
+
+test("plugin proof is distinct, source-strict and requires every native MCP and owner gate", async () => {
+  const { files, archive } = pluginFixture();
+  const actual = await inspectPluginNpmArchive(await archive(), files, "1.4.5");
+  const source = "a".repeat(40),
+    hash = "b".repeat(64);
+  const proof: PluginNpmProof = {
+    schema: 1,
+    kind: "bun-plugin-npm-source-qualification",
+    source,
+    selection: ["bun-agent-plugin"],
+    runtime: {
+      version: "1.4.5",
+      revision: source,
+      sourceUrl: "https://github.com/aphrody-labs/bun/releases/download/bun-v1.4.5/bun-linux-x64-full.zip",
+      sha256: hash,
+    },
+    lockSHA256: hash,
+    nativePayloadQualified: false,
+    allPlatformsQualified: false,
+    inputs: [{ path: ".claude/commands/source.md", sha256: hash }],
+    members: actual.members,
+    archive: actual.archive,
+    logs: ["generate", "generate-check", "pack", "consumer", "doctor", "owner-tests", "mcp"].map(name => ({
+      path: `${name}.log`,
+      sha256: hash,
+    })),
+    mcp: { source, suiteSHA256: hash, passed: true, logSHA256: hash },
+  };
+  expect(() => validatePluginNpmProof(proof, source)).not.toThrow();
+  const changed: unknown[] = [
+    { ...proof, kind: "bun-portable-npm-source-qualification" },
+    { ...proof, selection: ["bun-agent-plugin", "bun-tools"] },
+    { ...proof, runtime: { ...proof.runtime, revision: "c".repeat(40) } },
+    { ...proof, logs: proof.logs.slice(1) },
+    { ...proof, mcp: { ...proof.mcp, passed: false } },
+    { ...proof, mcp: { ...proof.mcp, logSHA256: "d".repeat(64) } },
+    { ...proof, allPlatformsQualified: true },
+    { ...proof, nativePayloadQualified: true },
+    { ...proof, members: [...proof.members, proof.members[0]] },
+    { ...proof, inputs: [{ path: "../foreign", sha256: hash }] },
+    { ...proof, archive: { ...proof.archive, version: "1.4.6" } },
+  ];
+  for (const value of changed) expect(() => validatePluginNpmProof(value as PluginNpmProof, source)).toThrow();
+  await expect(
+    verifyPluginNpmPublication("unused", { source, directory: "bun-tools", archive: "unused" }),
+  ).rejects.toThrow("another package");
+});

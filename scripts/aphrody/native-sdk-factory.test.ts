@@ -5,7 +5,7 @@ import { join } from "node:path";
 import { tempDir } from "../../test/harness";
 import { computeSourceIdentity } from "../build/fetch-cli";
 import { computeDepPICFlags } from "../build/flags";
-import { verifyZlibSDKSource } from "./native-sdk-factory";
+import { verifyZlibSDKSource, zlibSharedConsumerCommands } from "./native-sdk-factory";
 
 const commit = "12731092979c6d07f42da27da673a9f6c7b13586";
 const blob = (body: string) =>
@@ -223,4 +223,31 @@ test("dependency PIC policy preserves Windows and Android code models", () => {
     expect(computeDepPICFlags({ abi: "android", windows: false, unix: true }, pic)).toEqual(["-fPIC"]);
   }
   expect(computeDepPICFlags({ abi: "gnu", windows: false, unix: true })).toEqual(["-fno-pic", "-fno-pie"]);
+});
+
+test("Linux shared zlib qualification links the archive with defined symbols and runs a separate driver", () => {
+  for (const arch of ["x64", "aarch64"] as const) {
+    const input = {
+      windows: false,
+      arch,
+      cc: "/toolchain/clang",
+      flags: ["-O2", "-fno-pic", "-fno-pie"],
+      includes: ["/zlib/generated"],
+      libraries: ["/zlib/libzlib.a"],
+      consumer: "/job/consumer.c",
+      executable: "/job/consumer",
+    };
+    const commands = zlibSharedConsumerCommands(input);
+    for (const flag of ["-shared", "-Wl,-z,defs", "-DBUN_ZLIB_SHARED_CONSUMER"])
+      expect(commands.compile).toContain(flag);
+    expect(commands.compile.lastIndexOf("-fPIC")).toBeGreaterThan(commands.compile.lastIndexOf("-fno-pic"));
+    expect(commands.compile).not.toContain("-Wl,-no-pie");
+    expect(commands.compile).toContain("-Wl,-soname,libzlib-consumer.so");
+    expect(commands.compile).toContain(input.libraries[0]!);
+    expect(commands.link).toContain(commands.library);
+    expect(commands.link).toContain(commands.driver);
+    expect(commands.link).toContain("-Wl,-rpath,$ORIGIN");
+    expect(commands.execute).toEqual(["/job/zlib-shared-consumer"]);
+    expect(() => zlibSharedConsumerCommands({ ...input, windows: true })).toThrow("native Linux target");
+  }
 });

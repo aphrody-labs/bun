@@ -747,9 +747,21 @@ export async function publishAll(opts: {
   out?: string;
   registry?: string;
   portableQualification?: string;
+  pluginQualification?: string;
 }): Promise<Result[]> {
   if (opts.only?.some(dir => !PACKAGES.some(spec => spec.dir === dir)))
     throw new Error("Unknown package directory in --only");
+  const includesPlugin = !opts.only?.length || opts.only.includes("bun-agent-plugin");
+  if (opts.pluginQualification && !includesPlugin)
+    throw new Error("Plugin qualification cannot authorize a selection without bun-agent-plugin");
+  if (!opts.dryRun && includesPlugin && !opts.pluginQualification)
+    throw new Error(
+      "Publishing bun-agent-plugin requires --plugin-qualification, including mixed or all-package selections",
+    );
+  if (!opts.dryRun && includesPlugin) {
+    const { verifyPluginNpmQualification } = await import("./release-portable-npm.ts");
+    await verifyPluginNpmQualification(opts.pluginQualification!, run(["git", "rev-parse", "HEAD"], ROOT).trim());
+  }
   if (opts.noBuild) {
     const building = PACKAGES.filter(
       spec => spec.requiresBuild && (!opts.only?.length || opts.only.includes(spec.dir)),
@@ -843,6 +855,14 @@ export async function publishAll(opts: {
       }
     }
 
+    if (!opts.dryRun && spec.dir === "bun-agent-plugin") {
+      const { verifyPluginNpmPublication } = await import("./release-portable-npm.ts");
+      await verifyPluginNpmPublication(opts.pluginQualification!, {
+        source: sourceRevision,
+        directory: spec.dir,
+        archive: tgz,
+      });
+    }
     if (previous) {
       const tarball = doc!.versions[previous].dist.tarball;
       const prevFiles = await tarballFiles(new Uint8Array(await (await fetch(tarball)).arrayBuffer()));
@@ -936,6 +956,7 @@ if (import.meta.main) {
     ...(value("--out") ? { out: value("--out")! } : {}),
     ...(value("--registry") ? { registry: value("--registry")! } : {}),
     ...(value("--portable-qualification") ? { portableQualification: value("--portable-qualification")! } : {}),
+    ...(value("--plugin-qualification") ? { pluginQualification: value("--plugin-qualification")! } : {}),
   });
   const reportPath = value("--report");
   if (reportPath) {

@@ -1,5 +1,6 @@
-import { mkdir, readdir, symlink } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { mkdir, readdir, symlink, lstat } from "node:fs/promises";
+import { dirname, join, resolve, relative, delimiter } from "node:path";
+import { generate, inputFiles } from "../../packages/bun-agent-plugin/src/generate.ts";
 import { isAphrodyBun } from "../../packages/bun-agent-plugin/src/hooks/common.ts";
 
 const owner = resolve(import.meta.dir, "../..");
@@ -16,6 +17,11 @@ const contracts = {
 } as const;
 type Selection = keyof typeof contracts;
 const sha256 = (bytes: string | Uint8Array) => new Bun.CryptoHasher("sha256").update(bytes).digest("hex");
+async function fileSHA256(path: string): Promise<string> {
+  const hash = new Bun.CryptoHasher("sha256");
+  for await (const bytes of Bun.file(path).stream()) hash.update(bytes);
+  return hash.digest("hex");
+}
 
 /** Other selections keep the existing native release qualification route. */
 export function portableNpmSelection(only: string | undefined): Selection[] | null {
@@ -23,6 +29,16 @@ export function portableNpmSelection(only: string | undefined): Selection[] | nu
   const names = only.split(",");
   if (new Set(names).size !== names.length || names.some(name => !Object.hasOwn(contracts, name))) return null;
   return names.sort() as Selection[];
+}
+
+export function npmSourceQualificationRoute(
+  only: string | undefined,
+): "plugin-source" | "portable-source" | "native-full" {
+  return only === "bun-agent-plugin" ? "plugin-source" : portableNpmSelection(only) ? "portable-source" : "native-full";
+}
+
+export function npmSelectionIncludesPlugin(only: string | undefined): boolean {
+  return !only || only.split(",").includes("bun-agent-plugin");
 }
 
 type RuntimeIdentity = { version: string; revision: string; sourceUrl: string };
@@ -215,8 +231,14 @@ export async function inspectPortableNpmArchive(
   };
 }
 
-async function command(root: string, args: string[], log?: string): Promise<string> {
-  const env = { ...process.env };
+async function command(
+  root: string,
+  args: string[],
+  log?: string,
+  environment: Record<string, string> = {},
+  deadline = 600_000,
+): Promise<string> {
+  const env = { ...process.env, ...environment };
   env.NODE_PATH = "";
   for (const name of Object.keys(env)) if (/(TOKEN|PASSWORD|SECRET|API_KEY)$/.test(name)) delete env[name];
   const child = Bun.spawn(args, {
@@ -224,9 +246,10 @@ async function command(root: string, args: string[], log?: string): Promise<stri
     env,
     stdout: "pipe",
     stderr: "pipe",
-    signal: AbortSignal.timeout(600_000),
+    stdin: "ignore",
+    signal: AbortSignal.timeout(deadline),
   });
-  const escalation = setTimeout(() => child.kill(9), 610_000);
+  const escalation = setTimeout(() => child.kill(9), deadline + 10_000);
   const capture = async (stream: ReadableStream<Uint8Array>) => {
     const reader = stream.getReader();
     const chunks: Uint8Array[] = [];
@@ -418,16 +441,424 @@ export async function verifyQualifiedPortableNpmArchive(pkg: ArchiveProof, bytes
   if (JSON.stringify(actual) !== JSON.stringify(pkg)) throw new Error("Actual npm archive differs from qualification");
 }
 
+const pluginDirectory = "bun-agent-plugin";
+const pluginName = "@aphrody/bun-agent-plugin";
+const pluginGates = ["generate", "generate-check", "pack", "consumer", "doctor", "owner-tests", "mcp"] as const;
+export const pluginQualificationTests = [
+  "./test/internal/aphrody-publish-npm.test.ts",
+  "./scripts/aphrody/release-portable-npm.test.ts",
+  "./packages/bun-agent-plugin/src/input-files.test.ts",
+  "./packages/bun-agent-plugin/src/public-decision-docs.test.ts",
+  "./packages/bun-agent-plugin/src/install-executable.test.ts",
+  ...["agent-plugin", "adapters", "runtime-provenance", "decision-context", "yolo-identity"].map(
+    name => `./test/cli/agent-plugin/${name}.test.ts`,
+  ),
+];
+type PluginFile = { path: string; sha256: string };
+export type PluginNpmProof = {
+  schema: 1;
+  kind: "bun-plugin-npm-source-qualification";
+  source: string;
+  selection: ["bun-agent-plugin"];
+  runtime: RuntimeIdentity & { sha256: string };
+  lockSHA256: string;
+  nativePayloadQualified: false;
+  allPlatformsQualified: false;
+  inputs: PluginFile[];
+  members: PluginFile[];
+  archive: { name: string; version: string; bytes: number; sha256: string; integrity: string };
+  logs: PluginFile[];
+  mcp: { source: string; suiteSHA256: string; passed: true; logSHA256: string };
+};
+
+function safePluginInput(path: string): boolean {
+  return !!path && !/[\\:\0]/.test(path) && path.split("/").every(part => !!part && part !== "." && part !== "..");
+}
+
+export function validatePluginNpmProof(proof: PluginNpmProof, source: string): void {
+  const hash = (value: unknown) => typeof value === "string" && /^[a-f0-9]{64}$/.test(value);
+  const manifest = (files: PluginFile[], member: boolean) =>
+    Array.isArray(files) &&
+    files.length > 0 &&
+    files.length <= 10_000 &&
+    files.every(
+      (file, index) =>
+        typeof file.path === "string" &&
+        (member ? safeMember(file.path) : safePluginInput(file.path)) &&
+        hash(file.sha256) &&
+        (index === 0 || files[index - 1]!.path < file.path),
+    );
+  if (
+    !proof ||
+    proof.schema !== 1 ||
+    proof.kind !== "bun-plugin-npm-source-qualification" ||
+    JSON.stringify(proof.selection) !== JSON.stringify([pluginDirectory]) ||
+    !/^[a-f0-9]{40}$/.test(source) ||
+    proof.source !== source ||
+    proof.runtime?.revision !== source ||
+    !/^\d+\.\d+\.\d+$/.test(proof.runtime?.version ?? "") ||
+    !hash(proof.runtime?.sha256) ||
+    !proof.runtime?.sourceUrl?.startsWith(
+      `https://github.com/aphrody-labs/bun/releases/download/bun-v${proof.runtime.version}/`,
+    ) ||
+    !hash(proof.lockSHA256) ||
+    proof.nativePayloadQualified !== false ||
+    proof.allPlatformsQualified !== false ||
+    !manifest(proof.inputs, false) ||
+    !manifest(proof.members, true) ||
+    proof.archive?.name !== pluginName ||
+    typeof proof.archive.version !== "string" ||
+    (proof.archive.version !== proof.runtime.version &&
+      (!proof.archive.version.startsWith(proof.runtime.version + "-aphrody.") ||
+        !/-aphrody\.[1-9]\d*$/.test(proof.archive.version))) ||
+    !hash(proof.archive.sha256) ||
+    !Number.isSafeInteger(proof.archive.bytes) ||
+    proof.archive.bytes < 1 ||
+    proof.archive.bytes > 32 * 1024 ** 2 ||
+    !/^sha512-[A-Za-z0-9+/]{86}==$/.test(proof.archive.integrity) ||
+    proof.logs?.length !== pluginGates.length ||
+    proof.logs.some((file, index) => file.path !== `${pluginGates[index]}.log` || !hash(file.sha256)) ||
+    proof.mcp?.source !== source ||
+    proof.mcp.passed !== true ||
+    !hash(proof.mcp.suiteSHA256) ||
+    proof.mcp.logSHA256 !== proof.logs.at(-1)?.sha256
+  )
+    throw new Error("Invalid plugin npm source qualification: source, runtime, archive or gates differ");
+}
+
+async function pluginInputs(root: string): Promise<PluginFile[]> {
+  const paths = [
+    ...new Set([
+      ...inputFiles(root),
+      join(root, "LICENSE.md"),
+      join(root, "bun.lock"),
+      join(root, "scripts/aphrody/publish-npm.ts"),
+      join(root, "scripts/aphrody/release-portable-npm.ts"),
+      join(root, "scripts/aphrody/scope.ts"),
+      join(root, "test/cli/mcp/mcp.test.ts"),
+      ...pluginQualificationTests.map(path => join(root, path)),
+    ]),
+  ].sort();
+  return Promise.all(
+    paths.map(async path => {
+      const name = relative(root, path).replaceAll("\\", "/");
+      if (!safePluginInput(name) || !(await lstat(path)).isFile())
+        throw new Error("Plugin input is not an owned regular source file");
+      return { path: name, sha256: sha256(await Bun.file(path).bytes()) };
+    }),
+  );
+}
+
+async function pluginExpectedFiles(root: string, version: string): Promise<Map<string, string | Uint8Array>> {
+  const { PACKAGES, publishManifest } = await import("./publish-npm.ts");
+  const spec = PACKAGES.find(spec => spec.dir === pluginDirectory)!;
+  const pkgRoot = join(root, "packages", pluginDirectory);
+  const pkg = await Bun.file(join(pkgRoot, "package.json")).json();
+  const base = (await Bun.file(join(root, "package.json")).json()).version;
+  if (pkg.version !== base || pkg.engines?.bun !== `>=${base}`)
+    throw new Error("Plugin source version or Bun engine differs");
+  const out = new Map<string, string | Uint8Array>();
+  const tracked = (await command(root, ["git", "ls-files", "-z", "--", `packages/${pluginDirectory}`]))
+    .split("\0")
+    .filter(Boolean);
+  for (const path of tracked) {
+    const name = relative(pkgRoot, join(root, path)).replaceAll("\\", "/");
+    if (!/^(?:bin\/|src\/|memory\/|README\.md$|LICENSE[^/]*$|NOTICE$)/.test(name)) continue;
+    if (!safeMember("package/" + name) || !(await lstat(join(root, path))).isFile())
+      throw new Error("Plugin source member is not a regular public file");
+    out.set("package/" + name, await Bun.file(join(root, path)).bytes());
+  }
+  if (![...out.keys()].some(path => /^package\/licen[cs]e/i.test(path)))
+    out.set("package/LICENSE.md", await Bun.file(join(root, "LICENSE.md")).bytes());
+  out.set("package/package.json", JSON.stringify(publishManifest(pkg, spec, version, new Map()), null, 2) + "\n");
+  for (const [path, bytes] of generate({ root, pkg: pkgRoot })) out.set("package/plugins/" + path, bytes);
+  return out;
+}
+
+/** Every member must be an exact tracked source, manifest, license or generated output. */
+export async function inspectPluginNpmArchive(
+  bytes: Uint8Array,
+  expected: ReadonlyMap<string, string | Uint8Array>,
+  version: string,
+) {
+  if (!bytes.length || bytes.length > 32 * 1024 ** 2) throw new Error("Plugin npm archive exceeds its bound");
+  const files = await new Bun.Archive(bytes).files();
+  if (files.size !== expected.size || !expected.size) throw new Error("Plugin npm archive member closure differs");
+  const members: PluginFile[] = [];
+  let expanded = 0;
+  for (const [path, file] of [...files].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))) {
+    if (!safeMember(path) || (expanded += file.size) > 64 * 1024 ** 2 || !expected.has(path))
+      throw new Error("Plugin npm archive escaped its source closure");
+    const digest = sha256(await file.bytes());
+    if (digest !== sha256(expected.get(path)!)) throw new Error(`Plugin npm member differs: ${path}`);
+    members.push({ path, sha256: digest });
+  }
+  const pkg = await files.get("package/package.json")?.json();
+  if (
+    pkg?.name !== pluginName ||
+    pkg.version !== version ||
+    pkg.engines?.bun !== `>=${version.split("-")[0]}` ||
+    pkg.private === true ||
+    ["dependencies", "optionalDependencies", "peerDependencies", "bundledDependencies", "bundleDependencies"].some(
+      field => pkg[field] && Object.keys(pkg[field]).length,
+    )
+  )
+    throw new Error("Plugin npm manifest identity or dependency closure differs");
+  if (
+    JSON.stringify(pkg.exports) !==
+      JSON.stringify({
+        ".": "./src/cli.ts",
+        "./rewrite": "./src/hooks/rewrite.ts",
+        "./decision": "./src/decision.ts",
+        "./package.json": "./package.json",
+      }) ||
+    JSON.stringify(pkg.bin) !== JSON.stringify({ "bun-agent-plugin": "./bin/bun-agent-plugin.ts" }) ||
+    !files.has("package/LICENSE.md") ||
+    !files.has("package/README.md") ||
+    ![...files.keys()].some(path => path.startsWith("package/plugins/"))
+  )
+    throw new Error("Plugin npm exports, bin, license or generated tree are absent");
+  for (const path of [...Object.values<string>(pkg.exports), ...Object.values<string>(pkg.bin)])
+    if (!files.has("package/" + path.slice(2))) throw new Error("Plugin npm export or bin file is absent");
+  return {
+    files,
+    members,
+    archive: {
+      name: pluginName,
+      version,
+      bytes: bytes.length,
+      sha256: sha256(bytes),
+      integrity: `sha512-${new Bun.CryptoHasher("sha512").update(bytes).digest("base64")}`,
+    },
+  };
+}
+
+function pluginEnvironment(home: string): Record<string, string> {
+  return {
+    HOME: home,
+    USERPROFILE: home,
+    BUN_INSTALL: join(home, ".bun"),
+    CODEX_HOME: join(home, ".codex"),
+    CLAUDE_CONFIG_DIR: join(home, ".claude"),
+    XDG_CONFIG_HOME: join(home, ".config"),
+    XDG_DATA_HOME: join(home, ".local/share"),
+    XDG_CACHE_HOME: join(home, ".cache"),
+    BUN_MCP_MEMORY_DB: join(home, "memory.db"),
+    BUN_MCP_PROFILE: "generic",
+    BUN_FEATURE_FLAG_EXPERIMENTAL_MCP_NATIVE_TOOLS: "0",
+    BUN_RUNTIME_TRANSPILER_CACHE_PATH: "0",
+    NODE_PATH: "",
+    CLAUDECODE: "",
+    CLAUDE_CODE_ENTRYPOINT: "",
+    REDIS_URL: "",
+    VALKEY_URL: "",
+    BUN_MCP_MAX_TOKENS: "",
+    PATH: join(home, "bin") + delimiter + (process.env.PATH ?? ""),
+  };
+}
+
+export function verifyPluginTestSummary(log: string, suites: readonly string[]): void {
+  if (
+    !/\b0 fail\b/.test(log) ||
+    !/Ran [1-9]\d* tests/.test(log) ||
+    !/\b[1-9]\d* pass\b/.test(log) ||
+    /\b[1-9]\d* (?:skip|todo)\b/.test(log) ||
+    suites.some(path => !log.includes(path.replace(/^\.\//, "") + ":"))
+  )
+    throw new Error("Plugin qualification did not execute its complete test suites");
+}
+
+export async function qualifyPluginNpm(output: string, source: string, stable = false): Promise<PluginNpmProof> {
+  if (process.env.GITHUB_SHA && process.env.GITHUB_SHA !== source)
+    throw new Error("Plugin qualification source differs from GITHUB_SHA");
+  const { validateOutputDirectory } = await import("./publish-npm.ts");
+  output = validateOutputDirectory(output, owner);
+  await identity(owner, source);
+  const runtime = { ...runtimeIdentity(), sha256: await fileSHA256(process.execPath) };
+  const version = (await Bun.file(join(owner, "package.json")).json()).version;
+  if (!isAphrodyBun() || runtime.revision !== source || runtime.version !== version)
+    throw new Error("Plugin qualification requires the exact package-source Aphrody runtime");
+  await mkdir(output, { mode: 0o700 });
+  const inputs = await pluginInputs(owner);
+  const env = pluginEnvironment(join(output, "home"));
+  await mkdir(env.HOME!, { mode: 0o700 });
+  await mkdir(join(env.HOME!, "bin"), { mode: 0o700 });
+  await symlink(process.execPath, join(env.HOME!, "bin", process.platform === "win32" ? "bun.exe" : "bun"), "file");
+  const gate = (name: (typeof pluginGates)[number], args: string[], cwd = owner, deadline = 600_000) =>
+    command(
+      cwd,
+      args[0] === process.execPath ? [args[0], "--no-env-file", ...args.slice(1)] : args,
+      join(output, `${name}.log`),
+      env,
+      deadline,
+    );
+  const generated = join(output, "generated");
+  const generator = [
+    process.execPath,
+    "scripts/aphrody/agent-plugin.ts",
+    "generate",
+    "--root",
+    owner,
+    "--out",
+    generated,
+  ];
+  await gate("generate", generator);
+  await gate("generate-check", [...generator, "--check"]);
+  const stage = join(output, "staging");
+  await gate("pack", [
+    process.execPath,
+    "scripts/aphrody/publish-npm.ts",
+    "--dry-run",
+    "--no-build",
+    ...(stable ? ["--stable"] : []),
+    "--only",
+    pluginDirectory,
+    "--out",
+    stage,
+  ]);
+  const archives = (await readdir(join(stage, "tarballs", pluginDirectory))).filter(name => name.endsWith(".tgz"));
+  if (archives.length !== 1) throw new Error("Plugin staging must produce exactly one archive");
+  const bytes = await Bun.file(join(stage, "tarballs", pluginDirectory, archives[0]!)).bytes();
+  const packed = await (await new Bun.Archive(bytes).files()).get("package/package.json")!.json();
+  const inspected = await inspectPluginNpmArchive(
+    bytes,
+    await pluginExpectedFiles(owner, packed.version),
+    packed.version,
+  );
+  const consumer = join(output, "consumer");
+  await mkdir(consumer, { mode: 0o700 });
+  for (const [name, file] of inspected.files) {
+    await mkdir(dirname(join(consumer, name)), { recursive: true });
+    await Bun.write(join(consumer, name), file);
+  }
+  await mkdir(join(consumer, "node_modules", "@aphrody"), { recursive: true });
+  await symlink(
+    join(consumer, "package"),
+    join(consumer, "node_modules", pluginName),
+    process.platform === "win32" ? "junction" : "dir",
+  );
+  await gate(
+    "consumer",
+    [
+      process.execPath,
+      "--no-install",
+      "-e",
+      `for(const path of ${JSON.stringify([pluginName, pluginName + "/rewrite", pluginName + "/decision"])}){if(!Object.keys(await import(path)).length)throw Error("Empty plugin export");}const pkg=await import(${JSON.stringify(pluginName + "/package.json")});if(pkg.default.version!==${JSON.stringify(packed.version)})throw Error("Consumer version differs");console.log("qualified plugin exports");`,
+    ],
+    consumer,
+  );
+  const doctor = JSON.parse(
+    await gate(
+      "doctor",
+      ["bun", "--no-env-file", "--no-install", join(consumer, "package/bin/bun-agent-plugin.ts"), "doctor", "--json"],
+      consumer,
+    ),
+  );
+  if (
+    doctor.aphrody !== true ||
+    doctor.bun !== process.execPath ||
+    doctor.version !== Bun.version_with_sha ||
+    doctor.installed !== null ||
+    doctor.mcp !== null
+  )
+    throw new Error("Plugin doctor did not inspect the isolated exact runtime");
+  await gate("owner-tests", [process.execPath, "test", "--max-concurrency", "1", ...pluginQualificationTests]);
+  verifyPluginTestSummary(await Bun.file(join(output, "owner-tests.log")).text(), pluginQualificationTests);
+  await gate("mcp", [process.execPath, "test", "--max-concurrency", "1", "./test/cli/mcp/mcp.test.ts"], owner, 180_000);
+  const mcpLog = await Bun.file(join(output, "mcp.log")).text();
+  verifyPluginTestSummary(mcpLog, ["./test/cli/mcp/mcp.test.ts"]);
+  await identity(owner, source);
+  if (
+    (await fileSHA256(process.execPath)) !== runtime.sha256 ||
+    JSON.stringify(inputs) !== JSON.stringify(await pluginInputs(owner))
+  )
+    throw new Error("Plugin source or runtime changed during qualification");
+  const logs = await Promise.all(
+    pluginGates.map(async name => ({
+      path: `${name}.log`,
+      sha256: sha256(await Bun.file(join(output, `${name}.log`)).bytes()),
+    })),
+  );
+  const proof: PluginNpmProof = {
+    schema: 1,
+    kind: "bun-plugin-npm-source-qualification",
+    source,
+    selection: [pluginDirectory],
+    runtime,
+    lockSHA256: sha256(await Bun.file(join(owner, "bun.lock")).bytes()),
+    nativePayloadQualified: false,
+    allPlatformsQualified: false,
+    inputs,
+    members: inspected.members,
+    archive: inspected.archive,
+    logs,
+    mcp: {
+      source,
+      suiteSHA256: sha256(await Bun.file(join(owner, "test/cli/mcp/mcp.test.ts")).bytes()),
+      passed: true,
+      logSHA256: logs.at(-1)!.sha256,
+    },
+  };
+  validatePluginNpmProof(proof, source);
+  await Bun.write(join(output, "plugin-npm-qualification.json"), JSON.stringify(proof, null, 2) + "\n");
+  return proof;
+}
+
+export async function verifyPluginNpmQualification(receipt: string, source: string): Promise<PluginNpmProof> {
+  if (process.env.GITHUB_SHA && process.env.GITHUB_SHA !== source)
+    throw new Error("Plugin publication source differs from GITHUB_SHA");
+  const proof = (await Bun.file(receipt).json()) as PluginNpmProof;
+  validatePluginNpmProof(proof, source);
+  await identity(owner, source);
+  const runtime = { ...runtimeIdentity(), sha256: await fileSHA256(process.execPath) };
+  if (
+    !isAphrodyBun() ||
+    JSON.stringify(runtime) !== JSON.stringify(proof.runtime) ||
+    proof.lockSHA256 !== sha256(await Bun.file(join(owner, "bun.lock")).bytes()) ||
+    JSON.stringify(proof.inputs) !== JSON.stringify(await pluginInputs(owner)) ||
+    proof.mcp.suiteSHA256 !== sha256(await Bun.file(join(owner, "test/cli/mcp/mcp.test.ts")).bytes())
+  )
+    throw new Error("Plugin source, lock, runtime or MCP qualification differs");
+  for (const file of proof.logs)
+    if (sha256(await Bun.file(join(dirname(receipt), file.path)).bytes()) !== file.sha256)
+      throw new Error("Plugin qualification gate log differs");
+  return proof;
+}
+
+export async function verifyPluginNpmPublication(
+  receipt: string,
+  context: { source: string; directory: string; archive: string },
+): Promise<void> {
+  if (context.directory !== pluginDirectory) throw new Error("Plugin qualification cannot authorize another package");
+  const proof = await verifyPluginNpmQualification(receipt, context.source);
+  const actual = await inspectPluginNpmArchive(
+    await Bun.file(context.archive).bytes(),
+    await pluginExpectedFiles(owner, proof.archive.version),
+    proof.archive.version,
+  );
+  if (
+    JSON.stringify(actual.members) !== JSON.stringify(proof.members) ||
+    JSON.stringify(actual.archive) !== JSON.stringify(proof.archive)
+  )
+    throw new Error("Actual plugin archive differs from qualification");
+}
+
 if (import.meta.main) {
   const args = process.argv.slice(2);
   const value = (flag: string) => (args.includes(flag) ? args[args.indexOf(flag) + 1] : undefined);
-  const selected = portableNpmSelection(value("--only"));
   if (args[0] === "route") {
-    console.log(selected ? "portable-source" : "native-full");
+    console.log(npmSourceQualificationRoute(value("--only")));
+  } else if (args[0] === "contains-plugin") {
+    console.log(npmSelectionIncludesPlugin(value("--only")));
+  } else if (args[0] === "qualify-plugin") {
+    if (value("--only") !== pluginDirectory || !value("--source") || !value("--out"))
+      throw new Error("Expected qualify-plugin --only bun-agent-plugin --source <SHA> --out <private output>");
+    await qualifyPluginNpm(value("--out")!, value("--source")!, args.includes("--stable"));
+    console.log("Plugin source qualification complete; native payloads and foreign platforms are excluded");
   } else if (args[0] === "qualify") {
     if (!args.includes("--only") || !args.includes("--source") || !args.includes("--out"))
       throw new Error("Expected qualify --only <exact selection> --source <SHA> --out <private output>");
     await qualifyPortableNpm(value("--out")!, value("--only")!, value("--source")!, args.includes("--stable"));
     console.log("Portable npm source qualification complete; native payloads are excluded");
-  } else throw new Error("Expected route or qualify");
+  } else throw new Error("Expected route, contains-plugin, qualify or qualify-plugin");
 }

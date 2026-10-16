@@ -30,7 +30,7 @@ for (const [name, job, publication] of [
         name === "aphrody-publish-crates"
           ? "inputs.dry-run != true && inputs.only != 'crates/aphrody-jev'"
           : name === "aphrody-publish-npm"
-            ? "inputs.dry-run != true && steps.qualification.outputs.kind != 'portable-source'"
+            ? "inputs.dry-run != true && steps.qualification.outputs.kind != 'portable-source' && steps.qualification.outputs.kind != 'plugin-source'"
             : "inputs.dry-run != true",
       );
     if (name === "aphrody-publish-npm") {
@@ -41,10 +41,45 @@ for (const [name, job, publication] of [
         "inputs.dry-run != true && steps.qualification.outputs.kind == 'portable-source'",
       );
       expect(steps[publish]!.run).toContain("--portable-qualification");
+      const plugin = steps.findIndex(step => step.run?.includes("release-portable-npm.ts qualify-plugin"));
+      expect(plugin).toBeGreaterThan(gate);
+      expect(plugin).toBeLessThan(publish);
+      expect(steps[plugin]!.if).toBe("inputs.dry-run != true && steps.qualification.outputs.plugin == 'true'");
+      expect(steps[plugin]!.run).toContain("--only bun-agent-plugin");
+      expect(steps[plugin]!.run).toContain('"$GITHUB_SHA"');
+      expect(steps[publish]!.run).toContain("--plugin-qualification");
+      expect(steps[publish]!.run).toContain('"$INCLUDES_PLUGIN" = true');
+      const setup = steps.findIndex(step => step.name === "Setup exact-source plugin runtime");
+      expect(setup).toBeGreaterThan(gate);
+      expect(setup).toBeLessThan(plugin);
+      expect((steps[setup] as Step & { with: Record<string, string> }).with["expected-source"]).toBe(
+        "${{ github.sha }}",
+      );
     }
     for (const step of steps) expect(step.if ?? "").not.toContain("secrets.");
   });
 }
+
+test("push candidates select runtime while manual media and publication guards remain explicit", async () => {
+  const jobs = (await workflow("aphrody-release")).jobs;
+  const plan = jobs.plan!;
+  const step = plan.steps!.find(step => step.run?.includes("release-matrix.ts"))!;
+  const env = (step as Step & { env: Record<string, string> }).env;
+  expect(env.INPUT_COMPONENT).toBe("${{ github.event_name == 'push' && 'runtime' || inputs.component || 'media' }}");
+  const select = new Function("github", "inputs", `return (${env.INPUT_COMPONENT!.slice(3, -2)});`);
+  for (const ref of ["refs/heads/main", "refs/tags/bun-v1.4.5"])
+    expect(select({ event_name: "push", ref }, {})).toBe("runtime");
+  for (const component of ["media", "runtime"])
+    expect(select({ event_name: "workflow_dispatch" }, { component })).toBe(component);
+  expect(select({ event_name: "workflow_dispatch" }, {})).toBe("media");
+  expect(jobs.publish!.if).toContain("inputs.publish");
+  expect(jobs.publish!.if).toContain("needs.aggregate.result == 'success'");
+  const yaml = Bun.YAML.parse(
+    await Bun.file(new URL("../../.github/workflows/aphrody-release.yml", import.meta.url)).text(),
+  ) as { on: { workflow_dispatch: { inputs: Record<string, { default?: string; options?: string[] }> } } };
+  expect(yaml.on.workflow_dispatch.inputs.component!.default).toBe("media");
+  expect(yaml.on.workflow_dispatch.inputs.component!.options).toEqual(["media", "runtime"]);
+});
 
 test("runtime publication depends on the aggregate and rechecks assets before R2", async () => {
   const jobs = (await workflow("aphrody-release")).jobs;

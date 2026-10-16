@@ -55,6 +55,8 @@ jobs:
         run: |
           route=$(bun scripts/aphrody/release-portable-npm.ts route --only "$ONLY")
           printf 'kind=%s\n' "$route" >> "$GITHUB_OUTPUT"
+          printf 'plugin=%s\n' "$(bun scripts/aphrody/release-portable-npm.ts contains-plugin --only "$ONLY")" >> "$GITHUB_OUTPUT"
+          printf 'runtime-version=%s\n' "$(bun -e 'console.log((await Bun.file("package.json").json()).version)')" >> "$GITHUB_OUTPUT"
       - name: Qualify exact portable source archives and consumers
         id: portable
         if: inputs.dry-run != true && steps.qualification.outputs.kind == 'portable-source'
@@ -71,7 +73,7 @@ jobs:
           path: ${{ runner.temp }}/portable-npm
           if-no-files-found: error
       - name: Verify eight native full release receipts before publication
-        if: inputs.dry-run != true && steps.qualification.outputs.kind != 'portable-source'
+        if: inputs.dry-run != true && steps.qualification.outputs.kind != 'portable-source' && steps.qualification.outputs.kind != 'plugin-source'
         env:
           GH_TOKEN: ${{ secrets.APHRODY_SYNC_TOKEN || github.token }}
           QUALIFICATION_TAG: ${{ inputs.qualification-tag || github.ref_name }}
@@ -79,12 +81,32 @@ jobs:
           version=$(bun -e 'console.log((await Bun.file("package.json").json()).version)')
           channel=candidate; case "$QUALIFICATION_TAG" in bun-v*) channel=stable;; esac
           bun scripts/aphrody/release-aggregation.ts download-verify "$QUALIFICATION_TAG" "$RUNNER_TEMP/full-qualification" "$GITHUB_SHA" "$version" "$channel"
+      - name: Setup exact-source plugin runtime
+        if: inputs.dry-run != true && steps.qualification.outputs.plugin == 'true'
+        uses: ./.github/actions/setup-bun
+        with:
+          bun-version: ${{ steps.qualification.outputs.runtime-version }}
+          expected-source: ${{ github.sha }}
+      - name: Qualify exact plugin source, archive, consumer and native MCP
+        id: plugin
+        if: inputs.dry-run != true && steps.qualification.outputs.plugin == 'true'
+        run: |
+          stable=""; case "$GITHUB_REF_NAME" in bun-v*) stable="--stable";; esac
+          bun scripts/aphrody/release-portable-npm.ts qualify-plugin --only bun-agent-plugin --source "$GITHUB_SHA" --out "$RUNNER_TEMP/plugin-npm" $stable
+      - name: Retain plugin source qualification evidence
+        if: always() && inputs.dry-run != true && steps.qualification.outputs.plugin == 'true'
+        uses: actions/upload-artifact@v6
+        with:
+          name: plugin-npm-source-qualification
+          path: ${{ runner.temp }}/plugin-npm
+          if-no-files-found: error
       - name: Publish
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
           DRY_RUN: ${{ inputs.dry-run && '--dry-run' || '' }}
           ONLY: ${{ inputs.only }}
           QUALIFICATION_KIND: ${{ steps.qualification.outputs.kind }}
+          INCLUDES_PLUGIN: ${{ steps.qualification.outputs.plugin }}
         run: |
           auth_config=$(mktemp "$RUNNER_TEMP/aphrody-npmrc.XXXXXX")
           cleanup_auth() {
@@ -103,6 +125,10 @@ jobs:
           if [ "$QUALIFICATION_KIND" = portable-source ] && [ -z "$DRY_RUN" ]; then
             portable_receipt="$RUNNER_TEMP/portable-npm/portable-npm-qualification.json"
           fi
-          bun scripts/aphrody/publish-npm.ts $DRY_RUN $stable ${ONLY:+--only "$ONLY"} ${portable_receipt:+--portable-qualification "$portable_receipt"} --out "$RUNNER_TEMP/aphrody-npm"
+          plugin_receipt=""
+          if [ "$INCLUDES_PLUGIN" = true ] && [ -z "$DRY_RUN" ]; then
+            plugin_receipt="$RUNNER_TEMP/plugin-npm/plugin-npm-qualification.json"
+          fi
+          bun scripts/aphrody/publish-npm.ts $DRY_RUN $stable ${ONLY:+--only "$ONLY"} ${portable_receipt:+--portable-qualification "$portable_receipt"} ${plugin_receipt:+--plugin-qualification "$plugin_receipt"} --out "$RUNNER_TEMP/aphrody-npm"
           # A first publish of a new name leaves an npm 0.0.0-stage placeholder; deprecate it.
           bun scripts/aphrody/npm-placeholder.ts retire $DRY_RUN

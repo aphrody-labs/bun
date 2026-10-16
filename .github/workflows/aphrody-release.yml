@@ -72,7 +72,7 @@ jobs:
         env:
           INPUT_VERSION: ${{ inputs.version }}
           INPUT_TARGETS: ${{ inputs.targets }}
-          INPUT_COMPONENT: ${{ inputs.component || 'media' }}
+          INPUT_COMPONENT: ${{ github.event_name == 'push' && 'runtime' || inputs.component || 'media' }}
           INPUT_CHANNEL: ${{ inputs.release-channel || 'candidate' }}
           INPUT_PUBLISH_NPM: ${{ inputs.publish-npm }}
         run: |

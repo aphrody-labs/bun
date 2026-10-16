@@ -16,7 +16,11 @@ import { ensureNinja } from "../build/ninja-release";
 const zlibConsumer = `#include <zlib.h>
 #include <string.h>
 #include <stdio.h>
+#ifdef BUN_ZLIB_SHARED_CONSUMER
+__attribute__((visibility("default"))) int bun_zlib_sdk_roundtrip(void) {
+#else
 int main(void) {
+#endif
   unsigned char input[4096], compressed[8192], output[4096];
   for (unsigned i=0; i<sizeof(input); i++) input[i]=(unsigned char)(i*31u);
   uLongf compressed_size=sizeof(compressed), output_size=sizeof(output);
@@ -28,6 +32,10 @@ int main(void) {
   if (adler32(1,(const Bytef*)"123456789",9)!=0x091e01deUL) return 6;
   puts("zlib-roundtrip-crc32-adler32:pass"); return 0;
 }
+`;
+
+const zlibSharedDriver = `int bun_zlib_sdk_roundtrip(void);
+int main(void) { return bun_zlib_sdk_roundtrip(); }
 `;
 
 interface GitSourceTree {
@@ -277,9 +285,7 @@ export async function qualifyZlibNativeSDK(
   const headerHashes = await Promise.all(headers.map(hashSDKFile));
   const consumer = join(outputDirectory, "zlib-consumer.c"),
     executable = join(outputDirectory, cfg.windows ? "zlib-consumer.exe" : "zlib-consumer");
-  await Bun.write(consumer, zlibConsumer);
-  const consumerSHA256 = new Bun.CryptoHasher("sha256").update(zlibConsumer).digest("hex");
-  const commands = zlibConsumerCommands({
+  const consumerEvidence = await qualifyZlibConsumers({
     windows: cfg.windows,
     arch: cfg.arch,
     cc: cfg.cc,
@@ -289,20 +295,16 @@ export async function qualifyZlibNativeSDK(
     consumer,
     executable,
   });
-  await mediaSDKTool(commands.compile, build);
-  const stdout = await mediaSDKTool(commands.execute, outputDirectory);
-  if ((cfg.windows ? stdout.replaceAll("\r\n", "\n") : stdout) !== "zlib-roundtrip-crc32-adler32:pass\n")
-    throw new Error("Native zlib consumer did not qualify its roundtrip and checksums");
-  const log = join(outputDirectory, "zlib-consumer.log");
-  await Bun.write(log, stdout);
   const sourceTree = await mediaSourceTree(depSourceDir(cfg, "zlib"));
   if (
     sourceTree.sourceTreeSHA256 !== provenance.sourceTreeSHA256 ||
     JSON.stringify(await Promise.all(libraries.map(hashSDKFile))) !== JSON.stringify(hashes) ||
     JSON.stringify(await Promise.all(headers.map(hashSDKFile))) !== JSON.stringify(headerHashes) ||
-    (await hashSDKFile(consumer)) !== consumerSHA256 ||
     (await hashSDKFile(configureFile)) !== configureSHA256 ||
     (await hashSDKFile(ninjaFile)) !== ninjaSHA256 ||
+    (await Promise.all(consumerEvidence.map(({ path }) => hashSDKFile(path)))).some(
+      (hash, i) => hash !== consumerEvidence[i]!.sha256,
+    ) ||
     (await Promise.all(patchPaths.map(hashSDKFile))).some((hash, i) => hash !== provenance.patches[i]!.sha256)
   )
     throw new Error("Zlib source, patches, library or build changed during qualification");
@@ -313,11 +315,7 @@ export async function qualifyZlibNativeSDK(
     configureSHA256,
     ninjaSHA256,
     sourceReceiptSHA256: await hashSDKFile(sourceReceipt),
-    evidence: [
-      `consumer:${await hashSDKFile(executable)}`,
-      `source:${await hashSDKFile(consumer)}`,
-      `result:${await hashSDKFile(log)}`,
-    ],
+    evidence: consumerEvidence.map(({ kind, sha256 }) => `${kind}:${sha256}`),
   };
   const gateFile = join(outputDirectory, "native-gate.json");
   await Bun.write(gateFile, JSON.stringify(gate, null, 2) + "\n");
@@ -336,7 +334,7 @@ export async function qualifyZlibNativeSDK(
   return { prefix, sourceReceiptSHA256: gate.sourceReceiptSHA256 };
 }
 
-export function zlibConsumerCommands(input: {
+interface ZlibConsumerInput {
   windows: boolean;
   arch: "x64" | "aarch64";
   cc: string;
@@ -345,7 +343,54 @@ export function zlibConsumerCommands(input: {
   libraries: string[];
   consumer: string;
   executable: string;
-}) {
+}
+
+/** Qualify the actual archive in both executable and (Linux) shared-library consumers. */
+export async function qualifyZlibConsumers(input: ZlibConsumerInput) {
+  const directory = dirname(input.executable);
+  await Bun.write(input.consumer, zlibConsumer);
+  const files: [string, string][] = [["source", input.consumer]];
+  // Windows keeps its MSVC executable gate; this shared-link gate qualifies Linux only.
+  if (!input.windows) {
+    const shared = zlibSharedConsumerCommands(input);
+    await Bun.write(shared.driver, zlibSharedDriver);
+    await mediaSDKTool(shared.compile, directory);
+    await mediaSDKTool(shared.link, directory);
+    const stdout = await mediaSDKTool(shared.execute, directory, undefined, {
+      ...process.env,
+      LD_LIBRARY_PATH: undefined,
+      LD_PRELOAD: undefined,
+    });
+    if (stdout !== "zlib-roundtrip-crc32-adler32:pass\n")
+      throw new Error("Shared zlib consumer did not qualify its roundtrip and checksums");
+    const log = join(directory, "zlib-shared-consumer.log");
+    await Bun.write(log, stdout);
+    files.push(
+      ["linux-shared-library", shared.library],
+      ["linux-shared-driver", shared.driver],
+      ["linux-shared-consumer", shared.executable],
+      ["linux-shared-result", log],
+    );
+  }
+  const commands = zlibConsumerCommands(input);
+  await mediaSDKTool(commands.compile, directory);
+  const stdout = await mediaSDKTool(commands.execute, directory);
+  if ((input.windows ? stdout.replaceAll("\r\n", "\n") : stdout) !== "zlib-roundtrip-crc32-adler32:pass\n")
+    throw new Error("Native zlib consumer did not qualify its roundtrip and checksums");
+  const log = join(directory, "zlib-consumer.log");
+  await Bun.write(log, stdout);
+  files.push(["consumer", input.executable], ["result", log]);
+  if (
+    (await hashSDKFile(input.consumer)) !== new Bun.CryptoHasher("sha256").update(zlibConsumer).digest("hex") ||
+    (!input.windows &&
+      (await hashSDKFile(zlibSharedConsumerCommands(input).driver)) !==
+        new Bun.CryptoHasher("sha256").update(zlibSharedDriver).digest("hex"))
+  )
+    throw new Error("Zlib consumer sources changed during qualification");
+  return Promise.all(files.map(async ([kind, path]) => ({ kind, path, sha256: await hashSDKFile(path) })));
+}
+
+export function zlibConsumerCommands(input: ZlibConsumerInput) {
   const native = (argv: string[]) =>
     input.windows
       ? [process.execPath, "msvc", "exec", "--arch", input.arch === "aarch64" ? "arm64" : "x64", "--", ...argv]
@@ -369,6 +414,37 @@ export function zlibConsumerCommands(input: {
           ]),
     ]),
     execute: native([input.executable]),
+  };
+}
+
+/** Exercise the same roundtrip from an ELF shared library, not just a non-PIE executable. */
+export function zlibSharedConsumerCommands(input: ZlibConsumerInput) {
+  if (input.windows) throw new Error("The shared zlib consumer gate requires a native Linux target");
+  const directory = dirname(input.executable),
+    library = join(directory, "libzlib-consumer.so"),
+    driver = join(directory, "zlib-shared-driver.c"),
+    executable = join(directory, "zlib-shared-consumer");
+  const flags = [...input.flags, "-fPIC", ...input.includes.flatMap(path => ["-I", path])];
+  return {
+    library,
+    driver,
+    executable,
+    compile: [
+      input.cc,
+      ...flags,
+      "-DBUN_ZLIB_SHARED_CONSUMER",
+      input.consumer,
+      ...input.libraries,
+      "-fuse-ld=lld",
+      "-shared",
+      "-Wl,-z,defs",
+      "-Wl,-soname,libzlib-consumer.so",
+      "-lm",
+      "-o",
+      library,
+    ],
+    link: [input.cc, ...flags, driver, library, "-fuse-ld=lld", "-Wl,-rpath,$ORIGIN", "-o", executable],
+    execute: [executable],
   };
 }
 
