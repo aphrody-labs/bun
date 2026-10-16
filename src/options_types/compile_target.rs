@@ -308,8 +308,13 @@ impl CompileTarget {
                 found_libc = true;
                 continue;
             } else if token == b"android" {
+                // "bun-android-arm64" is shorthand for "bun-linux-arm64-android".
                 this.libc = Libc::Android;
                 found_libc = true;
+                if !found_os {
+                    this.os = OperatingSystem::Linux;
+                    found_os = true;
+                }
                 continue;
             } else {
                 return Err(ParseError::UnsupportedTarget);
@@ -391,7 +396,7 @@ impl CompileTarget {
                     && !strings::contains(input, b"linux")
                 {
                     bun_core::err_generic!(
-                        "invalid target, android only exists with linux (use bun-linux-arm64-android)"
+                        "invalid target, android only exists with linux (use bun-android-arm64 or bun-linux-arm64-android)"
                     );
                 } else if strings::contains(input, b"wasm") {
                     bun_core::err_generic!("invalid target, WebAssembly is not supported. Sorry!");
