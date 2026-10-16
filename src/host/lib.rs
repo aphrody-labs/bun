@@ -13,7 +13,6 @@
 pub mod cli;
 pub mod collect;
 pub mod environment;
-pub mod native;
 pub mod parse;
 pub mod registry;
 pub mod schema;

@@ -31,7 +31,7 @@ mod driver {
     use libloading::Library;
 
     use super::CudaInfo;
-    use crate::native::topology::bytes_to_mib;
+    use crate::topology::bytes_to_mib;
 
     /// `CUDA_SUCCESS` from `cuda.h`.
     const CUDA_SUCCESS: c_int = 0;

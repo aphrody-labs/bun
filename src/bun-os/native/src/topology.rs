@@ -6,7 +6,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use super::cuda;
+use crate::cuda;
 
 /// Hardware topology of the host, probed by [`SystemTopology::probe`].
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]

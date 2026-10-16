@@ -1,12 +1,17 @@
-//! Native platform probes
-//!
-//! Host hardware and clock probes.
+//! `bun_native`: host hardware topology and monotonic clock probes.
 //!
 //! - [`NativePlatform`]: monotonic clock and host hardware topology ([`SystemTopology`]), probed
 //!   from the operating system and, for CUDA, from the driver API loaded at run time.
 //!
 //! Llama and Whisper inference are owned by `aphrody-llama-server` and `aphrody-voice`.
-//! This module does not implement a C standard library.
+//! This crate does not implement a C standard library.
+
+// Std-only leaf crate outside the event loop (like `bun_host`).
+#![allow(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros
+)]
 
 mod cuda;
 mod topology;
