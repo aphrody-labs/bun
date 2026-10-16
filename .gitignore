@@ -219,6 +219,8 @@ Heap-*.json.*
 isolate-*.log
 core
 core.[0-9]*
+!src/pkg/core/
+!src/bun-os/pkg/core/
 !src/quality/format_cli/src/core/
 !src/migrate/
 !src/migrate/engine/github/
