@@ -140,7 +140,8 @@ Statuts : `fait` (déjà dans Bun), `en cours (autre agent)`, `à faire`,
 | packages/interop/native (@aphrody/bun) | — | reste aphrody : pont bun:ffi vers aphrody-ffi (CLI IA en processus) |
 | crates/native/gpu-backend | packages/bun-video (WebGPU) | à faire (lot 7) |
 | crates/interop/ffi | — | reste aphrody : cdylib de la CLI aphrody (IA, inférence, RAG) |
-| crates/pkg/{cli,core,ffi,net,store} | packages/aphrody-pkg-system → src/install | à faire (lot 8) |
+| crates/pkg/{core,store,net,cli} | src/pkg/{core,store,net,cli} (`bun_pkg_*`) | fait (lot 8) |
+| crates/pkg/ffi | — | supprimé (C ABI sans consommateur) |
 | crates/compat/toolchains | scripts/build (toolchains) | à faire (lot 8) |
 | crates/compat/egui-winit | — | supprimé (sans consommateur), aphrody `4b50cb3e2d` |
 | crates/compat/rfb-encodings, crates/native/simdutf | — | reste aphrody : `[patch.crates-io]` de rustvncserver (remote-desktop, infra) et de V8 |

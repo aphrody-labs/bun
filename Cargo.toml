@@ -32,6 +32,10 @@ members = [
   "src/css",
   "src/errno",
   "src/glob",
+  "src/pkg/core",
+  "src/pkg/store",
+  "src/pkg/net",
+  "src/pkg/cli",
   "src/graph",
   "src/http",
   "src/install",
@@ -531,6 +535,10 @@ jsonschema = { version = "0.58", default-features = false }
 proptest = "1"
 aphrody-jev = { path = "crates/aphrody-jev", version = "1.4.4", default-features = false }
 axum = "=0.8.9"
+bun_pkg_core = { path = "src/pkg/core" }
+bun_pkg_store = { path = "src/pkg/store" }
+bun_pkg_net = { path = "src/pkg/net" }
+bun_pkg_cli = { path = "src/pkg/cli" }
 bun_graph = { path = "src/graph" }
 bun_workspace = { path = "src/workspace" }
 # Shared browser dependencies; existing Bun declarations/pins remain authoritative.
