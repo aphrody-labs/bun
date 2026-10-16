@@ -1,0 +1,72 @@
+diff --git a/chrome/browser/ui/browser.cc b/chrome/browser/ui/browser.cc
+index 99041fad5cbaa7224ce7862dc23c628459e8173f..cce629c4c6b111a896d754703bb2d575b4a1f895 100644
+--- a/chrome/browser/ui/browser.cc
++++ b/chrome/browser/ui/browser.cc
+@@ -267,6 +267,10 @@ Browser::Browser(BrowserWindowCreateParams params)
+     : type_(params.type),
+       profile_(&*params.profile),
+       window_(nullptr),
++#if BUILDFLAG(ENABLE_CEF)
++      cef_browser_delegate_(
++          cef::BrowserDelegate::Create(this, params.cef_params, params.opener)),
++#endif
+       tab_strip_model_delegate_(
+           std::make_unique<chrome::BrowserTabStripModelDelegate>(this)),
+       tab_strip_model_(std::make_unique<TabStripModel>(
+@@ -305,9 +309,6 @@ Browser::Browser(BrowserWindowCreateParams params)
+   features_ = std::make_unique<BrowserWindowFeatures>();
+   features_->Init(this);
+ 
+-  if (custom_window) {
+-    CHECK_IS_TEST() << "BrowserWindowCreateParams::window is a test-only param";
+-  }
+   window_ =
+       custom_window
+           ? std::unique_ptr<BrowserWindow, BrowserWindowDeleter>(custom_window)
+@@ -325,9 +326,19 @@ Browser::Browser(BrowserWindowCreateParams params)
+     session_service->WindowOpened(this);
+   }
+ 
+-  // Initialize the browser features that rely on the browser window now that it
+-  // is initialized.
+-  features_->InitPostWindowConstruction(this);
++  const bool views_hosted =
++#if BUILDFLAG(ENABLE_CEF)
++      cef_delegate() && cef_delegate()->IsViewsHosted();
++#else
++      false;
++#endif
++
++  if (!views_hosted) {
++    // Initialize the browser features that rely on the browser window now that
++    // it is initialized. This will instead be called from
++    // BrowserView::AddedToWidget() for CEF Views-hosted windows.
++    features_->InitPostWindowConstruction(this);
++  }
+ 
+   // All initialization is complete; after this point, the browser should be on
+   // the browser list until it is marked for destruction.
+@@ -503,6 +514,10 @@ BrowserWindowInterface::Type Browser::GetType() const {
+   return type_;
+ }
+ 
++bool Browser::IsNormalBrowser() const {
++  return BrowserWindowFeatures::IsNormalBrowser(this);
++}
++
+ std::vector<tabs::TabInterface*> Browser::GetAllTabInterfaces() {
+   std::vector<tabs::TabInterface*> results;
+   results.reserve(tab_strip_model_->count());
+@@ -891,6 +906,12 @@ void Browser::OnTabReplacedAt(WebContents* old_contents,
+ // Browser, Assorted utility functions (private):
+ 
+ void Browser::SetAsDelegate(WebContents* web_contents, bool set_delegate) {
++#if BUILDFLAG(ENABLE_CEF)
++  if (cef_browser_delegate_) {
++    cef_browser_delegate_->SetAsDelegate(web_contents, set_delegate);
++  }
++#endif
++
+   content::WebContentsDelegate* delegate =
+       set_delegate ? BrowserWebContentsDelegate::From(this) : nullptr;
+ 

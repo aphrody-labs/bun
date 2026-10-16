@@ -1,0 +1,33 @@
+diff --git a/chrome/browser/profiles/pref_service_builder_utils.cc b/chrome/browser/profiles/pref_service_builder_utils.cc
+index 8986f4d47cc58ab13493cbafea52e91673e25144..2f23c7765f7d7325d4c6d1999fb6845f303d4d90 100644
+--- a/chrome/browser/profiles/pref_service_builder_utils.cc
++++ b/chrome/browser/profiles/pref_service_builder_utils.cc
+@@ -16,6 +16,7 @@
+ #include "base/task/sequenced_task_runner.h"
+ #include "base/threading/scoped_blocking_call.h"
+ #include "build/chromeos_buildflags.h"
++#include "cef/libcef/features/features.h"
+ #include "chrome/browser/browser_process.h"
+ #include "chrome/browser/policy/chrome_browser_policy_connector.h"
+ #include "chrome/browser/prefs/browser_prefs.h"
+@@ -39,6 +40,10 @@
+ #include "services/preferences/public/mojom/tracked_preference_validation_delegate.mojom.h"
+ #include "ui/base/l10n/l10n_util.h"
+ 
++#if BUILDFLAG(ENABLE_CEF)
++#include "cef/libcef/browser/prefs/browser_prefs.h"
++#endif
++
+ namespace {
+ 
+ // Text content of README file created in each profile directory. Both %s
+@@ -77,6 +82,9 @@ void RegisterProfilePrefs(bool is_signin_profile,
+       pref_registry);
+   BrowserContextDependencyManager::GetInstance()
+       ->RegisterProfilePrefsForServices(pref_registry);
++#if BUILDFLAG(ENABLE_CEF)
++  browser_prefs::RegisterProfilePrefs(pref_registry);
++#endif
+ }
+ 
+ std::unique_ptr<sync_preferences::PrefServiceSyncable> CreateProfilePrefService(

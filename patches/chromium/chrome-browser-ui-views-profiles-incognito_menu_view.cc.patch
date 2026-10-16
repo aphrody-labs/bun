@@ -1,0 +1,15 @@
+diff --git a/chrome/browser/ui/views/profiles/incognito_menu_view.cc b/chrome/browser/ui/views/profiles/incognito_menu_view.cc
+index 5e34acec16e1f581d7842e4210f00fd9b107ad70..bbe3cd63f1a921d0e62ad91a60af4ee009837fb9 100644
+--- a/chrome/browser/ui/views/profiles/incognito_menu_view.cc
++++ b/chrome/browser/ui/views/profiles/incognito_menu_view.cc
+@@ -26,7 +26,9 @@
+ IncognitoMenuView::IncognitoMenuView(views::BubbleAnchor anchor_element,
+                                      BrowserWindowInterface* browser)
+     : ProfileMenuViewBase(anchor_element, browser) {
+-  CHECK(profile().IsIncognitoProfile());
++  CHECK(profile().IsIncognitoProfile() ||
++        (profile().IsOffTheRecord() &&
++         profile().GetOTRProfileID().IsUniqueForCEF()));
+   GetViewAccessibility().SetName(GetAccessibleWindowTitle(),
+                                  ax::mojom::NameFrom::kAttribute);
+ 

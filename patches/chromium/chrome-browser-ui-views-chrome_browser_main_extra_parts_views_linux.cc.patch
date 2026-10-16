@@ -1,0 +1,16 @@
+diff --git a/chrome/browser/ui/views/chrome_browser_main_extra_parts_views_linux.cc b/chrome/browser/ui/views/chrome_browser_main_extra_parts_views_linux.cc
+index 65d9f24b665a1f244a759f1dc51e30adc13090df..9447b849d1f7ba5125c92616f7093549c662030e 100644
+--- a/chrome/browser/ui/views/chrome_browser_main_extra_parts_views_linux.cc
++++ b/chrome/browser/ui/views/chrome_browser_main_extra_parts_views_linux.cc
+@@ -69,7 +69,10 @@ void ChromeBrowserMainExtraPartsViewsLinux::ToolkitInitialized() {
+ #endif
+ 
+ #if BUILDFLAG(USE_DBUS)
+-  portal_settings_ = std::make_unique<ui::PortalSettingsLinux>();
++  if (!ui::NativeTheme::IsForcedDarkMode() &&
++      !ui::NativeTheme::IsForcedLightMode()) {
++    portal_settings_ = std::make_unique<ui::PortalSettingsLinux>();
++  }
+ #endif
+ }
+ 

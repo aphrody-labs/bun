@@ -1,0 +1,13 @@
+diff --git a/components/renderer_context_menu/render_view_context_menu_observer.cc b/components/renderer_context_menu/render_view_context_menu_observer.cc
+index 9fdda1636003df5f0981f6073bc459fa5b5056ae..538bd05a412961e54214833fad915de7104b5154 100644
+--- a/components/renderer_context_menu/render_view_context_menu_observer.cc
++++ b/components/renderer_context_menu/render_view_context_menu_observer.cc
+@@ -15,3 +15,8 @@ bool RenderViewContextMenuObserver::IsCommandIdChecked(int command_id) {
+ bool RenderViewContextMenuObserver::IsCommandIdEnabled(int command_id) {
+   return false;
+ }
++
++bool RenderViewContextMenuObserver::GetAccelerator(int command_id,
++                                                   ui::Accelerator* accel) {
++  return false;
++}

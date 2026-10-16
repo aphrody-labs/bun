@@ -1,0 +1,29 @@
+diff --git a/third_party/blink/renderer/core/exported/web_element.cc b/third_party/blink/renderer/core/exported/web_element.cc
+index 1d885fc9cccb1e5d3a9a5ea5abab59f73b99c4db..7b35d52a5a461f149d85e7076dea35e09d1cb2ab 100644
+--- a/third_party/blink/renderer/core/exported/web_element.cc
++++ b/third_party/blink/renderer/core/exported/web_element.cc
+@@ -210,6 +210,24 @@ void WebElement::SetAttribute(const WebString& attr_name,
+                                   IGNORE_EXCEPTION_FOR_TESTING);
+ }
+ 
++unsigned WebElement::AttributeCount() const {
++  if (!ConstUnwrap<Element>()->hasAttributes())
++    return 0;
++  return ConstUnwrap<Element>()->Attributes().size();
++}
++
++WebString WebElement::AttributeLocalName(unsigned index) const {
++  if (index >= AttributeCount())
++    return WebString();
++  return ConstUnwrap<Element>()->Attributes().at(index).LocalName();
++}
++
++WebString WebElement::AttributeValue(unsigned index) const {
++  if (index >= AttributeCount())
++    return WebString();
++  return ConstUnwrap<Element>()->Attributes().at(index).Value();
++}
++
+ WebString WebElement::TextContent() const {
+   return ConstUnwrap<Element>()->textContent();
+ }

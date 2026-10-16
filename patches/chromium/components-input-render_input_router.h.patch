@@ -1,0 +1,12 @@
+diff --git a/components/input/render_input_router.h b/components/input/render_input_router.h
+index 571b2bf8296a201e80efa496a34bee0e2984de08..3f7e3b870a54564ab1fd60c61ed3c2d8bb566d05 100644
+--- a/components/input/render_input_router.h
++++ b/components/input/render_input_router.h
+@@ -67,6 +67,7 @@ class COMPONENT_EXPORT(INPUT) RenderInputRouter
+ 
+   InputRouter* input_router() { return input_router_.get(); }
+   RenderInputRouterDelegate* delegate() { return delegate_; }
++  input::FlingSchedulerBase* fling_scheduler() { return fling_scheduler_.get(); }
+ 
+   void SetForceEnableZoom(bool);
+   void SetDeviceScaleFactor(float device_scale_factor);

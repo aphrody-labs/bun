@@ -1,0 +1,14 @@
+diff --git a/services/network/public/mojom/network_context.mojom b/services/network/public/mojom/network_context.mojom
+index ba22365134584f31e9ad15e248406c28e69566a4..e5ed1869c3b108cb320fe287a63f283048e77b01 100644
+--- a/services/network/public/mojom/network_context.mojom
++++ b/services/network/public/mojom/network_context.mojom
+@@ -403,6 +403,9 @@ struct NetworkContextParams {
+   // cookies. Otherwise it should be false.
+   bool persist_session_cookies = false;
+ 
++  // Schemes that will be passed to CookieMonster::SetCookieableSchemes.
++  array<string>? cookieable_schemes;
++
+   // True if an HTTP cache should be used.
+   bool http_cache_enabled = true;
+   // Maximum size of the HTTP cache. 0 means to use the default size.

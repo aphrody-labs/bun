@@ -1,0 +1,66 @@
+diff --git a/ui/shell_dialogs/select_file_dialog.h b/ui/shell_dialogs/select_file_dialog.h
+index 5b4ccd238c48b83d0233c5a07bfa97773844a738..593cbbb98983a26ad9c4c91c4372d8b81d3bc1ca 100644
+--- a/ui/shell_dialogs/select_file_dialog.h
++++ b/ui/shell_dialogs/select_file_dialog.h
+@@ -96,7 +96,8 @@ class SHELL_DIALOGS_EXPORT SelectFileDialog
+   // listener when there are no calls to SelectFile() outstanding.
+   static scoped_refptr<SelectFileDialog> Create(
+       Listener* listener,
+-      std::unique_ptr<SelectFilePolicy> policy);
++      std::unique_ptr<SelectFilePolicy> policy,
++      bool run_from_cef = false);
+ 
+   SelectFileDialog(const SelectFileDialog&) = delete;
+   SelectFileDialog& operator=(const SelectFileDialog&) = delete;
+@@ -130,6 +131,10 @@ class SHELL_DIALOGS_EXPORT SelectFileDialog
+     // FileTypeExtensions instead of this and the above vector?
+     std::vector<std::u16string> extension_description_overrides;
+ 
++    // Original mime types for the specified extensions. Entries correspond to
++    // |extensions|; if left blank then there was no mime type.
++    std::vector<std::u16string> extension_mimetypes;
++
+     // Specifies whether there will be a filter added for all files (i.e. *.*).
+     bool include_all_files = false;
+ 
+@@ -224,6 +229,19 @@ class SHELL_DIALOGS_EXPORT SelectFileDialog
+                   const GURL* caller = nullptr);
+   bool HasMultipleFileTypeChoices();
+ 
++  // Match the types used by CefWindowHandle.
++#if BUILDFLAG(IS_MAC)
++  using WidgetType = void*;
++  static constexpr WidgetType kNullWidget = nullptr;
++#else
++  using WidgetType = gfx::AcceleratedWidget;
++  static constexpr WidgetType kNullWidget = gfx::kNullAcceleratedWidget;
++#endif
++
++  void set_owning_widget(WidgetType widget) {
++    owning_widget_ = widget;
++  }
++
+  protected:
+   friend class base::RefCountedThreadSafe<SelectFileDialog>;
+ 
+@@ -250,6 +268,11 @@ class SHELL_DIALOGS_EXPORT SelectFileDialog
+ 
+   SelectFilePolicy* select_file_policy() { return select_file_policy_.get(); }
+ 
++  std::unique_ptr<SelectFilePolicy> select_file_policy_;
++
++  // Support override of the |owning_window| value.
++  WidgetType owning_widget_ = kNullWidget;
++
+  private:
+   // Tests if the file selection dialog can be displayed by
+   // testing if the AllowFileSelectionDialogs-Policy is
+@@ -262,8 +285,6 @@ class SHELL_DIALOGS_EXPORT SelectFileDialog
+ 
+   // Returns true if the dialog has multiple file type choices.
+   virtual bool HasMultipleFileTypeChoicesImpl() = 0;
+-
+-  std::unique_ptr<SelectFilePolicy> select_file_policy_;
+ };
+ 
+ SelectFileDialog* CreateSelectFileDialog(

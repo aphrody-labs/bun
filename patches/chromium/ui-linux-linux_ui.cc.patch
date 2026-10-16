@@ -1,0 +1,38 @@
+diff --git a/ui/linux/linux_ui.cc b/ui/linux/linux_ui.cc
+index 010672d309694991f50e208a4e965f9b1ce84801..6f8764480a6e069f4d82cc31d81193102dec975d 100644
+--- a/ui/linux/linux_ui.cc
++++ b/ui/linux/linux_ui.cc
+@@ -20,6 +20,7 @@ namespace ui {
+ namespace {
+ 
+ LinuxUi* g_linux_ui = nullptr;
++static PrintingContextLinuxDelegate* g_delegate = nullptr;
+ 
+ base::RepeatingClosureList& GetAnimationsEnabledCallbackList() {
+   static base::NoDestructor<base::RepeatingClosureList> s_callbacks;
+@@ -28,8 +29,25 @@ base::RepeatingClosureList& GetAnimationsEnabledCallbackList() {
+ 
+ }  // namespace
+ 
++// static
++PrintingContextLinuxDelegate* PrintingContextLinuxDelegate::SetInstance(
++    PrintingContextLinuxDelegate* delegate) {
++  auto old_delegate = g_delegate;
++  g_delegate = delegate;
++  return old_delegate;
++}
++
++// static
++PrintingContextLinuxDelegate* PrintingContextLinuxDelegate::instance() {
++  return g_delegate;
++}
++
+ // static
+ LinuxUi* LinuxUi::SetInstance(LinuxUi* instance) {
++#if BUILDFLAG(IS_LINUX) && BUILDFLAG(ENABLE_PRINTING)
++  PrintingContextLinuxDelegate::SetInstance(instance);
++#endif
++
+   LinuxUi* old_instance = std::exchange(g_linux_ui, instance);
+   if (old_instance != instance) {
+     GetAnimationsEnabledCallbackList().Notify();

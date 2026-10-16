@@ -1,0 +1,33 @@
+diff --git a/components/input/fling_scheduler_base.h b/components/input/fling_scheduler_base.h
+index 6e331ee24bddf1b6f4b0f99d40c94504707dbba8..06836e8ec901bf4380671a96fd218385d5a3aa76 100644
+--- a/components/input/fling_scheduler_base.h
++++ b/components/input/fling_scheduler_base.h
+@@ -5,9 +5,14 @@
+ #ifndef COMPONENTS_INPUT_FLING_SCHEDULER_BASE_H_
+ #define COMPONENTS_INPUT_FLING_SCHEDULER_BASE_H_
+ 
++#include "base/memory/raw_ptr.h"
+ #include "components/input/fling_controller.h"
+ #include "components/viz/common/frame_sinks/begin_frame_source.h"
+ 
++namespace ui {
++class Compositor;
++}
++
+ namespace input {
+ 
+ class FlingSchedulerBase : public FlingControllerSchedulerClient {
+@@ -19,6 +24,13 @@ class FlingSchedulerBase : public FlingControllerSchedulerClient {
+   // in Viz currently, but in future we would want to migrate browser's
+   // implementations to use this to progress flings.
+   virtual void SetBeginFrameSource(viz::BeginFrameSource* begin_frame_source) {}
++
++  void SetCompositor(ui::Compositor* compositor) {
++    compositor_ = compositor;
++  }
++
++ protected:
++  raw_ptr<ui::Compositor> compositor_ = nullptr;
+ };
+ 
+ }  // namespace input

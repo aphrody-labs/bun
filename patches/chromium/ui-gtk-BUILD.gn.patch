@@ -1,0 +1,15 @@
+diff --git a/ui/gtk/BUILD.gn b/ui/gtk/BUILD.gn
+index 53f967f9e97454184d3a2b99a05750af99c77392..063226932a40b5e6f0737dee4e668bde800ad30d 100644
+--- a/ui/gtk/BUILD.gn
++++ b/ui/gtk/BUILD.gn
+@@ -197,6 +197,10 @@ component("gtk") {
+ 
+   # TODO: This should be removed.
+   deps += [ "//ui/ozone" ]
++
++  if (is_clang) {
++    cflags = [ "-Wno-deprecated-volatile" ]
++  }
+ }
+ 
+ if (use_gtk) {

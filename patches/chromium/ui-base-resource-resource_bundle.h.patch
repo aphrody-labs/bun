@@ -1,0 +1,16 @@
+diff --git a/ui/base/resource/resource_bundle.h b/ui/base/resource/resource_bundle.h
+index 5b0e6cea9c6206526c11af155a26c8c2477690c4..63da981b5350d6b36afd84cd4c85e1cb6eb7efd3 100644
+--- a/ui/base/resource/resource_bundle.h
++++ b/ui/base/resource/resource_bundle.h
+@@ -266,6 +266,11 @@ class COMPONENT_EXPORT(UI_BASE) ResourceBundle {
+   ResourceBundle(const ResourceBundle&) = delete;
+   ResourceBundle& operator=(const ResourceBundle&) = delete;
+ 
++  // With CEF's multi-threaded mode the ResourceBundle may be created/destroyed
++  // on the main thread but accessed on the UI thread. Call this method on the
++  // UI thread to clean up resources before destruction.
++  void CleanupOnUIThread();
++
+   // Loads a secondary locale data pack using the given file region.
+   void LoadAdditionalLocaleDataWithPakFileRegion(
+       base::File pak_file,

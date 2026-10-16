@@ -1,0 +1,16 @@
+diff --git a/third_party/blink/public/platform/platform.h b/third_party/blink/public/platform/platform.h
+index 25844b6fbed36ecf8ab30c03f8319b4188da53f1..2d80b9fde912a7d38fc9ee212b2999d02298e9c3 100644
+--- a/third_party/blink/public/platform/platform.h
++++ b/third_party/blink/public/platform/platform.h
+@@ -889,6 +889,11 @@ class BLINK_PLATFORM_EXPORT Platform {
+   // calling an OOM.
+   virtual void OnV8HeapLastResortGC() {}
+ 
++  // DevTools ------------------------------------------------------------
++
++  virtual void DevToolsAgentAttached() {}
++  virtual void DevToolsAgentDetached() {}
++
+  private:
+   static void InitializeMainThreadCommon(
+       std::unique_ptr<MainThread> main_thread);

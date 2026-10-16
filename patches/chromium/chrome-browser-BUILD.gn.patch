@@ -1,0 +1,31 @@
+diff --git a/chrome/browser/BUILD.gn b/chrome/browser/BUILD.gn
+index 7589f3c1f713d1ee59854974be8aa5ead43e2d70..04062441322c92277b9578c8a68760c6f2f1daf0 100644
+--- a/chrome/browser/BUILD.gn
++++ b/chrome/browser/BUILD.gn
+@@ -11,6 +11,7 @@ import("//build/config/compiler/pgo/pgo.gni")
+ import("//build/config/features.gni")
+ import("//build/config/python.gni")
+ import("//build/config/ui.gni")
++import("//cef/libcef/features/features.gni")
+ import("//chrome/browser/buildflags.gni")
+ import("//chrome/browser/downgrade/buildflags.gni")
+ import("//chrome/common/features.gni")
+@@ -2258,6 +2259,7 @@ source_set("browser") {
+     ":unexpire_flags",
+     "//base",
+     "//cc",
++    "//cef/libcef/features:buildflags",
+     "//chrome:extra_resources",
+     "//chrome/browser/accessibility:impl",
+     "//chrome/browser/account_settings",
+@@ -2843,6 +2845,10 @@ source_set("browser") {
+     ]
+   }
+ 
++  if (enable_cef) {
++    configs += [ "//cef/libcef/features:config" ]
++  }
++
+   if (is_android) {
+     deps += [
+       "//chrome/browser/android",

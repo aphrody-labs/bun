@@ -1,0 +1,21 @@
+diff --git a/chrome/browser/ui/toolbar/app_menu_model.h b/chrome/browser/ui/toolbar/app_menu_model.h
+index 00d9ff6f3f89b85973b5e1aea66416d5a91ba7d5..b8451845687c5e01240365dab0cc7dd9561f9d51 100644
+--- a/chrome/browser/ui/toolbar/app_menu_model.h
++++ b/chrome/browser/ui/toolbar/app_menu_model.h
+@@ -337,6 +337,7 @@ class AppMenuModel : public ui::SimpleMenuModel,
+   void ExecuteCommand(int command_id, int event_flags) override;
+   bool IsCommandIdChecked(int command_id) const override;
+   bool IsCommandIdEnabled(int command_id) const override;
++  bool IsCommandIdVisible(int command_id) const override;
+   bool IsCommandIdAlerted(int command_id) const override;
+   bool GetAcceleratorForCommandId(int command_id,
+                                   ui::Accelerator* accelerator) const override;
+@@ -376,6 +377,8 @@ class AppMenuModel : public ui::SimpleMenuModel,
+   void LogSafetyHubInteractionMetrics(safety_hub::SafetyHubModuleType sh_module,
+                                       int event_flags);
+ 
++  bool IsCommandIdEnabledInternal(int command_id) const;
++
+  private:
+   // Adds actionable global error menu items to the menu.
+   // Examples: Extension permissions and sign in errors.

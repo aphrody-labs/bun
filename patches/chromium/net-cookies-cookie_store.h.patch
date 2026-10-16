@@ -1,0 +1,22 @@
+diff --git a/net/cookies/cookie_store.h b/net/cookies/cookie_store.h
+index 97ef5928c9ceee112f3f3ab3b47eeaaa95114268..43697f0ef88f38e53cd00652f54431413bbca8e3 100644
+--- a/net/cookies/cookie_store.h
++++ b/net/cookies/cookie_store.h
+@@ -170,6 +170,17 @@ class NET_EXPORT CookieStore {
+   // Transfer ownership of a CookieAccessDelegate.
+   void SetCookieAccessDelegate(std::unique_ptr<CookieAccessDelegate> delegate);
+ 
++  // Adds to the list of cookieable schemes. Does nothing if called after first
++  // use of the instance (i.e. after the instance initialization process).
++  virtual void AddCookieableSchemes(const std::vector<std::string>& schemes,
++                                    SetCookieableSchemesCallback callback) = 0;
++
++  // Removes from the list of cookieable schemes. Does nothing if called after
++  // first use of the instance (i.e. after the instance initialization process).
++  virtual void RemoveCookieableSchemes(
++      const std::vector<std::string>& schemes,
++      SetCookieableSchemesCallback callback) = 0;
++
+   // This may be null if no delegate has been set yet, or the delegate has been
+   // reset to null.
+   const CookieAccessDelegate* cookie_access_delegate() const {

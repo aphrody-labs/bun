@@ -1,0 +1,12 @@
+diff --git a/components/policy/BUILD.gn b/components/policy/BUILD.gn
+index f724bf914a934de95d71eda0c17cc475b51a2eae..8d9bee4da75693d32ca8c99b87690382d5e1acae 100644
+--- a/components/policy/BUILD.gn
++++ b/components/policy/BUILD.gn
+@@ -307,6 +307,7 @@ static_library("generated") {
+     ":cloud_policy_proto_generated_compile",
+     ":policy_code_generate",
+     "//base",
++    "//cef/libcef/features:buildflags",
+     "//components/policy/core/common:common_constants",
+     "//components/policy/proto:policy_common_definitions_compile_proto",
+     "//third_party/protobuf:protobuf_lite",

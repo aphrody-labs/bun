@@ -1,0 +1,12 @@
+diff --git a/components/gwp_asan/client/BUILD.gn b/components/gwp_asan/client/BUILD.gn
+index ecb619e0046a5c19c328f3629a1a983f27cf4895..81113456f368726145523f978b4249e4304adfe9 100644
+--- a/components/gwp_asan/client/BUILD.gn
++++ b/components/gwp_asan/client/BUILD.gn
+@@ -94,6 +94,7 @@ component("client") {
+     ":features",
+     "//base",
+     "//base/allocator:buildflags",
++    "//cef/libcef/features:buildflags",
+     "//components/crash/core/common:crash_key",
+     "//components/gwp_asan/common",
+     "//components/gwp_asan/common:crash_keys",

@@ -1,0 +1,24 @@
+diff --git a/ui/linux/BUILD.gn b/ui/linux/BUILD.gn
+index d189afddfd789f8f49af8aad704aea60ae6f81b0..dd9d8ab0f87329eb59a18c2d7c22ce7989c072c0 100644
+--- a/ui/linux/BUILD.gn
++++ b/ui/linux/BUILD.gn
+@@ -4,6 +4,7 @@
+ 
+ import("//build/config/features.gni")
+ import("//build/config/linux/gtk/gtk.gni")
++import("//printing/buildflags/buildflags.gni")
+ import("//ui/qt/qt.gni")
+ 
+ assert(is_linux)
+@@ -36,6 +37,11 @@ component("linux_ui") {
+     "//ui/display/types",
+     "//ui/gfx/geometry",
+   ]
++
++  if (enable_printing) {
++    deps += [ "//printing/mojom" ]
++  }
++
+   public_deps = [ "//printing/buildflags" ]
+ }
+ 

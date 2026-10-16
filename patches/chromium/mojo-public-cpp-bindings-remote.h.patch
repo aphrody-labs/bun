@@ -1,0 +1,16 @@
+diff --git a/mojo/public/cpp/bindings/remote.h b/mojo/public/cpp/bindings/remote.h
+index 8b155478058754be4c4863fdfb998ec4eca0215e..6e266589d5615d1cf5cdc11bdb14b5f0711aeb1a 100644
+--- a/mojo/public/cpp/bindings/remote.h
++++ b/mojo/public/cpp/bindings/remote.h
+@@ -159,6 +159,11 @@ class Remote {
+     internal_state_.set_connection_error_with_reason_handler(
+         std::move(handler));
+   }
++  void set_disconnect_with_reason_and_result_handler(
++      ConnectionErrorWithReasonAndResultCallback handler) {
++    internal_state_.set_connection_error_with_reason_and_result_handler(
++        std::move(handler));
++  }
+ 
+   // A convenient helper that resets this Remote on disconnect. Note that this
+   // replaces any previously set disconnection handler. Must be called on a

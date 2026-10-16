@@ -1,0 +1,15 @@
+diff --git a/third_party/blink/renderer/core/exported/web_settings_impl.cc b/third_party/blink/renderer/core/exported/web_settings_impl.cc
+index 8e58be8163a9367e9216cbdd1987eb24d3f091ba..1abc46e622068f2e20a383734c82de621c1a6f76 100644
+--- a/third_party/blink/renderer/core/exported/web_settings_impl.cc
++++ b/third_party/blink/renderer/core/exported/web_settings_impl.cc
+@@ -176,6 +176,10 @@ void WebSettingsImpl::SetAccessibilityAlwaysShowFocus(bool always_show_focus) {
+   settings_->SetAccessibilityAlwaysShowFocus(always_show_focus);
+ }
+ 
++void WebSettingsImpl::SetAccessibilityViewportCollapse(bool enabled) {
++  settings_->SetAccessibilityViewportCollapse(enabled);
++}
++
+ void WebSettingsImpl::SetAccessibilityPasswordValuesEnabled(bool enabled) {
+   settings_->SetAccessibilityPasswordValuesEnabled(enabled);
+ }

@@ -1,0 +1,12 @@
+diff --git a/third_party/blink/renderer/core/frame/web_frame_widget_impl.cc b/third_party/blink/renderer/core/frame/web_frame_widget_impl.cc
+index 70db0cebcd2935504361d75e01f572fd3394d156..9e8c4d1bfa62c24488280cf8abcaa6d96adb1748 100644
+--- a/third_party/blink/renderer/core/frame/web_frame_widget_impl.cc
++++ b/third_party/blink/renderer/core/frame/web_frame_widget_impl.cc
+@@ -6135,6 +6135,7 @@ void WebFrameWidgetImpl::OnWindowShowStateChanged(
+       break;
+     case WindowShowState::kInactive:
+     case WindowShowState::kFullscreen:
++    case WindowShowState::kHidden:
+     case WindowShowState::kEnd:
+       break;
+   }

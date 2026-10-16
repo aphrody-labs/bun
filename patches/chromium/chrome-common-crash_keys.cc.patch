@@ -1,0 +1,42 @@
+diff --git a/chrome/common/crash_keys.cc b/chrome/common/crash_keys.cc
+index 523879a76b60930953de2c1594af84e3ebda5b65..ba514934713f06d1f59e932fd74e21d273b92da4 100644
+--- a/chrome/common/crash_keys.cc
++++ b/chrome/common/crash_keys.cc
+@@ -6,6 +6,7 @@
+ 
+ #include <array>
+ #include <deque>
++#include <iterator>
+ #include <string_view>
+ 
+ #include "base/base_switches.h"
+@@ -36,8 +37,10 @@ namespace {
+ 
+ constexpr std::string_view kStringAnnotationsSwitch = "string-annotations";
+ 
++}  // namespace
++
+ // Return true if we DON'T want to upload this flag to the crash server.
+-bool IsBoringSwitch(const std::string& flag) {
++bool IsBoringChromeSwitch(const std::string& flag) {
+   if (crash_keys::IsDefaultBoringSwitch(flag)) {
+     return true;
+   }
+@@ -96,6 +99,8 @@ bool IsBoringSwitch(const std::string& flag) {
+   return false;
+ }
+ 
++namespace {
++
+ std::deque<CrashKeyWithName>& GetCommandLineStringAnnotations() {
+   static base::NoDestructor<std::deque<CrashKeyWithName>>
+       command_line_string_annotations;
+@@ -144,7 +149,7 @@ void AppendStringAnnotationsCommandLineSwitch(base::CommandLine* command_line) {
+ void SetCrashKeysFromCommandLine(const base::CommandLine& command_line) {
+   SetStringAnnotations(command_line);
+   SetFeaturesFromCommandLine(command_line);
+-  SetSwitchesFromCommandLine(command_line, &IsBoringSwitch);
++  SetSwitchesFromCommandLine(command_line, &IsBoringChromeSwitch);
+ 
+ #if BUILDFLAG(IS_WIN)
+   auto process_token = base::win::AccessToken::FromCurrentProcess();

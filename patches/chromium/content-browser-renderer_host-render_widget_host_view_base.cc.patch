@@ -1,0 +1,19 @@
+diff --git a/content/browser/renderer_host/render_widget_host_view_base.cc b/content/browser/renderer_host/render_widget_host_view_base.cc
+index a705de6229ee61e27af7f7f39fe9d0362b7b6e13..afa463fc17068b73789068d0f35683ff1015c107 100644
+--- a/content/browser/renderer_host/render_widget_host_view_base.cc
++++ b/content/browser/renderer_host/render_widget_host_view_base.cc
+@@ -742,6 +742,14 @@ float RenderWidgetHostViewBase::GetScaleOverrideForCapture() const {
+   return scale_override_for_capture_;
+ }
+ 
++void RenderWidgetHostViewBase::SetHasExternalParent(bool val) {
++  has_external_parent_ = val;
++}
++
++bool RenderWidgetHostViewBase::HasExternalParent() const {
++  return has_external_parent_;
++}
++
+ void RenderWidgetHostViewBase::OnAutoscrollStart() {
+   if (!GetMouseWheelPhaseHandler())
+     return;

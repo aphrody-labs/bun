@@ -1,0 +1,13 @@
+diff --git a/ui/views/controls/menu/menu_host.h b/ui/views/controls/menu/menu_host.h
+index 1b0dd04e1d2693c8b35e5e57306a27b09b72daab..5e1fdfb5ea832f2d67c6a2a0168adbe5c112229b 100644
+--- a/ui/views/controls/menu/menu_host.h
++++ b/ui/views/controls/menu/menu_host.h
+@@ -57,6 +57,8 @@ class MenuHost : public Widget, public WidgetObserver {
+     // Additional information that helps to position anchored windows in such
+     // backends as Wayland.
+     ui::OwnedWindowAnchor owned_window_anchor;
++
++    gfx::AcceleratedWidget parent_widget = gfx::kNullAcceleratedWidget;
+   };
+ 
+   explicit MenuHost(SubmenuView* submenu);

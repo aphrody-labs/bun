@@ -1,0 +1,13 @@
+diff --git a/chrome/browser/win/app_icon.h b/chrome/browser/win/app_icon.h
+index db8209bbcc2142734d2870ac8174a9b78c60f784..b50bce7fae5b58a8e9f06d7499ec4b80ef875199 100644
+--- a/chrome/browser/win/app_icon.h
++++ b/chrome/browser/win/app_icon.h
+@@ -14,6 +14,8 @@ class ImageFamily;
+ class Size;
+ }
+ 
++void SetExeAppIconResourceId(int icon_id);
++
+ HICON GetAppIcon();
+ HICON GetSmallAppIcon();
+ 

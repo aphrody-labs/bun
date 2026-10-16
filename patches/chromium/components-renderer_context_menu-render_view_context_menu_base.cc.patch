@@ -1,0 +1,22 @@
+diff --git a/components/renderer_context_menu/render_view_context_menu_base.cc b/components/renderer_context_menu/render_view_context_menu_base.cc
+index 2b2fe5f40b7824ece0b9538cec9a1438ca437451..23c768a1229f3ee2427e8554b8ac615cce28d8d9 100644
+--- a/components/renderer_context_menu/render_view_context_menu_base.cc
++++ b/components/renderer_context_menu/render_view_context_menu_base.cc
+@@ -416,6 +416,17 @@ bool RenderViewContextMenuBase::IsCommandIdChecked(int id) const {
+   return false;
+ }
+ 
++bool RenderViewContextMenuBase::GetAcceleratorForCommandId(
++    int id,
++    ui::Accelerator* accelerator) const {
++  for (auto& observer : observers_) {
++    if (observer.IsCommandIdSupported(id))
++      return observer.GetAccelerator(id, accelerator);
++  }
++
++  return false;
++}
++
+ void RenderViewContextMenuBase::ExecuteCommand(int id, int event_flags) {
+   command_executed_ = true;
+   RecordUsedItem(id);

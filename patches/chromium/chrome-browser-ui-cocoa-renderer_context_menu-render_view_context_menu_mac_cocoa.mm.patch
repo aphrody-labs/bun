@@ -1,0 +1,26 @@
+diff --git a/chrome/browser/ui/cocoa/renderer_context_menu/render_view_context_menu_mac_cocoa.mm b/chrome/browser/ui/cocoa/renderer_context_menu/render_view_context_menu_mac_cocoa.mm
+index 10829d1e5930ce9f1b9deb4027b9ba7361ecb358..e6462ceca3ab21bb4f83f94ccbdf205d29df9c13 100644
+--- a/chrome/browser/ui/cocoa/renderer_context_menu/render_view_context_menu_mac_cocoa.mm
++++ b/chrome/browser/ui/cocoa/renderer_context_menu/render_view_context_menu_mac_cocoa.mm
+@@ -75,6 +75,10 @@ RenderViewContextMenuMacCocoa::~RenderViewContextMenuMacCocoa() {
+ }
+ 
+ void RenderViewContextMenuMacCocoa::Show() {
++  if (UseShowHandler()) {
++    return;
++  }
++
+   views::Widget* widget = views::Widget::GetTopLevelWidgetForNativeView(
+       source_web_contents_->GetNativeView());
+ 
+@@ -100,6 +104,10 @@ void RenderViewContextMenuMacCocoa::Show() {
+                       views::ElementTrackerViews::GetContextForWidget(widget));
+ }
+ 
++bool RenderViewContextMenuMacCocoa::IsRunning() {
++  return menu_controller_ && [menu_controller_ isMenuOpen];
++}
++
+ void RenderViewContextMenuMacCocoa::CancelToolkitMenu() {
+   [menu_controller_ cancel];
+ }

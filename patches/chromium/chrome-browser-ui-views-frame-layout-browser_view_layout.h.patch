@@ -1,0 +1,13 @@
+diff --git a/chrome/browser/ui/views/frame/layout/browser_view_layout.h b/chrome/browser/ui/views/frame/layout/browser_view_layout.h
+index c84c47a1190f9acd9602e6cc06badcbf81cf00a2..a2bb1d25ea23b8eb2b3c6763739d0f65a9f4d130 100644
+--- a/chrome/browser/ui/views/frame/layout/browser_view_layout.h
++++ b/chrome/browser/ui/views/frame/layout/browser_view_layout.h
+@@ -136,6 +136,8 @@ class BrowserViewLayout : public views::LayoutManager {
+     return views_.side_panel_animation_content;
+   }
+ 
++  void reset_toolbar() { views_.toolbar = nullptr; }
++
+   // views::LayoutManager overrides:
+   gfx::Size GetPreferredSize(
+       const views::View* host,

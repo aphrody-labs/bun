@@ -1,0 +1,36 @@
+diff --git a/chrome/browser/download/chrome_download_manager_delegate.h b/chrome/browser/download/chrome_download_manager_delegate.h
+index 677db611b4936cfdaa397b5f7dccf02d01fcfcea..477b1d67d09fafe1e3601d4644f4d4c0e342efe1 100644
+--- a/chrome/browser/download/chrome_download_manager_delegate.h
++++ b/chrome/browser/download/chrome_download_manager_delegate.h
+@@ -21,6 +21,7 @@
+ #include "base/task/sequenced_task_runner.h"
+ #include "base/unguessable_token.h"
+ #include "build/build_config.h"
++#include "cef/libcef/features/features.h"
+ #include "chrome/browser/download/download_completion_blocker.h"
+ #include "chrome/browser/download/download_target_determiner_delegate.h"
+ #include "components/download/public/common/download_danger_type.h"
+@@ -76,6 +77,12 @@ enum class DownloadCheckResult;
+ }
+ #endif
+ 
++#if BUILDFLAG(ENABLE_CEF)
++namespace cef {
++class DownloadManagerDelegate;
++}
++#endif
++
+ // This is the Chrome side helper for the download system.
+ class ChromeDownloadManagerDelegate
+     : public content::DownloadManagerDelegate,
+@@ -458,6 +465,10 @@ class ChromeDownloadManagerDelegate
+   // Whether a file picker dialog is showing.
+   bool is_file_picker_showing_ = false;
+ 
++#if BUILDFLAG(ENABLE_CEF)
++  std::unique_ptr<cef::DownloadManagerDelegate> cef_delegate_;
++#endif
++
+   base::WeakPtrFactory<ChromeDownloadManagerDelegate> weak_ptr_factory_{this};
+ };
+ 

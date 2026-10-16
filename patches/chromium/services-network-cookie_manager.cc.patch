@@ -1,0 +1,23 @@
+diff --git a/services/network/cookie_manager.cc b/services/network/cookie_manager.cc
+index b980d4df597a77ac915369a9543a74189156dc2a..0cbaca555dfe12d8a80c737d3da626fa281440df 100644
+--- a/services/network/cookie_manager.cc
++++ b/services/network/cookie_manager.cc
+@@ -344,13 +344,13 @@ void CookieManager::AllowFileSchemeCookies(
+     AllowFileSchemeCookiesCallback callback) {
+   OnSettingsWillChange();
+ 
+-  std::vector<std::string> cookieable_schemes =
+-      net::CookieMonster::GetDefaultCookieableSchemes();
+   if (allow) {
+-    cookieable_schemes.emplace_back(url::kFileScheme);
++    cookie_store_->AddCookieableSchemes({url::kFileScheme},
++                                        std::move(callback));
++  } else {
++    cookie_store_->RemoveCookieableSchemes({url::kFileScheme},
++                                           std::move(callback));
+   }
+-  cookie_store_->SetCookieableSchemes(std::move(cookieable_schemes),
+-                                      std::move(callback));
+ }
+ 
+ void CookieManager::SetForceKeepSessionState() {

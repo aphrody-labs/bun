@@ -1,0 +1,56 @@
+diff --git a/components/remote_cocoa/app_shim/native_widget_ns_window_bridge.mm b/components/remote_cocoa/app_shim/native_widget_ns_window_bridge.mm
+index e7a596db9798ce0dfa27d2f7691b7e3548405ac7..3b37b26482949a57d2c5015fb2dd973f213cc6b6 100644
+--- a/components/remote_cocoa/app_shim/native_widget_ns_window_bridge.mm
++++ b/components/remote_cocoa/app_shim/native_widget_ns_window_bridge.mm
+@@ -1521,7 +1521,51 @@ void NativeWidgetNSWindowBridge::OnWindowWillStartLiveResize() {
+ }
+ 
+ void NativeWidgetNSWindowBridge::OnWindowDidEndLiveResize() {
++  auto weak_this = factory_.GetWeakPtr();
+   host_->OnWindowDidEndLiveResize();
++
++  // Defer until AppKit has finished its resize handling. The host notification
++  // or subsequent tasks may close the window or change focus.
++  base::SingleThreadTaskRunner::GetCurrentDefault()->PostTask(
++      FROM_HERE,
++      base::BindOnce(
++          &NativeWidgetNSWindowBridge::RestoreChildModalFocusAfterResize,
++          weak_this));
++}
++
++void NativeWidgetNSWindowBridge::RestoreChildModalFocusAfterResize() {
++  if (!NSApp.active || NSApp.keyWindow != window_ || !window_.visible ||
++      window_.inLiveResize) {
++    return;
++  }
++
++  auto* modal = this;
++  while (true) {
++    // Native sheets (including file dialogs) manage their own activation.
++    if (modal->window_.attachedSheet) {
++      return;
++    }
++    const auto& children = modal->child_windows_;
++    auto it = std::find_if(children.rbegin(), children.rend(), [](auto* child) {
++      return child->modal_type_ != ui::mojom::ModalType::kNone &&
++             child->window_.visible;
++    });
++    if (it == children.rend()) {
++      break;
++    }
++    modal = *it;
++    if (modal->modal_type_ != ui::mojom::ModalType::kChild) {
++      return;
++    }
++  }
++
++  if (modal != this) {
++    // Making the dialog key restores its saved responder/focused view instead
++    // of resetting focus to the dialog's initially focused control.
++    // Retain the window across activation callbacks that may close its bridge.
++    NSWindow* modal_window = modal->window_;
++    [modal_window makeKeyWindow];
++  }
+ }
+ 
+ void NativeWidgetNSWindowBridge::OnVisibilityChanged() {

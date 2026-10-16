@@ -1,0 +1,55 @@
+diff --git a/chrome/browser/ui/views/frame/browser_widget.h b/chrome/browser/ui/views/frame/browser_widget.h
+index d384a2c99a1c1d8f160de20ea8518a6a4cc5ab71..39937dca7434763b3baa82600c7c9e73a6c01573 100644
+--- a/chrome/browser/ui/views/frame/browser_widget.h
++++ b/chrome/browser/ui/views/frame/browser_widget.h
+@@ -58,6 +58,7 @@ enum class TabDragKind {
+ class BrowserWidget : public views::Widget,
+                       public views::ContextMenuController {
+  public:
++  BrowserWidget();
+   explicit BrowserWidget(BrowserView* browser_view);
+ 
+   BrowserWidget(const BrowserWidget&) = delete;
+@@ -98,7 +99,7 @@ class BrowserWidget : public views::Widget,
+ 
+   // ThemeService calls this when a user has changed their theme, indicating
+   // that it's time to redraw everything.
+-  void UserChangedTheme(BrowserThemeChangeType theme_change_type);
++  virtual void UserChangedTheme(BrowserThemeChangeType theme_change_type);
+ 
+   // views::Widget:
+   views::internal::RootView* CreateRootView() override;
+@@ -132,11 +133,21 @@ class BrowserWidget : public views::Widget,
+   void SetTabDragKind(TabDragKind tab_drag_kind);
+   TabDragKind tab_drag_kind() const { return tab_drag_kind_; }
+ 
++  BrowserView* browser_view() const { return browser_view_.get(); }
++
+  protected:
++  void SetBrowserFrameView(BrowserFrameView* browser_frame_view);
++  void SetBrowserView(BrowserView* browser_view);
++
+   // views::Widget:
+   void OnNativeThemeUpdated(ui::NativeTheme* observed_theme) override;
+   ui::ColorProviderKey GetColorProviderKey() const override;
+ 
++  // Select a native theme that is appropriate for the current context. This is
++  // currently only needed for Linux to switch between the regular NativeTheme
++  // and the GTK NativeTheme instance.
++  void SelectNativeTheme();
++
+  private:
+   const ui::ThemeProvider* GetBaseThemeProvider() const;
+ 
+@@ -146,11 +157,6 @@ class BrowserWidget : public views::Widget,
+   // Callback for MenuRunner.
+   void OnMenuClosed();
+ 
+-  // Select a native theme that is appropriate for the current context. This is
+-  // currently only needed for Linux to switch between the regular NativeTheme
+-  // and the GTK NativeTheme instance.
+-  void SelectNativeTheme();
+-
+   // Regenerate the frame on theme change if necessary. Returns true if
+   // regenerated.
+   bool RegenerateFrameOnThemeChange(BrowserThemeChangeType theme_change_type);

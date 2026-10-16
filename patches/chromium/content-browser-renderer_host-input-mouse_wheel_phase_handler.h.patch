@@ -1,0 +1,12 @@
+diff --git a/content/browser/renderer_host/input/mouse_wheel_phase_handler.h b/content/browser/renderer_host/input/mouse_wheel_phase_handler.h
+index 0e48e79829001f718f219ed144de9c119240413f..eaca632ed4407b3fa7ce88c3a4c0c8abd75f8dfc 100644
+--- a/content/browser/renderer_host/input/mouse_wheel_phase_handler.h
++++ b/content/browser/renderer_host/input/mouse_wheel_phase_handler.h
+@@ -9,6 +9,7 @@
+ #include "base/time/time.h"
+ #include "base/timer/timer.h"
+ #include "content/browser/renderer_host/render_widget_host_delegate.h"
++#include "content/common/content_export.h"
+ #include "third_party/blink/public/common/input/web_mouse_wheel_event.h"
+ #include "third_party/blink/public/mojom/input/input_event_result.mojom-shared.h"
+ 

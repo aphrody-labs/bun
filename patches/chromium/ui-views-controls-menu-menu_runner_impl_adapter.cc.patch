@@ -1,0 +1,17 @@
+diff --git a/ui/views/controls/menu/menu_runner_impl_adapter.cc b/ui/views/controls/menu/menu_runner_impl_adapter.cc
+index d23190775a306c3db4bed95398bc8c525e4b20e5..8a1467a1f828f5b3b27533bebed28ba96a42768d 100644
+--- a/ui/views/controls/menu/menu_runner_impl_adapter.cc
++++ b/ui/views/controls/menu/menu_runner_impl_adapter.cc
+@@ -37,10 +37,11 @@ void MenuRunnerImplAdapter::RunMenuAt(
+     ui::mojom::MenuSourceType source_type,
+     int32_t types,
+     gfx::NativeView native_view_for_gestures,
++    gfx::AcceleratedWidget parent_widget,
+     std::optional<gfx::RoundedCornersF> corners,
+     std::optional<std::string> show_menu_host_duration_histogram) {
+   impl_->RunMenuAt(parent, button_controller, bounds, anchor, source_type,
+-                   types, native_view_for_gestures);
++                   types, native_view_for_gestures, parent_widget);
+ }
+ 
+ void MenuRunnerImplAdapter::Cancel() {

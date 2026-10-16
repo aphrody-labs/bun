@@ -1,0 +1,13 @@
+diff --git a/build/config/linux/atk/BUILD.gn b/build/config/linux/atk/BUILD.gn
+index aa8723b55c6a0b7375435e2d175868163d523d78..0dbb3405d35cec123a6f816f023866d8d6548706 100644
+--- a/build/config/linux/atk/BUILD.gn
++++ b/build/config/linux/atk/BUILD.gn
+@@ -9,7 +9,7 @@ import("//build/config/ui.gni")
+ assert(!is_chromeos)
+ 
+ # These packages should _only_ be expected when building for a target.
+-assert(current_toolchain == default_toolchain)
++# assert(current_toolchain == default_toolchain)
+ 
+ if (use_atk) {
+   assert(use_glib, "use_atk=true requires that use_glib=true")

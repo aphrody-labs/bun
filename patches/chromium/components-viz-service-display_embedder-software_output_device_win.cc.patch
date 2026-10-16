@@ -1,0 +1,16 @@
+diff --git a/components/viz/service/display_embedder/software_output_device_win.cc b/components/viz/service/display_embedder/software_output_device_win.cc
+index 4f9e8946fa02d859e92a6896beba82721914f868..cf20c96a84c5551eba592fecfce21350104491bd 100644
+--- a/components/viz/service/display_embedder/software_output_device_win.cc
++++ b/components/viz/service/display_embedder/software_output_device_win.cc
+@@ -158,8 +158,9 @@ void SoftwareOutputDeviceWinProxy::EndPaintDelegated(
+   if (!canvas_)
+     return;
+ 
+-  layered_window_updater_->Draw(base::BindOnce(
+-      &SoftwareOutputDeviceWinProxy::DrawAck, base::Unretained(this)));
++  layered_window_updater_->Draw(
++      damage_rect, base::BindOnce(&SoftwareOutputDeviceWinProxy::DrawAck,
++                                  base::Unretained(this)));
+   waiting_on_draw_ack_ = true;
+ 
+   TRACE_EVENT_BEGIN("viz", "SoftwareOutputDeviceWinProxy::Draw",

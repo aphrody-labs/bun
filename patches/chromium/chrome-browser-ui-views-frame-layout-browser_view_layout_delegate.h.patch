@@ -1,0 +1,12 @@
+diff --git a/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate.h b/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate.h
+index ac03bc00a00a9e127479f9da46b8bfb68da5fe98..b695949269ea20fee3c421ab72e0ca0d81f33831 100644
+--- a/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate.h
++++ b/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate.h
+@@ -46,6 +46,7 @@ class BrowserViewLayoutDelegate {
+       bool use_browser_bounds) const = 0;
+   virtual WindowState GetBrowserWindowState() const = 0;
+   virtual views::LayoutAlignment GetWindowTitleAlignment() const = 0;
++  virtual void UpdateDialogTopInsetInBrowserView(int* dialog_top_y) const = 0;
+   virtual bool IsToolbarVisible() const = 0;
+   virtual bool IsBookmarkBarVisible() const = 0;
+   virtual bool IsInfobarVisible() const = 0;

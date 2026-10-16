@@ -1,0 +1,13 @@
+diff --git a/ui/ozone/common/egl_util.cc b/ui/ozone/common/egl_util.cc
+index e9102802316a8e2e0cce4d7c3db1c14cdb71648e..1a1ab8625a789c894acf27b5fcd1d32baa21ca2f 100644
+--- a/ui/ozone/common/egl_util.cc
++++ b/ui/ozone/common/egl_util.cc
+@@ -154,7 +154,7 @@ bool LoadDefaultEGLGLES2Bindings(
+ 
+     base::FilePath module_path;
+ #if !BUILDFLAG(IS_FUCHSIA)
+-    if (!base::PathService::Get(base::DIR_MODULE, &module_path)) {
++    if (!base::PathService::Get(base::DIR_ASSETS, &module_path)) {
+       return false;
+     }
+ #endif

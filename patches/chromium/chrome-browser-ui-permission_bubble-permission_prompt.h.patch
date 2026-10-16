@@ -1,0 +1,18 @@
+diff --git a/chrome/browser/ui/permission_bubble/permission_prompt.h b/chrome/browser/ui/permission_bubble/permission_prompt.h
+index 6e9bba3c993b0c3c3ce71851b45e4316c5673d77..26f4c4771f9b7817fdd92e42b410c7abc6a0b4ea 100644
+--- a/chrome/browser/ui/permission_bubble/permission_prompt.h
++++ b/chrome/browser/ui/permission_bubble/permission_prompt.h
+@@ -12,6 +12,13 @@ namespace content {
+ class WebContents;
+ }
+ 
++using CreatePermissionPromptFunctionPtr =
++    std::unique_ptr<permissions::PermissionPrompt> (*)(
++        content::WebContents* web_contents,
++        permissions::PermissionPrompt::Delegate* delegate,
++        bool* default_handling);
++void SetCreatePermissionPromptFunction(CreatePermissionPromptFunctionPtr);
++
+ // Factory function to create permission prompts for chrome.
+ std::unique_ptr<permissions::PermissionPrompt> CreatePermissionPrompt(
+     content::WebContents* web_contents,

@@ -1,0 +1,45 @@
+diff --git a/ui/native_theme/native_theme.cc b/ui/native_theme/native_theme.cc
+index 412c163a231ba7b70930acb84e7921bffcbbda17..190b7584c45dbef5e2b5791bbeb2a37cd8937cf6 100644
+--- a/ui/native_theme/native_theme.cc
++++ b/ui/native_theme/native_theme.cc
+@@ -70,7 +70,10 @@ PreferredColorSchemeOverride() {
+       base::CommandLine::ForCurrentProcess()->HasSwitch(
+           switches::kForceDarkMode)
+           ? std::make_optional(NativeTheme::PreferredColorScheme::kDark)
+-          : std::nullopt;
++          : (base::CommandLine::ForCurrentProcess()->HasSwitch(
++                 "force-light-mode")
++                 ? std::make_optional(NativeTheme::PreferredColorScheme::kLight)
++                 : std::nullopt);
+   return value;
+ }
+ 
+@@ -316,6 +319,8 @@ void NativeTheme::NotifyOnNativeThemeUpdated() {
+ 
+   NotifyOnNativeThemeUpdatedImpl();
+ 
++  color_provider_manager.AfterNativeThemeUpdated();
++
+   RecordNumColorProvidersInitializedDuringOnNativeThemeUpdated(
+       color_provider_manager.num_providers_initialized() -
+       initial_providers_initialized);
+@@ -406,6 +411,19 @@ NativeTheme::GetPreferredColorSchemeOverride() {
+   return PreferredColorSchemeOverride();
+ }
+ 
++bool NativeTheme::IsForcedDarkMode() {
++  static bool kIsForcedDarkMode =
++      base::CommandLine::ForCurrentProcess()->HasSwitch(
++          switches::kForceDarkMode);
++  return kIsForcedDarkMode;
++}
++
++bool NativeTheme::IsForcedLightMode() {
++  static bool kIsForcedLightMode =
++      base::CommandLine::ForCurrentProcess()->HasSwitch("force-light-mode");
++  return kIsForcedLightMode;
++}
++
+ bool NativeTheme::IsForcedHighContrast() {
+   static bool kIsForcedHighContrast =
+       base::CommandLine::ForCurrentProcess()->HasSwitch(

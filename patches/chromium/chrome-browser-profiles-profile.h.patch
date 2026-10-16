@@ -1,0 +1,32 @@
+diff --git a/chrome/browser/profiles/profile.h b/chrome/browser/profiles/profile.h
+index c3f5e8f8e4bbeafef1741b7c8139737177fdb905..1063f2fca3b277f23695aea0bb85069c64188132 100644
+--- a/chrome/browser/profiles/profile.h
++++ b/chrome/browser/profiles/profile.h
+@@ -94,6 +94,10 @@ class Profile : public content::BrowserContext {
+     // details.
+     static OTRProfileID CreateUnique(const std::string& profile_id_prefix);
+ 
++    // Creates a unique OTR profile id to be used for CEF browser contexts.
++    static OTRProfileID CreateUniqueForCEF();
++    bool IsUniqueForCEF() const;
++
+     // Creates a unique OTR profile id to be used for DevTools browser contexts.
+     static OTRProfileID CreateUniqueForDevTools();
+ 
+@@ -517,6 +521,8 @@ class Profile : public content::BrowserContext {
+   virtual void AckCrashForTracking() = 0;
+ #endif
+ 
++  void NotifyOffTheRecordProfileCreated(Profile* off_the_record);
++
+   LifecycleState lifecycle_state() const { return lifecycle_state_; }
+   void set_lifecycle_state(LifecycleState lifecycle_state) {
+     lifecycle_state_ = lifecycle_state;
+@@ -534,7 +540,6 @@ class Profile : public content::BrowserContext {
+       Profile*,
+       bool incognito_pref_store);
+ 
+-  void NotifyOffTheRecordProfileCreated(Profile* off_the_record);
+   void NotifyProfileInitializationComplete();
+ 
+   // Returns whether the user has signed in this profile to an account.

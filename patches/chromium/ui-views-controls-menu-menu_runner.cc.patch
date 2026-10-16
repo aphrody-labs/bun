@@ -1,0 +1,21 @@
+diff --git a/ui/views/controls/menu/menu_runner.cc b/ui/views/controls/menu/menu_runner.cc
+index 87739aa15210faf8666d28199f393532ec580a57..e785faf160c2ef01bd0b1bcf3d734e8f1e72e270 100644
+--- a/ui/views/controls/menu/menu_runner.cc
++++ b/ui/views/controls/menu/menu_runner.cc
+@@ -43,6 +43,7 @@ void MenuRunner::RunMenuAt(
+     MenuAnchorPosition anchor,
+     ui::mojom::MenuSourceType source_type,
+     gfx::NativeView native_view_for_gestures,
++    gfx::AcceleratedWidget parent_widget,
+     std::optional<gfx::RoundedCornersF> corners,
+     std::optional<std::string> show_menu_host_duration_histogram) {
+   // Do not attempt to show the menu if the application is currently shutting
+@@ -90,7 +91,7 @@ void MenuRunner::RunMenuAt(
+   }
+ 
+   impl_->RunMenuAt(parent, button_controller, bounds, anchor, source_type,
+-                   run_types_, native_view_for_gestures, corners,
++                   run_types_, native_view_for_gestures, parent_widget, corners,
+                    std::move(show_menu_host_duration_histogram));
+ }
+ 

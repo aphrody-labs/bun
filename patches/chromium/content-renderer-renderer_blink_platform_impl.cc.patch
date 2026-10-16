@@ -1,0 +1,20 @@
+diff --git a/content/renderer/renderer_blink_platform_impl.cc b/content/renderer/renderer_blink_platform_impl.cc
+index 063cec06ba0dc94a28c4f6698f6f165359011c23..db185b1d1e055ea3ec7cd9ced6370c24b3404f36 100644
+--- a/content/renderer/renderer_blink_platform_impl.cc
++++ b/content/renderer/renderer_blink_platform_impl.cc
+@@ -1127,6 +1127,15 @@ RendererBlinkPlatformImpl::GetCpuPerformanceTier() {
+ 
+ //------------------------------------------------------------------------------
+ 
++void RendererBlinkPlatformImpl::DevToolsAgentAttached() {
++  GetContentClient()->renderer()->DevToolsAgentAttached();
++}
++void RendererBlinkPlatformImpl::DevToolsAgentDetached() {
++  GetContentClient()->renderer()->DevToolsAgentDetached();
++}
++
++//------------------------------------------------------------------------------
++
+ std::unique_ptr<blink::WebV8ValueConverter>
+ RendererBlinkPlatformImpl::CreateWebV8ValueConverter() {
+   return std::make_unique<V8ValueConverterImpl>();

@@ -1,0 +1,13 @@
+diff --git a/services/viz/privileged/mojom/compositing/frame_sink_manager.mojom b/services/viz/privileged/mojom/compositing/frame_sink_manager.mojom
+index a360316b8f0b1c4de98248bf2cb44b5a7ac3c272..ecbe2129f70a52b7ac1415a6f3af68659e89004c 100644
+--- a/services/viz/privileged/mojom/compositing/frame_sink_manager.mojom
++++ b/services/viz/privileged/mojom/compositing/frame_sink_manager.mojom
+@@ -70,6 +70,8 @@ struct RootCompositorFrameSinkParams {
+   // `external_begin_frame_controller` is set.
+   pending_associated_remote<ExternalBeginFrameControllerClient>?
+       external_begin_frame_controller_client;
++
++   bool use_proxy_output_device = false;
+ };
+ 
+ // The FrameSinkManager interface is a privileged interface that allows the

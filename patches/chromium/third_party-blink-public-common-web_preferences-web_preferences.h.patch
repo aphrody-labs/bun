@@ -1,0 +1,14 @@
+diff --git a/third_party/blink/public/common/web_preferences/web_preferences.h b/third_party/blink/public/common/web_preferences/web_preferences.h
+index afad7285f6508a82bf4f8fa030dde81de5d61a12..0a1f53ba253c6591a39a5768a768f08f7c58f83b 100644
+--- a/third_party/blink/public/common/web_preferences/web_preferences.h
++++ b/third_party/blink/public/common/web_preferences/web_preferences.h
+@@ -437,6 +437,9 @@ struct BLINK_COMMON_EXPORT WebPreferences {
+   // forcing :focus-visible to match regardless of focus method).
+   bool always_show_focus = false;
+ 
++  // Whether CDP accessibility tree serialization collapses off-screen nodes.
++  bool accessibility_viewport_collapse = false;
++
+   // Whether touch input can trigger HTML drag-and-drop operations. The
+   // default value depends on the platform.
+   bool touch_drag_drop_enabled = false;

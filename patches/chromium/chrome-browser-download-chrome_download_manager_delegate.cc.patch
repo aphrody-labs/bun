@@ -1,0 +1,73 @@
+diff --git a/chrome/browser/download/chrome_download_manager_delegate.cc b/chrome/browser/download/chrome_download_manager_delegate.cc
+index 5d999436c7e7c5440198fa1d2fd7e7fbad3156e6..3cdc5f4a7de7dcc1d111937084d577ff6fc1ec1b 100644
+--- a/chrome/browser/download/chrome_download_manager_delegate.cc
++++ b/chrome/browser/download/chrome_download_manager_delegate.cc
+@@ -32,6 +32,7 @@
+ #include "base/task/thread_pool.h"
+ #include "base/time/time.h"
+ #include "build/build_config.h"
++#include "cef/libcef/features/features.h"
+ #include "chrome/browser/browser_process.h"
+ #include "chrome/browser/download/download_core_service.h"
+ #include "chrome/browser/download/download_core_service_factory.h"
+@@ -186,6 +187,10 @@
+ #endif  // BUILDFLAG(ENTERPRISE_CLOUD_CONTENT_ANALYSIS)
+ #endif  // BUILDFLAG(SAFE_BROWSING_DOWNLOAD_PROTECTION)
+ 
++#if BUILDFLAG(ENABLE_CEF)
++#include "cef/libcef/browser/download_manager_delegate.h"
++#endif
++
+ using content::BrowserThread;
+ using content::DownloadManager;
+ using download::DownloadItem;
+@@ -710,6 +715,10 @@ ChromeDownloadManagerDelegate::ChromeDownloadManagerDelegate(Profile* profile)
+       download_message_bridge_(std::make_unique<DownloadMessageBridge>()),
+ #endif
+       download_prefs_(std::make_unique<DownloadPrefs>(profile)) {
++#if BUILDFLAG(ENABLE_CEF)
++  cef_delegate_ =
++      cef::DownloadManagerDelegate::Create(profile_->GetDownloadManager());
++#endif
+ }
+ 
+ ChromeDownloadManagerDelegate::~ChromeDownloadManagerDelegate() {
+@@ -791,6 +800,9 @@ void ChromeDownloadManagerDelegate::Shutdown() {
+     download_manager_->RemoveObserver(this);
+     download_manager_ = nullptr;
+   }
++#if BUILDFLAG(ENABLE_CEF)
++  cef_delegate_.reset();
++#endif
+ }
+ 
+ void ChromeDownloadManagerDelegate::OnDownloadCanceledAtShutdown(
+@@ -872,6 +884,12 @@ bool ChromeDownloadManagerDelegate::DetermineDownloadTarget(
+     ReportPDFLoadStatus(PDFLoadStatus::kTriggeredNoGestureDriveByDownload);
+   }
+ 
++#if BUILDFLAG(ENABLE_CEF)
++  if (cef_delegate_->DetermineDownloadTarget(download, callback)) {
++    return true;
++  }
++#endif
++
+   DownloadTargetDeterminer::CompletionCallback target_determined_callback =
+       base::BindOnce(&ChromeDownloadManagerDelegate::OnDownloadTargetDetermined,
+                      weak_ptr_factory_.GetWeakPtr(), download->GetId(),
+@@ -1443,9 +1461,12 @@ void ChromeDownloadManagerDelegate::OpenDownload(DownloadItem* download) {
+ 
+   BrowserWindowInterface* browser =
+       chrome::ScopedTabbedBrowserDisplayer(profile_).browser_window_interface();
+-  CHECK(browser &&
+-        WindowFeatureController::From(browser)->CanSupportWindowFeature(
+-            WindowFeatureController::WindowFeature::kFeatureTabStrip));
++  CHECK(browser
++#if !BUILDFLAG(ENABLE_CEF)
++        && WindowFeatureController::From(browser)->CanSupportWindowFeature(
++               WindowFeatureController::WindowFeature::kFeatureTabStrip)
++#endif
++  );
+   content::OpenURLParams params =
+       content::OpenURLParams::CreateBrowserInitiated(
+           net::FilePathToFileURL(download->GetTargetFilePath()),

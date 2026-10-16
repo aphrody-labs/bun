@@ -1,0 +1,17 @@
+diff --git a/components/web_modal/modal_dialog_host.h b/components/web_modal/modal_dialog_host.h
+index a1410173b87559db21104cc5012f2a28ad760d3c..866e555f39427dc5eca20a072272157ed3d917eb 100644
+--- a/components/web_modal/modal_dialog_host.h
++++ b/components/web_modal/modal_dialog_host.h
+@@ -34,6 +34,12 @@ class WEB_MODAL_EXPORT ModalDialogHost {
+   // Returns the view against which the dialog is positioned and parented.
+   virtual gfx::NativeView GetHostView() const = 0;
+ 
++  // Returns the widget against which the dialog is positioned and parented.
++  // Used with CEF windowless rendering.
++  virtual gfx::AcceleratedWidget GetAcceleratedWidget() const {
++    return gfx::kNullAcceleratedWidget;
++  }
++
+   // Gets the position for the dialog in coordinates relative to the host view.
+   virtual gfx::Point GetDialogPosition(const gfx::Size& size) = 0;
+ 

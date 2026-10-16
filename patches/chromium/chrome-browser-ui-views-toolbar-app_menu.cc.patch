@@ -1,0 +1,20 @@
+diff --git a/chrome/browser/ui/views/toolbar/app_menu.cc b/chrome/browser/ui/views/toolbar/app_menu.cc
+index 0d5179c864c54e569cb9ee095af9ed8553bb1e91..366412948a54025161ba01a06de40efc05c8a8a7 100644
+--- a/chrome/browser/ui/views/toolbar/app_menu.cc
++++ b/chrome/browser/ui/views/toolbar/app_menu.cc
+@@ -1109,6 +1109,7 @@ void AppMenu::RunMenu(views::MenuButtonController* host,
+                           host->button()->GetAnchorBoundsInScreen(),
+                           views::MenuAnchorPosition::kTopRight, source_type,
+                           /*native_view_for_gestures=*/gfx::NativeView(),
++                          /*parent_widget=*/gfx::kNullAcceleratedWidget,
+                           /*corners=*/std::nullopt,
+                           "Chrome.AppMenu.MenuHostInitToNextFramePresented");
+ }
+@@ -1123,6 +1124,7 @@ void AppMenu::RunMenu(views::Widget* parent,
+   menu_runner_->RunMenuAt(parent, nullptr, anchor_screen_bounds,
+                           views::MenuAnchorPosition::kTopRight, source_type,
+                           /*native_view_for_gestures=*/gfx::NativeView(),
++                          /*parent_widget=*/gfx::kNullAcceleratedWidget,
+                           /*corners=*/std::nullopt,
+                           "Chrome.AppMenu.MenuHostInitToNextFramePresented");
+ }

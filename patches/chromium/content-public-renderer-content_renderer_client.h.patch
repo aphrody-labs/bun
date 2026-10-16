@@ -1,0 +1,25 @@
+diff --git a/content/public/renderer/content_renderer_client.h b/content/public/renderer/content_renderer_client.h
+index ee1ba2eeb47f936cf1b7cb7634a9f1f91f0a5246..95fdb68064280d96b62e4be36a8758bfc31a9c73 100644
+--- a/content/public/renderer/content_renderer_client.h
++++ b/content/public/renderer/content_renderer_client.h
+@@ -110,6 +110,9 @@ class CONTENT_EXPORT ContentRendererClient {
+   // a crash handler (such as crashpad) is already in use.
+   virtual void SetUpWebAssemblyTrapHandler();
+ 
++  // Notifies that the RenderThread can now send sync IPC messages.
++  virtual void RenderThreadConnected() {}
++
+   // Notifies that a new RenderFrame has been created.
+   virtual void RenderFrameCreated(RenderFrame* render_frame) {}
+ 
+@@ -358,6 +361,10 @@ class CONTENT_EXPORT ContentRendererClient {
+   // This method may invalidate the frame.
+   virtual void RunScriptsAtDocumentIdle(RenderFrame* render_frame) {}
+ 
++  // Notifies that a DevTools agent has attached or detached.
++  virtual void DevToolsAgentAttached() {}
++  virtual void DevToolsAgentDetached() {}
++
+   // Allows subclasses to enable some runtime features before Blink has
+   // started.
+   virtual void SetRuntimeFeaturesDefaultsBeforeBlinkInitialization() {}

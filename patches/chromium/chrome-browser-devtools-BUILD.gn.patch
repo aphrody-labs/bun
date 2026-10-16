@@ -1,0 +1,24 @@
+diff --git a/chrome/browser/devtools/BUILD.gn b/chrome/browser/devtools/BUILD.gn
+index 83f42ae51fbc73544153fa2e0de1dd092bcd6f11..96b12cf9022ce0a7e6964680cf81be43201ff0d4 100644
+--- a/chrome/browser/devtools/BUILD.gn
++++ b/chrome/browser/devtools/BUILD.gn
+@@ -2,6 +2,7 @@
+ # Use of this source code is governed by a BSD-style license that can be
+ # found in the LICENSE file.
+ 
++import("//cef/libcef/features/features.gni")
+ import("//content/browser/devtools/features.gni")
+ import("//extensions/buildflags/buildflags.gni")
+ import("//printing/buildflags/buildflags.gni")
+@@ -535,6 +536,11 @@ static_library("devtools") {
+   if (!is_android) {
+     deps += [ "//chrome/browser/ui:browser_tab_strip_tracker" ]
+   }
++  deps += [ "//cef/libcef/features:buildflags" ]
++  if (enable_cef) {
++    configs += [ "//cef/libcef/features:config" ]
++    deps += [ "//cef/libcef/features:deps" ]
++  }
+ }
+ 
+ static_library("test_support") {

@@ -1,0 +1,12 @@
+diff --git a/ui/views/controls/menu/menu_runner_impl_cocoa.mm b/ui/views/controls/menu/menu_runner_impl_cocoa.mm
+index acc5a70d1c1f294df7f154a3cfebfc1beffc0658..3c181da5873cfff9ee268a746338fd62b7564dae 100644
+--- a/ui/views/controls/menu/menu_runner_impl_cocoa.mm
++++ b/ui/views/controls/menu/menu_runner_impl_cocoa.mm
+@@ -72,6 +72,7 @@ void MenuRunnerImplCocoa::RunMenuAt(
+     ui::mojom::MenuSourceType source_type,
+     int32_t run_types,
+     gfx::NativeView native_view_for_gestures,
++    gfx::AcceleratedWidget /*parent_widget*/,
+     std::optional<gfx::RoundedCornersF> corners,
+     std::optional<std::string> show_menu_host_duration_histogram) {
+   DCHECK(!IsRunning());

@@ -1,0 +1,14 @@
+diff --git a/chrome/browser/ui/views/omnibox/omnibox_popup_closer.cc b/chrome/browser/ui/views/omnibox/omnibox_popup_closer.cc
+index f3468b8df860303d49052587004ca1e0f501d4fd..44c59704cad310c5f577470eb3b0e2c431cb9a6c 100644
+--- a/chrome/browser/ui/views/omnibox/omnibox_popup_closer.cc
++++ b/chrome/browser/ui/views/omnibox/omnibox_popup_closer.cc
+@@ -59,7 +59,8 @@ OmniboxPopupCloser::~OmniboxPopupCloser() = default;
+ 
+ void OmniboxPopupCloser::OnMouseEvent(ui::MouseEvent* event) {
+   // Close the omnibox popup if the click is outside the omnibox view.
+-  if (!browser_view_->browser()->IsDeleteScheduled()) {
++  if (browser_view_->browser() &&
++      !browser_view_->browser()->IsDeleteScheduled()) {
+     LocationBar* location_bar = browser_view_->GetLocationBar();
+     CHECK(location_bar);
+     if (location_bar->ShouldCloseOmniboxPopup(event)) {

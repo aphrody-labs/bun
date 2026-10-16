@@ -1,0 +1,36 @@
+diff --git a/base/rand_util.cc b/base/rand_util.cc
+index 0387c25e436c1e7d6b379fcbfcd0cb62970792c8..96503e3f54a1788394bc5a1286650d48de04aa36 100644
+--- a/base/rand_util.cc
++++ b/base/rand_util.cc
+@@ -130,17 +130,27 @@ std::vector<uint8_t> RandBytesAsVector(size_t length) {
+   return result;
+ }
+ 
+-InsecureRandomGenerator::InsecureRandomGenerator() {
+-  a_ = base::RandUint64();
+-  b_ = base::RandUint64();
+-}
++InsecureRandomGenerator::InsecureRandomGenerator() = default;
+ 
+ void InsecureRandomGenerator::ReseedForTesting(uint64_t seed) {
++  // `(0, 0)` is reserved as the "unseeded" sentinel; see header.
++  CHECK_NE(seed, 0u);
+   a_ = seed;
+   b_ = seed;
+ }
+ 
+ uint64_t InsecureRandomGenerator::RandUint64() const {
++  // First use can occur while holding an allocator lock (e.g. lock metrics
++  // sampling), so seeding must also avoid allocation. `(0, 0)` is
++  // XorShift128+'s unique fixed point, so it cannot occur post-seeding and is
++  // safe to use as the sentinel.
++  if (a_ == 0 && b_ == 0) [[unlikely]] {
++    do {
++      internal::RandBytesAvoidAllocation(byte_span_from_ref(a_));
++      internal::RandBytesAvoidAllocation(byte_span_from_ref(b_));
++    } while (a_ == 0 && b_ == 0);  // ~2^-128; effectively never iterates.
++  }
++
+   // Using XorShift128+, which is simple and widely used. See
+   // https://en.wikipedia.org/wiki/Xorshift#xorshift+ for details.
+   uint64_t t = a_;

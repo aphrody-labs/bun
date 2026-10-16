@@ -1,0 +1,15 @@
+diff --git a/chrome/browser/ui/views/profiles/profile_menu_coordinator.cc b/chrome/browser/ui/views/profiles/profile_menu_coordinator.cc
+index 913e028f5bcff9f570e22820b055f636a32bf364..e4760704d846065f8e55a819022273d9b83e6461 100644
+--- a/chrome/browser/ui/views/profiles/profile_menu_coordinator.cc
++++ b/chrome/browser/ui/views/profiles/profile_menu_coordinator.cc
+@@ -96,7 +96,9 @@ void ProfileMenuCoordinator::ShowWithPromoResults(
+   auto avatar_toolbar_button = GetAvatarToolbarButton();
+   std::unique_ptr<ProfileMenuViewBase> bubble;
+   const bool is_incognito = GetProfile()->IsIncognitoProfile();
+-  if (is_incognito) {
++  if (is_incognito ||
++         (GetProfile()->IsOffTheRecord() &&
++          GetProfile()->GetOTRProfileID().IsUniqueForCEF())) {
+     bubble = std::make_unique<IncognitoMenuView>(avatar_toolbar_button,
+                                                  &browser_.get());
+   } else if (GetProfile()->IsEnterpriseIsolatedModeProfile()) {

@@ -1,0 +1,43 @@
+diff --git a/chrome/browser/ui/startup/startup_browser_creator.cc b/chrome/browser/ui/startup/startup_browser_creator.cc
+index 49f777ff63d99301b0b2beea91edeb322464b9fd..a91743e35fb09d48a07d51d349ea5ede6ee977f3 100644
+--- a/chrome/browser/ui/startup/startup_browser_creator.cc
++++ b/chrome/browser/ui/startup/startup_browser_creator.cc
+@@ -689,6 +689,13 @@ std::optional<bool> MaybeHandleValidateCrx(
+   return false;
+ }
+ 
++StartupBrowserCreator::ProcessCommandLineCallback*
++GetProcessCommandLineCallback() {
++  static base::NoDestructor<StartupBrowserCreator::ProcessCommandLineCallback>
++      callback;
++  return callback.get();
++}
++
+ }  // namespace
+ 
+ StartupBrowserCreator::StartupBrowserCreator() = default;
+@@ -1579,6 +1586,12 @@ void StartupBrowserCreator::ProcessCommandLineWithProfile(
+       {profile, mode}, last_opened_profiles);
+ }
+ 
++// static
++void StartupBrowserCreator::RegisterProcessCommandLineCallback(
++    ProcessCommandLineCallback cb) {
++  *GetProcessCommandLineCallback() = cb;
++}
++
+ // static
+ void StartupBrowserCreator::ProcessCommandLineAlreadyRunning(
+     const base::CommandLine& command_line,
+@@ -1588,6 +1601,11 @@ void StartupBrowserCreator::ProcessCommandLineAlreadyRunning(
+     return;
+   }
+ 
++  auto* cb = GetProcessCommandLineCallback();
++  if (!cb->is_null() && cb->Run(command_line, cur_dir)) {
++    return;
++  }
++
+   Profile* profile = nullptr;
+   if (profile_path_info.mode == StartupProfileMode::kBrowserWindow) {
+     ProfileManager* profile_manager = g_browser_process->profile_manager();

@@ -1,0 +1,14 @@
+diff --git a/third_party/blink/public/mojom/webpreferences/web_preferences.mojom b/third_party/blink/public/mojom/webpreferences/web_preferences.mojom
+index 505832dd70e9089a98be31856e7a2bfb848aac17..26ef3a25c892051585e7cf998fcc6798211c17d9 100644
+--- a/third_party/blink/public/mojom/webpreferences/web_preferences.mojom
++++ b/third_party/blink/public/mojom/webpreferences/web_preferences.mojom
+@@ -488,6 +488,9 @@ struct WebPreferences {
+   // forcing :focus-visible to match regardless of focus method).
+   bool always_show_focus;
+ 
++  // Whether CDP accessibility tree serialization collapses off-screen nodes.
++  bool accessibility_viewport_collapse;
++
+   // Whether touch input can trigger HTML drag-and-drop operations. The
+   // default value depends on the platform.
+   bool touch_drag_drop_enabled;

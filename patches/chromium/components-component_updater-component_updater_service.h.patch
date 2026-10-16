@@ -1,0 +1,20 @@
+diff --git a/components/component_updater/component_updater_service.h b/components/component_updater/component_updater_service.h
+index 45fd0dffb50a77e8c462b9f921fc05518c5193e3..77143f9a20211809b221c862161730a35d3d5afe 100644
+--- a/components/component_updater/component_updater_service.h
++++ b/components/component_updater/component_updater_service.h
+@@ -21,6 +21,7 @@
+ #include "build/build_config.h"
+ #include "components/update_client/update_client.h"
+ 
++class CefComponentUpdaterImpl;
+ class ComponentsHandler;
+ class PluginObserver;
+ 
+@@ -243,6 +244,7 @@ class OnDemandUpdater {
+   friend class ash::SmartDimComponentIntegrationTest;
+   friend class CrOSComponentInstaller;
+ #endif  // BUILDFLAG(IS_CHROMEOS)
++  friend class ::CefComponentUpdaterImpl;
+   friend class IwaKeyDistributionComponentInstallerPolicy;
+   friend class PlatformRuntimeComponentInstallerPolicy;
+   friend void UpdateAIEmbeddingsComponentOnDemand(Priority priority,

@@ -1,0 +1,12 @@
+diff --git a/components/renderer_context_menu/views/toolkit_delegate_views.h b/components/renderer_context_menu/views/toolkit_delegate_views.h
+index 7762b3e6673d91edd01858bfd325ee57e3d9f766..5bd1544aaaa6229bd20955e0e0ded1360d1395b2 100644
+--- a/components/renderer_context_menu/views/toolkit_delegate_views.h
++++ b/components/renderer_context_menu/views/toolkit_delegate_views.h
+@@ -39,6 +39,7 @@ class ToolkitDelegateViews : public RenderViewContextMenuBase::ToolkitDelegate {
+                  const gfx::Point& point,
+                  ui::mojom::MenuSourceType type);
+   views::MenuItemView* menu_view() { return menu_view_; }
++  bool IsMenuRunning() const;
+ 
+  protected:
+   // ToolkitDelegate:

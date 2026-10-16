@@ -1,0 +1,13 @@
+diff --git a/ui/shell_dialogs/select_file_dialog_factory.h b/ui/shell_dialogs/select_file_dialog_factory.h
+index c7acd9b05fbb8c94c37a03c9b7e170548cb3dfbb..3e95e4125fa245e9671437e847058a865a52876a 100644
+--- a/ui/shell_dialogs/select_file_dialog_factory.h
++++ b/ui/shell_dialogs/select_file_dialog_factory.h
+@@ -24,6 +24,8 @@ class SHELL_DIALOGS_EXPORT SelectFileDialogFactory {
+   virtual SelectFileDialog* Create(
+       ui::SelectFileDialog::Listener* listener,
+       std::unique_ptr<ui::SelectFilePolicy> policy) = 0;
++
++  virtual bool IsCefFactory() const { return false; }
+ };
+ 
+ }  // namespace ui

@@ -1,0 +1,15 @@
+diff --git a/ui/views/controls/webview/webview.cc b/ui/views/controls/webview/webview.cc
+index 41afec12a8b37454b6e4606aeb3f1121c9f195f2..17f6cfb2d63d4d16c5275120e5a7004585b50d18 100644
+--- a/ui/views/controls/webview/webview.cc
++++ b/ui/views/controls/webview/webview.cc
+@@ -223,6 +223,10 @@ const gfx::Size& WebView::AutoResizeMaxSize() const {
+   return max_size_;
+ }
+ 
++void WebView::SetResizeBackgroundColor(SkColor resize_background_color) {
++  holder_->SetBackgroundColorWhenClipped(resize_background_color);
++}
++
+ void WebView::TakeCrashedOverlayViewImpl(
+     std::unique_ptr<View> crashed_overlay_view,
+     ReturnCrashOverlayToOwnerCallback return_to_owner) {

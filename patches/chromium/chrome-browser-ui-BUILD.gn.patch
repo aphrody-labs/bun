@@ -1,0 +1,75 @@
+diff --git a/chrome/browser/ui/BUILD.gn b/chrome/browser/ui/BUILD.gn
+index 9209b135c5c3911cd2da1464f8e05364e16a5ff5..898b45d1edbe28c68a7604cb6f85cc3d71e20f81 100644
+--- a/chrome/browser/ui/BUILD.gn
++++ b/chrome/browser/ui/BUILD.gn
+@@ -2,6 +2,7 @@
+ # Use of this source code is governed by a BSD-style license that can be
+ # found in the LICENSE file.
+ 
++import("//cef/libcef/features/features.gni")
+ import("//build/config/buildflags_paint_preview.gni")
+ import("//build/config/chrome_build.gni")
+ import("//build/config/compiler/compiler.gni")
+@@ -121,6 +122,11 @@ if (!is_android) {
+       "//ui/base",
+       "//url",
+     ]
++    deps += [ "//cef/libcef/features:buildflags" ]
++    if (enable_cef) {
++      configs += [ "//cef/libcef/features:config" ]
++      deps += [ "//cef/libcef/features:deps" ]
++    }
+   }
+ 
+   source_set("chrome_web_modal_dialog_manager_delegate") {
+@@ -161,6 +167,11 @@ if (!is_android) {
+       "//components/keep_alive_registry",
+       "//printing/buildflags",
+     ]
++    deps += [ "//cef/libcef/features:buildflags" ]
++    if (enable_cef) {
++      configs += [ "//cef/libcef/features:config" ]
++      deps += [ "//cef/libcef/features:deps" ]
++    }
+   }
+ 
+   source_set("intent_picker_tab_helper") {
+@@ -1327,6 +1338,7 @@ source_set("download_close_type") {
+ 
+ source_set("tab_helpers") {
+   public = [ "tab_helpers.h" ]
++  public_deps = [ "//cef/libcef/features:buildflags" ]
+ }
+ 
+ source_set("tab_helpers_impl") {
+@@ -1509,6 +1521,12 @@ if (!is_android) {
+       "//ui/gfx/geometry",
+       "//url",
+     ]
++    public_deps += [ "//cef/libcef/features:buildflags" ]
++    if (enable_cef) {
++      visibility += [ "//cef/*" ]
++      public_configs = [ "//cef/libcef/features:config" ]
++      deps = [ "//cef/libcef/features:deps" ]
++    }
+   }
+ 
+   source_set("core") {
+@@ -1632,6 +1650,17 @@ if (!is_android) {
+     if (enable_captive_portal_detection) {
+       deps += [ "//components/captive_portal/content" ]
+     }
++    deps += [ "//cef/libcef/features:buildflags" ]
++    if (enable_cef) {
++      configs += [ "//cef/libcef/features:config" ]
++      deps += [ "//cef/libcef/features:deps" ]
++    }
++    if (enable_cef) {
++      deps += [ "//cef:cef_resources" ]
++    }
++    if (enable_printing) {
++      deps += [ "//components/printing/common:mojo_interfaces" ]
++    }
+   }
+ }
+ 

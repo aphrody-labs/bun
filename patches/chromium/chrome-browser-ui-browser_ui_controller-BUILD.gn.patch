@@ -1,0 +1,22 @@
+diff --git a/chrome/browser/ui/browser_ui_controller/BUILD.gn b/chrome/browser/ui/browser_ui_controller/BUILD.gn
+index 6ea2a379145cb3973e67545f8667ab00be09d251..f4d61e08a52a3798ac787e6130fff5e98d6b71a5 100644
+--- a/chrome/browser/ui/browser_ui_controller/BUILD.gn
++++ b/chrome/browser/ui/browser_ui_controller/BUILD.gn
+@@ -2,6 +2,7 @@
+ # Use of this source code is governed by a BSD-style license that can be
+ # found in the LICENSE file.
+ 
++import("//cef/libcef/features/features.gni")
+ assert(!is_android)
+ 
+ source_set("browser_ui_controller") {
+@@ -39,4 +40,9 @@ source_set("impl") {
+     "//chrome/browser/ui/web_applications",
+     "//content/public/browser",
+   ]
++  deps += [ "//cef/libcef/features:buildflags" ]
++  if (enable_cef) {
++    configs += [ "//cef/libcef/features:config" ]
++    deps += [ "//cef/libcef/features:deps" ]
++  }
+ }

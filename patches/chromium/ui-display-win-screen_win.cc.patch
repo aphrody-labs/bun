@@ -1,0 +1,22 @@
+diff --git a/ui/display/win/screen_win.cc b/ui/display/win/screen_win.cc
+index 2c11ea99b73956ca50811eff4f9f947eea38e9f8..9862e27d3da6efed366375be61d828c18c0a73e5 100644
+--- a/ui/display/win/screen_win.cc
++++ b/ui/display/win/screen_win.cc
+@@ -756,7 +756,7 @@ gfx::Rect ScreenWin::ScreenToDIPRect(HWND hwnd,
+                 gfx::PointF(pixel_bounds.origin()), screen_win_display))
+           : ToFlooredPoint(display::win::ScreenToDIPPoint(
+                 gfx::PointF(pixel_bounds.origin()), screen_win_display));
+-  return {origin, ScaleToEnclosingRect(pixel_bounds, scale_factor).size()};
++  return {origin, ScaleToRoundedRect(pixel_bounds, scale_factor).size()};
+ }
+ 
+ gfx::Rect ScreenWin::DIPToScreenRect(HWND hwnd,
+@@ -771,7 +771,7 @@ gfx::Rect ScreenWin::DIPToScreenRect(HWND hwnd,
+   const gfx::Point origin =
+       display::win::DIPToScreenPoint(dip_bounds.origin(), screen_win_display);
+   const float scale_factor = screen_win_display.display().device_scale_factor();
+-  return {origin, ScaleToEnclosingRect(dip_bounds, scale_factor).size()};
++  return {origin, ScaleToRoundedRect(dip_bounds, scale_factor).size()};
+ }
+ 
+ gfx::Rect ScreenWin::ClientToDIPRect(HWND hwnd,

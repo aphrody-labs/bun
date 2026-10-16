@@ -1,0 +1,15 @@
+diff --git a/ui/accessibility/platform/BUILD.gn b/ui/accessibility/platform/BUILD.gn
+index eadb44ecc00a1ac4f5c442eafe9ceb53279a36b1..41df3858aaa4416bcffdc74adab274c7a806d78a 100644
+--- a/ui/accessibility/platform/BUILD.gn
++++ b/ui/accessibility/platform/BUILD.gn
+@@ -363,6 +363,10 @@ component("platform") {
+       if (use_gio) {
+         configs += [ "//build/linux:gio_config" ]
+       }
++
++      if (is_clang) {
++        cflags = [ "-Wno-deprecated-volatile" ]
++      }
+     }
+   }
+ }

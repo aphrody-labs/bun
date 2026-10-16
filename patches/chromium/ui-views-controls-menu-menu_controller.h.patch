@@ -1,0 +1,23 @@
+diff --git a/ui/views/controls/menu/menu_controller.h b/ui/views/controls/menu/menu_controller.h
+index ccdb48fc12254e46da9b510c7c6925a68845061f..8db0aa86dcd166b08d065c47beb5d43404912c29 100644
+--- a/ui/views/controls/menu/menu_controller.h
++++ b/ui/views/controls/menu/menu_controller.h
+@@ -163,7 +163,8 @@ class VIEWS_EXPORT MenuController final : public gfx::AnimationDelegate,
+       ui::mojom::MenuSourceType source_type = ui::mojom::MenuSourceType::kNone,
+       MenuType menu_type = MenuType::kNormal,
+       bool is_nested_drag = false,
+-      gfx::NativeView native_view_for_gestures = gfx::NativeView());
++      gfx::NativeView native_view_for_gestures = gfx::NativeView(),
++      gfx::AcceleratedWidget parent_widget = gfx::kNullAcceleratedWidget);
+ 
+   bool for_drop() const { return for_drop_; }
+ 
+@@ -827,6 +828,8 @@ class VIEWS_EXPORT MenuController final : public gfx::AnimationDelegate,
+   // RunType::SEND_GESTURE_EVENTS_TO_OWNER is set.
+   gfx::NativeView native_view_for_gestures_ = gfx::NativeView();
+ 
++  gfx::AcceleratedWidget parent_widget_ = gfx::kNullAcceleratedWidget;
++
+   // Indicates a possible drag operation.
+   bool possible_drag_ = false;
+ 

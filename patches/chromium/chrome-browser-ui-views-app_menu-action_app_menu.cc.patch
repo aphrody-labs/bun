@@ -1,0 +1,12 @@
+diff --git a/chrome/browser/ui/views/app_menu/action_app_menu.cc b/chrome/browser/ui/views/app_menu/action_app_menu.cc
+index 0755ce003ca3547d1e9b982f4092f7ad90f74471..ea315fc6aedbc092a5f51a6f9692b8e79c27308f 100644
+--- a/chrome/browser/ui/views/app_menu/action_app_menu.cc
++++ b/chrome/browser/ui/views/app_menu/action_app_menu.cc
+@@ -196,6 +196,7 @@ void ActionAppMenu::RunMenu(views::MenuButtonController* host, int run_types) {
+                           views::MenuAnchorPosition::kTopRight,
+                           ui::mojom::MenuSourceType::kNone,
+                           /*native_view_for_gestures=*/gfx::NativeView(),
++                          /*parent_widget=*/gfx::kNullAcceleratedWidget,
+                           /*corners=*/std::nullopt,
+                           "Chrome.AppMenu.MenuHostInitToNextFramePresented");
+ }

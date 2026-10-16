@@ -1,0 +1,15 @@
+diff --git a/components/signin/internal/identity_manager/gaia_cookie_manager_service.cc b/components/signin/internal/identity_manager/gaia_cookie_manager_service.cc
+index 92b485477138bf1f69a99eee9307d15624338ba6..fa175ca5cd7afdcecf18ec6261e1c7cdbf6551cf 100644
+--- a/components/signin/internal/identity_manager/gaia_cookie_manager_service.cc
++++ b/components/signin/internal/identity_manager/gaia_cookie_manager_service.cc
+@@ -527,6 +527,10 @@ GaiaCookieManagerService::GetCachedListAccounts() {
+ }
+ 
+ void GaiaCookieManagerService::TriggerListAccounts() {
++  if (!signin_client_->GetPrefs()->GetBoolean(prefs::kSigninAllowed)) {
++    return;
++  }
++
+   // Callers suspect that a check to Gaia needs to be done, don't rely on the
+   // in progress request, conditions might have changed while the request is
+   // in-flight.

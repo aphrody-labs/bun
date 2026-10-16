@@ -1,0 +1,29 @@
+diff --git a/ui/base/resource/resource_bundle.cc b/ui/base/resource/resource_bundle.cc
+index 1c25647fde07a252e41512f5f51e7040772f4c7c..a7db596df1a0af5d45d20eb3b2ece351440e2fbc 100644
+--- a/ui/base/resource/resource_bundle.cc
++++ b/ui/base/resource/resource_bundle.cc
+@@ -1023,6 +1023,12 @@ ResourceBundle::ResourceBundle(Delegate* delegate)
+       locale_resources_data_lock_(std::make_unique<base::Lock>()),
+       resource_handles_lock_(std::make_unique<base::Lock>()),
+       max_scale_factor_(k100Percent) {
++  // With CEF's multi-threaded mode the ResourceBundle may be created on the
++  // main thread and then accessed on the UI thread. Allow the SequenceChecker
++  // to re-bind on the UI thread when CalledOnValidSequence() is called for the
++  // first time.
++  DETACH_FROM_SEQUENCE(sequence_checker_);
++
+   mangle_localized_strings_ = base::CommandLine::ForCurrentProcess()->HasSwitch(
+       switches::kMangleLocalizedStrings);
+ }
+@@ -1032,6 +1038,11 @@ ResourceBundle::~ResourceBundle() {
+   UnloadLocaleResources();
+ }
+ 
++void ResourceBundle::CleanupOnUIThread() {
++  FreeImages();
++  font_cache_.clear();
++}
++
+ // static
+ void ResourceBundle::InitSharedInstance(Delegate* delegate) {
+   DCHECK(g_shared_instance_ == nullptr) << "ResourceBundle initialized twice";

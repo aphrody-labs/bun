@@ -1,0 +1,16 @@
+diff --git a/content/browser/renderer_host/render_widget_host_impl.cc b/content/browser/renderer_host/render_widget_host_impl.cc
+index f0377b9acce6ff3d56f0b98266f7288b3be29358..dd85b69afa7f1e9cbed12f613f66d9fbaad8d161 100644
+--- a/content/browser/renderer_host/render_widget_host_impl.cc
++++ b/content/browser/renderer_host/render_widget_host_impl.cc
+@@ -4385,6 +4385,11 @@ void RenderWidgetHostImpl::StopFling() {
+   GetRenderInputRouter()->StopFling();
+ }
+ 
++void RenderWidgetHostImpl::SetCompositorForFlingScheduler(
++    ui::Compositor* compositor) {
++  GetRenderInputRouter()->fling_scheduler()->SetCompositor(compositor);
++}
++
+ void RenderWidgetHostImpl::SetScreenOrientationForTesting(
+     uint16_t angle,
+     display::mojom::ScreenOrientation type) {

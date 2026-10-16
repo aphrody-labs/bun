@@ -1,0 +1,21 @@
+diff --git a/ui/views/controls/menu/menu_runner_impl.cc b/ui/views/controls/menu/menu_runner_impl.cc
+index a263bbbf97a0e24ac0600f1eeb514914249d1179..809781660aeae719ba9fc251b074e66440749280 100644
+--- a/ui/views/controls/menu/menu_runner_impl.cc
++++ b/ui/views/controls/menu/menu_runner_impl.cc
+@@ -128,6 +128,7 @@ void MenuRunnerImpl::RunMenuAt(
+     ui::mojom::MenuSourceType source_type,
+     int32_t run_types,
+     gfx::NativeView native_view_for_gestures,
++    gfx::AcceleratedWidget parent_widget,
+     std::optional<gfx::RoundedCornersF> corners,
+     std::optional<std::string> show_menu_host_duration_histogram) {
+   closing_event_time_ = base::TimeTicks();
+@@ -219,7 +220,7 @@ void MenuRunnerImpl::RunMenuAt(
+   controller->Run(parent, button_controller, menu_.get(), bounds, anchor,
+                   source_type, menu_type,
+                   (run_types & MenuRunner::NESTED_DRAG) != 0,
+-                  native_view_for_gestures);
++                  native_view_for_gestures, parent_widget);
+ }
+ 
+ void MenuRunnerImpl::Cancel() {

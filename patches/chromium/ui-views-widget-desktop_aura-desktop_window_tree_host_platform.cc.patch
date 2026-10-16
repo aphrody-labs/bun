@@ -1,0 +1,15 @@
+diff --git a/ui/views/widget/desktop_aura/desktop_window_tree_host_platform.cc b/ui/views/widget/desktop_aura/desktop_window_tree_host_platform.cc
+index 3a5009d15fdcaa994b9a0ed918b73258f26472ca..fa335ff38d6257b3f09d7bb0da73dfa4e928365a 100644
+--- a/ui/views/widget/desktop_aura/desktop_window_tree_host_platform.cc
++++ b/ui/views/widget/desktop_aura/desktop_window_tree_host_platform.cc
+@@ -283,8 +283,8 @@ void DesktopWindowTreeHostPlatform::Init(const Widget::InitParams& params) {
+   if (properties.parent_widget) {
+     window_parent_ = DesktopWindowTreeHostPlatform::GetHostForWidget(
+         properties.parent_widget);
+-    DCHECK(window_parent_);
+-    window_parent_->window_children_.insert(this);
++    if (window_parent_)
++      window_parent_->window_children_.insert(this);
+   }
+ 
+   // Calculate initial bounds.

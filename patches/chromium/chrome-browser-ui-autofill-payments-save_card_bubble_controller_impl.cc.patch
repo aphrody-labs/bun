@@ -1,0 +1,26 @@
+diff --git a/chrome/browser/ui/autofill/payments/save_card_bubble_controller_impl.cc b/chrome/browser/ui/autofill/payments/save_card_bubble_controller_impl.cc
+index 8f485344dba761fa5a589759749e2e63f8806da8..02159698d4cc52ff6947354c07b6e9be99b02725 100644
+--- a/chrome/browser/ui/autofill/payments/save_card_bubble_controller_impl.cc
++++ b/chrome/browser/ui/autofill/payments/save_card_bubble_controller_impl.cc
+@@ -883,7 +883,9 @@ SaveCardBubbleControllerImpl::GetAutofillBubbleHandler() {
+     return nullptr;
+   }
+   BrowserWindowInterface* browser = tab->GetBrowserWindowInterface();
+-  CHECK(browser);
++  if (!browser) {
++    return nullptr;
++  }
+   return AutofillBubbleHandler::Get(browser->GetUnownedUserDataHost());
+ }
+ 
+@@ -893,7 +895,9 @@ void SaveCardBubbleControllerImpl::DoShowBubble() {
+   }
+ 
+   AutofillBubbleHandler* autofill_bubble_handler = GetAutofillBubbleHandler();
+-  CHECK(autofill_bubble_handler);
++  if (!autofill_bubble_handler) {
++    return;
++  }
+   if (current_bubble_type_ == PaymentsBubbleType::kUploadComplete) {
+     SetBubbleView(*autofill_bubble_handler->ShowSaveCardConfirmationBubble(
+         web_contents(), this));

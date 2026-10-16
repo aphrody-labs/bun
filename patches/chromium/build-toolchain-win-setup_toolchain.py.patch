@@ -1,0 +1,48 @@
+diff --git a/build/toolchain/win/setup_toolchain.py b/build/toolchain/win/setup_toolchain.py
+index 34be00a458a4d52808c6df3b6267c530ec82183c..f0e84cd30857e764c0e5541fb1d887d2e4c6d647 100644
+--- a/build/toolchain/win/setup_toolchain.py
++++ b/build/toolchain/win/setup_toolchain.py
+@@ -115,6 +115,15 @@ def _LoadToolchainEnv(cpu, toolchain_root, sdk_dir, target_store):
+     # the setup script from the SDK if so. |cpu| should be either
+     # 'x86' or 'x64' or 'arm' or 'arm64'.
+     assert cpu in ('x86', 'x64', 'arm', 'arm64')
++    prepared_dir = os.environ.get('CEF_MSVC_ENV_DIR')
++    if prepared_dir:
++        if os.environ.get('CEF_VCVARS') != 'none':
++            raise Exception('CEF_MSVC_ENV_DIR requires CEF_VCVARS=none')
++        with open(os.path.join(prepared_dir, cpu + '.json'), encoding='utf-8') as source:
++            prepared = json.load(source)
++        variables = '\n'.join('%s=%s' % (key, value) for key, value in prepared.items())
++        return _ExtractImportantEnvironment(variables)
++
+     if bool(int(os.environ.get('DEPOT_TOOLS_WIN_TOOLCHAIN', 1))) and sdk_dir:
+         # Load environment from json file.
+         env = os.path.normpath(
+@@ -180,18 +189,20 @@ def _LoadToolchainEnv(cpu, toolchain_root, sdk_dir, target_store):
+                     del os.environ['LIB']
+                 if 'LIBPATH' in os.environ:
+                     del os.environ['LIBPATH']
+-            other_path = os.path.normpath(
++            script_path = os.path.normpath(
+                 os.path.join(
+                     os.environ['GYP_MSVS_OVERRIDE_PATH'],
+                     'VC/Auxiliary/Build/vcvarsall.bat',
+                 )
+             )
+-            if not os.path.exists(other_path):
+-                raise Exception(
+-                    '%s is missing - make sure VC++ tools are installed.'
+-                    % script_path
+-                )
+-            script_path = other_path
++        if not os.path.exists(script_path):
++            # Compiler environment variables must already be specified.
++            variables = []
++            for k in sorted(os.environ.keys()):
++                variables.append('%s=%s' % (str(k), str(os.environ[k])))
++            variables = '\n'.join(variables)
++            return _ExtractImportantEnvironment(variables)
++
+         cpu_arg = "amd64"
+         if cpu != 'x64':
+             # x64 is default target CPU thus any other CPU requires a target set

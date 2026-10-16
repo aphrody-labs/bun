@@ -1,0 +1,15 @@
+diff --git a/ui/shell_dialogs/select_file_dialog_mac.mm b/ui/shell_dialogs/select_file_dialog_mac.mm
+index 5da67cfb7362d01fac8d0be4565d319087ec3cf9..6e618083bc851ba2d9a11adebfeb8ac1afffa89c 100644
+--- a/ui/shell_dialogs/select_file_dialog_mac.mm
++++ b/ui/shell_dialogs/select_file_dialog_mac.mm
+@@ -105,6 +105,10 @@ void SelectFileDialogImpl::SelectFileImpl(
+     mojo_window->CreateSelectFileDialog(std::move(receiver));
+   } else {
+     NSWindow* ns_window = gfx_window.GetNativeNSWindow();
++    if (!ns_window && owning_widget_) {
++      NSView* view = ((__bridge NSView*)owning_widget_);
++      ns_window = [view window];
++    }
+     mojo::MakeSelfOwnedReceiver(
+         std::make_unique<remote_cocoa::SelectFileDialogBridge>(ns_window),
+         std::move(receiver));

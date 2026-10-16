@@ -1,0 +1,21 @@
+diff --git a/content/public/browser/content_browser_client.cc b/content/public/browser/content_browser_client.cc
+index c4686f46458c3075c76fd7124f166adf45a10eeb..a6f38f298bd27a5e47ec13f91cda64fe2d281ad5 100644
+--- a/content/public/browser/content_browser_client.cc
++++ b/content/public/browser/content_browser_client.cc
+@@ -1198,7 +1198,7 @@ ContentBrowserClient::URLLoaderRequestHandler ContentBrowserClient::
+ void ContentBrowserClient::OnNetworkServiceCreated(
+     network::mojom::NetworkService* network_service) {}
+ 
+-void ContentBrowserClient::ConfigureNetworkContextParams(
++bool ContentBrowserClient::ConfigureNetworkContextParams(
+     BrowserContext* context,
+     bool in_memory,
+     const base::FilePath& relative_partition_path,
+@@ -1207,6 +1207,7 @@ void ContentBrowserClient::ConfigureNetworkContextParams(
+         cert_verifier_creation_params) {
+   network_context_params->user_agent = GetUserAgent();
+   network_context_params->accept_language = "en-us,en";
++  return true;
+ }
+ 
+ std::vector<base::FilePath>

@@ -1,0 +1,15 @@
+diff --git a/base/rand_util_win.cc b/base/rand_util_win.cc
+index bf9a489b95f2eb4ffd43c900eeb7d3c2e3fe8b08..9631d700ff0c4f0177c8599ab8e231da292a06e3 100644
+--- a/base/rand_util_win.cc
++++ b/base/rand_util_win.cc
+@@ -84,6 +84,10 @@ void RandBytes(span<uint8_t> output) {
+ 
+ namespace internal {
+ 
++void RandBytesAvoidAllocation(span<uint8_t> output) {
++  RandBytesInternal(output, /*avoid_allocation=*/true);
++}
++
+ double RandDoubleAvoidAllocation() {
+   uint64_t number;
+   RandBytesInternal(byte_span_from_ref(number),

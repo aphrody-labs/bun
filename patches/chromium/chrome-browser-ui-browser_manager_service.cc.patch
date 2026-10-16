@@ -1,0 +1,41 @@
+diff --git a/chrome/browser/ui/browser_manager_service.cc b/chrome/browser/ui/browser_manager_service.cc
+index c9ca8806600c5af524c96c0d876feb203f09fdaf..390c116e9f20c3270f1bb777a382e496f3da071c 100644
+--- a/chrome/browser/ui/browser_manager_service.cc
++++ b/chrome/browser/ui/browser_manager_service.cc
+@@ -142,10 +142,17 @@ void BrowserManagerService::DeleteBrowser(
+   //
+   // TODO(crbug.com/40159237): Use ScopedProfileKeepAlive for Incognito too,
+   // instead of separate logic for Incognito and regular profiles.
+-  target_browser_and_subscriptions->browser.reset();
+-  if (browsers_and_subscriptions_.empty() &&
+-      profile_->IsPrimaryOTRProfileWithRegularParent() &&
+-      !profile_->IsSystemProfile()) {
++  // Capture state from `this` before destroying the Browser. The destruction
++  // chain may release the last reference keeping the Profile alive (e.g. via
++  // CEF's CefRequestContext release for OTR profiles), which triggers keyed
++  // service shutdown and destroys `this`. Do not access members after the
++  // reset below.
++  const bool is_last_browser = browsers_and_subscriptions_.empty();
++  base::WeakPtr<Profile> weak_profile = profile_->GetWeakPtr();
++  target_browser_and_subscriptions.reset();
++  if (is_last_browser && weak_profile &&
++      weak_profile->IsPrimaryOTRProfileWithRegularParent() &&
++      !weak_profile->IsSystemProfile()) {
+ #if BUILDFLAG(ENABLE_PRINT_PREVIEW)
+     // The Printing Background Manager holds onto preview dialog WebContents
+     // whose corresponding print jobs have not yet fully spooled. Make sure
+@@ -153,12 +160,12 @@ void BrowserManagerService::DeleteBrowser(
+     // profile so that their RenderFrameHosts can exit in time - see
+     // crbug.com/41235373
+     g_browser_process->background_printing_manager()
+-        ->DeletePreviewContentsForBrowserContext(&profile_.get());
++        ->DeletePreviewContentsForBrowserContext(weak_profile.get());
+ #endif
+     // The incognito or isolated mode profile is no longer needed, this
+     // indirectly frees its cache and cookies once it gets destroyed at the
+     // appropriate time.
+-    ProfileDestroyer::DestroyOTRProfileWhenAppropriate(&profile_.get());
++    ProfileDestroyer::DestroyOTRProfileWhenAppropriate(weak_profile.get());
+   }
+ 
+   // If we're exiting, send out the APP_TERMINATING notification to allow other

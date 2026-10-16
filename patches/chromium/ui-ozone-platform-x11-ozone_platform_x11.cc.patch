@@ -1,0 +1,39 @@
+diff --git a/ui/ozone/platform/x11/ozone_platform_x11.cc b/ui/ozone/platform/x11/ozone_platform_x11.cc
+index 33d4a4a084cf8cb57db2b7765598de93ae905fd1..1cb9e18fb4b697989dbb36bd3260674a9d67e50b 100644
+--- a/ui/ozone/platform/x11/ozone_platform_x11.cc
++++ b/ui/ozone/platform/x11/ozone_platform_x11.cc
+@@ -65,6 +65,8 @@ namespace ui {
+ 
+ namespace {
+ 
++bool g_multi_threaded_message_loop = false;
++
+ // Singleton OzonePlatform implementation for X11 platform.
+ class OzonePlatformX11 : public OzonePlatform,
+                          public OSExchangeDataProviderFactoryOzone {
+@@ -274,7 +276,15 @@ class OzonePlatformX11 : public OzonePlatform,
+     TouchFactory::SetTouchDeviceListFromCommandLine();
+ 
+ #if BUILDFLAG(USE_GTK)
+-    linux_ui_delegate_ = std::make_unique<LinuxUiDelegateX11>();
++    // Not creating the LinuxUiDelegateX11 will disable creation of GtkUi
++    // (interface to GTK desktop features) and cause ui::GetDefaultLinuxUi()
++    // (and related functions) to return nullptr. We can't use GtkUi in
++    // combination with multi-threaded-message-loop because Chromium's GTK
++    // implementation doesn't use GDK threads. Light/dark theme changes will
++    // still be detected via DarkModeManagerLinux.
++    if (!g_multi_threaded_message_loop) {
++      linux_ui_delegate_ = std::make_unique<LinuxUiDelegateX11>();
++    }
+ #endif
+ 
+     menu_utils_ = std::make_unique<X11MenuUtils>();
+@@ -373,4 +383,8 @@ OzonePlatform* CreateOzonePlatformX11() {
+   return new OzonePlatformX11;
+ }
+ 
++void SetMultiThreadedMessageLoopX11() {
++  g_multi_threaded_message_loop = true;
++}
++
+ }  // namespace ui

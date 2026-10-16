@@ -1,0 +1,40 @@
+diff --git a/components/policy/tools/generate_policy_source.py b/components/policy/tools/generate_policy_source.py
+index 0f77424e42703ed966c82c246078435503f073b2..735d96632fc345281986aceeefc5d668e6644be6 100755
+--- a/components/policy/tools/generate_policy_source.py
++++ b/components/policy/tools/generate_policy_source.py
+@@ -558,6 +558,7 @@ def _WritePolicyConstantHeader(
+ #include <cstdint>
+ #include <string>
+ 
++#include "cef/libcef/features/features.h"
+ #include "components/policy/core/common/policy_details.h"
+ #include "components/policy/core/common/policy_map.h"
+ 
+@@ -581,9 +582,11 @@ namespace {namespace} {{
+ 
+   if target_platform == 'win':
+     f.write(
++      '#if !BUILDFLAG(ENABLE_CEF)\n'
+       '// The windows registry path where Chrome policy '
+       'configuration resides.\n'
+       'extern const wchar_t kRegistryChromePolicyKey[];\n'
++      '#endif\n'
+     )
+ 
+   f.write('''#if BUILDFLAG(IS_CHROMEOS)
+@@ -1395,6 +1398,7 @@ namespace {namespace} {{
+ 
+   if target_platform == 'win':
+     f.write(
++      '#if !BUILDFLAG(ENABLE_CEF)\n'
+       '#if BUILDFLAG(GOOGLE_CHROME_BRANDING)\n'
+       'const wchar_t kRegistryChromePolicyKey[] = '
+       'L"' + CHROME_POLICY_KEY + '";\n'
+@@ -1404,6 +1408,7 @@ namespace {namespace} {{
+       '#else\n'
+       'const wchar_t kRegistryChromePolicyKey[] = '
+       'L"' + CHROMIUM_POLICY_KEY + '";\n'
++      '#endif\n'
+       '#endif\n\n'
+     )
+ 

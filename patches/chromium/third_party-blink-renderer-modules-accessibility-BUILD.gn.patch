@@ -1,0 +1,30 @@
+diff --git a/third_party/blink/renderer/modules/accessibility/BUILD.gn b/third_party/blink/renderer/modules/accessibility/BUILD.gn
+index 12a864be8e5ea7ce04cb50e519ff5cc1847abe9a..3fd01bb2442583486ae71d8001ed988610144d1d 100644
+--- a/third_party/blink/renderer/modules/accessibility/BUILD.gn
++++ b/third_party/blink/renderer/modules/accessibility/BUILD.gn
+@@ -2,6 +2,7 @@
+ # Use of this source code is governed by a BSD-style license that can be
+ # found in the LICENSE file.
+ 
++import("//cef/libcef/features/features.gni")
+ import("//third_party/blink/renderer/modules/modules.gni")
+ 
+ blink_modules_sources("accessibility") {
+@@ -73,6 +74,17 @@ blink_modules_sources("accessibility") {
+     ]
+   }
+ 
++  if (enable_cef) {
++    sources += [
++      "//cef/libcef/renderer/accessibility/build_collapsed_summary_node.inc",
++      "//cef/libcef/renderer/accessibility/viewport_collapse.cc",
++      "//cef/libcef/renderer/accessibility/viewport_collapse.h",
++      "//cef/libcef/renderer/accessibility/walk_ax_nodes_with_collapse.inc",
++    ]
++    configs += [ "//cef/libcef/features:config" ]
++    deps += [ "//cef/libcef/features:deps" ]
++  }
++
+   if (is_android) {
+     defines = [ "REDUCE_AX_INLINE_TEXTBOXES" ]
+   }

@@ -1,0 +1,13 @@
+diff --git a/ui/views/style/platform_style.h b/ui/views/style/platform_style.h
+index 1e9785672f767e32dc20af93036971afaaec3b63..21ff43539056293e170d306bac004e85b8841c84 100644
+--- a/ui/views/style/platform_style.h
++++ b/ui/views/style/platform_style.h
+@@ -84,7 +84,7 @@ class VIEWS_EXPORT PlatformStyle {
+   // Default setting at bubble creation time for whether arrow will be adjusted
+   // for bubbles going off-screen to bring more bubble area into view. Linux
+   // clips bubble windows that extend outside their parent window bounds.
+-  static constexpr bool kAdjustBubbleIfOffscreen = !BUILDFLAG(IS_LINUX);
++  static constexpr bool kAdjustBubbleIfOffscreen = BUILDFLAG(IS_WIN);
+ 
+   // Default focus behavior on the platform.
+   static constexpr View::FocusBehavior kDefaultFocusBehavior =

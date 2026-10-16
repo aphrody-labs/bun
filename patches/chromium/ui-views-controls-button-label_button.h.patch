@@ -1,0 +1,14 @@
+diff --git a/ui/views/controls/button/label_button.h b/ui/views/controls/button/label_button.h
+index 9423cffe6af6b262428585d326c60246c8ede5fc..00f24fa4f740e8bcff43e0047c927df8b69a942a 100644
+--- a/ui/views/controls/button/label_button.h
++++ b/ui/views/controls/button/label_button.h
+@@ -186,6 +186,9 @@ class VIEWS_EXPORT LabelButton : public Button,
+     return !!paint_as_active_subscription_;
+   }
+ 
++  // Sets the font list used by this button.
++  void SetFontList(const gfx::FontList& font_list);
++
+  protected:
+   LabelButtonImageContainer* image_container() {
+     return image_container_.get();

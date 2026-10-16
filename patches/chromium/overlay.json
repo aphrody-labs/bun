@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "base": "e20c553087353010f4b71143841c189447ac1628",
+  "repository": "https://github.com/aphrody-labs/chromium",
+  "revision": "95ff46fdacff0d4973f17710418f12e1ceedeed9",
+  "trees": {
+    "chrome/browser/bunmium": "4effc331948860f03fda2c3caf4ed6a3883717ae",
+    "chrome/browser/resources/m3": "4796867af742ecdee737d603c2358b89e11d4f67",
+    "components/bunmium": "4bf694f11f2557ae52db6042b0381646dd53ac67",
+    "content/bunmium": "51f1421ffdaf179bc58e04101843c588a698f7e5",
+    "ui/m3": "f32478d836163e8dfda0feb1891c29ea33023bb0"
+  }
+}

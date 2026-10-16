@@ -1,0 +1,15 @@
+diff --git a/chrome/browser/ui/views/incognito_clear_browsing_data_dialog.cc b/chrome/browser/ui/views/incognito_clear_browsing_data_dialog.cc
+index f25b0d6283336b899d58cc83879820d2b46e9cfe..5aedb7c65fe40e40dd061156fb38625fbed24c58 100644
+--- a/chrome/browser/ui/views/incognito_clear_browsing_data_dialog.cc
++++ b/chrome/browser/ui/views/incognito_clear_browsing_data_dialog.cc
+@@ -30,7 +30,9 @@ IncognitoClearBrowsingDataDialog::IncognitoClearBrowsingDataDialog(
+       dialog_type_(type),
+       incognito_profile_(incognito_profile) {
+   DCHECK(incognito_profile_);
+-  DCHECK(incognito_profile_->IsPrimaryOTRProfileWithRegularParent());
++  DCHECK(incognito_profile_->IsPrimaryOTRProfileWithRegularParent() ||
++         (incognito_profile_->IsOffTheRecord() &&
++          incognito_profile_->GetOTRProfileID().IsUniqueForCEF()));
+   SetButtons(static_cast<int>(ui::mojom::DialogButton::kNone));
+   SetShowCloseButton(true);
+ 

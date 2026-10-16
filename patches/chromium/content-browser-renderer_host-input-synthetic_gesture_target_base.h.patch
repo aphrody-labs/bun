@@ -1,0 +1,22 @@
+diff --git a/content/browser/renderer_host/input/synthetic_gesture_target_base.h b/content/browser/renderer_host/input/synthetic_gesture_target_base.h
+index 09d80f2ba678df9ab1b9b2b74ad66d4546036fb2..5dbff44c280a145c65146279a971620fc18db54c 100644
+--- a/content/browser/renderer_host/input/synthetic_gesture_target_base.h
++++ b/content/browser/renderer_host/input/synthetic_gesture_target_base.h
+@@ -8,6 +8,7 @@
+ #include "base/functional/callback_forward.h"
+ #include "base/memory/raw_ptr.h"
+ #include "base/time/time.h"
++#include "content/common/content_export.h"
+ #include "content/common/input/synthetic_gesture_target.h"
+ #include "ui/gfx/geometry/point_f.h"
+ 
+@@ -26,7 +27,8 @@ namespace content {
+ 
+ class RenderWidgetHostImpl;
+ 
+-class SyntheticGestureTargetBase : public SyntheticGestureTarget {
++class CONTENT_EXPORT SyntheticGestureTargetBase :
++    public SyntheticGestureTarget {
+  public:
+   explicit SyntheticGestureTargetBase(RenderWidgetHostImpl* host);
+ 

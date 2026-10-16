@@ -1,0 +1,35 @@
+diff --git a/chrome/browser/browser_about_handler.cc b/chrome/browser/browser_about_handler.cc
+index 08949a69415dfa9f836e00929a34330a34546ce2..e417f50fa68e274b80c0d45bdaa45c7b22fd6dcd 100644
+--- a/chrome/browser/browser_about_handler.cc
++++ b/chrome/browser/browser_about_handler.cc
+@@ -25,6 +25,10 @@
+ 
+ namespace {
+ 
++bool IsChromeIgnoreUrl(const std::string& spec) {
++  return base::EqualsCaseInsensitiveASCII(spec, "chrome://ignore/");
++}
++
+ bool IsNonNavigationAboutUrl(const GURL& url) {
+   if (!url.is_valid()) {
+     return false;
+@@ -32,8 +36,8 @@ bool IsNonNavigationAboutUrl(const GURL& url) {
+ 
+   const std::string spec(url.spec());
+   return base::EqualsCaseInsensitiveASCII(spec, chrome::kChromeUIRestartURL) ||
+-         base::EqualsCaseInsensitiveASCII(spec, chrome::kChromeUIQuitURL);
+-  ;
++         base::EqualsCaseInsensitiveASCII(spec, chrome::kChromeUIQuitURL) ||
++         IsChromeIgnoreUrl(spec);
+ }
+ 
+ }  // namespace
+@@ -102,5 +106,8 @@ bool HandleNonNavigationAboutURL(const GURL& url,
+         FROM_HERE, base::BindOnce(&chrome::AttemptExit));
+     return true;
+   }
++  if (IsChromeIgnoreUrl(spec)) {
++    return true;
++  }
+   NOTREACHED();
+ }

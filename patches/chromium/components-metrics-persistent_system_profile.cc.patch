@@ -1,0 +1,15 @@
+diff --git a/components/metrics/persistent_system_profile.cc b/components/metrics/persistent_system_profile.cc
+index 87dd0b61a08cf59bf6c351fb97f96ead42f00d8d..d5d25772c6f517c922816830df110c4a13db942e 100644
+--- a/components/metrics/persistent_system_profile.cc
++++ b/components/metrics/persistent_system_profile.cc
+@@ -423,6 +423,10 @@ bool PersistentSystemProfile::GetSystemProfile(
+   return true;
+ }
+ 
++void PersistentSystemProfile::DetachFromCurrentThread() {
++  DETACH_FROM_SEQUENCE(sequence_checker_);
++}
++
+ // static
+ void PersistentSystemProfile::MergeUpdateRecords(
+     const base::PersistentMemoryAllocator& memory_allocator,

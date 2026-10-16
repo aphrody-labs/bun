@@ -1,0 +1,28 @@
+diff --git a/components/webui/version/version_ui_constants.cc b/components/webui/version/version_ui_constants.cc
+index 7b7be3eae6656d88030eb927f522de01550f8ff6..af7a2b21a8344e2089bb68fa0f8659b8558d6adf 100644
+--- a/components/webui/version/version_ui_constants.cc
++++ b/components/webui/version/version_ui_constants.cc
+@@ -5,6 +5,7 @@
+ #include "components/webui/version/version_ui_constants.h"
+ 
+ #include "build/build_config.h"
++#include "cef/libcef/features/features.h"
+ 
+ namespace version_ui {
+ 
+@@ -92,4 +93,15 @@ const char kVersionSuffix[] = "version_suffix";
+ const char kVersionModifier[] = "version_modifier";
+ const char kVersionProcessorVariation[] = "version_processor_variation";
+ 
++#if BUILDFLAG(ENABLE_CEF)
++const char kKeyModulePath[] = "modulePath";
++const char kKeyUserDataPath[] = "userDataPath";
++
++const char kCefVersion[] = "cef_version";
++const char kModulePath[] = "module_path";
++const char kModulePathName[] = "module_path_name";
++const char kUserDataPath[] = "user_data_path";
++const char kUserDataPathName[] = "user_data_path_name";
++#endif
++
+ }  // namespace version_ui

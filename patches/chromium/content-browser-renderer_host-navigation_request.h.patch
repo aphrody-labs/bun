@@ -1,0 +1,14 @@
+diff --git a/content/browser/renderer_host/navigation_request.h b/content/browser/renderer_host/navigation_request.h
+index d3e9c9f96632786d9d477412f8c21174646e6ad2..e2a5cbb0258d28e479a14b273168f452a799113c 100644
+--- a/content/browser/renderer_host/navigation_request.h
++++ b/content/browser/renderer_host/navigation_request.h
+@@ -2686,7 +2686,8 @@ class CONTENT_EXPORT NavigationRequest
+   // situations where the final frame host hasn't been determined but the origin
+   // is needed to create URLLoaderFactory.
+   url::Origin GetOriginForURLLoaderFactoryBeforeResponse(
+-      network::mojom::WebSandboxFlags sandbox_flags);
++      network::mojom::WebSandboxFlags sandbox_flags,
++      bool* cef_nonstandard = nullptr);
+ 
+   // Superset of GetOriginForURLLoaderFactoryBeforeResponse(). Calculates
+   // the origin with information from the final frame host. Can be called only

@@ -1,0 +1,15 @@
+diff --git a/base/rand_util_fuchsia.cc b/base/rand_util_fuchsia.cc
+index 49951ac5ffcd4d134d00264b2d9adbde38fb50f8..909e317b3188688a86f828b803d5214b36034b19 100644
+--- a/base/rand_util_fuchsia.cc
++++ b/base/rand_util_fuchsia.cc
+@@ -49,6 +49,10 @@ void RandBytes(span<uint8_t> output) {
+ 
+ namespace internal {
+ 
++void RandBytesAvoidAllocation(span<uint8_t> output) {
++  zx_cprng_draw(output.data(), output.size());
++}
++
+ double RandDoubleAvoidAllocation() {
+   uint64_t number;
+   zx_cprng_draw(&number, sizeof(number));

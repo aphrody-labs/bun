@@ -1,0 +1,35 @@
+diff --git a/content/browser/loader/navigation_url_loader_impl.cc b/content/browser/loader/navigation_url_loader_impl.cc
+index 33267b7a0d4f90da9cd7262f4f4a969e225fed0b..c64de02e17a1c9dcef24353ade1632e7229574a3 100644
+--- a/content/browser/loader/navigation_url_loader_impl.cc
++++ b/content/browser/loader/navigation_url_loader_impl.cc
+@@ -1299,7 +1299,7 @@ NavigationURLLoaderImpl::CreateNonNetworkLoaderFactory(
+   mojo::PendingRemote<network::mojom::URLLoaderFactory>
+       terminal_external_protocol;
+   bool handled = GetContentClient()->browser()->HandleExternalProtocol(
+-      resource_request.url, std::move(web_contents_getter),
++      resource_request.url, web_contents_getter,
+       frame_tree_node->frame_tree_node_id(), navigation_ui_data,
+       request_info.is_primary_main_frame,
+       frame_tree_node->IsInFencedFrameTree(), request_info.sandbox_flags,
+@@ -1311,6 +1311,21 @@ NavigationURLLoaderImpl::CreateNonNetworkLoaderFactory(
+                 *request_info.initiator_document_token)
+           : nullptr,
+       request_info.isolation_info, &terminal_external_protocol);
++
++  if (!handled) {
++    handled = GetContentClient()->browser()->HandleExternalProtocol(
++        web_contents_getter, frame_tree_node->frame_tree_node_id(),
++        navigation_ui_data, request_info.is_primary_main_frame,
++        frame_tree_node->IsInFencedFrameTree(), request_info.sandbox_flags,
++        resource_request, initiating_origin,
++        request_info.initiator_document_token
++            ? RenderFrameHostImpl::FromDocumentToken(
++                  request_info.initiator_process_id,
++                  *request_info.initiator_document_token)
++            : nullptr,
++        request_info.isolation_info, &terminal_external_protocol);
++  }
++
+   if (terminal_external_protocol) {
+     return std::make_pair(
+         /*is_cacheable=*/false,

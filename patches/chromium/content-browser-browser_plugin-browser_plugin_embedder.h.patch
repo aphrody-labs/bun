@@ -1,0 +1,21 @@
+diff --git a/content/browser/browser_plugin/browser_plugin_embedder.h b/content/browser/browser_plugin/browser_plugin_embedder.h
+index ea2891a279371f7967786e44188aee9afe19607f..595e5b8eb2cb66d0a8cdf70629fed806314d8374 100644
+--- a/content/browser/browser_plugin/browser_plugin_embedder.h
++++ b/content/browser/browser_plugin/browser_plugin_embedder.h
+@@ -15,6 +15,7 @@
+ #define CONTENT_BROWSER_BROWSER_PLUGIN_BROWSER_PLUGIN_EMBEDDER_H_
+ 
+ #include "base/memory/raw_ptr.h"
++#include "content/common/content_export.h"
+ 
+ namespace input {
+ struct NativeWebKeyboardEvent;
+@@ -29,7 +30,7 @@ class WebContentsImpl;
+ 
+ // TODO(wjmaclean): Get rid of "BrowserPlugin" in the name of this class.
+ // Perhaps "WebContentsEmbedderDelegate" would be better?
+-class BrowserPluginEmbedder {
++class CONTENT_EXPORT BrowserPluginEmbedder {
+  public:
+   BrowserPluginEmbedder(const BrowserPluginEmbedder&) = delete;
+   BrowserPluginEmbedder& operator=(const BrowserPluginEmbedder&) = delete;

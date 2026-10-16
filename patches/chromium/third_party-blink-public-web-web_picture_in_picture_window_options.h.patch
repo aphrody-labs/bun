@@ -1,0 +1,24 @@
+diff --git a/third_party/blink/public/web/web_picture_in_picture_window_options.h b/third_party/blink/public/web/web_picture_in_picture_window_options.h
+index f3a5b90b3bb119558da1d9c56a73675c9f32cefd..53c5c690bcf2b6af49d44945e93df58bf3b9f5b4 100644
+--- a/third_party/blink/public/web/web_picture_in_picture_window_options.h
++++ b/third_party/blink/public/web/web_picture_in_picture_window_options.h
+@@ -6,6 +6,9 @@
+ #define THIRD_PARTY_BLINK_PUBLIC_WEB_WEB_PICTURE_IN_PICTURE_WINDOW_OPTIONS_H_
+ 
+ #include <cstdint>
++#include <optional>
++
++#include "ui/gfx/geometry/point.h"
+ 
+ namespace blink {
+ 
+@@ -14,6 +17,9 @@ struct WebPictureInPictureWindowOptions {
+   uint64_t height = 0;
+   bool disallow_return_to_opener = false;
+   bool prefer_initial_window_placement = false;
++  // CEF extension
++  std::optional<gfx::Point> initial_position;
++  bool resizable = true;
+ };
+ 
+ }  // namespace blink

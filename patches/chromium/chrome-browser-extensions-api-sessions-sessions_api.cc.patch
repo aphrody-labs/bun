@@ -1,0 +1,12 @@
+diff --git a/chrome/browser/extensions/api/sessions/sessions_api.cc b/chrome/browser/extensions/api/sessions/sessions_api.cc
+index 6f19b84656e52d89d0025ecf139d110521f0069e..ed10608ef12e5c22ec9fe8d2499e3c362aa2eaa4 100644
+--- a/chrome/browser/extensions/api/sessions/sessions_api.cc
++++ b/chrome/browser/extensions/api/sessions/sessions_api.cc
+@@ -582,6 +582,7 @@ SessionsGetDevicesFunction::CreateWindowModel(
+       state = api::windows::WindowState::kNormal;
+       break;
+     case ui::mojom::WindowShowState::kMinimized:
++    case ui::mojom::WindowShowState::kHidden:
+       state = api::windows::WindowState::kMinimized;
+       break;
+     case ui::mojom::WindowShowState::kMaximized:

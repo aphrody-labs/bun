@@ -1,0 +1,13 @@
+diff --git a/ui/shell_dialogs/select_file_dialog_win.cc b/ui/shell_dialogs/select_file_dialog_win.cc
+index e3edd353d533ad35749cca0e0a248e47d371f821..863f04f0a5d29f2ec6dc1d7cd31b41badcee7488 100644
+--- a/ui/shell_dialogs/select_file_dialog_win.cc
++++ b/ui/shell_dialogs/select_file_dialog_win.cc
+@@ -250,6 +250,8 @@ void SelectFileDialogImpl::SelectFileImpl(
+   HWND owner = owning_window && owning_window->GetRootWindow()
+                    ? owning_window->GetHost()->GetAcceleratedWidget()
+                    : nullptr;
++  if (!owner)
++    owner = owning_widget_;
+ 
+   std::unique_ptr<RunState> run_state = BeginRun(owner);
+ 

@@ -1,0 +1,38 @@
+diff --git a/chrome/browser/profiles/profile.cc b/chrome/browser/profiles/profile.cc
+index f5c9ae68aaf4a9f6f2288d9c4a7e0b249d67dcea..e1dfee49632af6a3d43cfc8264a0311ecd08e6ea 100644
+--- a/chrome/browser/profiles/profile.cc
++++ b/chrome/browser/profiles/profile.cc
+@@ -105,6 +105,7 @@ constexpr char kPrimaryOTRProfileID[] = "profile::primary_otr";
+ // differentiated by such prefixes. Consult with the profile owners before
+ // proceeding if you believe a new prefix is strictly necessary.
+ // See `chrome/browser/PRESUBMIT.py` which enforces this via a warning.
++constexpr char kCEFOTRProfileIDPrefix[] = "CEF::BrowserContext";
+ constexpr char kDevToolsOTRProfileIDPrefix[] = "Devtools::BrowserContext";
+ constexpr char kMediaRouterOTRProfileIDPrefix[] = "MediaRouter::Presentation";
+ constexpr char kTestOTRProfileIDPrefix[] = "Test::OTR";
+@@ -125,6 +126,8 @@ bool Profile::OTRProfileID::AllowsBrowserWindows() const {
+   // DevTools::BrowserContext, MediaRouter::Presentation, and
+   // CaptivePortal::Signin are exceptions to this ban.
+   if (*this == PrimaryID() || IsDevTools() ||
++      base::StartsWith(profile_id_, kCEFOTRProfileIDPrefix,
++                       base::CompareCase::SENSITIVE) ||
+       base::StartsWith(profile_id_, kMediaRouterOTRProfileIDPrefix,
+                        base::CompareCase::SENSITIVE)) {
+     return true;
+@@ -165,6 +168,16 @@ Profile::OTRProfileID Profile::OTRProfileID::CreateUnique(
+       base::Uuid::GenerateRandomV4().AsLowercaseString().c_str()));
+ }
+ 
++// static
++Profile::OTRProfileID Profile::OTRProfileID::CreateUniqueForCEF() {
++  return CreateUnique(kCEFOTRProfileIDPrefix);
++}
++
++bool Profile::OTRProfileID::IsUniqueForCEF() const {
++  return base::StartsWith(profile_id_, kCEFOTRProfileIDPrefix,
++                          base::CompareCase::SENSITIVE);
++}
++
+ // static
+ Profile::OTRProfileID Profile::OTRProfileID::CreateUniqueForDevTools() {
+   return CreateUnique(kDevToolsOTRProfileIDPrefix);

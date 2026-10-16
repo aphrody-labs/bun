@@ -1,0 +1,12 @@
+diff --git a/components/sessions/core/tab_restore_service_impl.cc b/components/sessions/core/tab_restore_service_impl.cc
+index fc0c2c5531275322a8f5c84384e29df6b2d7273d..b153d49bab7a7c3547700dd838b8c6694e818cc2 100644
+--- a/components/sessions/core/tab_restore_service_impl.cc
++++ b/components/sessions/core/tab_restore_service_impl.cc
+@@ -214,6 +214,7 @@ int SerializeWindowShowState(ui::mojom::WindowShowState show_state) {
+     case ui::mojom::WindowShowState::kNormal:
+       return kSerializedShowStateNormal;
+     case ui::mojom::WindowShowState::kMinimized:
++    case ui::mojom::WindowShowState::kHidden:
+       return kSerializedShowStateMinimized;
+     case ui::mojom::WindowShowState::kMaximized:
+       return kSerializedShowStateMaximized;

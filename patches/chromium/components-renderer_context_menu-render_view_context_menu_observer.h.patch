@@ -1,0 +1,24 @@
+diff --git a/components/renderer_context_menu/render_view_context_menu_observer.h b/components/renderer_context_menu/render_view_context_menu_observer.h
+index b2aa338c76cd36031abe49190c1f43db4e2b6f03..233c34003bbc5a3e3588bdd60b3ba6ea4c426ea9 100644
+--- a/components/renderer_context_menu/render_view_context_menu_observer.h
++++ b/components/renderer_context_menu/render_view_context_menu_observer.h
+@@ -11,6 +11,10 @@ namespace content {
+ struct ContextMenuParams;
+ }
+ 
++namespace ui {
++class Accelerator;
++}
++
+ // The interface used for implementing context-menu items. The following
+ // instruction describe how to implement a context-menu item with this
+ // interface.
+@@ -100,6 +104,8 @@ class RenderViewContextMenuObserver {
+   virtual bool IsCommandIdChecked(int command_id);
+   virtual bool IsCommandIdEnabled(int command_id);
+ 
++  virtual bool GetAccelerator(int command_id, ui::Accelerator* accel);
++
+   // Called when a user selects the specified context-menu item. This is
+   // only called when the observer returns true for IsCommandIdSupported()
+   // for that |command_id|.

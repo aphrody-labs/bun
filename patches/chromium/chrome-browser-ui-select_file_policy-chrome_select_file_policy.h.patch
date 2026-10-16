@@ -1,0 +1,13 @@
+diff --git a/chrome/browser/ui/select_file_policy/chrome_select_file_policy.h b/chrome/browser/ui/select_file_policy/chrome_select_file_policy.h
+index 993b89dca34875d458370dc0730a98fb36bf7bff..d82beccf7014fe79c84b82d549d4015ee5c23b95 100644
+--- a/chrome/browser/ui/select_file_policy/chrome_select_file_policy.h
++++ b/chrome/browser/ui/select_file_policy/chrome_select_file_policy.h
+@@ -30,6 +30,8 @@ class ChromeSelectFilePolicy : public ui::SelectFilePolicy {
+   // Returns true if local state allows showing file pickers.
+   static bool FileSelectDialogsAllowed();
+ 
++  content::WebContents* source_contents() const { return source_contents_; }
++
+  private:
+   raw_ptr<content::WebContents, AcrossTasksDanglingUntriaged> source_contents_;
+ };

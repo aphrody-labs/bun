@@ -1,0 +1,18 @@
+diff --git a/mojo/public/cpp/bindings/lib/binding_state.h b/mojo/public/cpp/bindings/lib/binding_state.h
+index 7efe47038b51b9922a817be9876bfd4830031ebb..22a636f9ac3ad7d6a6e66fc8da6e0229e19460ef 100644
+--- a/mojo/public/cpp/bindings/lib/binding_state.h
++++ b/mojo/public/cpp/bindings/lib/binding_state.h
+@@ -66,6 +66,13 @@ class COMPONENT_EXPORT(MOJO_CPP_BINDINGS) BindingStateBase {
+         std::move(error_handler));
+   }
+ 
++  void set_connection_error_with_reason_and_result_handler(
++      ConnectionErrorWithReasonAndResultCallback error_handler) {
++    DCHECK(is_bound());
++    endpoint_client_->set_connection_error_with_reason_and_result_handler(
++        std::move(error_handler));
++  }
++
+   bool is_bound() const { return !!router_; }
+ 
+   MessagePipeHandle handle() const {

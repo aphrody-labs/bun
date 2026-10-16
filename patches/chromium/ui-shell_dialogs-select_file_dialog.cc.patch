@@ -1,0 +1,17 @@
+diff --git a/ui/shell_dialogs/select_file_dialog.cc b/ui/shell_dialogs/select_file_dialog.cc
+index d44aa9ea9f3f81e2d6dd3f28f67980ded747f7d8..60f42e1299d5cd909974de91cd48c4b79b4c1590 100644
+--- a/ui/shell_dialogs/select_file_dialog.cc
++++ b/ui/shell_dialogs/select_file_dialog.cc
+@@ -90,8 +90,10 @@ void SelectFileDialog::SetFactory(
+ // static
+ scoped_refptr<SelectFileDialog> SelectFileDialog::Create(
+     Listener* listener,
+-    std::unique_ptr<ui::SelectFilePolicy> policy) {
+-  if (dialog_factory_)
++    std::unique_ptr<ui::SelectFilePolicy> policy,
++    bool run_from_cef) {
++  // Avoid reentrancy of the CEF factory.
++  if (dialog_factory_ && (!run_from_cef || !dialog_factory_->IsCefFactory()))
+     return dialog_factory_->Create(listener, std::move(policy));
+   return CreateSelectFileDialog(listener, std::move(policy));
+ }

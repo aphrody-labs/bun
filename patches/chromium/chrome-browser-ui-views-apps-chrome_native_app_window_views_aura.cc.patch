@@ -1,0 +1,12 @@
+diff --git a/chrome/browser/ui/views/apps/chrome_native_app_window_views_aura.cc b/chrome/browser/ui/views/apps/chrome_native_app_window_views_aura.cc
+index 56331d60609fd1e3a6488917bc06b550d4064f63..ae8ca8f70535ae5932a019d2bea0de2e637faed5 100644
+--- a/chrome/browser/ui/views/apps/chrome_native_app_window_views_aura.cc
++++ b/chrome/browser/ui/views/apps/chrome_native_app_window_views_aura.cc
+@@ -35,6 +35,7 @@ ui::mojom::WindowShowState ChromeNativeAppWindowViewsAura::GetRestorableState(
+ 
+     case ui::mojom::WindowShowState::kDefault:
+     case ui::mojom::WindowShowState::kMinimized:
++    case ui::mojom::WindowShowState::kHidden:
+     case ui::mojom::WindowShowState::kInactive:
+     case ui::mojom::WindowShowState::kEnd:
+       return ui::mojom::WindowShowState::kNormal;

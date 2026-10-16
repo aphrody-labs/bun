@@ -1,0 +1,13 @@
+diff --git a/content/renderer/render_thread_impl.cc b/content/renderer/render_thread_impl.cc
+index a5cf4998876676fc58d4a4842932e82ee2eb9abf..1cd1a4835cdd38714e2aff391bf0966184c58474 100644
+--- a/content/renderer/render_thread_impl.cc
++++ b/content/renderer/render_thread_impl.cc
+@@ -569,6 +569,8 @@ void RenderThreadImpl::Init() {
+       GetContentClient()->renderer()->CreateURLLoaderThrottleProvider(
+           blink::URLLoaderThrottleProviderType::kFrame);
+ 
++  GetContentClient()->renderer()->RenderThreadConnected();
++
+   GetAssociatedInterfaceRegistry()->AddInterface<mojom::Renderer>(
+       base::BindRepeating(&RenderThreadImpl::OnRendererInterfaceReceiver,
+                           base::Unretained(this)));

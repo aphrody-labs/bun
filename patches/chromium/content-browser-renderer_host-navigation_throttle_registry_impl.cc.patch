@@ -1,0 +1,25 @@
+diff --git a/content/browser/renderer_host/navigation_throttle_registry_impl.cc b/content/browser/renderer_host/navigation_throttle_registry_impl.cc
+index 0ab996be624ce2b8487cfa2fb26a042ea83c0fef..d6451e7867b33d413ac349582f842375098b2520 100644
+--- a/content/browser/renderer_host/navigation_throttle_registry_impl.cc
++++ b/content/browser/renderer_host/navigation_throttle_registry_impl.cc
+@@ -279,13 +279,18 @@ NavigationHandle& NavigationThrottleRegistryImpl::GetNavigationHandle() {
+ }
+ 
+ void NavigationThrottleRegistryImpl::AddThrottle(
+-    std::unique_ptr<NavigationThrottle> navigation_throttle) {
++    std::unique_ptr<NavigationThrottle> navigation_throttle,
++    bool first) {
+   CHECK(navigation_throttle);
+   TRACE_EVENT(TRACE_DISABLED_BY_DEFAULT("navigation"),
+               "NavigationThrottleRegistryImpl::AddThrottle",
+               "navigation_throttle", navigation_throttle->GetNameForLogging());
+   CHECK(!navigation_request_->IsInitialWebUINavigation());
+-  throttles_.push_back(std::move(navigation_throttle));
++  if (first) {
++    throttles_.emplace(throttles_.begin(), std::move(navigation_throttle));
++  } else {
++    throttles_.push_back(std::move(navigation_throttle));
++  }
+ }
+ 
+ bool NavigationThrottleRegistryImpl::HasThrottle(const std::string& name) {

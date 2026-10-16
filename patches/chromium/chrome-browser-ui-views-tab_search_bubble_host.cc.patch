@@ -1,0 +1,37 @@
+diff --git a/chrome/browser/ui/views/tab_search_bubble_host.cc b/chrome/browser/ui/views/tab_search_bubble_host.cc
+index 5c2304d13ba39a0dcdcdd2780fbd1a8fdb593dc1..5330f82e0fab94e2b3742efca9f2ec0d94797d4a 100644
+--- a/chrome/browser/ui/views/tab_search_bubble_host.cc
++++ b/chrome/browser/ui/views/tab_search_bubble_host.cc
+@@ -64,7 +64,7 @@ TabSearchOpenAction GetActionForEvent(const ui::Event& event) {
+ TabSearchBubbleHost::TabSearchBubbleHost(
+     views::Button* button,
+     BrowserWindowInterface* browser_window_interface)
+-    : button_(button),
++    : button_tracker_(button),
+       profile_(browser_window_interface->GetProfile()),
+       browser_window_interface_(browser_window_interface),
+       webui_bubble_manager_(WebUIBubbleManager::Create<TabSearchUI>(
+@@ -202,7 +202,7 @@ bool TabSearchBubbleHost::ShowTabSearchBubble(
+   const tabs::TabSearchPosition position =
+       tabs::GetTabSearchPosition(browser_window_interface_);
+   webui_bubble_manager_->ShowBubble(
+-      button_,
++      button(),
+       (position == tabs::TabSearchPosition::kLeadingHorizontalTabstrip ||
+        position == tabs::TabSearchPosition::kVerticalTabstrip)
+           ? views::BubbleBorder::TOP_LEFT
+@@ -222,9 +222,11 @@ bool TabSearchBubbleHost::ShowTabSearchBubble(
+ 
+   // Hold the pressed lock while the |bubble_| is active.
+   // LINT.IfChange(pressed_lock_)
+-  pressed_lock_ =
+-      static_cast<views::MenuButtonController*>(button_->button_controller())
+-          ->TakeLock();
++  if (auto* button = static_cast<views::Button*>(button_tracker_.view())) {
++    pressed_lock_ =
++        static_cast<views::MenuButtonController*>(button->button_controller())
++            ->TakeLock();
++  }
+   // LINT.ThenChange(:menu_button_controller)
+   return true;
+ }

@@ -1,0 +1,12 @@
+diff --git a/content/browser/renderer_host/render_widget_host_impl.h b/content/browser/renderer_host/render_widget_host_impl.h
+index 02bdef3bae5a29d874956d88e33e37bf0fd9ce5c..cd9c7fe1f6bb8f589ad709d2850619a29b3ec390 100644
+--- a/content/browser/renderer_host/render_widget_host_impl.h
++++ b/content/browser/renderer_host/render_widget_host_impl.h
+@@ -908,6 +908,7 @@ class CONTENT_EXPORT RenderWidgetHostImpl
+ 
+   void ProgressFlingIfNeeded(base::TimeTicks current_time);
+   void StopFling();
++  void SetCompositorForFlingScheduler(ui::Compositor* compositor);
+ 
+   RenderWidgetHostViewBase* GetRenderWidgetHostViewBase();
+ 

@@ -1,0 +1,14 @@
+diff --git a/chrome/common/webui_url_constants.cc b/chrome/common/webui_url_constants.cc
+index bb97c63d19778ea77853a1dc13b17a8b994eb21e..293cbbfb9439f2b673f583ad9e56f0df2b9a4e4c 100644
+--- a/chrome/common/webui_url_constants.cc
++++ b/chrome/common/webui_url_constants.cc
+@@ -148,6 +148,9 @@ base::span<const base::cstring_view> ChromeURLHosts() {
+       kChromeUIHistoryHost,
+       history_clusters_internals::kChromeUIHistoryClustersInternalsHost,
+       kChromeUIInterstitialHost,
++#if BUILDFLAG(ENABLE_CEF)
++      kChromeUILicenseHost,
++#endif
+ #if !BUILDFLAG(IS_ANDROID)
+       kChromeUIIwaDevHost,
+ #endif

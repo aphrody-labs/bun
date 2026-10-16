@@ -1,0 +1,21 @@
+diff --git a/chrome/common/chrome_paths.h b/chrome/common/chrome_paths.h
+index e36249713bfd5c254a322c3c55fd31d129937fab..8e60ff056d2bf996e6fb84b924379f2f19efa458 100644
+--- a/chrome/common/chrome_paths.h
++++ b/chrome/common/chrome_paths.h
+@@ -7,6 +7,7 @@
+ 
+ #include "build/branding_buildflags.h"
+ #include "build/build_config.h"
++#include "cef/libcef/features/features.h"
+ #include "extensions/buildflags/buildflags.h"
+ #include "third_party/widevine/cdm/buildflags.h"
+ 
+@@ -49,7 +50,7 @@ enum {
+ #if BUILDFLAG(IS_MAC)
+   DIR_OUTER_BUNDLE,  // Directory that is the outermost Chromium bundle.
+ #endif
+-#if BUILDFLAG(IS_POSIX) && !BUILDFLAG(IS_MAC)
++#if BUILDFLAG(IS_POSIX) && !BUILDFLAG(IS_MAC) && !BUILDFLAG(ENABLE_CEF)
+   DIR_POLICY_FILES,  // Directory for system-wide read-only
+                      // policy files that allow sys-admins
+                      // to set policies for chrome. This directory

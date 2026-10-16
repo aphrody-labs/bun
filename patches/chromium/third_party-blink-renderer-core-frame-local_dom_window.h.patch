@@ -1,0 +1,25 @@
+diff --git a/third_party/blink/renderer/core/frame/local_dom_window.h b/third_party/blink/renderer/core/frame/local_dom_window.h
+index d9457ae5f06d8c8e30edddbf281b29c7e313503a..4ea83b4dcd4849224e60c4bba50552eb7bf8dfc8 100644
+--- a/third_party/blink/renderer/core/frame/local_dom_window.h
++++ b/third_party/blink/renderer/core/frame/local_dom_window.h
+@@ -651,6 +651,11 @@ class CORE_EXPORT LocalDOMWindow final : public DOMWindow,
+ 
+   void SetIsPictureInPictureWindow();
+ 
++  void SetMovePictureInPictureEnabled(bool enabled) {
++    move_pip_enabled_ = enabled;
++  }
++  bool MovePictureInPictureEnabled() const { return move_pip_enabled_; }
++
+   // Return the viewport size including scrollbars.
+   gfx::Size GetViewportSize() const;
+ 
+@@ -762,6 +767,8 @@ class CORE_EXPORT LocalDOMWindow final : public DOMWindow,
+   // https://wicg.github.io/document-picture-in-picture/
+   bool is_picture_in_picture_window_ = false;
+ 
++  bool move_pip_enabled_ = false;
++
+   // Records this window's Storage Access API status. It cannot be downgraded.
+   net::StorageAccessApiStatus storage_access_api_status_ =
+       net::StorageAccessApiStatus::kNone;

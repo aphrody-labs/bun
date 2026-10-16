@@ -1,0 +1,19 @@
+diff --git a/content/public/browser/render_widget_host_view.h b/content/public/browser/render_widget_host_view.h
+index 3647b788db993b821ff46814559173d3ebab03a3..ebae81511fcca16cde467f2b01b20d1a29356f0a 100644
+--- a/content/public/browser/render_widget_host_view.h
++++ b/content/public/browser/render_widget_host_view.h
+@@ -286,6 +286,14 @@ class CONTENT_EXPORT RenderWidgetHostView {
+   // This must always return the same device scale factor as GetScreenInfo.
+   virtual float GetDeviceScaleFactor() const = 0;
+ 
++  // Set whether the widget has a external parent view/window outside of the
++  // Chromium-controlled view/window hierarchy.
++  virtual void SetHasExternalParent(bool val) = 0;
++
++  // Returns true if the widget has a external parent view/window outside of the
++  // Chromium-controlled view/window hierarchy.
++  virtual bool HasExternalParent() const = 0;
++
+ #if BUILDFLAG(IS_MAC)
+   // Set the view's active state (i.e., tint state of controls).
+   virtual void SetActive(bool active) = 0;

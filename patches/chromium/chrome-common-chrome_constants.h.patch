@@ -1,0 +1,24 @@
+diff --git a/chrome/common/chrome_constants.h b/chrome/common/chrome_constants.h
+index e7b9a848b308067a5fceb9b114a19f3827d7df55..3391e76c8cf61fe4d552d09e1e9b057ea74b5d49 100644
+--- a/chrome/common/chrome_constants.h
++++ b/chrome/common/chrome_constants.h
+@@ -9,6 +9,7 @@
+ 
+ #include "base/files/file_path.h"
+ #include "build/build_config.h"
++#include "cef/libcef/features/features.h"
+ 
+ namespace chrome {
+ 
+@@ -36,7 +37,11 @@ extern const char kMacHelperSuffixAlerts[];
+ 
+ #if BUILDFLAG(IS_WIN)
+ inline constexpr base::FilePath::CharType kBrowserResourcesDll[] =
++#if BUILDFLAG(ENABLE_CEF)
++    FILE_PATH_LITERAL("libcef.dll");
++#else
+     FILE_PATH_LITERAL("chrome.dll");
++#endif
+ inline constexpr base::FilePath::CharType kElfDll[] =
+     FILE_PATH_LITERAL("chrome_elf.dll");
+ inline constexpr base::FilePath::CharType kRendererDll[] =

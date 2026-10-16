@@ -1,0 +1,32 @@
+diff --git a/chrome/browser/ui/views/frame/browser_native_widget_mac.h b/chrome/browser/ui/views/frame/browser_native_widget_mac.h
+index c1ffa079a86d21a2e451d8023e1c9610b28f6fdb..18c8b1eebc5cba36888f62043bdd04e895b39a22 100644
+--- a/chrome/browser/ui/views/frame/browser_native_widget_mac.h
++++ b/chrome/browser/ui/views/frame/browser_native_widget_mac.h
+@@ -19,6 +19,7 @@
+ #include "ui/native_theme/native_theme.h"
+ #include "ui/views/widget/native_widget_mac.h"
+ 
++class Browser;
+ class BrowserWidget;
+ class BrowserView;
+ @class BrowserWindowTouchBarController;
+@@ -76,6 +77,19 @@ class BrowserNativeWidgetMac : public views::NativeWidgetMac,
+   bool ShouldUseInitialVisibleOnAllWorkspaces() const override;
+   void AnnounceTextInInProcessWindow(const std::u16string& text) override;
+ 
++  static void ValidateUserInterfaceItem(
++      BrowserWindowInterface* browser,
++      int32_t command,
++      remote_cocoa::mojom::ValidateUserInterfaceItemResult* result);
++  static bool WillExecuteCommand(BrowserWindowInterface* browser,
++                                 int32_t command,
++                                 WindowOpenDisposition window_open_disposition,
++                                 bool is_before_first_responder);
++  static bool ExecuteCommand(BrowserWindowInterface* browser,
++                             int32_t command,
++                             WindowOpenDisposition window_open_disposition,
++                             bool is_before_first_responder);
++
+  protected:
+   ~BrowserNativeWidgetMac() override;
+ 

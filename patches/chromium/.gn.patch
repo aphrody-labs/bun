@@ -1,0 +1,13 @@
+diff --git a/.gn b/.gn
+index 84c68fbae243a60a676b0234cf850331adbb87d9..f6d8bbda483254aeeb2197ff2ed4f187afb7ade3 100644
+--- a/.gn
++++ b/.gn
+@@ -442,6 +442,8 @@ exec_script_allowlist =
+       # in the Chromium repo outside of //build.
+       "//build_overrides/build.gni",
+ 
++      "//cef/BUILD.gn",
++
+       "//chrome/version.gni",
+ 
+       "//google_apis/BUILD.gn",

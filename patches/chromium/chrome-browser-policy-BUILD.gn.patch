@@ -1,0 +1,12 @@
+diff --git a/chrome/browser/policy/BUILD.gn b/chrome/browser/policy/BUILD.gn
+index 62a1a6fdc419029d78fdf52c946adac78d4e82ac..fd46496eb3822db730821d25a02970842a0bcd61 100644
+--- a/chrome/browser/policy/BUILD.gn
++++ b/chrome/browser/policy/BUILD.gn
+@@ -28,6 +28,7 @@ source_set("path_parser") {
+     "//base",
+     "//chrome/common:constants",
+     "//components/policy:generated",
++    "//components/strings:components_strings",
+   ]
+ 
+   if (is_mac) {

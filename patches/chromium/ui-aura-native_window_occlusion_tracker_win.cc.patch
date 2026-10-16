@@ -1,0 +1,18 @@
+diff --git a/ui/aura/native_window_occlusion_tracker_win.cc b/ui/aura/native_window_occlusion_tracker_win.cc
+index 675d6e17776445f7f0c81177782baa5b17d83001..5b55c134f171692b0ef4b6efbbdd2fb0536d915b 100644
+--- a/ui/aura/native_window_occlusion_tracker_win.cc
++++ b/ui/aura/native_window_occlusion_tracker_win.cc
+@@ -107,6 +107,13 @@ void NativeWindowOcclusionTrackerWin::Enable(Window* window) {
+   HWND widget_hwnd = window->GetHost()->GetAcceleratedWidget();
+   HWND root_window_hwnd = ::GetAncestor(widget_hwnd, GA_ROOT);
+ 
++
++  // Delay occlusion tracking for initially-minimized windows.
++  // See CEF issue #3638.
++  if (IsIconic(root_window_hwnd)) {
++    return;
++  }
++
+   // Remember the mapping from this window back to the real root hwnd.
+   hwnd_widget_to_app_root_map_[window] = root_window_hwnd;
+ 

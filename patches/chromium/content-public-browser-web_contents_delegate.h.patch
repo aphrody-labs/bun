@@ -1,0 +1,32 @@
+diff --git a/content/public/browser/web_contents_delegate.h b/content/public/browser/web_contents_delegate.h
+index 38efabfe5d486e893fbf4f4fed72570771dad817..c1543df2153ea55229e669339addd7d0f6ca6b91 100644
+--- a/content/public/browser/web_contents_delegate.h
++++ b/content/public/browser/web_contents_delegate.h
+@@ -115,10 +115,12 @@ class FileSelectListener;
+ class InitiatorNavigationState;
+ class JavaScriptDialogManager;
+ class RenderFrameHost;
++class RenderViewHostDelegateView;
+ class RenderWidgetHost;
+ class SessionStorageNamespaceHandle;
+ class SiteInstance;
+ class WebContents;
++class WebContentsView;
+ struct ContextMenuParams;
+ struct DropData;
+ struct GlobalRenderFrameHostId;
+@@ -423,6 +425,14 @@ class CONTENT_EXPORT WebContentsDelegate {
+       const StoragePartitionConfig& partition_config,
+       SessionStorageNamespaceHandle* session_storage_namespace);
+ 
++  virtual void GetCustomWebContentsView(
++      WebContents* web_contents,
++      const GURL& target_url,
++      int opener_render_process_id,
++      int opener_render_frame_id,
++      raw_ptr<content::WebContentsView>* view,
++      raw_ptr<content::RenderViewHostDelegateView>* delegate_view) {}
++
+   // Notifies the delegate about the creation of a new WebContents. This
+   // typically happens when popups are created.
+   virtual void WebContentsCreated(WebContents* source_contents,

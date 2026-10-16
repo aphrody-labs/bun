@@ -1,0 +1,12 @@
+diff --git a/chrome/browser/ui/views/renderer_context_menu/render_view_context_menu_views.h b/chrome/browser/ui/views/renderer_context_menu/render_view_context_menu_views.h
+index 8a9a76560aa243e253b4412153789465f41419c4..09779da2ada9b5f2afa0dacf29293a5d3ed07757 100644
+--- a/chrome/browser/ui/views/renderer_context_menu/render_view_context_menu_views.h
++++ b/chrome/browser/ui/views/renderer_context_menu/render_view_context_menu_views.h
+@@ -49,6 +49,7 @@ class RenderViewContextMenuViews : public RenderViewContextMenu {
+ 
+   // RenderViewContextMenuBase implementation.
+   void Show() override;
++  bool IsRunning() override;
+ 
+  protected:
+   RenderViewContextMenuViews(content::RenderFrameHost& render_frame_host,

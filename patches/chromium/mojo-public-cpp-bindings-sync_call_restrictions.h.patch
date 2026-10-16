@@ -1,0 +1,21 @@
+diff --git a/mojo/public/cpp/bindings/sync_call_restrictions.h b/mojo/public/cpp/bindings/sync_call_restrictions.h
+index e9773085029937d9192392c9ace0a85c0fcde1cb..7c7f14f6c396ef803731dcd83a51ba6d07c887e2 100644
+--- a/mojo/public/cpp/bindings/sync_call_restrictions.h
++++ b/mojo/public/cpp/bindings/sync_call_restrictions.h
+@@ -37,6 +37,7 @@ class SharedImageInterfaceProxy;
+ }  // namespace gpu
+ 
+ namespace viz {
++class GpuDisplayProvider;
+ class GpuHostImpl;
+ class HostFrameSinkManager;
+ }  // namespace viz
+@@ -106,6 +107,8 @@ class COMPONENT_EXPORT(MOJO_CPP_BINDINGS) SyncCallRestrictions {
+   // SynchronousCompositorHost is used for Android webview.
+   friend class content::SynchronousCompositorHost;
+   friend class mojo::ScopedAllowSyncCallForTesting;
++  // For query of whether to use SoftwareOutputDevice or not.
++  friend class viz::GpuDisplayProvider;
+   friend class viz::GpuHostImpl;
+   // For destroying the GL context/surface that draw to a platform window before
+   // the platform window is destroyed.

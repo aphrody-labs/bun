@@ -1,0 +1,60 @@
+diff --git a/content/browser/renderer_host/render_widget_host_view_aura.cc b/content/browser/renderer_host/render_widget_host_view_aura.cc
+index 5e68fd479b3c466ca38f1d5ee0b1e2831ca32755..650092cb75c387cea1f7cc37e6c76cc014af1e33 100644
+--- a/content/browser/renderer_host/render_widget_host_view_aura.cc
++++ b/content/browser/renderer_host/render_widget_host_view_aura.cc
+@@ -8,6 +8,7 @@
+ #include <memory>
+ #include <set>
+ #include <string_view>
++#include <tuple>
+ #include <utility>
+ 
+ #include "base/auto_reset.h"
+@@ -57,6 +58,7 @@
+ #include "content/public/browser/content_browser_client.h"
+ #include "content/public/browser/device_service.h"
+ #include "content/public/browser/render_view_host.h"
++#include "content/public/browser/web_contents.h"
+ #include "content/public/common/page_visibility_state.h"
+ #include "services/service_manager/public/cpp/interface_provider.h"
+ #include "third_party/blink/public/common/input/web_input_event.h"
+@@ -870,6 +872,9 @@ gfx::Rect RenderWidgetHostViewAura::GetViewBoundsWithoutTransform() {
+ void RenderWidgetHostViewAura::UpdateBackgroundColor() {
+   CHECK(GetBackgroundColor());
+ 
++  if (!window_) {
++    return;
++  }
+   SkColor4f background_color =
+       SkColor4f::FromColor(GetBackgroundColor().value());
+   window_->SetTransparent(!background_color.isOpaque());
+@@ -1301,6 +1306,12 @@ void RenderWidgetHostViewAura::TransformPointToRootSurface(gfx::PointF* point) {
+ }
+ 
+ gfx::Rect RenderWidgetHostViewAura::GetBoundsInScreen() {
++  if (!root_window_bounds_callback_.is_null()) {
++    if (auto bounds = root_window_bounds_callback_.Run()) {
++      return *bounds;
++    }
++  }
++
+   aura::Window* top_level = window_->GetToplevelWindow();
+   gfx::Rect bounds(top_level->GetBoundsInScreen());
+ 
+@@ -3131,6 +3142,16 @@ void RenderWidgetHostViewAura::CreateAuraWindow(aura::client::WindowType type) {
+   window_->SetTransparent(!background_color.isOpaque());
+   window_->layer()->AsSurface()->SetFallbackBackgroundColor(background_color);
+   UpdateFrameSinkIdRegistration();
++
++  // Do this after |window_| is created to avoid crashes on Win10.
++  // See https://crbug.com/761389.
++  auto* web_contents =
++      WebContents::FromRenderViewHost(RenderViewHost::From(host()));
++  if (web_contents) {
++    // TODO(mostynb): actually use prefs.  Landing this as a separate CL
++    // first to rebaseline some unreliable layout tests.
++    std::ignore = web_contents->GetOrCreateWebPreferences();
++  }
+ }
+ 
+ void RenderWidgetHostViewAura::UpdateFrameSinkIdRegistration() {

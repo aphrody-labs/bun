@@ -1,0 +1,12 @@
+diff --git a/ui/views/controls/menu/menu_runner_impl_remote_cocoa.mm b/ui/views/controls/menu/menu_runner_impl_remote_cocoa.mm
+index fa04c9c73bba6aa9d142856d9177ad91e3f05a05..49482a32c751e2c6ac4a28bd4b162cd27283e3f6 100644
+--- a/ui/views/controls/menu/menu_runner_impl_remote_cocoa.mm
++++ b/ui/views/controls/menu/menu_runner_impl_remote_cocoa.mm
+@@ -75,6 +75,7 @@ void MenuRunnerImplRemoteCocoa::RunMenuAt(
+     ui::mojom::MenuSourceType source_type,
+     int32_t run_types,
+     gfx::NativeView native_view_for_gestures,
++    gfx::AcceleratedWidget parent_widget,
+     std::optional<gfx::RoundedCornersF> corners,
+     std::optional<std::string> show_menu_host_duration_histogram) {
+   RunMenu(parent, bounds.CenterPoint());

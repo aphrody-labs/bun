@@ -1,0 +1,25 @@
+diff --git a/ui/gtk/gtk_ui.cc b/ui/gtk/gtk_ui.cc
+index 0f3f0752cd8252e094268e460246b112b9fec2f4..f1e6bf06e1ee7d0981bd09e8207a2e5b7ee3126c 100644
+--- a/ui/gtk/gtk_ui.cc
++++ b/ui/gtk/gtk_ui.cc
+@@ -32,6 +32,7 @@
+ #include "base/scoped_environment_variable_override.h"
+ #include "base/strings/string_number_conversions.h"
+ #include "base/strings/string_split.h"
++#include "cef/libcef/features/features.h"
+ #include "chrome/browser/themes/theme_properties.h"  // nogncheck
+ #include "third_party/skia/include/core/SkBitmap.h"
+ #include "third_party/skia/include/core/SkColor.h"
+@@ -363,10 +364,12 @@ bool GtkUi::Initialize() {
+   };
+ 
+   GtkSettings* settings = gtk_settings_get_default();
++#if !BUILDFLAG(ENABLE_CEF)
+   connect(settings, "notify::gtk-theme-name", &GtkUi::OnThemeChanged);
+   connect(settings, "notify::gtk-icon-theme-name", &GtkUi::OnThemeChanged);
+   connect(settings, "notify::gtk-application-prefer-dark-theme",
+           &GtkUi::OnThemeChanged);
++#endif
+   connect(settings, "notify::gtk-cursor-theme-name",
+           &GtkUi::OnCursorThemeNameChanged);
+   connect(settings, "notify::gtk-cursor-theme-size",

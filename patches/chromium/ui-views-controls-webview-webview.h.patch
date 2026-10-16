@@ -1,0 +1,15 @@
+diff --git a/ui/views/controls/webview/webview.h b/ui/views/controls/webview/webview.h
+index 28aaa94abd83d47fdc5cb3c2082c0da3f1a28725..b38320797d00b6edd00bf5d013cf74854ac56803 100644
+--- a/ui/views/controls/webview/webview.h
++++ b/ui/views/controls/webview/webview.h
+@@ -137,6 +137,10 @@ class WEBVIEW_EXPORT WebView : public View,
+   const gfx::Size& AutoResizeMinSize() const;
+   const gfx::Size& AutoResizeMaxSize() const;
+ 
++  // Set the background color to use while resizing with a clip. This is white
++  // by default.
++  void SetResizeBackgroundColor(SkColor resize_background_color);
++
+   // A scoped object that disconnects the webview from the accessibility tree.
+   // When destroyed, it restores the previous accessibility state.
+   class WEBVIEW_EXPORT ScopedAxDisconnectLock {

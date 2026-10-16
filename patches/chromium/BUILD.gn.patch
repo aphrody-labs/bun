@@ -1,0 +1,23 @@
+diff --git a/BUILD.gn b/BUILD.gn
+index 516aa805059c1af3e03dff6271a8a95626cfea97..7e425752cfaf3edff455e94f0e69e264e1335c9a 100644
+--- a/BUILD.gn
++++ b/BUILD.gn
+@@ -22,6 +22,7 @@ import("//build/config/ui.gni")
+ import("//build/gn_logs.gni")
+ import("//build/toolchain/rbe.gni")
+ import("//build/util/generate_wrapper.gni")
++import("//cef/libcef/features/features.gni")
+ import("//chrome/browser/buildflags.gni")
+ import("//chrome/enterprise_companion/config.gni")
+ import("//components/enterprise/buildflags/buildflags.gni")
+@@ -288,6 +289,10 @@ group("gn_all") {
+ 
+     deps += root_extra_deps
+ 
++    if (enable_cef) {
++      deps += [ "//cef" ]
++    }
++
+     if (enable_printing || enable_printing_tests) {
+       deps += [ "//printing:printing_unittests" ]
+     }

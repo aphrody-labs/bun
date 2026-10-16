@@ -1,0 +1,26 @@
+diff --git a/chrome/browser/ui/tabs/tab_strip_api/tab_strip_model_impl/tab_strip_model_adapter_impl.cc b/chrome/browser/ui/tabs/tab_strip_api/tab_strip_model_impl/tab_strip_model_adapter_impl.cc
+index 24311c6c0b3fa53d4f49dbf5f7d4207cf127eec5..ec1cc9ce8d5fdaff173eecc7ec7c950e1b578a02 100644
+--- a/chrome/browser/ui/tabs/tab_strip_api/tab_strip_model_impl/tab_strip_model_adapter_impl.cc
++++ b/chrome/browser/ui/tabs/tab_strip_api/tab_strip_model_impl/tab_strip_model_adapter_impl.cc
+@@ -16,6 +16,8 @@
+ #include "components/tab_groups/tab_group_visual_data.h"
+ #include "components/tabs/public/split_tab_collection.h"
+ #include "components/tabs/public/tab_collection.h"
++#include "ui/color/color_provider_manager.h"
++#include "ui/native_theme/native_theme.h"
+ #include "components/tabs/public/tab_group.h"
+ #include "components/tabs/public/tab_group_tab_collection.h"
+ #include "components/tabs/public/tab_interface.h"
+@@ -71,7 +73,11 @@ types::TabStates TabStripModelAdapterImpl::GetTabStates(
+ const ui::ColorProvider& TabStripModelAdapterImpl::GetColorProvider() const {
+   content::WebContents* active_contents =
+       tab_strip_model_->GetActiveWebContents();
+-  CHECK(active_contents);
++  if (!active_contents) {
++    return *ui::ColorProviderManager::Get().GetColorProviderFor(
++        ui::NativeTheme::GetInstanceForNativeUi()->GetColorProviderKey(
++            /*custom_theme=*/nullptr));
++  }
+   return active_contents->GetColorProvider();
+ }
+ 

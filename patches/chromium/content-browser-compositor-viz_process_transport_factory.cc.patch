@@ -1,0 +1,22 @@
+diff --git a/content/browser/compositor/viz_process_transport_factory.cc b/content/browser/compositor/viz_process_transport_factory.cc
+index 53219f0aaeb84332363ff3d1e41dc97269f50608..6d76074b6e16e610282527cf3ff405cc2cc9d006 100644
+--- a/content/browser/compositor/viz_process_transport_factory.cc
++++ b/content/browser/compositor/viz_process_transport_factory.cc
+@@ -400,8 +400,15 @@ void VizProcessTransportFactory::OnEstablishedGpuChannel(
+   mojo::AssociatedRemote<viz::mojom::DisplayPrivate> display_private;
+   root_params->display_private =
+       display_private.BindNewEndpointAndPassReceiver();
+-  compositor_data.display_client =
+-      std::make_unique<HostDisplayClient>(compositor);
++  if (compositor->delegate()) {
++    compositor_data.display_client =
++        compositor->delegate()->CreateHostDisplayClient();
++    root_params->use_proxy_output_device =
++        compositor->delegate()->UseProxyOutputDevice();
++  } else {
++    compositor_data.display_client =
++        std::make_unique<HostDisplayClient>(compositor);
++  }
+   root_params->display_client =
+       compositor_data.display_client->GetBoundRemote(resize_task_runner_);
+   mojo::AssociatedRemote<viz::mojom::ExternalBeginFrameController>

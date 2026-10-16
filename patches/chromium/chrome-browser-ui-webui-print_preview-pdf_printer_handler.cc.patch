@@ -1,0 +1,17 @@
+diff --git a/chrome/browser/ui/webui/print_preview/pdf_printer_handler.cc b/chrome/browser/ui/webui/print_preview/pdf_printer_handler.cc
+index e5306cca505ca23e442ec18ff8550990c295acc6..d91360d31ad43c2bf7a540e09399ae2b576a39c8 100644
+--- a/chrome/browser/ui/webui/print_preview/pdf_printer_handler.cc
++++ b/chrome/browser/ui/webui/print_preview/pdf_printer_handler.cc
+@@ -531,8 +531,10 @@ void PdfPrinterHandler::OnDirectorySelected(const base::FilePath& filename,
+   }
+ #endif
+ 
+-  select_file_dialog_ =
+-      ui::SelectFileDialog::Create(this, nullptr /*policy already checked*/);
++  // Preserve the source contents so CEF can associate the file dialog with
++  // the print initiator, even when the preview owns a separate native window.
++  select_file_dialog_ = ui::SelectFileDialog::Create(
++      this, std::make_unique<ChromeSelectFilePolicy>(preview_web_contents_));
+   select_file_dialog_->SelectFile(
+       ui::SelectFileDialog::SELECT_SAVEAS_FILE, std::u16string(), path,
+       &file_type_info, 0, kPdfExtension,

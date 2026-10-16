@@ -1,0 +1,12 @@
+diff --git a/ui/views/widget/native_widget_mac.mm b/ui/views/widget/native_widget_mac.mm
+index 8acc42f87dfbebc93184039db0e340a2983b3c17..8a42668d70de717af2042b26e4fcdf432d7d12ef 100644
+--- a/ui/views/widget/native_widget_mac.mm
++++ b/ui/views/widget/native_widget_mac.mm
+@@ -769,6 +769,7 @@ void NativeWidgetMac::Show(ui::mojom::WindowShowState show_state,
+       break;
+     case ui::mojom::WindowShowState::kMaximized:
+     case ui::mojom::WindowShowState::kFullscreen:
++    case ui::mojom::WindowShowState::kHidden:
+       NOTIMPLEMENTED();
+       break;
+     case ui::mojom::WindowShowState::kEnd:

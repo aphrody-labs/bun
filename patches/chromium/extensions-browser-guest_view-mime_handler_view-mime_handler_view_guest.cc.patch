@@ -1,0 +1,13 @@
+diff --git a/extensions/browser/guest_view/mime_handler_view/mime_handler_view_guest.cc b/extensions/browser/guest_view/mime_handler_view/mime_handler_view_guest.cc
+index 234fbf36362d3a3932ca397e6173cd16e2d3fb1e..c87885851c47eb3aaac233c2d44bf2730c6c95b4 100644
+--- a/extensions/browser/guest_view/mime_handler_view/mime_handler_view_guest.cc
++++ b/extensions/browser/guest_view/mime_handler_view/mime_handler_view_guest.cc
+@@ -171,6 +171,8 @@ void MimeHandlerViewGuest::CreateInnerPage(
+     WebContents::CreateParams params(browser_context(),
+                                      guest_site_instance.get());
+     params.guest_delegate = this;
++    if (delegate_)
++      delegate_->OverrideWebContentsCreateParams(&params);
+     std::move(callback).Run(std::move(owned_this),
+                             WebContents::CreateWithSessionStorage(
+                                 params, owner_web_contents()

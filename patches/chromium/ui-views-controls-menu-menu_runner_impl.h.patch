@@ -1,0 +1,12 @@
+diff --git a/ui/views/controls/menu/menu_runner_impl.h b/ui/views/controls/menu/menu_runner_impl.h
+index d6022d082640f4f605b2d54a74e5caba3829795f..06bd5d409f6aa50ff2028d6b19ef46318900d7d8 100644
+--- a/ui/views/controls/menu/menu_runner_impl.h
++++ b/ui/views/controls/menu/menu_runner_impl.h
+@@ -57,6 +57,7 @@ class VIEWS_EXPORT MenuRunnerImpl : public MenuRunnerImplInterface,
+       ui::mojom::MenuSourceType source_type,
+       int32_t run_types,
+       gfx::NativeView native_view_for_gestures,
++      gfx::AcceleratedWidget parent_widget,
+       std::optional<gfx::RoundedCornersF> corners,
+       std::optional<std::string> show_menu_host_duration_histogram) override;
+   void Cancel() override;

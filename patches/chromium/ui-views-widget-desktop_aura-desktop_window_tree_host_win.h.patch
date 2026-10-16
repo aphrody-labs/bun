@@ -1,0 +1,22 @@
+diff --git a/ui/views/widget/desktop_aura/desktop_window_tree_host_win.h b/ui/views/widget/desktop_aura/desktop_window_tree_host_win.h
+index ae1ac5976e3beca9465545b0b168503a55486621..3cd45c3c4f10127cdd7035ecdf3951e136ab8530 100644
+--- a/ui/views/widget/desktop_aura/desktop_window_tree_host_win.h
++++ b/ui/views/widget/desktop_aura/desktop_window_tree_host_win.h
+@@ -366,6 +366,17 @@ class VIEWS_EXPORT DesktopWindowTreeHostWin
+   // Overrides the remote session detection for testing.
+   std::optional<bool> remote_session_for_testing_;
+ 
++  // True if the widget has a external parent view/window outside of the
++  // Chromium-controlled view/window hierarchy.
++  bool has_external_parent_ = false;
++
++  // True if this widget is a menu.
++  bool is_menu_ = false;
++
++  // True if the first call to HandleWindowMinimizedOrRestored for an initially-
++  // minimized window is pending.
++  bool initially_minimized_first_restore_pending_ = false;
++
+   // Visibility of the cursor. On Windows we can have multiple root windows and
+   // the implementation of ::ShowCursor() is based on a counter, so making this
+   // member static ensures that ::ShowCursor() is always called exactly once

@@ -1,0 +1,12 @@
+diff --git a/net/base/load_flags_list.h b/net/base/load_flags_list.h
+index c10df92f30b1292a8243f376025e81afcefba78d..17abc3e15b985a13308014488728fcb0af188f18 100644
+--- a/net/base/load_flags_list.h
++++ b/net/base/load_flags_list.h
+@@ -123,4 +123,7 @@ LOAD_FLAG(SHOULD_BYPASS_HSTS, 1 << 18)
+ // compromised renderer concern is acceptable.
+ LOAD_FLAG(IS_MAIN_FRAME_ORIGIN_RECENTLY_ACCESSED, 1 << 19)
+ 
++// This load will not send any cookies. For CEF usage.
++LOAD_FLAG(DO_NOT_SEND_COOKIES, 1 << 20)
++
+ // See note at top of file about why adding LoadFlags is often a bad idea.

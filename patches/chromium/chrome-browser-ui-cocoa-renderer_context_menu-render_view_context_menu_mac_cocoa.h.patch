@@ -1,0 +1,12 @@
+diff --git a/chrome/browser/ui/cocoa/renderer_context_menu/render_view_context_menu_mac_cocoa.h b/chrome/browser/ui/cocoa/renderer_context_menu/render_view_context_menu_mac_cocoa.h
+index 3506a973cf674e7fa8e377bf2cb5a729973897f4..a3600ffa009b07f82acd87b30e035982de4938a2 100644
+--- a/chrome/browser/ui/cocoa/renderer_context_menu/render_view_context_menu_mac_cocoa.h
++++ b/chrome/browser/ui/cocoa/renderer_context_menu/render_view_context_menu_mac_cocoa.h
+@@ -31,6 +31,7 @@ class RenderViewContextMenuMacCocoa : public RenderViewContextMenuMac {
+ 
+   // RenderViewContextMenu:
+   void Show() override;
++  bool IsRunning() override;
+ 
+  private:
+   // RenderViewContextMenuViewsMac:

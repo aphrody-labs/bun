@@ -1,0 +1,13 @@
+diff --git a/ui/shell_dialogs/execute_select_file_win.cc b/ui/shell_dialogs/execute_select_file_win.cc
+index 4785be9d5609b9379bac8604ed25bc60770af164..44e961854a72a3eaf775aa7ce0a4d65682862ade 100644
+--- a/ui/shell_dialogs/execute_select_file_win.cc
++++ b/ui/shell_dialogs/execute_select_file_win.cc
+@@ -33,7 +33,7 @@ namespace ui {
+ namespace {
+ 
+ // Stop switch for the AutoCloseDialogEventHandler.
+-BASE_FEATURE(kAutoCloseFileDialogs, base::FEATURE_ENABLED_BY_DEFAULT);
++BASE_FEATURE(kAutoCloseFileDialogs, base::FEATURE_DISABLED_BY_DEFAULT);
+ 
+ // Stop switch for the `SafeAcceptFileDialogEventHandler`.
+ BASE_FEATURE(kSafeAcceptFileDialogs, base::FEATURE_ENABLED_BY_DEFAULT);

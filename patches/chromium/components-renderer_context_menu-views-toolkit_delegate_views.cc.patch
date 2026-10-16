@@ -1,0 +1,15 @@
+diff --git a/components/renderer_context_menu/views/toolkit_delegate_views.cc b/components/renderer_context_menu/views/toolkit_delegate_views.cc
+index 0be2640c8173c86720b44a8ad4ab10fdf9e6686e..8bfdc6185690fbe01ba0aaab8c7bc6973a78a37c 100644
+--- a/components/renderer_context_menu/views/toolkit_delegate_views.cc
++++ b/components/renderer_context_menu/views/toolkit_delegate_views.cc
+@@ -31,6 +31,10 @@ void ToolkitDelegateViews::RunMenuAt(views::Widget* parent,
+                           anchor_position, type);
+ }
+ 
++bool ToolkitDelegateViews::IsMenuRunning() const {
++  return menu_runner_ && menu_runner_->IsRunning();
++}
++
+ void ToolkitDelegateViews::Init(ui::SimpleMenuModel* menu_model) {
+   menu_adapter_ = std::make_unique<views::MenuModelAdapter>(menu_model);
+   std::unique_ptr<views::MenuItemView> menu_view = menu_adapter_->CreateMenu();

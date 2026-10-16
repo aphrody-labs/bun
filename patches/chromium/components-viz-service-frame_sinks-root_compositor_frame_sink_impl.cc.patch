@@ -1,0 +1,14 @@
+diff --git a/components/viz/service/frame_sinks/root_compositor_frame_sink_impl.cc b/components/viz/service/frame_sinks/root_compositor_frame_sink_impl.cc
+index a7b06724021d0c78ef8278a2e7ebf33fa28b6544..56e3e410cf03f415a7dd794898d1dbebc8022574 100644
+--- a/components/viz/service/frame_sinks/root_compositor_frame_sink_impl.cc
++++ b/components/viz/service/frame_sinks/root_compositor_frame_sink_impl.cc
+@@ -131,7 +131,8 @@ RootCompositorFrameSinkImpl::Create(
+       params->gpu_compositing, params->widget);
+   auto output_surface = output_surface_provider->CreateOutputSurface(
+       params->widget, params->gpu_compositing, display_client.get(),
+-      display_controller.get(), params->renderer_settings, debug_settings);
++      display_controller.get(), params->renderer_settings, debug_settings,
++      params->use_proxy_output_device);
+ 
+   // Creating output surface failed. The host can send a new request, possibly
+   // with a different compositing mode.

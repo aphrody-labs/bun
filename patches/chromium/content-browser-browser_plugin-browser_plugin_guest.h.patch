@@ -1,0 +1,22 @@
+diff --git a/content/browser/browser_plugin/browser_plugin_guest.h b/content/browser/browser_plugin/browser_plugin_guest.h
+index 91c9f60d586972c294da016e8ae19ddda02a2023..987b2f68146044f130b7ff94fbe972ca4e78b164 100644
+--- a/content/browser/browser_plugin/browser_plugin_guest.h
++++ b/content/browser/browser_plugin/browser_plugin_guest.h
+@@ -68,6 +68,8 @@ class BrowserPluginGuest : public WebContentsObserver {
+   WebContentsImpl* GetWebContents() const;
+   RenderFrameHostImpl* GetProspectiveOuterDocument();
+ 
++  WebContentsImpl* owner_web_contents() const { return owner_web_contents_; }
++
+  private:
+   // BrowserPluginGuest is a WebContentsObserver of |web_contents| and
+   // |web_contents| has to stay valid for the lifetime of BrowserPluginGuest.
+@@ -78,6 +80,8 @@ class BrowserPluginGuest : public WebContentsObserver {
+ 
+   // May be null during guest destruction.
+   const base::WeakPtr<BrowserPluginGuestDelegate> delegate_;
++
++  raw_ptr<WebContentsImpl> owner_web_contents_ = nullptr;
+ };
+ 
+ }  // namespace content

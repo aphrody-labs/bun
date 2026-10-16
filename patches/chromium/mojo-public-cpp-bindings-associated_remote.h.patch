@@ -1,0 +1,16 @@
+diff --git a/mojo/public/cpp/bindings/associated_remote.h b/mojo/public/cpp/bindings/associated_remote.h
+index 05257f8b06bbc17df0a2cd80ee1ca5b3bea81508..f70b18236dea18faa04c974c1514a4d2086782e8 100644
+--- a/mojo/public/cpp/bindings/associated_remote.h
++++ b/mojo/public/cpp/bindings/associated_remote.h
+@@ -155,6 +155,11 @@ class AssociatedRemote {
+     internal_state_.set_connection_error_with_reason_handler(
+         std::move(handler));
+   }
++  void set_disconnect_with_reason_and_result_handler(
++      ConnectionErrorWithReasonAndResultCallback handler) {
++    internal_state_.set_connection_error_with_reason_and_result_handler(
++        std::move(handler));
++  }
+ 
+   // A convenient helper that resets this AssociatedRemote on disconnect. Note
+   // that this replaces any previously set disconnection handler. Must be called

@@ -1,0 +1,37 @@
+diff --git a/ui/views/window/dialog_delegate.h b/ui/views/window/dialog_delegate.h
+index 54331d0064b9275c74b7971c11eac66390f74474..35a9be1f1564e0b9c299ae3e2d67cc6164dbcc6e 100644
+--- a/ui/views/window/dialog_delegate.h
++++ b/ui/views/window/dialog_delegate.h
+@@ -303,13 +303,18 @@ class VIEWS_EXPORT DialogDelegate : public WidgetDelegate {
+   // WidgetDelegate::SetOwnedByWidget().
+   static Widget* CreateDialogWidget(std::unique_ptr<WidgetDelegate> delegate,
+                                     gfx::NativeWindow context,
+-                                    gfx::NativeView parent);
++                                    gfx::NativeView parent,
++                                    gfx::AcceleratedWidget parent_widget =
++                                        gfx::kNullAcceleratedWidget);
+   static Widget* CreateDialogWidget(WidgetDelegate* delegate,
+                                     gfx::NativeWindow context,
+-                                    gfx::NativeView parent);
++                                    gfx::NativeView parent,
++                                    gfx::AcceleratedWidget parent_widget =
++                                        gfx::kNullAcceleratedWidget);
+ 
+   // Whether using custom dialog frame is supported for this dialog.
+-  static bool CanSupportCustomFrame(gfx::NativeView parent);
++  static bool CanSupportCustomFrame(gfx::NativeView parent,
++                                    gfx::AcceleratedWidget parent_widget);
+ 
+   // Returns the dialog widget InitParams for a given |context| or |parent|.
+   // If |bounds| is not empty, used to initially place the dialog, otherwise
+@@ -317,7 +322,9 @@ class VIEWS_EXPORT DialogDelegate : public WidgetDelegate {
+   static Widget::InitParams GetDialogWidgetInitParams(WidgetDelegate* delegate,
+                                                       gfx::NativeWindow context,
+                                                       gfx::NativeView parent,
+-                                                      const gfx::Rect& bounds);
++                                                      const gfx::Rect& bounds,
++                                                      gfx::AcceleratedWidget parent_widget =
++                                                          gfx::kNullAcceleratedWidget);
+ 
+   // Returns a mask specifying which of the available DialogButtons are visible
+   // for the dialog.

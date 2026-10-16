@@ -1,0 +1,21 @@
+diff --git a/headless/lib/browser/headless_content_browser_client.cc b/headless/lib/browser/headless_content_browser_client.cc
+index d1a6b4dff1a8bfc2e87d999742cd157a204c03a1..b4c8738ce654b60d7395db5ecb3ba73a26a90fbc 100644
+--- a/headless/lib/browser/headless_content_browser_client.cc
++++ b/headless/lib/browser/headless_content_browser_client.cc
+@@ -419,7 +419,7 @@ bool HeadlessContentBrowserClient::IsPrivacySandboxReportingDestinationAttested(
+   return command_line->HasSwitch(switches::kForceReportingDestinationAttested);
+ }
+ 
+-void HeadlessContentBrowserClient::ConfigureNetworkContextParams(
++bool HeadlessContentBrowserClient::ConfigureNetworkContextParams(
+     content::BrowserContext* context,
+     bool in_memory,
+     const base::FilePath& relative_partition_path,
+@@ -429,6 +429,7 @@ void HeadlessContentBrowserClient::ConfigureNetworkContextParams(
+   HeadlessBrowserContextImpl::From(context)->ConfigureNetworkContextParams(
+       in_memory, relative_partition_path, network_context_params,
+       cert_verifier_creation_params);
++  return true;
+ }
+ 
+ std::string HeadlessContentBrowserClient::GetProduct() {

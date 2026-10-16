@@ -1,0 +1,15 @@
+diff --git a/components/remote_cocoa/app_shim/native_widget_ns_window_bridge.h b/components/remote_cocoa/app_shim/native_widget_ns_window_bridge.h
+index de4c147140265a8a576aa5ef4d0276e1a3cf1de5..a45a5b8a2342243e648d0707507b65fc90c56f7c 100644
+--- a/components/remote_cocoa/app_shim/native_widget_ns_window_bridge.h
++++ b/components/remote_cocoa/app_shim/native_widget_ns_window_bridge.h
+@@ -393,6 +393,10 @@ class REMOTE_COCOA_APP_SHIM_EXPORT NativeWidgetNSWindowBridge
+  private:
+   friend class views::test::BridgedNativeWidgetTestApi;
+ 
++  // Restore child-modal activation after AppKit finishes resizing the parent,
++  // provided focus still belongs to this window and application.
++  void RestoreChildModalFocusAfterResize();
++
+   // Attach child windows, if the window is visible (see comment inline).
+   void OrderChildren();
+ 

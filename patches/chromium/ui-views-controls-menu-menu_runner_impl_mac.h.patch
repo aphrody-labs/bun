@@ -1,0 +1,12 @@
+diff --git a/ui/views/controls/menu/menu_runner_impl_mac.h b/ui/views/controls/menu/menu_runner_impl_mac.h
+index e6a36828b677d592a6c4776dedf656b730fd19cc..25c9f75925639384ba4dd1bf8e1ab377de45f362 100644
+--- a/ui/views/controls/menu/menu_runner_impl_mac.h
++++ b/ui/views/controls/menu/menu_runner_impl_mac.h
+@@ -38,6 +38,7 @@ class VIEWS_EXPORT MenuRunnerImplMac : public MenuRunnerImplInterface {
+       ui::mojom::MenuSourceType source_type,
+       int32_t run_types,
+       gfx::NativeView native_view_for_gestures,
++      gfx::AcceleratedWidget parent_widget,
+       std::optional<gfx::RoundedCornersF> corners,
+       std::optional<std::string> show_menu_host_duration_histogram) override;
+   void Cancel() override;

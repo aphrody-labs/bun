@@ -1,0 +1,17 @@
+diff --git a/ui/views/controls/button/label_button.cc b/ui/views/controls/button/label_button.cc
+index 62e69d6a8cc32a0614fc78921ae405c01b215406..d156e20180ebff199384f5f33495e7c76cf0651b 100644
+--- a/ui/views/controls/button/label_button.cc
++++ b/ui/views/controls/button/label_button.cc
+@@ -676,6 +676,12 @@ void LabelButton::OnThemeChanged() {
+   }
+ }
+ 
++void LabelButton::SetFontList(const gfx::FontList& font_list) {
++  cached_normal_font_list_ = font_list;
++  cached_default_button_font_list_ = font_list;
++  label_->SetFontList(cached_normal_font_list_);
++}
++
+ void LabelButton::StateChanged(ButtonState old_state) {
+   Button::StateChanged(old_state);
+   ResetLabelEnabledColor();

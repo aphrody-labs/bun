@@ -1,0 +1,59 @@
+diff --git a/chrome/browser/ui/browser_tabstrip.cc b/chrome/browser/ui/browser_tabstrip.cc
+index f7b9e7e34d64e86f1c228f9d5ad2051297c641f6..15004010537c6251db14c063c010648af3d09139 100644
+--- a/chrome/browser/ui/browser_tabstrip.cc
++++ b/chrome/browser/ui/browser_tabstrip.cc
+@@ -29,6 +29,10 @@
+ #include "ui/base/window_open_disposition.h"
+ #include "url/gurl.h"
+ 
++#if BUILDFLAG(ENABLE_CEF)
++#include "cef/libcef/browser/chrome/browser_delegate.h"
++#endif
++
+ namespace chrome {
+ 
+ GURL GetNewTabURL(const BrowserWindowInterface* browser) {
+@@ -50,7 +54,12 @@ content::WebContents* AddAndReturnTabAt(
+     bool pinned,
+     std::optional<NavigateParams::WindowAction> window_action) {
+   const GURL resolved_url = url.is_empty() ? GetNewTabURL(browser) : url;
+-  NavigateParams params(browser, resolved_url, ui::PAGE_TRANSITION_TYPED);
++  // For CEF use a PageTransition that matches
++  // CefFrameHostImpl::kPageTransitionExplicit.
++  NavigateParams params(
++      browser, resolved_url,
++      static_cast<ui::PageTransition>(ui::PAGE_TRANSITION_TYPED |
++                                      ui::PAGE_TRANSITION_FROM_ADDRESS_BAR));
+   params.disposition = foreground ? WindowOpenDisposition::NEW_FOREGROUND_TAB
+                                   : WindowOpenDisposition::NEW_BACKGROUND_TAB;
+   if (window_action) {
+@@ -109,6 +118,17 @@ content::WebContents* AddWebContents(
+   // Can't create a new contents for the current tab - invalid case.
+   DCHECK(disposition != WindowOpenDisposition::CURRENT_TAB);
+ 
++#if BUILDFLAG(ENABLE_CEF)
++  if (browser && new_contents) {
++    if (auto* cef_delegate = browser->cef_delegate()) {
++      new_contents = cef_delegate->AddWebContents(std::move(new_contents));
++      if (!new_contents) {
++        return nullptr;
++      }
++    }
++  }
++#endif
++
+   NavigateParams params(browser, std::move(new_contents));
+   params.source_contents = source_contents;
+   params.url = target_url;
+@@ -131,8 +151,9 @@ void CloseWebContents(BrowserWindowInterface* browser,
+                       content::WebContents* contents,
+                       bool add_to_history) {
+   int index = browser->GetTabStripModel()->GetIndexOfWebContents(contents);
+-  CHECK_NE(index, TabStripModel::kNoTab)
+-      << "CloseWebContents called for tab not in our strip";
++  if (index == TabStripModel::kNoTab) {
++    return;
++  }
+ 
+   uint32_t close_types = TabCloseTypes::CLOSE_NONE;
+   if (auto* data = TabCloseTypesData::FromWebContents(contents)) {

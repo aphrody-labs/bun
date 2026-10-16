@@ -1,0 +1,27 @@
+diff --git a/mojo/public/cpp/bindings/connection_error_callback.h b/mojo/public/cpp/bindings/connection_error_callback.h
+index ba6d81eaccbb608c89eb4571b564b32f61e49c00..e0542ae97760af7a10aa276656221877da4f53ad 100644
+--- a/mojo/public/cpp/bindings/connection_error_callback.h
++++ b/mojo/public/cpp/bindings/connection_error_callback.h
+@@ -6,6 +6,7 @@
+ #define MOJO_PUBLIC_CPP_BINDINGS_CONNECTION_ERROR_CALLBACK_H_
+ 
+ #include "base/functional/callback_forward.h"
++#include "mojo/public/c/system/types.h"
+ 
+ namespace mojo {
+ 
+@@ -18,6 +19,14 @@ using ConnectionErrorWithReasonCallback =
+ using RepeatingConnectionErrorWithReasonCallback =
+     base::RepeatingCallback<void(uint32_t /* custom_reason */,
+                                  const std::string& /* description */)>;
++using ConnectionErrorWithReasonAndResultCallback =
++    base::OnceCallback<void(uint32_t /* custom_reason */,
++                            const std::string& /* description */,
++                            MojoResult /* error_result */)>;
++using RepeatingConnectionErrorWithReasonAndResultCallback =
++    base::RepeatingCallback<void(uint32_t /* custom_reason */,
++                                 const std::string& /* description */,
++                                 MojoResult /* error_result */)>;
+ 
+ }  // namespace mojo
+ 

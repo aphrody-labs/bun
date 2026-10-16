@@ -1,0 +1,17 @@
+diff --git a/ui/base/l10n/l10n_util.cc b/ui/base/l10n/l10n_util.cc
+index b1ae0008d0a554231e9e11e50d06fa36f094bec0..27741e88258ab7a16c0e7b18b81b065a987f3932 100644
+--- a/ui/base/l10n/l10n_util.cc
++++ b/ui/base/l10n/l10n_util.cc
+@@ -167,11 +167,7 @@ std::vector<LanguageTag> GetCandidates() {
+ // Preferred locales are enabled everywhere but Linux systems with GLib. This
+ // function parses `preferred_locale` into a `LanguageTag` if they are enabled.
+ std::optional<LanguageTag> GetPreferredTag(std::string_view preferred_locale) {
+-#if BUILDFLAG(IS_APPLE)
+-  std::string_view locale_override = l10n_util::GetLocaleOverride();
+-  return GetLanguageTagFromString(locale_override.empty() ? preferred_locale
+-                                                          : locale_override);
+-#elif defined(USE_GLIB) && !BUILDFLAG(IS_CHROMEOS)
++#if defined(USE_GLIB) && !BUILDFLAG(IS_CHROMEOS)
+   return std::nullopt;
+ #else
+   return GetLanguageTagFromString(preferred_locale);

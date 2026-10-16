@@ -1,0 +1,13 @@
+diff --git a/mojo/public/cpp/bindings/lib/connector.cc b/mojo/public/cpp/bindings/lib/connector.cc
+index 9a927711bddb7e3baca78375424e497bdb57fec0..3d5497888e37eb3df7cc22e6f8490f7906662c72 100644
+--- a/mojo/public/cpp/bindings/lib/connector.cc
++++ b/mojo/public/cpp/bindings/lib/connector.cc
+@@ -438,6 +438,8 @@ void Connector::OnSyncHandleWatcherHandleReady(const char* interface_name,
+ void Connector::OnHandleReadyInternal(MojoResult result) {
+   DCHECK_CALLED_ON_VALID_SEQUENCE(sequence_checker_);
+ 
++  handle_ready_result_ = result;
++
+   if (result == MOJO_RESULT_FAILED_PRECONDITION) {
+     // No more messages on the pipe and the peer is closed.
+     HandleError(false /* force_pipe_reset */, false /* force_async_handler */);

@@ -1,0 +1,13 @@
+diff --git a/ui/views/animation/ink_drop_host.h b/ui/views/animation/ink_drop_host.h
+index 551b709d2620d4e3c43d9ee1fa31a00c4532efb9..53875cea7f5225cb53a23c2591fbdf1810027657 100644
+--- a/ui/views/animation/ink_drop_host.h
++++ b/ui/views/animation/ink_drop_host.h
+@@ -195,6 +195,8 @@ class VIEWS_EXPORT InkDropHost {
+   const View* host_view() const { return host_view_; }
+   bool in_attention_state_for_testing() const { return in_attention_state_; }
+ 
++  InkDropMode ink_drop_mode() const { return ink_drop_mode_; }
++
+  private:
+   friend class test::InkDropHostTestApi;
+ 

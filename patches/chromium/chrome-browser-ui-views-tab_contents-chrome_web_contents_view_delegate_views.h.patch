@@ -1,0 +1,12 @@
+diff --git a/chrome/browser/ui/views/tab_contents/chrome_web_contents_view_delegate_views.h b/chrome/browser/ui/views/tab_contents/chrome_web_contents_view_delegate_views.h
+index 11b494e1859b091e49901a5d8ec07804ce8231e7..091e23b39b9884fe1e6c64677c178fc279332fd5 100644
+--- a/chrome/browser/ui/views/tab_contents/chrome_web_contents_view_delegate_views.h
++++ b/chrome/browser/ui/views/tab_contents/chrome_web_contents_view_delegate_views.h
+@@ -70,6 +70,7 @@ class ChromeWebContentsViewDelegateViews
+       base::OnceCallback<void(std::unique_ptr<RenderViewContextMenuBase>)>
+           callback) override;
+   void ShowMenu(std::unique_ptr<RenderViewContextMenuBase> menu) override;
++  bool IsMenuRunning() override;
+ 
+  private:
+   void OnReadAvailableTypes(

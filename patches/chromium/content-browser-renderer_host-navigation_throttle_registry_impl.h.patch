@@ -1,0 +1,14 @@
+diff --git a/content/browser/renderer_host/navigation_throttle_registry_impl.h b/content/browser/renderer_host/navigation_throttle_registry_impl.h
+index 1242d3e6a2c6d36376800ebf84b4e90097697e57..9ae73a07c1121e013a0e1c534f0b5c2687e20fb0 100644
+--- a/content/browser/renderer_host/navigation_throttle_registry_impl.h
++++ b/content/browser/renderer_host/navigation_throttle_registry_impl.h
+@@ -136,7 +136,8 @@ class CONTENT_EXPORT NavigationThrottleRegistryImpl
+   // Implements NavigationThrottleRegistry:
+   NavigationHandle& GetNavigationHandle() override;
+   void AddThrottle(
+-      std::unique_ptr<NavigationThrottle> navigation_throttle) override;
++      std::unique_ptr<NavigationThrottle> navigation_throttle,
++      bool first = false) override;
+   bool HasThrottle(const std::string& name) override;
+   bool EraseThrottleForTesting(const std::string& name) override;
+ 

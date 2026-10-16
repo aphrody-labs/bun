@@ -1,0 +1,31 @@
+diff --git a/components/variations/synthetic_trials_active_group_id_provider.cc b/components/variations/synthetic_trials_active_group_id_provider.cc
+index 6d94012d58446be8e3513ec4a03df9f0b1983bbd..806460a88956e53d73abe73c7e6777b71b675786 100644
+--- a/components/variations/synthetic_trials_active_group_id_provider.cc
++++ b/components/variations/synthetic_trials_active_group_id_provider.cc
+@@ -27,7 +27,7 @@ SyntheticTrialsActiveGroupIdProvider::GetActiveGroupIds() {
+   return group_ids_;
+ }
+ 
+-#if !defined(NDEBUG)
++#if !defined(NDEBUG) || BUILDFLAG(ENABLE_CEF)
+ std::vector<SyntheticTrialGroup>
+ SyntheticTrialsActiveGroupIdProvider::GetGroups() {
+   base::AutoLock scoped_lock(lock_);
+@@ -38,7 +38,7 @@ SyntheticTrialsActiveGroupIdProvider::GetGroups() {
+ void SyntheticTrialsActiveGroupIdProvider::ResetForTesting() {
+   base::AutoLock scoped_lock(lock_);
+   group_ids_.clear();
+-#if !defined(NDEBUG)
++#if !defined(NDEBUG) || BUILDFLAG(ENABLE_CEF)
+   groups_.clear();
+ #endif  // !defined(NDEBUG)
+ }
+@@ -54,7 +54,7 @@ void SyntheticTrialsActiveGroupIdProvider::OnSyntheticTrialsChanged(
+     for (const auto& group : groups) {
+       group_ids_.push_back(group.id());
+     }
+-#if !defined(NDEBUG)
++#if !defined(NDEBUG) || BUILDFLAG(ENABLE_CEF)
+     groups_ = groups;
+ #endif  // !defined(NDEBUG)
+   }

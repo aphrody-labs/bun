@@ -14,6 +14,7 @@ const HELP = `Usage: bun chromium <command> [--jobs 1..64] [--out out/bun] [--re
   gen      Generate Chromium's build graph with its pinned GN
   build    Generate and build the complete chrome target with local Siso/autoninja
   exec     Run a depot_tools command, e.g. exec -- gclient --version
+  patch    Manage downstream patches: patch apply|refresh|check|reset|status (see patches/chromium)
 
 Usage: bun depots_tools setup|doctor|exec [-- args...]
 All sources stay in vendor/depot_tools and vendor/chromium/src in this checkout.
@@ -319,6 +320,7 @@ export async function repairUndiciTypes(
 }
 
 export async function main(args = process.argv.slice(2)) {
+  if (args[0] === "patch") return (await import("./chromium-patches")).main(args.slice(1));
   const options = parseArguments(args);
   if (options.command === "help") {
     console.log(HELP);
@@ -428,7 +430,18 @@ export async function main(args = process.argv.slice(2)) {
           `Restored ${repair.restoredFiles} Chromium undici-types ${repair.version} declarations from its verified lock`,
         );
     }
+    const syncing = !options.depotTools && (options.command === "setup" || options.command === "sync");
+    const patches = syncing ? await import("./chromium-patches") : undefined;
+    const patchOptions = patches?.parsePatchArguments(["apply", "--source", plan.source], ROOT);
+    // gclient refuses to move a dirty src; drop downstream changes, then reapply them.
+    if (patches && patchOptions && existsSync(join(plan.source, ".git"))) patches.reset(patchOptions);
     for (const command of ownedCommands) await run(command, env);
+    if (patches && patchOptions && options.revision === patches.PATCH_BASE) {
+      const result = patches.apply(patchOptions);
+      console.log(JSON.stringify(result));
+      if (result.failed.length)
+        throw new Error(`${result.failed.length} Chromium patches conflict; see bun chromium patch check`);
+    }
     if (!options.depotTools && (options.command === "setup" || options.command === "sync")) {
       const repair = await repairUndiciTypes(plan.source);
       if (repair.restoredFiles)

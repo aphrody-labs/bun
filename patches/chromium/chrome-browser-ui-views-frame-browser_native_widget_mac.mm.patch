@@ -1,0 +1,87 @@
+diff --git a/chrome/browser/ui/views/frame/browser_native_widget_mac.mm b/chrome/browser/ui/views/frame/browser_native_widget_mac.mm
+index 73a8db26c25b7848f6f51bf1ac9ebb89dd6fbae2..64dafa6a6fa65e1f7b3b9901cf31872add74d32c 100644
+--- a/chrome/browser/ui/views/frame/browser_native_widget_mac.mm
++++ b/chrome/browser/ui/views/frame/browser_native_widget_mac.mm
+@@ -410,8 +410,15 @@ void BrowserNativeWidgetMac::OnWidgetDestroyed(views::Widget* widget) {
+ void BrowserNativeWidgetMac::ValidateUserInterfaceItem(
+     int32_t tag,
+     remote_cocoa::mojom::ValidateUserInterfaceItemResult* result) {
+-  BrowserWindowInterface* const browser =
+-      browser_view_ ? browser_view_->browser() : nullptr;
++  return ValidateUserInterfaceItem(
++      browser_view_ ? browser_view_->browser() : nullptr, tag, result);
++}
++
++// static
++void BrowserNativeWidgetMac::ValidateUserInterfaceItem(
++    BrowserWindowInterface* browser,
++    int32_t tag,
++    remote_cocoa::mojom::ValidateUserInterfaceItemResult* result) {
+   if (!browser || !chrome::SupportsCommand(browser, tag)) {
+     result->enable = false;
+     return;
+@@ -622,9 +629,16 @@ bool BrowserNativeWidgetMac::WillExecuteCommand(
+   if (!browser_view_) {
+     return false;
+   }
++  return WillExecuteCommand(browser_view_->browser(), command,
++                            window_open_disposition, is_before_first_responder);
++}
+ 
+-  BrowserWindowInterface* const browser = browser_view_->browser();
+-
++// static
++bool BrowserNativeWidgetMac::WillExecuteCommand(
++    BrowserWindowInterface* browser,
++    int32_t command,
++    WindowOpenDisposition window_open_disposition,
++    bool is_before_first_responder) {
+   if (is_before_first_responder) {
+     // The specification for this private extensions API is incredibly vague.
+     // For now, we avoid triggering chrome commands prior to giving the
+@@ -656,13 +670,24 @@ bool BrowserNativeWidgetMac::ExecuteCommand(
+     int32_t command,
+     WindowOpenDisposition window_open_disposition,
+     bool is_before_first_responder) {
+-  if (!WillExecuteCommand(command, window_open_disposition,
++  if (!browser_view_) {
++    return false;
++  }
++  return ExecuteCommand(browser_view_->browser(), command,
++                        window_open_disposition, is_before_first_responder);
++}
++
++// static
++bool BrowserNativeWidgetMac::ExecuteCommand(
++    BrowserWindowInterface* browser,
++    int32_t command,
++    WindowOpenDisposition window_open_disposition,
++    bool is_before_first_responder) {
++  if (!WillExecuteCommand(browser, command, window_open_disposition,
+                           is_before_first_responder)) {
+     return false;
+   }
+ 
+-  BrowserWindowInterface* browser = browser_view_->browser();
+-
+   if (command == IDC_TOGGLE_VERTICAL_TABS) {
+     if (auto* controller =
+             tabs::VerticalTabStripStateController::From(browser)) {
+@@ -708,10 +733,13 @@ bool BrowserNativeWidgetMac::ExecuteCommand(
+       return true;
+     }
+   } else if (command == IDC_CLEAR_BROWSING_DATA) {
+-    views::ElementTrackerViews::GetInstance()->NotifyCustomEvent(
+-        browsing_data_important_sites_util::
+-            kOpenClearBrowsingDataDialogViaAcceleratorEventId,
+-        browser_view_);
++    BrowserView* browser_view = BrowserView::GetBrowserViewForBrowser(browser);
++    if (browser_view) {
++      views::ElementTrackerViews::GetInstance()->NotifyCustomEvent(
++          browsing_data_important_sites_util::
++              kOpenClearBrowsingDataDialogViaAcceleratorEventId,
++          browser_view);
++    }
+   }
+ 
+   chrome::ExecuteCommandWithDisposition(browser, command,

@@ -1,0 +1,14 @@
+diff --git a/ui/views/test/desktop_test_views_delegate_aura.cc b/ui/views/test/desktop_test_views_delegate_aura.cc
+index 78aa8726deedc16639d10892717a69d85e038eb4..f4d20b39b844abe9afc9cb6557db6fbc217a5b9d 100644
+--- a/ui/views/test/desktop_test_views_delegate_aura.cc
++++ b/ui/views/test/desktop_test_views_delegate_aura.cc
+@@ -29,7 +29,8 @@ void DesktopTestViewsDelegate::OnBeforeWidgetInit(
+     return;
+   }
+ 
+-  if (params->parent && params->type != views::Widget::InitParams::TYPE_MENU &&
++  if (params->parent && params->child &&
++      params->type != views::Widget::InitParams::TYPE_MENU &&
+       params->type != views::Widget::InitParams::TYPE_TOOLTIP) {
+     params->native_widget = new views::NativeWidgetAura(delegate);
+   } else {

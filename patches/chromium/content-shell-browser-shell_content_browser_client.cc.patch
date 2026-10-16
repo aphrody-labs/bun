@@ -1,0 +1,21 @@
+diff --git a/content/shell/browser/shell_content_browser_client.cc b/content/shell/browser/shell_content_browser_client.cc
+index 2c989a3aee1eac80f6096ec7556b7d916dd2faa4..769c574022e9521c5175d200db119bf969f48aba 100644
+--- a/content/shell/browser/shell_content_browser_client.cc
++++ b/content/shell/browser/shell_content_browser_client.cc
+@@ -808,7 +808,7 @@ void ShellContentBrowserClient::OnNetworkServiceCreated(
+ #endif
+ }
+ 
+-void ShellContentBrowserClient::ConfigureNetworkContextParams(
++bool ShellContentBrowserClient::ConfigureNetworkContextParams(
+     BrowserContext* context,
+     bool in_memory,
+     const base::FilePath& relative_partition_path,
+@@ -817,6 +817,7 @@ void ShellContentBrowserClient::ConfigureNetworkContextParams(
+         cert_verifier_creation_params) {
+   ConfigureNetworkContextParamsForShell(context, network_context_params,
+                                         cert_verifier_creation_params);
++  return true;
+ }
+ 
+ std::vector<base::FilePath>

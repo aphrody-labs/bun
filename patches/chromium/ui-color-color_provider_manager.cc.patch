@@ -1,0 +1,37 @@
+diff --git a/ui/color/color_provider_manager.cc b/ui/color/color_provider_manager.cc
+index 78cdb9346664d4c8f5a24d639925c65540d80fdf..f5b735552cbdb23197f39b487bd48e7fee06fed9 100644
+--- a/ui/color/color_provider_manager.cc
++++ b/ui/color/color_provider_manager.cc
+@@ -45,6 +45,15 @@ std::optional<GlobalManager>& GetGlobalManager() {
+ 
+ }  // namespace
+ 
++void ColorProviderManager::AddObserver(ColorProviderManagerObserver* observer) {
++  observers_.AddObserver(observer);
++}
++
++void ColorProviderManager::RemoveObserver(
++    ColorProviderManagerObserver* observer) {
++  observers_.RemoveObserver(observer);
++}
++
+ ColorProviderManager::ColorProviderManager() {
+   ResetColorProviderInitializerList();
+ }
+@@ -86,6 +95,16 @@ void ColorProviderManager::ResetColorProviderInitializerList() {
+ void ColorProviderManager::ResetColorProviderCache() {
+   if (!color_providers_.empty()) {
+     color_providers_.clear();
++
++    for (ColorProviderManagerObserver& observer : observers_) {
++      observer.OnColorProviderCacheReset();
++    }
++  }
++}
++
++void ColorProviderManager::AfterNativeThemeUpdated() {
++  for (ColorProviderManagerObserver& observer : observers_) {
++    observer.OnAfterNativeThemeUpdated();
+   }
+ }
+ 

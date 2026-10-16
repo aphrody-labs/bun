@@ -1,0 +1,20 @@
+diff --git a/third_party/blink/renderer/modules/accessibility/inspector_type_builder_helper.cc b/third_party/blink/renderer/modules/accessibility/inspector_type_builder_helper.cc
+index 1119773ff9b3e7e882aae0e1e83a81071bd6c591..2538d6b7f5c61c1f666cbf665d8261263042dcdf 100644
+--- a/third_party/blink/renderer/modules/accessibility/inspector_type_builder_helper.cc
++++ b/third_party/blink/renderer/modules/accessibility/inspector_type_builder_helper.cc
+@@ -4,6 +4,7 @@
+ 
+ #include "third_party/blink/renderer/modules/accessibility/inspector_type_builder_helper.h"
+ 
++#include "cef/libcef/features/features.h"
+ #include "third_party/blink/renderer/core/dom/dom_node_ids.h"
+ #include "third_party/blink/renderer/core/frame/local_frame.h"
+ #include "third_party/blink/renderer/core/inspector/identifiers_factory.h"
+@@ -910,3 +911,7 @@ std::unique_ptr<AXNode> BuildProtocolAXNodeForUnignoredAXObject(
+ }
+ 
+ }  // namespace blink
++
++#if BUILDFLAG(ENABLE_CEF)
++#include "cef/libcef/renderer/accessibility/build_collapsed_summary_node.inc"
++#endif

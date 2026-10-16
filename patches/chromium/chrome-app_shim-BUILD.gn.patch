@@ -1,0 +1,12 @@
+diff --git a/chrome/app_shim/BUILD.gn b/chrome/app_shim/BUILD.gn
+index 777ebe8a33e8a9ceab85862273ee21564b7636dd..d5fd00a7b01c6ef32e04e77b6a2dbc8bba8036ba 100644
+--- a/chrome/app_shim/BUILD.gn
++++ b/chrome/app_shim/BUILD.gn
+@@ -28,6 +28,7 @@ source_set("app_shim") {
+   deps = [
+     "//base/allocator:early_zone_registration_apple",
+     "//build:chromeos_buildflags",
++    "//cef/libcef/features:buildflags",
+     "//chrome:strings",
+     "//chrome/app:command_ids",
+     "//chrome/browser/renderer_host:history_swiper",

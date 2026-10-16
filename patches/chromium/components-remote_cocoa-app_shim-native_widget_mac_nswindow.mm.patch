@@ -1,0 +1,17 @@
+diff --git a/components/remote_cocoa/app_shim/native_widget_mac_nswindow.mm b/components/remote_cocoa/app_shim/native_widget_mac_nswindow.mm
+index c5c652c6c67da33e9a2127cbbc35ec5fc535df6c..fa4bf570c5db16fcc93cabc998047982bb4fad3e 100644
+--- a/components/remote_cocoa/app_shim/native_widget_mac_nswindow.mm
++++ b/components/remote_cocoa/app_shim/native_widget_mac_nswindow.mm
+@@ -777,6 +777,12 @@ struct NSEdgeAndCornerThicknesses {
+     // window, swallow the event to prevent the web contents from processing it
+     // (and potentially triggering new dialogs).
+     if (is_blocked_by_modal && child_modal_window) {
++      // Let AppKit handle native resize edges, even when they overlap the
++      // blocked web contents view.
++      if ([self _resizeDirectionForMouseLocation:event.locationInWindow] != -1) {
++        [super sendEvent:event];
++        return;
++      }
+       if (![child_modal_window isKeyWindow]) {
+         [child_modal_window makeKeyWindow];
+       }

@@ -1,0 +1,19 @@
+diff --git a/third_party/blink/renderer/platform/runtime_enabled_features.override.json5 b/third_party/blink/renderer/platform/runtime_enabled_features.override.json5
+index 43cfe5a54118d60898fb4f6bfbcae7ec3a96c53d..2d80c0463e2774ce5a1189348814289e5a837d16 100644
+--- a/third_party/blink/renderer/platform/runtime_enabled_features.override.json5
++++ b/third_party/blink/renderer/platform/runtime_enabled_features.override.json5
+@@ -46,5 +46,13 @@
+ 
+   data: [
+     // Entries go here.
++    // Enables cefOptions for Document PiP to specify initial window position
++    {
++      name: "DocumentPictureInPictureCefOptions",
++      status: {
++        "Android": "",
++        "default": "",
++      },
++    },
+   ]
+ }
+\ No newline at end of file

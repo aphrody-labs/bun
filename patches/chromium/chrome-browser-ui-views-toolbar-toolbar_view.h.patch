@@ -1,0 +1,15 @@
+diff --git a/chrome/browser/ui/views/toolbar/toolbar_view.h b/chrome/browser/ui/views/toolbar/toolbar_view.h
+index a178c95d8818403fad895c15f2d76e65c5326c54..c55509d6ae876003b70282a11a8e72fe44d6fb07 100644
+--- a/chrome/browser/ui/views/toolbar/toolbar_view.h
++++ b/chrome/browser/ui/views/toolbar/toolbar_view.h
+@@ -113,7 +113,9 @@ class ToolbarView : public views::AccessiblePaneView,
+ 
+   DECLARE_CLASS_ELEMENT_IDENTIFIER_VALUE(kToolbarElementId);
+ 
+-  ToolbarView(BrowserWindowInterface* browser, BrowserView* browser_view);
++  ToolbarView(BrowserWindowInterface* browser,
++              BrowserView* browser_view,
++              std::optional<DisplayMode> display_mode);
+   ToolbarView(const ToolbarView&) = delete;
+   ToolbarView& operator=(const ToolbarView&) = delete;
+   ~ToolbarView() override;

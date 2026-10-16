@@ -1,0 +1,12 @@
+diff --git a/components/variations/BUILD.gn b/components/variations/BUILD.gn
+index a7acb2b272a3352e3a30471bf10b7e91a6ef61f9..79e3f7aa95da69826af9786997e31561a8535b83 100644
+--- a/components/variations/BUILD.gn
++++ b/components/variations/BUILD.gn
+@@ -136,6 +136,7 @@ component("variations") {
+     ":buildflags",
+     ":variations_mojom",
+     "proto",
++    "//cef/libcef/features:buildflags",
+     "//base:build_time",
+     "//components/crash/core/common:crash_key",
+     "//components/prefs",

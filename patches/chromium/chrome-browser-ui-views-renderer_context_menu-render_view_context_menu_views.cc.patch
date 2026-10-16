@@ -1,0 +1,37 @@
+diff --git a/chrome/browser/ui/views/renderer_context_menu/render_view_context_menu_views.cc b/chrome/browser/ui/views/renderer_context_menu/render_view_context_menu_views.cc
+index 2a5168eae3a9fdcffba00096d9ae8acc68af32f9..dfc75cf0fc1c1b6408e9e2d783499bb8e782c590 100644
+--- a/chrome/browser/ui/views/renderer_context_menu/render_view_context_menu_views.cc
++++ b/chrome/browser/ui/views/renderer_context_menu/render_view_context_menu_views.cc
+@@ -158,6 +158,9 @@ void RenderViewContextMenuViews::RunMenuAt(views::Widget* parent,
+ bool RenderViewContextMenuViews::GetAcceleratorForCommandId(
+     int command_id,
+     ui::Accelerator* accel) const {
++  if (RenderViewContextMenu::GetAcceleratorForCommandId(command_id, accel))
++    return true;
++
+   // There are no formally defined accelerators we can query so we assume
+   // that Ctrl+C, Ctrl+V, Ctrl+X, Ctrl-A, etc do what they normally do.
+   switch (command_id) {
+@@ -403,6 +406,10 @@ void RenderViewContextMenuViews::AppendPlatformEditableItems() {
+ }
+ 
+ void RenderViewContextMenuViews::Show() {
++  if (UseShowHandler()) {
++    return;
++  }
++
+   if (base::CommandLine::ForCurrentProcess()->HasSwitch(switches::kKioskMode)) {
+     return;
+   }
+@@ -449,6 +456,11 @@ void RenderViewContextMenuViews::Show() {
+   }
+ }
+ 
++bool RenderViewContextMenuViews::IsRunning() {
++  return static_cast<ToolkitDelegateViews*>(toolkit_delegate())
++             ->IsMenuRunning();
++}
++
+ views::Widget* RenderViewContextMenuViews::GetTopLevelWidget() {
+   return views::Widget::GetTopLevelWidgetForNativeView(GetActiveNativeView());
+ }

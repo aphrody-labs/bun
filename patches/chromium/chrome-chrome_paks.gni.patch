@@ -1,0 +1,24 @@
+diff --git a/chrome/chrome_paks.gni b/chrome/chrome_paks.gni
+index 80f9bd82545b15e975f8dae8dc9ea324e2d936ef..590d51a38e03bdc086eac24d5f972d7c4d855a92 100644
+--- a/chrome/chrome_paks.gni
++++ b/chrome/chrome_paks.gni
+@@ -5,6 +5,7 @@
+ import("//ash/ambient/resources/resources.gni")
+ import("//build/config/chrome_build.gni")
+ import("//build/config/locales.gni")
++import("//cef/libcef/features/features.gni")
+ import("//chrome/browser/buildflags.gni")
+ import("//chrome/common/features.gni")
+ import("//components/compose/features.gni")
+@@ -523,6 +524,11 @@ template("chrome_extra_paks") {
+       deps += [ "//chrome/browser/resources/skills:resources" ]
+     }
+ 
++    if (enable_cef) {
++      sources += [ "$root_gen_dir/cef/cef_resources.pak" ]
++      deps += [ "//cef:cef_resources" ]
++    }
++
+     if (enable_extensions_core) {
+       sources += [
+         "$root_gen_dir/chrome/aim_eligibility_extension_resources.pak",

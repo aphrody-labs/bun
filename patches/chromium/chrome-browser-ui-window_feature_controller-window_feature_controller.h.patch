@@ -1,0 +1,20 @@
+diff --git a/chrome/browser/ui/window_feature_controller/window_feature_controller.h b/chrome/browser/ui/window_feature_controller/window_feature_controller.h
+index 7c203d12c129f2a7b949c5ccb5144d04b175d58b..efcc0206789d58cda43579cd6177039834dec323 100644
+--- a/chrome/browser/ui/window_feature_controller/window_feature_controller.h
++++ b/chrome/browser/ui/window_feature_controller/window_feature_controller.h
+@@ -34,6 +34,7 @@ class WindowFeatureController {
+   };
+ 
+   WindowFeatureController(
++      BrowserWindowInterface* browser,
+       BrowserWindowFullscreenController* fullscreen_controller,
+       web_app::AppBrowserController* app_controller,
+       BrowserWindowInterface::Type browser_type,
+@@ -85,6 +86,7 @@ class WindowFeatureController {
+                                  bool check_can_support) const;
+   bool IsFullscreen() const;
+ 
++  const raw_ptr<BrowserWindowInterface> browser_;
+   const raw_ref<BrowserWindowFullscreenController> fullscreen_controller_;
+ 
+   // Can be null.

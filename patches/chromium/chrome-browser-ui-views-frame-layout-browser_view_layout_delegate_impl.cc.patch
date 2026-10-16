@@ -1,0 +1,53 @@
+diff --git a/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate_impl.cc b/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate_impl.cc
+index 162cb0487882a40ed6324115d5e58eb3cca97186..fdf3895be6aa8d4444849c45e1266eed1cf36cfb 100644
+--- a/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate_impl.cc
++++ b/chrome/browser/ui/views/frame/layout/browser_view_layout_delegate_impl.cc
+@@ -35,19 +35,23 @@
+ #include "chrome/browser/ui/window_feature_controller/window_feature_controller.h"
+ #endif
+ 
++#if BUILDFLAG(ENABLE_CEF)
++#include "cef/libcef/browser/chrome/browser_delegate.h"
++#endif
++
+ BrowserViewLayoutDelegateImpl::BrowserViewLayoutDelegateImpl(
+     BrowserView& browser_view)
+     : browser_view_(browser_view) {
+-    PrefService* prefs = browser_view_->GetProfile()->GetPrefs();
+-    tab_search_pinned_to_tab_strip_ =
+-        prefs->GetBoolean(prefs::kTabSearchPinnedToTabstrip);
++  PrefService* prefs = browser_view_->GetProfile()->GetPrefs();
++  tab_search_pinned_to_tab_strip_ =
++      prefs->GetBoolean(prefs::kTabSearchPinnedToTabstrip);
+ 
+-    pref_registrar_.Init(prefs);
+-    pref_registrar_.Add(
+-        prefs::kTabSearchPinnedToTabstrip,
+-        base::BindRepeating(
+-            &BrowserViewLayoutDelegateImpl::OnTabSearchPinnedStateChanged,
+-            base::Unretained(this)));
++  pref_registrar_.Init(prefs);
++  pref_registrar_.Add(
++      prefs::kTabSearchPinnedToTabstrip,
++      base::BindRepeating(
++          &BrowserViewLayoutDelegateImpl::OnTabSearchPinnedStateChanged,
++          base::Unretained(this)));
+ }
+ BrowserViewLayoutDelegateImpl::~BrowserViewLayoutDelegateImpl() = default;
+ 
+@@ -144,6 +148,15 @@ views::LayoutAlignment BrowserViewLayoutDelegateImpl::GetWindowTitleAlignment()
+   return GetFrameView()->GetWindowTitleAlignment();
+ }
+ 
++void BrowserViewLayoutDelegateImpl::UpdateDialogTopInsetInBrowserView(
++    int* dialog_top_y) const {
++#if BUILDFLAG(ENABLE_CEF)
++  if (auto cef_delegate = browser_view_->browser()->cef_delegate()) {
++    cef_delegate->UpdateDialogTopInset(dialog_top_y);
++  }
++#endif
++}
++
+ bool BrowserViewLayoutDelegateImpl::IsToolbarVisible() const {
+   return browser_view_->IsToolbarVisible();
+ }

@@ -1,0 +1,20 @@
+diff --git a/mojo/public/cpp/bindings/lib/interface_ptr_state.h b/mojo/public/cpp/bindings/lib/interface_ptr_state.h
+index 39b746a38582596ff8873d0cbad16112cb658848..bbaf765e73d5735c1d72224f5c4b76f0e4d35fcf 100644
+--- a/mojo/public/cpp/bindings/lib/interface_ptr_state.h
++++ b/mojo/public/cpp/bindings/lib/interface_ptr_state.h
+@@ -231,6 +231,15 @@ class InterfacePtrState : public InterfacePtrStateBase {
+         std::move(error_handler));
+   }
+ 
++  void set_connection_error_with_reason_and_result_handler(
++      ConnectionErrorWithReasonAndResultCallback error_handler) {
++    ConfigureProxyIfNecessary();
++
++    DCHECK(endpoint_client());
++    endpoint_client()->set_connection_error_with_reason_and_result_handler(
++        std::move(error_handler));
++  }
++
+   void set_idle_handler(base::TimeDelta timeout,
+                         base::RepeatingClosure handler) {
+     ConfigureProxyIfNecessary();

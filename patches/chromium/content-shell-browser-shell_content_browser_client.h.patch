@@ -1,0 +1,13 @@
+diff --git a/content/shell/browser/shell_content_browser_client.h b/content/shell/browser/shell_content_browser_client.h
+index 8be7415b823ffa8525d0490081fab8eeafcabfd8..d47b1a0265da12a874cecb3ddd467585d9e745e6 100644
+--- a/content/shell/browser/shell_content_browser_client.h
++++ b/content/shell/browser/shell_content_browser_client.h
+@@ -139,7 +139,7 @@ class ShellContentBrowserClient : public ContentBrowserClient {
+   GetGeolocationSystemPermissionManager() override;
+   void OnNetworkServiceCreated(
+       network::mojom::NetworkService* network_service) override;
+-  void ConfigureNetworkContextParams(
++  bool ConfigureNetworkContextParams(
+       BrowserContext* context,
+       bool in_memory,
+       const base::FilePath& relative_partition_path,

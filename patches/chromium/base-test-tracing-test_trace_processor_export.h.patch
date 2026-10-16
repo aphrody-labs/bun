@@ -1,0 +1,21 @@
+diff --git a/base/test/tracing/test_trace_processor_export.h b/base/test/tracing/test_trace_processor_export.h
+index dc5c18bd66d1cc6fe55edc1a0709795cb2b3b3ec..15f25c0e92f87b2dc73be30b5366c0846a61dbef 100644
+--- a/base/test/tracing/test_trace_processor_export.h
++++ b/base/test/tracing/test_trace_processor_export.h
+@@ -5,6 +5,7 @@
+ #ifndef BASE_TEST_TRACING_TEST_TRACE_PROCESSOR_EXPORT_H_
+ #define BASE_TEST_TRACING_TEST_TRACE_PROCESSOR_EXPORT_H_
+ 
++#if defined(COMPONENT_BUILD)
+ #if defined(WIN32)
+ 
+ #if defined(TEST_TRACE_PROCESSOR_IMPL)
+@@ -17,4 +18,8 @@
+ #define TEST_TRACE_PROCESSOR_EXPORT __attribute__((visibility("default")))
+ #endif  // defined(WIN32)
+ 
++#else  // defined(COMPONENT_BUILD)
++#define TEST_TRACE_PROCESSOR_EXPORT
++#endif
++
+ #endif  // BASE_TEST_TRACING_TEST_TRACE_PROCESSOR_EXPORT_H_

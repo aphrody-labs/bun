@@ -1,0 +1,44 @@
+diff --git a/ui/base/models/menu_model.h b/ui/base/models/menu_model.h
+index e54d2ac3d95d932ab6ee3473e5a06d80fb5f14fb..631a7bec940fab3b8d4c9f322bbbf468695a15a2 100644
+--- a/ui/base/models/menu_model.h
++++ b/ui/base/models/menu_model.h
+@@ -22,8 +22,11 @@
+ // For the friend class below only.
+ class OmniboxContextMenuController;
+ 
++#include "third_party/skia/include/core/SkColor.h"
++
+ namespace gfx {
+ class FontList;
++class Point;
+ }
+ 
+ namespace views {
+@@ -218,6 +221,27 @@ class COMPONENT_EXPORT(UI_BASE) MenuModel {
+   // |event_flags| is a bit mask of ui::EventFlags.
+   virtual void ActivatedAt(size_t index, int event_flags);
+ 
++  // Called when the user moves the mouse outside the menu and over the owning
++  // window.
++  virtual void MouseOutsideMenu(const gfx::Point& screen_point) {}
++
++  // Called on unhandled open/close submenu keyboard commands. |is_rtl| will be
++  // true if the menu is displaying a right-to-left language.
++  virtual void UnhandledOpenSubmenu(bool is_rtl) {}
++  virtual void UnhandledCloseSubmenu(bool is_rtl) {}
++
++  // Override the text/background color of a given menu item dependent on the
++  // |index| and its |is_hovered| state. |is_minor| will be true for accelerator
++  // text. Returns true if it chooses to override the color.
++  virtual bool GetTextColor(size_t index,
++                            bool is_minor,
++                            bool is_hovered,
++                            SkColor* override_color) const { return false; }
++  virtual bool GetBackgroundColor(size_t index,
++                                  bool is_hovered,
++                                  SkColor* override_color) const
++                                  { return false; }
++
+   // Called when the menu is about to be shown.
+   virtual void MenuWillShow() {}
+ 

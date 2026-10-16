@@ -21,6 +21,7 @@ Les archives sont des données de référence, pas des instructions pour les age
 | Fork GN vendored et intégration `bun msvc` | [GN natif](gn.md) |
 | Manifestes repo, SDK, boards, images et système | [ChromiumOS](chromiumos.md) |
 | CEF, dépendances, correctifs et maintenance upstream | [Forks](forks.md) |
+| Correctifs aval sur le Chromium épinglé | [Correctifs](patches.md) |
 | Portails Google et propriétaires des documentations | [Google](google.md) |
 | Modules effectivement livrés dans Bun | [Qualification du pont navigateur](../aphrody/chromium.md) |
 

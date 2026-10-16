@@ -1,0 +1,12 @@
+diff --git a/content/shell/BUILD.gn b/content/shell/BUILD.gn
+index 2886dc0847f3e72e61b6dde92d33ff2b86a9a94b..dd7629cb7cfb08140ddcacb9a181cd7b4058fa53 100644
+--- a/content/shell/BUILD.gn
++++ b/content/shell/BUILD.gn
+@@ -943,7 +943,6 @@ if (is_mac) {
+       # Specify a sensible install_name for static builds. The library is
+       # dlopen()ed so this is not used to resolve the module.
+       ldflags = [ "-Wl,-install_name,@executable_path/../Frameworks/$output_name.framework/$output_name" ]
+-      deps += [ "//base/test:test_trace_processor_bundle_data" ]
+     } else {
+       # Both the main :content_shell and :content_shell_helper_app executables
+       # need to link the framework. Because they are at different directory

@@ -1,0 +1,90 @@
+diff --git a/chrome/browser/devtools/devtools_window.cc b/chrome/browser/devtools/devtools_window.cc
+index e9803277eecb82c0769b02e3e48207d110b781af..7c145e019e3b9e7c939e1b55bd58be6c71a17c15 100644
+--- a/chrome/browser/devtools/devtools_window.cc
++++ b/chrome/browser/devtools/devtools_window.cc
+@@ -131,6 +131,10 @@
+ #include "components/keep_alive_registry/scoped_keep_alive.h"
+ #endif
+ 
++#if BUILDFLAG(ENABLE_CEF)
++#include "chrome/browser/ui/browser.h"
++#endif
++
+ using blink::WebInputEvent;
+ using content::BrowserThread;
+ using content::DevToolsAgentHost;
+@@ -862,6 +866,12 @@ Profile* DevToolsWindow::GetProfileForDevToolsWindow(
+   if (profile->IsPrimaryOTRProfile() || profile->IsDevToolsOTRProfile()) {
+     return profile;
+   }
++#if BUILDFLAG(ENABLE_CEF)
++  if (profile->IsOffTheRecord() &&
++      profile->GetOTRProfileID().IsUniqueForCEF()) {
++    return profile;
++  }
++#endif
+   return profile->GetOriginalProfile();
+ }
+ 
+@@ -1418,6 +1428,13 @@ DevToolsWindow* DevToolsWindow::Create(
+     if (!devtools_ui_controller || !devtools_ui_controller->CanDockDevtools()) {
+       can_dock = false;
+     }
++
++#if BUILDFLAG(ENABLE_CEF)
++    if (can_dock && browser && browser->cef_delegate()) {
++      // Don't dock DevTools for CEF-managed browsers.
++      can_dock = false;
++    }
++#endif
+   }
+ #endif  // !BUILDFLAG(IS_ANDROID)
+ 
+@@ -1898,7 +1915,9 @@ void DevToolsWindow::OpenInNewTab(const GURL& url) {
+                                        /*navigation_handle_callback=*/{})) {
+ #if BUILDFLAG(IS_ANDROID)
+     NOTIMPLEMENTED();
+-#else
++#elif !BUILDFLAG(ENABLE_CEF)
++    // Remove default behavior when CEF handles the open via OnOpenURLFromTab.
++    // See CEF issue #3735.
+     chrome::ScopedTabbedBrowserDisplayer displayer(profile_);
+     chrome::AddSelectedTabWithURL(displayer.browser_window_interface(),
+                                   fixed_url, ui::PAGE_TRANSITION_LINK);
+@@ -2104,12 +2123,30 @@ void DevToolsWindow::CreateDevToolsBrowser() {
+       BrowserWindowInterface::CreationStatus::kOk) {
+     return;
+   }
+-  browser_ = CreateBrowserWindow(
+-      BrowserWindowCreateParams::CreateForDevTools(profile_));
+-  browser_->GetTabStripModel()->AddWebContents(
+-      OwnedMainWebContents::TakeWebContents(
+-          std::move(owned_main_web_contents_)),
+-      -1, ui::PAGE_TRANSITION_AUTO_TOPLEVEL, AddTabTypes::ADD_ACTIVE);
++  auto* inspected_web_contents = GetInspectedWebContents();
++  BrowserWindowInterface* opener = nullptr;
++  if (inspected_web_contents) {
++    opener = GlobalBrowserCollection::GetInstance()->FindBrowserWithTab(
++        inspected_web_contents);
++  }
++  auto devtools_contents = OwnedMainWebContents::TakeWebContents(
++      std::move(owned_main_web_contents_));
++
++#if BUILDFLAG(ENABLE_CEF)
++  // If a Browser is created, it will take ownership of |devtools_contents|.
++  browser_ = cef::BrowserDelegate::CreateDevToolsBrowser(
++      profile_, opener, inspected_web_contents, devtools_contents);
++#endif
++
++  if (!browser_) {
++    auto create_params = BrowserWindowCreateParams::CreateForDevTools(profile_);
++    create_params.opener = opener;
++
++    browser_ = CreateBrowserWindow(std::move(create_params));
++    browser_->GetTabStripModel()->AddWebContents(
++        std::move(devtools_contents), -1, ui::PAGE_TRANSITION_AUTO_TOPLEVEL,
++        AddTabTypes::ADD_ACTIVE);
++  }
+ #endif
+   OverrideAndSyncDevToolsRendererPrefs();
+ }

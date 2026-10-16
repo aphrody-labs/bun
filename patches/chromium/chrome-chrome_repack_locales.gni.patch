@@ -1,0 +1,23 @@
+diff --git a/chrome/chrome_repack_locales.gni b/chrome/chrome_repack_locales.gni
+index 226c91dd847f533d800407fb95cf2d7b56917e6e..ad2d86dfd8a04e4a67eee7533a7289d5210c45eb 100644
+--- a/chrome/chrome_repack_locales.gni
++++ b/chrome/chrome_repack_locales.gni
+@@ -4,6 +4,7 @@
+ 
+ import("//build/config/chrome_build.gni")
+ import("//build/config/ui.gni")
++import("//cef/libcef/features/features.gni")
+ import("//extensions/buildflags/buildflags.gni")
+ import("//tools/grit/repack.gni")
+ 
+@@ -112,6 +113,10 @@ template("chrome_repack_locales") {
+         "//third_party/search_engines_data:search_engine_descriptions_strings",
+       ]
+     }
++    if (enable_cef) {
++      source_patterns += [ "${root_gen_dir}/cef/cef_strings_" ]
++      deps += [ "//cef:cef_strings" ]
++    }
+     if (enable_extensions_core) {
+       source_patterns +=
+           [ "${root_gen_dir}/extensions/strings/extensions_strings_" ]

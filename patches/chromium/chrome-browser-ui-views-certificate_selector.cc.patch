@@ -1,0 +1,19 @@
+diff --git a/chrome/browser/ui/views/certificate_selector.cc b/chrome/browser/ui/views/certificate_selector.cc
+index 98e63b81b595e73a4b030910efbde85a685dbdad..e9f5306f711530bbe6b1db2f9cabfd31d4d81646 100644
+--- a/chrome/browser/ui/views/certificate_selector.cc
++++ b/chrome/browser/ui/views/certificate_selector.cc
+@@ -337,8 +337,13 @@ void CertificateSelector::ViewCertButtonPressed() {
+   if (!cert) {
+     return;
+   }
++  auto native_window = web_contents_->GetTopLevelNativeWindow();
++  if (!native_window) {
++    // Not supported with CEF windowless rendering.
++    return;
++  }
+   ShowCertificateViewerForClientAuth(web_contents_,
+-                                     web_contents_->GetTopLevelNativeWindow(),
++                                     native_window,
+                                      cert->certificate());
+ }
+ 

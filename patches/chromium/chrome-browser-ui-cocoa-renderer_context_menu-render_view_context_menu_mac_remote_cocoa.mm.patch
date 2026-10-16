@@ -1,0 +1,15 @@
+diff --git a/chrome/browser/ui/cocoa/renderer_context_menu/render_view_context_menu_mac_remote_cocoa.mm b/chrome/browser/ui/cocoa/renderer_context_menu/render_view_context_menu_mac_remote_cocoa.mm
+index ec7a5fdef0fdf08dedb1c3932c78d485730a7a1a..ba772758fe13ebcff3935bfb53a9e97a88909225 100644
+--- a/chrome/browser/ui/cocoa/renderer_context_menu/render_view_context_menu_mac_remote_cocoa.mm
++++ b/chrome/browser/ui/cocoa/renderer_context_menu/render_view_context_menu_mac_remote_cocoa.mm
+@@ -48,6 +48,10 @@ void RenderViewContextMenuMacRemoteCocoa::Show() {
+       target_view_id_);
+ }
+ 
++bool RenderViewContextMenuMacRemoteCocoa::IsRunning() {
++  return runner_ && runner_->IsRunning();
++}
++
+ void RenderViewContextMenuMacRemoteCocoa::CancelToolkitMenu() {
+   runner_->Cancel();
+ }

@@ -1,0 +1,16 @@
+diff --git a/ui/views/controls/menu/menu_scroll_view_container.cc b/ui/views/controls/menu/menu_scroll_view_container.cc
+index 34760e09f796d9003877cbf0d8fbfbd8d3487d51..15a4f18d0c2b04c880a57af29ffa2f6d2966d26a 100644
+--- a/ui/views/controls/menu/menu_scroll_view_container.cc
++++ b/ui/views/controls/menu/menu_scroll_view_container.cc
+@@ -276,6 +276,11 @@ MenuScrollViewContainer::MenuScrollViewContainer(SubmenuView* content_view)
+   scroll_down_button_ = background_view_->AddChildView(
+       std::make_unique<MenuScrollButton>(content_view, false));
+ 
++  SkColor override_color;
++  MenuDelegate* delegate = content_view_->GetMenuItem()->GetDelegate();
++  if (delegate && delegate->GetBackgroundColor(-1, false, &override_color))
++    SetBackground(views::CreateSolidBackground(override_color));
++
+   arrow_ = BubbleBorderTypeFromAnchor(
+       content_view_->GetMenuItem()->GetMenuController()->GetAnchorPosition());
+ 

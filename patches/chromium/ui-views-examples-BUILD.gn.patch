@@ -1,0 +1,12 @@
+diff --git a/ui/views/examples/BUILD.gn b/ui/views/examples/BUILD.gn
+index db6385c2d4761aff2617004f589cd8d2fa3b3d9f..ca4596413082681894eb42da5fcd46b6e3210312 100644
+--- a/ui/views/examples/BUILD.gn
++++ b/ui/views/examples/BUILD.gn
+@@ -372,7 +372,6 @@ if (is_mac) {
+       # Specify a sensible install_name for static builds. The library is
+       # dlopen()ed so this is not used to resolve the module.
+       ldflags = [ "-Wl,-install_name,@executable_path/../Frameworks/$output_name.framework/$output_name.framework" ]
+-      deps += [ "//base/test:test_trace_processor_bundle_data" ]
+     }
+ 
+     info_plist_target = ":views_examples_framework_plist"

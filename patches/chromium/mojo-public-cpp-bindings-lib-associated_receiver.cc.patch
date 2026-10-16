@@ -1,0 +1,18 @@
+diff --git a/mojo/public/cpp/bindings/lib/associated_receiver.cc b/mojo/public/cpp/bindings/lib/associated_receiver.cc
+index f727b6320bd927b72320652959ad669486ee094e..ebf7536ac38707d2aeb8861b70f16777746ecb7d 100644
+--- a/mojo/public/cpp/bindings/lib/associated_receiver.cc
++++ b/mojo/public/cpp/bindings/lib/associated_receiver.cc
+@@ -56,6 +56,13 @@ void AssociatedReceiverBase::set_disconnect_with_reason_handler(
+       std::move(error_handler));
+ }
+ 
++void AssociatedReceiverBase::set_disconnect_with_reason_and_result_handler(
++    ConnectionErrorWithReasonAndResultCallback error_handler) {
++  DCHECK(is_bound());
++  endpoint_client_->set_connection_error_with_reason_and_result_handler(
++      std::move(error_handler));
++}
++
+ void AssociatedReceiverBase::reset_on_disconnect() {
+   DCHECK(is_bound());
+   set_disconnect_handler(

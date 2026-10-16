@@ -1,0 +1,13 @@
+diff --git a/headless/lib/browser/headless_content_browser_client.h b/headless/lib/browser/headless_content_browser_client.h
+index e317e94d208e93cf823e77f4d1b1dab18dc4cd6c..1a66c7bbff726e5bf5f759495c172ed48fd98e04 100644
+--- a/headless/lib/browser/headless_content_browser_client.h
++++ b/headless/lib/browser/headless_content_browser_client.h
+@@ -86,7 +86,7 @@ class HeadlessContentBrowserClient : public content::ContentBrowserClient {
+       const url::Origin& destination_origin,
+       content::PrivacySandboxInvokingAPI invoking_api) override;
+ 
+-  void ConfigureNetworkContextParams(
++  bool ConfigureNetworkContextParams(
+       content::BrowserContext* context,
+       bool in_memory,
+       const base::FilePath& relative_partition_path,

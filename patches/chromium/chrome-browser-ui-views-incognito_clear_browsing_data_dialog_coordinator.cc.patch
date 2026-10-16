@@ -1,0 +1,15 @@
+diff --git a/chrome/browser/ui/views/incognito_clear_browsing_data_dialog_coordinator.cc b/chrome/browser/ui/views/incognito_clear_browsing_data_dialog_coordinator.cc
+index e87fb564bcd043a0010788eedbc61825d005160d..7dbd5ef335945c06ab25a1400ab021080fce564e 100644
+--- a/chrome/browser/ui/views/incognito_clear_browsing_data_dialog_coordinator.cc
++++ b/chrome/browser/ui/views/incognito_clear_browsing_data_dialog_coordinator.cc
+@@ -23,6 +23,10 @@ IncognitoClearBrowsingDataDialogCoordinator::
+ void IncognitoClearBrowsingDataDialogCoordinator::Show(
+     IncognitoClearBrowsingDataDialogInterface::Type type,
+     views::BubbleAnchor anchor) {
++  // The full toolbar may not be visible.
++  if (anchor.IsNull())
++    return;
++
+   if (bubble_tracker_.view() && bubble_tracker_.view()->GetWidget()) {
+     // Ensure the previous bubble is closed before creating and showing the new
+     // one.

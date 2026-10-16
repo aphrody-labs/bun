@@ -1,0 +1,15 @@
+diff --git a/chrome/browser/profiles/off_the_record_profile_impl.cc b/chrome/browser/profiles/off_the_record_profile_impl.cc
+index 67065112a11016b11fa82abe9cc12003689f902c..9fd3e3aebf703908101073932a5318c7c32b8e4c 100644
+--- a/chrome/browser/profiles/off_the_record_profile_impl.cc
++++ b/chrome/browser/profiles/off_the_record_profile_impl.cc
+@@ -654,7 +654,9 @@ std::unique_ptr<Profile> Profile::CreateOffTheRecordProfile(
+ #endif
+   if (!profile)
+     profile = std::make_unique<OffTheRecordProfileImpl>(parent, otr_profile_id);
+-  profile->Init();
++  // With CEF we want to delay initialization.
++  if (!otr_profile_id.IsUniqueForCEF())
++    profile->Init();
+   return std::move(profile);
+ }
+ 

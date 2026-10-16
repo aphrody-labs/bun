@@ -1,0 +1,46 @@
+diff --git a/chrome/browser/ui/window_feature_controller/window_feature_controller.cc b/chrome/browser/ui/window_feature_controller/window_feature_controller.cc
+index ec7bd3ea6cd00a5093b9bac2cfca9fe1a0bc4bfb..ec531f37cd4a3fa404f85dd98ca56451339226b7 100644
+--- a/chrome/browser/ui/window_feature_controller/window_feature_controller.cc
++++ b/chrome/browser/ui/window_feature_controller/window_feature_controller.cc
+@@ -7,18 +7,25 @@
+ #include "base/check.h"
+ #include "base/check_deref.h"
+ #include "build/build_config.h"
++#include "cef/libcef/features/features.h"
+ #include "chrome/browser/ui/fullscreen/browser_window_fullscreen_controller.h"
+ #include "chrome/browser/ui/web_applications/app_browser_controller.h"
+ 
++#if BUILDFLAG(ENABLE_CEF)
++#include "cef/libcef/browser/chrome/browser_delegate.h"
++#endif
++
+ DEFINE_USER_DATA(WindowFeatureController);
+ 
+ WindowFeatureController::WindowFeatureController(
++    BrowserWindowInterface* browser,
+     BrowserWindowFullscreenController* fullscreen_controller,
+     web_app::AppBrowserController* app_controller,
+     BrowserWindowInterface::Type browser_type,
+     bool is_trusted_source,
+     ui::UnownedUserDataHost& host)
+-    : fullscreen_controller_(CHECK_DEREF(fullscreen_controller)),
++    : browser_(browser),
++      fullscreen_controller_(CHECK_DEREF(fullscreen_controller)),
+       app_controller_(app_controller),
+       browser_type_(browser_type),
+       is_trusted_source_(is_trusted_source),
+@@ -42,6 +49,14 @@ const WindowFeatureController* WindowFeatureController::From(
+ 
+ bool WindowFeatureController::SupportsWindowFeature(
+     WindowFeature feature) const {
++#if BUILDFLAG(ENABLE_CEF)
++  if (browser_->cef_delegate()) {
++    if (auto value = browser_->cef_delegate()->SupportsWindowFeature(
++            static_cast<int>(feature))) {
++      return *value;
++    }
++  }
++#endif
+   bool supports =
+       SupportsWindowFeatureImpl(feature, /*check_can_support=*/false);
+   // Supported features imply CanSupportWindowFeature.

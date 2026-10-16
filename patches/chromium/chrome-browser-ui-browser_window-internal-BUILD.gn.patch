@@ -1,0 +1,24 @@
+diff --git a/chrome/browser/ui/browser_window/internal/BUILD.gn b/chrome/browser/ui/browser_window/internal/BUILD.gn
+index d4f1138108aa813b1d75773fbcdd2a591c0ea812..146adb9645787152b06b92dc7bfab0ec65cd42c7 100644
+--- a/chrome/browser/ui/browser_window/internal/BUILD.gn
++++ b/chrome/browser/ui/browser_window/internal/BUILD.gn
+@@ -2,6 +2,7 @@
+ # Use of this source code is governed by a BSD-style license that can be
+ # found in the LICENSE file.
+ 
++import("//cef/libcef/features/features.gni")
+ import("//build/config/chrome_build.gni")
+ import("//chrome/common/features.gni")
+ 
+@@ -247,6 +248,11 @@ source_set("internal") {
+       "//chrome/browser/ui/views/frame:browser_view_header",
+     ]
+   }
++  deps += [ "//cef/libcef/features:buildflags" ]
++  if (enable_cef) {
++    configs += [ "//cef/libcef/features:config" ]
++    deps += [ "//cef/libcef/features:deps" ]
++  }
+ }
+ 
+ source_set("unit_tests") {

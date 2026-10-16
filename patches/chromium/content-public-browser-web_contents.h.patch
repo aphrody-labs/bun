@@ -1,0 +1,31 @@
+diff --git a/content/public/browser/web_contents.h b/content/public/browser/web_contents.h
+index fde5f306d77d8614dbc8d9a1a1710e3ab38ac01c..9fc62d5af2490bf36a5eac0427e1b5f05ce94049 100644
+--- a/content/public/browser/web_contents.h
++++ b/content/public/browser/web_contents.h
+@@ -137,6 +137,7 @@ class PreloadPipelineInfo;
+ class PrerenderHandle;
+ class RenderFrameHost;
+ class RenderViewHost;
++class RenderViewHostDelegateView;
+ class RenderWidgetHost;
+ class RenderWidgetHostView;
+ class ScreenOrientationDelegate;
+@@ -144,6 +145,7 @@ class SiteInstance;
+ class SurfaceEmbedConnector;
+ class UnownedInnerWebContentsClient;
+ class WebContentsDelegate;
++class WebContentsView;
+ class WebUI;
+ struct DropData;
+ struct MHTMLGenerationParams;
+@@ -328,6 +330,10 @@ class WebContents : public PageNavigator, public base::SupportsUserData {
+     network::mojom::WebSandboxFlags starting_sandbox_flags =
+         network::mojom::WebSandboxFlags::kNone;
+ 
++    // Optionally specify the view and delegate view.
++    raw_ptr<content::WebContentsView> view = nullptr;
++    raw_ptr<content::RenderViewHostDelegateView> delegate_view = nullptr;
++
+     // Value used to set the last time the WebContents was made active, this is
+     // the value that'll be returned by GetLastActiveTimeTicks(). If this is
+     // left default initialized then the value is not passed on to the

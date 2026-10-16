@@ -1,0 +1,14 @@
+diff --git a/chrome/common/chrome_paths.cc b/chrome/common/chrome_paths.cc
+index 32d01c008e1341eb8142cd80e1c91afe7928ed42..223112aede4b84107a732a12fa2b6c4aed49acc7 100644
+--- a/chrome/common/chrome_paths.cc
++++ b/chrome/common/chrome_paths.cc
+@@ -406,7 +406,8 @@ bool PathProvider(int key, base::FilePath* result) {
+       break;
+     }
+ #endif
+-#if BUILDFLAG(IS_POSIX) && !BUILDFLAG(IS_MAC) && !BUILDFLAG(IS_OPENBSD)
++#if BUILDFLAG(IS_POSIX) && !BUILDFLAG(IS_MAC) && !BUILDFLAG(IS_OPENBSD) && \
++    !BUILDFLAG(ENABLE_CEF)
+     case chrome::DIR_POLICY_FILES: {
+       cur = base::FilePath(policy::kPolicyPath);
+       break;

@@ -1,0 +1,40 @@
+diff --git a/chrome/browser/ui/browser_window/public/browser_window_interface.h b/chrome/browser/ui/browser_window/public/browser_window_interface.h
+index 8a2e9f19aa3f5deba0c76f6420f9e156159509ae..9154d1a3d7fa760f27524380a2be0ca50d199230 100644
+--- a/chrome/browser/ui/browser_window/public/browser_window_interface.h
++++ b/chrome/browser/ui/browser_window/public/browser_window_interface.h
+@@ -9,6 +9,7 @@
+ 
+ #include "base/memory/raw_ptr.h"
+ #include "build/build_config.h"
++#include "cef/libcef/features/features.h"
+ #include "content/public/browser/page_navigator.h"
+ 
+ #if !BUILDFLAG(IS_ANDROID)
+@@ -54,6 +55,12 @@ class UnownedUserDataHost;
+ class Profile;
+ class SessionID;
+ 
++#if BUILDFLAG(ENABLE_CEF)
++namespace cef {
++class BrowserDelegate;
++}
++#endif
++
+ namespace internal {
+ class ScopedBrowserShower;
+ }
+@@ -315,6 +322,14 @@ class BrowserWindowInterface : public content::PageNavigator {
+   virtual base::CallbackListSubscription RegisterDidBecomeInactive(
+       DidBecomeInactiveCallback callback) = 0;
+ 
++  // Returns true if this is a normal browser as determined by
++  // BrowserWindowFeatures::IsNormalBrowser.
++  virtual bool IsNormalBrowser() const = 0;
++
++#if BUILDFLAG(ENABLE_CEF)
++  virtual cef::BrowserDelegate* cef_delegate() const { return nullptr; }
++#endif
++
+   // This is used by features that need to operate on most or all tabs in the
+   // browser window. Do not use this method to find a specific tab.
+   virtual std::vector<tabs::TabInterface*> GetAllTabInterfaces() = 0;

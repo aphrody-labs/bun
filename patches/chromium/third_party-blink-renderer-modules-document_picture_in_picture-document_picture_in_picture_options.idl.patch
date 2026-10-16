@@ -1,0 +1,25 @@
+diff --git a/third_party/blink/renderer/modules/document_picture_in_picture/document_picture_in_picture_options.idl b/third_party/blink/renderer/modules/document_picture_in_picture/document_picture_in_picture_options.idl
+index de4f0294a2f7ea20517c71cad3d17fb0f1975211..8fa3befaf1d90d20ffe819ed09667511be1b8cf9 100644
+--- a/third_party/blink/renderer/modules/document_picture_in_picture/document_picture_in_picture_options.idl
++++ b/third_party/blink/renderer/modules/document_picture_in_picture/document_picture_in_picture_options.idl
+@@ -4,9 +4,20 @@
+ 
+ // https://wicg.github.io/document-picture-in-picture/#dictdef-documentpictureinpictureoptions
+ 
++dictionary DocumentPictureInPicturePosition {
++  required long x;
++  required long y;
++};
++
++dictionary DocumentPictureInPictureCefOptions {
++  DocumentPictureInPicturePosition position;
++  boolean resizable = true;
++};
++
+ dictionary DocumentPictureInPictureOptions {
+   [EnforceRange] unsigned long long width = 0;
+   [EnforceRange] unsigned long long height = 0;
+   boolean disallowReturnToOpener = false;
+   [RuntimeEnabled=DocumentPictureInPicturePreferInitialPlacement] boolean preferInitialWindowPlacement = false;
++  [RuntimeEnabled=DocumentPictureInPictureCefOptions] DocumentPictureInPictureCefOptions cefOptions;
+ };

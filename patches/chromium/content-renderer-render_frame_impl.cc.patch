@@ -1,0 +1,13 @@
+diff --git a/content/renderer/render_frame_impl.cc b/content/renderer/render_frame_impl.cc
+index 0cbd98a13b99f678ad4ed90bc1f9e556001c0c45..38a241c464ae1c4d6636515823f51ae3c6de3c3d 100644
+--- a/content/renderer/render_frame_impl.cc
++++ b/content/renderer/render_frame_impl.cc
+@@ -7126,6 +7126,8 @@ WebView* RenderFrameImpl::CreateNewWindow(
+         pip_options->disallow_return_to_opener;
+     pip_mojom_opts->prefer_initial_window_placement =
+         pip_options->prefer_initial_window_placement;
++    pip_mojom_opts->initial_position = pip_options->initial_position;
++    pip_mojom_opts->resizable = pip_options->resizable;
+     params->pip_options = std::move(pip_mojom_opts);
+   }
+ 

@@ -1,0 +1,13 @@
+diff --git a/sandbox/linux/suid/client/setuid_sandbox_host.cc b/sandbox/linux/suid/client/setuid_sandbox_host.cc
+index 0848ecf067f6d29e1b84741d548761c62e3920d6..3c275e7f16b0266c8cb9a1795012e5436e0cbfdb 100644
+--- a/sandbox/linux/suid/client/setuid_sandbox_host.cc
++++ b/sandbox/linux/suid/client/setuid_sandbox_host.cc
+@@ -134,7 +134,7 @@ bool SetuidSandboxHost::IsDisabledViaEnvironment() {
+ base::FilePath SetuidSandboxHost::GetSandboxBinaryPath() {
+   base::FilePath sandbox_binary;
+   base::FilePath exe_dir;
+-  if (base::PathService::Get(base::DIR_EXE, &exe_dir)) {
++  if (base::PathService::Get(base::DIR_ASSETS, &exe_dir)) {
+     base::FilePath sandbox_candidate = exe_dir.AppendASCII("chrome-sandbox");
+     if (base::PathExists(sandbox_candidate))
+       sandbox_binary = sandbox_candidate;

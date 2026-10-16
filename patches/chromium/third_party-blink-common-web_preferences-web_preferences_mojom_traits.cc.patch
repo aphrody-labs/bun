@@ -1,0 +1,12 @@
+diff --git a/third_party/blink/common/web_preferences/web_preferences_mojom_traits.cc b/third_party/blink/common/web_preferences/web_preferences_mojom_traits.cc
+index 180ee8bd4c380b88b361fa8ad120a519503b2d0f..fd2b394504fda93a20b6faeebc3c8bbd5d7281fa 100644
+--- a/third_party/blink/common/web_preferences/web_preferences_mojom_traits.cc
++++ b/third_party/blink/common/web_preferences/web_preferences_mojom_traits.cc
+@@ -236,6 +236,7 @@ bool StructTraits<blink::mojom::WebPreferencesDataView,
+   out->lazy_load_enabled = data.lazy_load_enabled();
+   out->allow_mixed_content_upgrades = data.allow_mixed_content_upgrades();
+   out->always_show_focus = data.always_show_focus();
++  out->accessibility_viewport_collapse = data.accessibility_viewport_collapse();
+   out->touch_drag_drop_enabled = data.touch_drag_drop_enabled();
+   out->touch_dragend_context_menu = data.touch_dragend_context_menu();
+   out->webxr_immersive_ar_allowed = data.webxr_immersive_ar_allowed();

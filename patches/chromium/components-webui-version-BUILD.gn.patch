@@ -1,0 +1,22 @@
+diff --git a/components/webui/version/BUILD.gn b/components/webui/version/BUILD.gn
+index 2193019afd18eac09e7812737dc2de3533c2f404..42ec99b0a4673f9ba7c8bbd568a18fa888efe96e 100644
+--- a/components/webui/version/BUILD.gn
++++ b/components/webui/version/BUILD.gn
+@@ -2,6 +2,8 @@
+ # Use of this source code is governed by a BSD-style license that can be
+ # found in the LICENSE file.
+ 
++import("//cef/libcef/features/features.gni")
++
+ static_library("version") {
+   sources = [
+     "version_handler_helper.cc",
+@@ -16,4 +18,8 @@ static_library("version") {
+     "//components/variations/net",
+     "//components/variations/service",
+   ]
++
++  if (enable_cef) {
++    configs += [ "//cef/libcef/features:config" ]
++  }
+ }

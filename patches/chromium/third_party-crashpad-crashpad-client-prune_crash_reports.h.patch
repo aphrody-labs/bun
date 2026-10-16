@@ -1,0 +1,14 @@
+diff --git a/third_party/crashpad/crashpad/client/prune_crash_reports.h b/third_party/crashpad/crashpad/client/prune_crash_reports.h
+index b362e0aadbadd8d0f812d86cd5024c3ea9cf7dda..1588232a6e4d418d4f338d64a3bdf6da565f4533 100644
+--- a/third_party/crashpad/crashpad/client/prune_crash_reports.h
++++ b/third_party/crashpad/crashpad/client/prune_crash_reports.h
+@@ -58,7 +58,8 @@ class PruneCondition {
+   //! of 128 MB.
+   //!
+   //! \return A PruneCondition for use with PruneCrashReportDatabase().
+-  static std::unique_ptr<PruneCondition> GetDefault();
++  static std::unique_ptr<PruneCondition> GetDefault(int max_size_in_mb,
++                                                    int max_age_in_days);
+ 
+   virtual ~PruneCondition() {}
+ 

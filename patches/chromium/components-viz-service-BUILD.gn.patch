@@ -1,0 +1,13 @@
+diff --git a/components/viz/service/BUILD.gn b/components/viz/service/BUILD.gn
+index 42fc3926fd9e3712d93d8f67e4ba7cfb3f24dbb9..c41528b9c0f7258c5b5d1383c0dc018eed34ca35 100644
+--- a/components/viz/service/BUILD.gn
++++ b/components/viz/service/BUILD.gn
+@@ -284,6 +284,8 @@ viz_component("service") {
+     "transitions/surface_animation_manager.h",
+     "transitions/transferable_resource_tracker.cc",
+     "transitions/transferable_resource_tracker.h",
++    "//cef/libcef/browser/osr/software_output_device_proxy.cc",
++    "//cef/libcef/browser/osr/software_output_device_proxy.h",
+   ]
+ 
+   defines = [ "VIZ_SERVICE_IMPLEMENTATION" ]

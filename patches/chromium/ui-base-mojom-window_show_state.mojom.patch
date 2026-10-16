@@ -1,0 +1,13 @@
+diff --git a/ui/base/mojom/window_show_state.mojom b/ui/base/mojom/window_show_state.mojom
+index aeaf8e35f7eda89598149117fe8508d197bf2610..4b7cc3f03d3cf9c91ac8efe11ae820cf2b34b8b0 100644
+--- a/ui/base/mojom/window_show_state.mojom
++++ b/ui/base/mojom/window_show_state.mojom
+@@ -20,6 +20,7 @@ enum WindowShowState {
+   kMaximized = 3,
+   kInactive = 4, // Views only, not persisted.
+   kFullscreen = 5,
++  kHidden = 6,
+   // TODO(crbug.com/361560784): Investigate and Remove `kEnd`
+-  [MinVersion=1] kEnd = 6,
++  [MinVersion=1] kEnd = 7,
+ };

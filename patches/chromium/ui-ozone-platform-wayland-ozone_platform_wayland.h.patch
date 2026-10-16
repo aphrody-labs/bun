@@ -1,0 +1,23 @@
+diff --git a/ui/ozone/platform/wayland/ozone_platform_wayland.h b/ui/ozone/platform/wayland/ozone_platform_wayland.h
+index 4302d96a03e6f98dafe8544ada91e1462957ec2d..d0cb3254a7716b8fba06b72829013e01d1ea6ef6 100644
+--- a/ui/ozone/platform/wayland/ozone_platform_wayland.h
++++ b/ui/ozone/platform/wayland/ozone_platform_wayland.h
+@@ -5,6 +5,8 @@
+ #ifndef UI_OZONE_PLATFORM_WAYLAND_OZONE_PLATFORM_WAYLAND_H_
+ #define UI_OZONE_PLATFORM_WAYLAND_OZONE_PLATFORM_WAYLAND_H_
+ 
++#include "base/component_export.h"
++
+ namespace ui {
+ 
+ class OzonePlatform;
+@@ -12,6 +14,9 @@ class OzonePlatform;
+ // Constructor hook for use in ozone_platform_list.cc
+ OzonePlatform* CreateOzonePlatformWayland();
+ 
++// Indicate that CEF is using multi-threaded-message-loop.
++COMPONENT_EXPORT(OZONE) void SetMultiThreadedMessageLoopWayland();
++
+ }  // namespace ui
+ 
+ #endif  // UI_OZONE_PLATFORM_WAYLAND_OZONE_PLATFORM_WAYLAND_H_

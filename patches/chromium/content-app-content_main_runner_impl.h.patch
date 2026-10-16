@@ -1,0 +1,22 @@
+diff --git a/content/app/content_main_runner_impl.h b/content/app/content_main_runner_impl.h
+index e456be694c9e8581d1baf20247d89b0bfbebadb6..4273506484cf9827089a3eb3445b6e052bc29229 100644
+--- a/content/app/content_main_runner_impl.h
++++ b/content/app/content_main_runner_impl.h
+@@ -32,7 +32,7 @@ class BackgroundTracingManagerImpl;
+ class BrowserMemoryCoordinatorImpl;
+ class MojoIpcSupport;
+ 
+-class ContentMainRunnerImpl : public ContentMainRunner {
++class CONTENT_EXPORT ContentMainRunnerImpl : public ContentMainRunner {
+  public:
+   static std::unique_ptr<ContentMainRunnerImpl> Create();
+ 
+@@ -51,6 +51,8 @@ class ContentMainRunnerImpl : public ContentMainRunner {
+   int Run() override;
+   void Shutdown() override;
+ 
++  void ShutdownOnUIThread();
++
+  private:
+   int RunBrowser(MainFunctionParams main_function_params,
+                  bool start_minimal_browser);

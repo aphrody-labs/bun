@@ -1,0 +1,40 @@
+diff --git a/chrome/browser/ui/browser_window/public/browser_window_features.h b/chrome/browser/ui/browser_window/public/browser_window_features.h
+index 51a4352ef290726f370197a99e7e94240fd6d89e..124421590d56fcc7aa5ec3d520842896c538bbdd 100644
+--- a/chrome/browser/ui/browser_window/public/browser_window_features.h
++++ b/chrome/browser/ui/browser_window/public/browser_window_features.h
+@@ -161,6 +161,9 @@ namespace content_settings {
+ class CookieControlsController;
+ }  // namespace content_settings
+ 
++namespace content {
++class WebContents;
++}
+ namespace contextual_tasks {
+ class ContextualTasksBrowserController;
+ }  // namespace contextual_tasks
+@@ -282,6 +285,8 @@ class BrowserWindowFeatures {
+   BrowserWindowFeatures();
+   ~BrowserWindowFeatures();
+ 
++  static bool IsNormalBrowser(const BrowserWindowInterface* browser);
++
+   BrowserWindowFeatures(const BrowserWindowFeatures&) = delete;
+   BrowserWindowFeatures& operator=(const BrowserWindowFeatures&) = delete;
+ 
+@@ -298,6 +303,16 @@ class BrowserWindowFeatures {
+   // hierarchy in BrowserView.
+   void InitPostBrowserViewConstruction(BrowserView* browser_view);
+ 
++  // Initialize features that depend on the tab model object being created. May
++  // be called multiple times (on TabModel ceation via Navigate). With CEF this
++  // will be called after BrowserView construction.
++  void InitPostTabModelConstruction(BrowserWindowInterface* browser);
++
++  // Called when a WebContents is created as part of TabModel ceation via
++  // Navigate.
++  void OnWebContentsCreated(BrowserWindowInterface* browser,
++                            content::WebContents* target_contents);
++
+   // Called exactly once to tear down state that depends on the window object.
+   void TearDownPreBrowserWindowDestruction();
+ 

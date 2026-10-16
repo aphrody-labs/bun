@@ -1,0 +1,13 @@
+diff --git a/chrome/browser/ui/views/chrome_javascript_app_modal_view_factory_views.cc b/chrome/browser/ui/views/chrome_javascript_app_modal_view_factory_views.cc
+index acd15177f6b03dc4bb914e54cb86ae88cb254bfe..6902dae7961846c9026c549f23c1a785f0f4aaba 100644
+--- a/chrome/browser/ui/views/chrome_javascript_app_modal_view_factory_views.cc
++++ b/chrome/browser/ui/views/chrome_javascript_app_modal_view_factory_views.cc
+@@ -99,7 +99,7 @@ javascript_dialogs::AppModalDialogView* CreateViewsJavaScriptDialog(
+   web_contents->GetDelegate()->ActivateContents(web_contents);
+   gfx::NativeWindow parent_window = web_contents->GetTopLevelNativeWindow();
+ #if defined(USE_AURA)
+-  if (!parent_window->GetRootWindow()) {
++  if (parent_window && !parent_window->GetRootWindow()) {
+     // When we are part of a WebContents that isn't actually being displayed
+     // on the screen, we can't actually attach to it.
+     parent_window = nullptr;

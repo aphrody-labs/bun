@@ -1,0 +1,24 @@
+diff --git a/chrome/browser/ui/window_feature_controller/BUILD.gn b/chrome/browser/ui/window_feature_controller/BUILD.gn
+index 8fe49bb5e6163168797322e80ef87e025ee85f18..1afdee5262822428eff6dd4816b32a76bf646883 100644
+--- a/chrome/browser/ui/window_feature_controller/BUILD.gn
++++ b/chrome/browser/ui/window_feature_controller/BUILD.gn
+@@ -2,6 +2,7 @@
+ # Use of this source code is governed by a BSD-style license that can be
+ # found in the LICENSE file.
+ 
++import("//cef/libcef/features/features.gni")
+ import("//build/config/ui.gni")
+ 
+ assert(!is_android)
+@@ -20,6 +21,11 @@ source_set("window_feature_controller") {
+     "//chrome/browser/ui/fullscreen",
+     "//chrome/browser/ui/web_applications",
+   ]
++  deps += [ "//cef/libcef/features:buildflags" ]
++  if (enable_cef) {
++    configs += [ "//cef/libcef/features:config" ]
++    deps += [ "//cef/libcef/features:deps" ]
++  }
+ }
+ 
+ source_set("unit_tests") {

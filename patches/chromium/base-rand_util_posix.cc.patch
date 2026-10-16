@@ -1,0 +1,15 @@
+diff --git a/base/rand_util_posix.cc b/base/rand_util_posix.cc
+index 6560a29287de45bc41c1083c272d40b6850ee8f7..dff4a24a88c133d2163e2e7f39d5650ca1df1cda 100644
+--- a/base/rand_util_posix.cc
++++ b/base/rand_util_posix.cc
+@@ -157,6 +157,10 @@ void RandBytesInternal(span<uint8_t> output, bool avoid_allocation) {
+ 
+ namespace internal {
+ 
++void RandBytesAvoidAllocation(span<uint8_t> output) {
++  RandBytesInternal(output, /*avoid_allocation=*/true);
++}
++
+ double RandDoubleAvoidAllocation() {
+   uint64_t number;
+   RandBytesInternal(byte_span_from_ref(number), /*avoid_allocation=*/true);

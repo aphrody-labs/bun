@@ -1,0 +1,13 @@
+diff --git a/net/base/directory_lister.cc b/net/base/directory_lister.cc
+index 58cce4935385662099e84fadd0c734b0b112647e..33b00235918c34e62422a6b12df4a7f8abf3c111 100644
+--- a/net/base/directory_lister.cc
++++ b/net/base/directory_lister.cc
+@@ -200,7 +200,7 @@ void DirectoryLister::OnListFile(const DirectoryListerData& data) {
+ }
+ 
+ void DirectoryLister::OnListDone(int error) {
+-  delegate_->OnListDone(error);
++  delegate_.ExtractAsDangling()->OnListDone(error);
+ }
+ 
+ }  // namespace net

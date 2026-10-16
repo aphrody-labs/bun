@@ -1,0 +1,58 @@
+diff --git a/chrome/browser/ui/browser_ui_controller/browser_ui_controller.cc b/chrome/browser/ui/browser_ui_controller/browser_ui_controller.cc
+index f68bbcc884726f183561d2108756a07493709c6b..7e224f6415b0a1f1b15075d7d5ce7efbb1c00e98 100644
+--- a/chrome/browser/ui/browser_ui_controller/browser_ui_controller.cc
++++ b/chrome/browser/ui/browser_ui_controller/browser_ui_controller.cc
+@@ -12,8 +12,10 @@
+ #include "base/feature_list.h"
+ #include "base/task/single_thread_task_runner.h"
+ #include "base/trace_event/trace_event.h"
++#include "cef/libcef/features/features.h"
+ #include "chrome/browser/app_mode/app_mode_utils.h"
+ #include "chrome/browser/ui/bookmarks/bookmark_bar_controller.h"
++#include "chrome/browser/ui/browser.h"
+ #include "chrome/browser/ui/browser_command_controller.h"
+ #include "chrome/browser/ui/browser_window.h"
+ #include "chrome/browser/ui/browser_window/public/browser_window_interface.h"
+@@ -145,7 +147,11 @@ void BrowserUiController::ScheduleUIUpdate(content::WebContents* source,
+     // Update the loading state synchronously. This is so the throbber will
+     // immediately start/stop, which gives a more snappy feel. We want to do
+     // this for any tab so they start & stop quickly.
+-    NotifyTabUIChanged(tab, TabChangeType::kLoadingOnly);
++    // Guard against notifications during tab insertion when the tab strip model
++    // state is not yet fully consistent.
++    if (tab_strip_model_->GetIndexOfTab(tab) != TabStripModel::kNoTab) {
++      NotifyTabUIChanged(tab, TabChangeType::kLoadingOnly);
++    }
+     // The status bubble needs to be updated during INVALIDATE_TYPE_LOAD too,
+     // but we do that asynchronously by not stripping INVALIDATE_TYPE_LOAD from
+     // changed_flags.
+@@ -273,9 +279,11 @@ void BrowserUiController::NotifyTabUIChanged(tabs::TabInterface* tab,
+ }
+ 
+ std::vector<StatusBubble*> BrowserUiController::GetStatusBubbles() {
++  bool show_by_default = true;
++
+   // For kiosk and exclusive app mode we want to always hide the status bubble.
+   if (IsRunningInAppMode()) {
+-    return {};
++    show_by_default = false;
+   }
+ 
+   // We hide the status bar for web apps windows as this matches native
+@@ -285,6 +293,16 @@ std::vector<StatusBubble*> BrowserUiController::GetStatusBubbles() {
+       web_app::AppBrowserController::From(&*browser_);
+   if (app_browser_controller &&
+       !app_browser_controller->HasMinimalUiButtons()) {
++    show_by_default = false;
++  }
++
++  bool show = show_by_default;
++#if BUILDFLAG(ENABLE_CEF)
++  if (browser_->cef_delegate()) {
++    show = browser_->cef_delegate()->ShowStatusBubble(show_by_default);
++  }
++#endif
++  if (!show) {
+     return {};
+   }
+ 

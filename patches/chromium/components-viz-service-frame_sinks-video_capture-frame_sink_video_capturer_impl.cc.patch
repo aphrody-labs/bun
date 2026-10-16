@@ -1,0 +1,51 @@
+diff --git a/components/viz/service/frame_sinks/video_capture/frame_sink_video_capturer_impl.cc b/components/viz/service/frame_sinks/video_capture/frame_sink_video_capturer_impl.cc
+index 017decb7bbf3e1643674d98888b10904558b0b71..225b54602811e287aa0f22b18b064a2c555097b9 100644
+--- a/components/viz/service/frame_sinks/video_capture/frame_sink_video_capturer_impl.cc
++++ b/components/viz/service/frame_sinks/video_capture/frame_sink_video_capturer_impl.cc
+@@ -1533,16 +1533,20 @@ void FrameSinkVideoCapturerImpl::MaybeDeliverFrame(FrameCapture frame_capture) {
+     // frame is desirable.)
+     if (frame_capture.frame->metadata().capture_version != capture_version()) {
+       frame_capture.CaptureFailed(CaptureResult::kSubCaptureTargetChanged);
+-    } else if (!oracle_->CompleteCapture(frame_capture.oracle_frame_number,
+-                                         frame_capture.success(),
+-                                         &media_ticks)) {
+-      // The Oracle has the final say in whether frame delivery will proceed. It
+-      // also rewrites the media timestamp in terms of the smooth flow of the
+-      // original source content.
+-      frame_capture.CaptureFailed(CaptureResult::kOracleRejectedFrame);
+     }
+   }
+ 
++  // Complete every recorded capture, including failed copies and frames from
++  // an obsolete capture target. Otherwise the oracle's pending-frame count
++  // prevents subsequent refresh requests from capturing a replacement frame.
++  const bool deliver_frame = oracle_->CompleteCapture(
++      frame_capture.oracle_frame_number, frame_capture.success(), &media_ticks);
++  if (frame_capture.success() && !deliver_frame) {
++    // The oracle also decides whether successful captures should be delivered
++    // and rewrites their timestamps to smooth the flow of the source content.
++    frame_capture.CaptureFailed(CaptureResult::kOracleRejectedFrame);
++  }
++
+   if (!frame_capture.success()) {
+     const media::VideoFrameMetadata& metadata = frame_capture.frame_metadata();
+     TRACE_EVENT_END("gpu.capture", CaptureTrack(metadata), "result",
+@@ -1653,6 +1657,8 @@ void FrameSinkVideoCapturerImpl::OnLog(const std::string& message) {
+ bool FrameSinkVideoCapturerImpl::ShouldMark(const media::VideoFrame& frame,
+                                             int64_t content_version) const {
+   return !marked_frame_ || content_version > content_version_in_marked_frame_ ||
++         frame.metadata().capture_version >
++             marked_frame_->metadata().capture_version ||
+          frame.coded_size() != marked_frame_->coded_size();
+ }
+ 
+@@ -1666,7 +1672,8 @@ void FrameSinkVideoCapturerImpl::MarkFrame(
+ bool FrameSinkVideoCapturerImpl::CanResurrectFrame(
+     const gfx::Size& size) const {
+   return content_version_ == content_version_in_marked_frame_ &&
+-         marked_frame_ && marked_frame_->coded_size() == size;
++         marked_frame_ && marked_frame_->coded_size() == size &&
++         marked_frame_->metadata().capture_version == capture_version();
+ }
+ 
+ void FrameSinkVideoCapturerImpl::NotifyFrameReleased(

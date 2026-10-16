@@ -1,0 +1,14 @@
+diff --git a/base/process/set_process_title.cc b/base/process/set_process_title.cc
+index aacd4a841f3940c27c5c73c03fa9bcc6e56448cc..f4488f8259836a8f3bb5c465df28ca40f2bdd455 100644
+--- a/base/process/set_process_title.cc
++++ b/base/process/set_process_title.cc
+@@ -54,9 +54,6 @@ void SetProcessTitleFromCommandLine(const char** main_argv) {
+   bool have_argv0 = false;
+ 
+ #if BUILDFLAG(IS_LINUX) || BUILDFLAG(IS_CHROMEOS)
+-  DCHECK_EQ(base::PlatformThread::CurrentId(),
+-            base::PlatformThreadId(getpid()));
+-
+   if (main_argv) {
+     setproctitle_init(main_argv);
+   }

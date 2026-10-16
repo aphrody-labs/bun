@@ -1,0 +1,14 @@
+diff --git a/ui/views/widget/widget_hwnd_utils.cc b/ui/views/widget/widget_hwnd_utils.cc
+index 56ed7cad8652cf57e597bb7f369e9e659ea6ed4d..e5f68885fa41fc9da62e746ca790816b901b4321 100644
+--- a/ui/views/widget/widget_hwnd_utils.cc
++++ b/ui/views/widget/widget_hwnd_utils.cc
+@@ -80,7 +80,8 @@ WindowStyles CalculateWindowStylesFromInitParams(
+         styles.style &= static_cast<DWORD>(~(WS_THICKFRAME | WS_MAXIMIZEBOX));
+       }
+       if (params.remove_standard_frame) {
+-        styles.style &= static_cast<DWORD>(~(WS_MINIMIZEBOX | WS_MAXIMIZEBOX));
++        styles.style &= static_cast<DWORD>(~(WS_MINIMIZEBOX | WS_MAXIMIZEBOX |
++                                             WS_CAPTION | WS_SYSMENU));
+       }
+ 
+       if (native_widget_delegate->IsDialogBox()) {

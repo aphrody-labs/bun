@@ -1,0 +1,13 @@
+diff --git a/chrome/browser/ui/views/chrome_views_delegate_linux.cc b/chrome/browser/ui/views/chrome_views_delegate_linux.cc
+index c5808a079716b9b21039c0d30d7625a1ed6f26d4..2c9f04a07c16dba3d9af635ebd41679837becfa3 100644
+--- a/chrome/browser/ui/views/chrome_views_delegate_linux.cc
++++ b/chrome/browser/ui/views/chrome_views_delegate_linux.cc
+@@ -87,6 +87,8 @@ NativeWidgetType GetNativeWidgetTypeForInitParams(
+   }
+ 
+   return (params.parent &&
++          (params.child ||
++           params.type == views::Widget::InitParams::TYPE_BUBBLE) &&
+           params.type != views::Widget::InitParams::TYPE_MENU &&
+           params.type != views::Widget::InitParams::TYPE_TOOLTIP)
+              ? NativeWidgetType::kNativeWidgetAura

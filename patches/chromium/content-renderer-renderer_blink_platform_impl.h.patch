@@ -1,0 +1,14 @@
+diff --git a/content/renderer/renderer_blink_platform_impl.h b/content/renderer/renderer_blink_platform_impl.h
+index 0fe9e989c048a057e8c1e5becf11db35b584ec44..a4dc4017739b6cab88507c4f1928e74079958cec 100644
+--- a/content/renderer/renderer_blink_platform_impl.h
++++ b/content/renderer/renderer_blink_platform_impl.h
+@@ -272,6 +272,9 @@ class CONTENT_EXPORT RendererBlinkPlatformImpl : public BlinkPlatformImpl {
+ #endif  // BUILDFLAG(IS_ANDROID)
+   void OnV8HeapLastResortGC() override;
+ 
++  void DevToolsAgentAttached() override;
++  void DevToolsAgentDetached() override;
++
+   // Tells this platform that the renderer is locked to a site (i.e., a scheme
+   // plus eTLD+1, such as https://google.com), or to a more specific origin.
+   void SetIsLockedToSite();

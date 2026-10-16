@@ -1,0 +1,26 @@
+diff --git a/chrome/browser/ui/webui/about/about_ui.h b/chrome/browser/ui/webui/about/about_ui.h
+index cc7393a05800d80a7dc6a6bc571e77cf5ddda50d..bf5e8e1547f87f72cb18221ab2184fd0f7510dbf 100644
+--- a/chrome/browser/ui/webui/about/about_ui.h
++++ b/chrome/browser/ui/webui/about/about_ui.h
+@@ -11,6 +11,7 @@
+ 
+ #include "base/memory/raw_ptr.h"
+ #include "build/build_config.h"
++#include "cef/libcef/features/features.h"
+ #include "content/public/browser/url_data_source.h"
+ #include "content/public/browser/web_ui_controller.h"
+ #include "content/public/browser/webui_config.h"
+@@ -35,6 +36,13 @@ class CreditsUIConfig : public AboutUIConfigBase {
+   CreditsUIConfig();
+ };
+ 
++#if BUILDFLAG(ENABLE_CEF)
++class ChromeUILicenseConfig : public AboutUIConfigBase {
++ public:
++  ChromeUILicenseConfig();
++};
++#endif
++
+ #if !BUILDFLAG(IS_ANDROID)
+ // chrome://terms
+ class TermsUIConfig : public AboutUIConfigBase {

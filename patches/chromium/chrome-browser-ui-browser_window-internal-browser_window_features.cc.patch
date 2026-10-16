@@ -1,0 +1,140 @@
+diff --git a/chrome/browser/ui/browser_window/internal/browser_window_features.cc b/chrome/browser/ui/browser_window/internal/browser_window_features.cc
+index 6c1c78d4341e72f815fed35a8a808e60333876ac..b9ba4cbbf6f37b4ea3af4ea5c41c43155141de44 100644
+--- a/chrome/browser/ui/browser_window/internal/browser_window_features.cc
++++ b/chrome/browser/ui/browser_window/internal/browser_window_features.cc
+@@ -12,6 +12,7 @@
+ #include "base/memory/ptr_util.h"
+ #include "base/metrics/histogram_functions.h"
+ #include "base/no_destructor.h"
++#include "cef/libcef/features/features.h"
+ #include "chrome/browser/actor/ui/actor_border_view_controller.h"
+ #include "chrome/browser/actor/ui/actor_ui_window_controller.h"
+ #include "chrome/browser/autocomplete/aim_eligibility_service_factory.h"
+@@ -247,6 +248,17 @@
+ BrowserWindowFeatures::BrowserWindowFeatures() = default;
+ BrowserWindowFeatures::~BrowserWindowFeatures() = default;
+ 
++// static
++bool BrowserWindowFeatures::IsNormalBrowser(
++    const BrowserWindowInterface* browser) {
++  // CEF normal browsers have TYPE_POPUP.
++  if (browser->GetType() == BrowserWindowInterface::Type::TYPE_POPUP &&
++      browser->cef_delegate()) {
++    return true;
++  }
++  return browser->GetType() == BrowserWindowInterface::Type::TYPE_NORMAL;
++}
++
+ void BrowserWindowFeatures::Init(BrowserWindowInterface* browser) {
+   // This is used only for the controllers which will be created on demand
+   // later.
+@@ -319,8 +331,8 @@ void BrowserWindowFeatures::Init(BrowserWindowInterface* browser) {
+           *browser, *browser, *browser->GetTabStripModel());
+   window_feature_controller_ =
+       GetUserDataFactory().CreateInstance<WindowFeatureController>(
+-          *browser, fullscreen_controller_.get(), app_browser_controller_.get(),
+-          browser->GetType(),
++          *browser, browser, fullscreen_controller_.get(),
++          app_browser_controller_.get(), browser->GetType(),
+           BrowserInitState::From(browser)
+               ->browser_window_create_params()
+               .is_trusted_source,
+@@ -682,6 +694,9 @@ void BrowserWindowFeatures::InitPostWindowConstruction(
+   // Foundational state used throughout this function. Computed/assigned early
+   // so the alphabetical sections below can rely on them.
+   Profile* const profile = browser_->GetProfile();
++
++  const bool supports_toolbar = IsNormalBrowser(browser);
++
+   BrowserView* const browser_view =
+       BrowserView::GetBrowserViewForBrowser(browser);
+   WebUIBrowserWindow* const webui_browser_window =
+@@ -749,18 +764,6 @@ void BrowserWindowFeatures::InitPostWindowConstruction(
+         std::make_unique<ContentsBorderController>(browser_view);
+   }
+ 
+-  if (browser_view) {
+-    if (browser_->GetType() == BrowserWindowInterface::Type::TYPE_NORMAL ||
+-        browser_->GetType() == BrowserWindowInterface::Type::TYPE_POPUP ||
+-        browser_view->GetIsWebAppType()) {
+-      data_protection_ui_controller_ =
+-          GetUserDataFactory()
+-              .CreateInstance<
+-                  enterprise_data_protection::DataProtectionUIController>(
+-                  *browser_view->browser(), browser_view);
+-    }
+-  }
+-
+ #if BUILDFLAG(ENABLE_EXTENSIONS) && (BUILDFLAG(IS_WIN) || BUILDFLAG(IS_MAC))
+   if (browser_view) {
+     if (!browser_->GetProfile()->IsOffTheRecord()) {
+@@ -811,7 +814,12 @@ void BrowserWindowFeatures::InitPostWindowConstruction(
+ 
+   // Must be after exclusive_access_manager_,
+   // desktop_browser_window_capabilities_, and browser_ui_controller_.
++#if BUILDFLAG(ENABLE_CEF)
++  browser_web_contents_delegate_ =
++      cef::BrowserDelegate::CreateWebContentsDelegate(
++#else
+   browser_web_contents_delegate_ = std::make_unique<BrowserWebContentsDelegate>(
++#endif
+       browser, *exclusive_access_manager_, *browser_command_controller_,
+       *unload_controller_, app_browser_controller_.get(),
+       *BrowserWindow::FromBrowser(browser),
+@@ -924,7 +932,7 @@ void BrowserWindowFeatures::InitPostWindowConstruction(
+           *browser, browser, browser->GetTabStripModel(),
+           browser->GetSessionID(), browser->GetType());
+ 
+-  if (browser->GetType() == BrowserWindowInterface::Type::TYPE_NORMAL ||
++  if (supports_toolbar ||
+       browser->GetType() == BrowserWindowInterface::Type::TYPE_APP) {
+     toast_service_ =
+         GetUserDataFactory().CreateInstance<ToastService>(*browser, browser);
+@@ -969,7 +977,7 @@ void BrowserWindowFeatures::InitPostWindowConstruction(
+   // omnibox and a tab strip). By default most new features should be
+   // instantiated in this block (please keep this list ordered without taking
+   // into consideration buildflags, repeating buildflags is ok):
+-  if (browser->GetType() == BrowserWindowInterface::Type::TYPE_NORMAL) {
++  if (supports_toolbar) {
+     if (browser_view) {
+       if (base::FeatureList::IsEnabled(features::kGlicActorUi)) {
+         std::vector<std::pair<views::WebView*, ActorOverlayWebView*>>
+@@ -1134,6 +1142,38 @@ void BrowserWindowFeatures::InitPostBrowserViewConstruction(
+       browser_view);
+ }
+ 
++void BrowserWindowFeatures::InitPostTabModelConstruction(
++    BrowserWindowInterface* interface) {
++  auto* browser_view = BrowserView::GetBrowserViewForBrowser(interface);
++  CHECK(browser_view);
++
++  auto* browser = browser_view->browser();
++  const bool supports_toolbar = IsNormalBrowser(browser);
++
++  if (supports_toolbar) {
++    if (!data_protection_ui_controller_) {
++      data_protection_ui_controller_ =
++          GetUserDataFactory()
++              .CreateInstance<
++                  enterprise_data_protection::DataProtectionUIController>(
++                  *browser, browser_view);
++    }
++  }
++}
++
++void BrowserWindowFeatures::OnWebContentsCreated(
++    BrowserWindowInterface* interface,
++    content::WebContents* target_contents) {
++#if BUILDFLAG(ENABLE_CEF)
++  auto* browser_view = BrowserView::GetBrowserViewForBrowser(interface);
++  CHECK(browser_view);
++
++  if (auto cef_delegate = browser_view->browser()->cef_delegate()) {
++    cef_delegate->OnWebContentsCreated(target_contents);
++  }
++#endif
++}
++
+ void BrowserWindowFeatures::TearDownPreBrowserWindowDestruction() {
+   // Tear down in reverse order of construction: embedder first, then
+   // InitPostWindowConstruction, then Init. Within each section, members are

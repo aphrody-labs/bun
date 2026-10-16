@@ -1,0 +1,24 @@
+diff --git a/components/prefs/pref_service.h b/components/prefs/pref_service.h
+index 7ac0cd7952128af52f896ac9013e2030b2b7bfd9..903749dac5fa1b5331226be9a6ca99cb947713d2 100644
+--- a/components/prefs/pref_service.h
++++ b/components/prefs/pref_service.h
+@@ -55,6 +55,10 @@ namespace base::i18n {
+ class LanguageTag;
+ }
+ 
++namespace pref_helper {
++class Registrar;
++}
++
+ namespace prefs {
+ class ScopedDictionaryPrefUpdate;
+ }
+@@ -442,6 +446,8 @@ class COMPONENTS_PREFS_EXPORT PrefService {
+   // declared as a friend, too.
+   friend class PrefChangeRegistrar;
+   friend class subtle::PrefMemberBase;
++  // CEF registration manager.
++  friend class pref_helper::Registrar;
+ 
+   // These are protected so they can only be accessed by the friend
+   // classes listed above.

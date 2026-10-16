@@ -1,0 +1,110 @@
+diff --git a/chrome/browser/ui/views/frame/picture_in_picture_browser_frame_view.cc b/chrome/browser/ui/views/frame/picture_in_picture_browser_frame_view.cc
+index 59bdfa1e118091ea37ba235fb47b05797fdb16ed..69a4e327752488204cf046ac62b25b84be782ccb 100644
+--- a/chrome/browser/ui/views/frame/picture_in_picture_browser_frame_view.cc
++++ b/chrome/browser/ui/views/frame/picture_in_picture_browser_frame_view.cc
+@@ -29,6 +29,7 @@
+ #include "chrome/browser/ui/views/picture_in_picture/picture_in_picture_bounds_change_animation.h"
+ #include "chrome/browser/ui/views/picture_in_picture/picture_in_picture_tucker.h"
+ #include "chrome/browser/ui/views/picture_in_picture/pip_top_bar_animation_controller.h"
++#include "chrome/browser/ui/window_feature_controller/window_feature_controller.h"
+ #include "chrome/grit/generated_resources.h"
+ #include "components/omnibox/browser/location_bar_model_impl.h"
+ #include "components/vector_icons/vector_icons.h"
+@@ -75,6 +76,11 @@
+ #if BUILDFLAG(ENABLE_EXTENSIONS_CORE)
+ #include "extensions/common/constants.h"
+ #endif  // BUILDFLAG(ENABLE_EXTENSIONS_CORE)
++
++#if BUILDFLAG(ENABLE_CEF)
++#include "ui/views/controls/webview/webview.h"
++#endif
++
+ namespace {
+ 
+ constexpr int kWindowIconImageSize = 16;
+@@ -346,6 +352,12 @@ PictureInPictureBrowserFrameView::PictureInPictureBrowserFrameView(
+       IsOverlayViewVisible()) {
+     PictureInPictureWindowManager::GetInstance()->ClearCachedBounds();
+   }
++
++  if (!WindowFeatureController::From(browser_view->browser())
++           ->SupportsWindowFeature(
++               WindowFeatureController::WindowFeature::kFeatureTitleBar)) {
++    top_bar_container_view_->SetVisible(false);
++  }
+ }
+ 
+ PictureInPictureBrowserFrameView::~PictureInPictureBrowserFrameView() {
+@@ -452,19 +464,43 @@ gfx::Rect PictureInPictureBrowserFrameView::GetWindowBoundsForClientBounds(
+ 
+ int PictureInPictureBrowserFrameView::NonClientHitTest(
+     const gfx::Point& point) {
+-  // Allow interacting with the buttons.
+-  if (GetLocationIconViewBounds().Contains(point) ||
+-      GetBackToTabControlsBounds().Contains(point) ||
+-      GetCloseControlsBounds().Contains(point)) {
+-    return HTCLIENT;
+-  }
+-
+-  for (size_t i = 0; i < content_setting_views_.size(); i++) {
+-    if (GetContentSettingViewBounds(i).Contains(point)) {
++  const bool frameless = !top_bar_container_view_->GetVisible();
++  if (!frameless) {
++    // Allow interacting with the buttons.
++    if (GetLocationIconViewBounds().Contains(point) ||
++        GetBackToTabControlsBounds().Contains(point) ||
++        GetCloseControlsBounds().Contains(point)) {
+       return HTCLIENT;
+     }
++
++    for (size_t i = 0; i < content_setting_views_.size(); i++) {
++      if (GetContentSettingViewBounds(i).Contains(point)) {
++        return HTCLIENT;
++      }
++    }
+   }
+ 
++#if BUILDFLAG(ENABLE_CEF)
++  if (frameless) {
++    // Match logic in BrowserView::ShouldDescendIntoChildForEventHandling.
++    const auto draggable_region =
++        GetBrowserView()->browser()->cef_delegate()->GetDraggableRegion();
++    if (draggable_region.has_value()) {
++      // Draggable regions are defined relative to the web contents.
++      gfx::Point point_in_contents_web_view_coords(point);
++      views::View::ConvertPointToTarget(
++          GetWidget()->GetRootView(),
++          GetBrowserView()->GetActiveContentsWebView(),
++          &point_in_contents_web_view_coords);
++
++      if (draggable_region->contains(point_in_contents_web_view_coords.x(),
++                                     point_in_contents_web_view_coords.y())) {
++        return HTCAPTION;
++      }
++    }
++  }
++#endif  // BUILDFLAG(ENABLE_CEF)
++
+   // Allow dragging and resizing the window.
+   int window_component = GetHTComponentForFrame(
+       point, ResizeBorderInsets(), kResizeAreaCornerSize, kResizeAreaCornerSize,
+@@ -528,7 +564,8 @@ void PictureInPictureBrowserFrameView::Layout(PassKey) {
+   gfx::Rect content_area = GetLocalBounds();
+   content_area.Inset(FrameBorderInsets());
+   gfx::Rect top_bar = content_area;
+-  top_bar.set_height(kTopControlsHeight);
++  top_bar.set_height(top_bar_container_view_->GetVisible() ? kTopControlsHeight
++                                                           : 0);
+   top_bar_container_view_->SetBoundsRect(top_bar);
+ #if !BUILDFLAG(IS_ANDROID)
+   if (auto_pip_setting_overlay_) {
+@@ -1004,7 +1041,8 @@ gfx::Insets PictureInPictureBrowserFrameView::FrameBorderInsets() const {
+ }
+ 
+ int PictureInPictureBrowserFrameView::GetTopAreaHeight() const {
+-  return FrameBorderInsets().top() + kTopControlsHeight;
++  return FrameBorderInsets().top() +
++         (top_bar_container_view_->GetVisible() ? kTopControlsHeight : 0);
+ }
+ 
+ gfx::Size PictureInPictureBrowserFrameView::GetNonClientViewAreaSize() const {

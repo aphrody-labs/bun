@@ -1,0 +1,12 @@
+diff --git a/ui/views/controls/menu/menu_runner_impl_remote_cocoa.h b/ui/views/controls/menu/menu_runner_impl_remote_cocoa.h
+index f86808e88b51bf3dd20c42a2255bcafddb5e2a15..f3d6a8bef0a33e62dd455df843222819dd713489 100644
+--- a/ui/views/controls/menu/menu_runner_impl_remote_cocoa.h
++++ b/ui/views/controls/menu/menu_runner_impl_remote_cocoa.h
+@@ -62,6 +62,7 @@ class VIEWS_EXPORT MenuRunnerImplRemoteCocoa
+       ui::mojom::MenuSourceType source_type,
+       int32_t run_types,
+       gfx::NativeView native_view_for_gestures,
++      gfx::AcceleratedWidget parent_widget,
+       std::optional<gfx::RoundedCornersF> corners,
+       std::optional<std::string> show_menu_host_duration_histogram) override;
+   void Cancel() override;

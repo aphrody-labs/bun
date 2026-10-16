@@ -1,0 +1,15 @@
+diff --git a/printing/printing_context_linux.cc b/printing/printing_context_linux.cc
+index 5c555d8768e2a1d9e6ac86fc9392420a42f5193d..9d343a47c7896569b3ba4de67fbed50e3007be0c 100644
+--- a/printing/printing_context_linux.cc
++++ b/printing/printing_context_linux.cc
+@@ -88,8 +88,8 @@ mojom::ResultCode PrintingContextLinux::UseDefaultSettings() {
+ }
+ 
+ gfx::Size PrintingContextLinux::GetPdfPaperSizeDeviceUnits() {
+-  if (ui::LinuxUi::instance()) {
+-    return ui::LinuxUi::instance()->GetPdfPaperSize(this);
++  if (ui::PrintingContextLinuxDelegate::instance()) {
++    return ui::PrintingContextLinuxDelegate::instance()->GetPdfPaperSize(this);
+   }
+ 
+   return gfx::Size();

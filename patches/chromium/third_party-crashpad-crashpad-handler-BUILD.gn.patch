@@ -1,0 +1,37 @@
+diff --git a/third_party/crashpad/crashpad/handler/BUILD.gn b/third_party/crashpad/crashpad/handler/BUILD.gn
+index 7b7b446e847f47c6dee76371c46b1bfa0f3090b9..5ed2f6d6cf6858eef716c312cfa129340bb4ec98 100644
+--- a/third_party/crashpad/crashpad/handler/BUILD.gn
++++ b/third_party/crashpad/crashpad/handler/BUILD.gn
+@@ -12,6 +12,7 @@
+ # See the License for the specific language governing permissions and
+ # limitations under the License.
+ 
++import("//cef/libcef/features/features.gni")
+ import("../build/crashpad_buildconfig.gni")
+ 
+ static_library("common") {
+@@ -108,12 +109,24 @@ if (!crashpad_is_ios) {
+       "../minidump",
+       "../snapshot",
+       "../tools:tool_support",
++      "//cef/libcef/features:buildflags",
+     ]
+ 
+     if (crashpad_is_win) {
+       cflags =
+           [ "/wd4201" ]  # nonstandard extension used : nameless struct/union
+     }
++
++    if (enable_cef) {
++      sources += [
++        "//cef/libcef/common/cef_crash_report_upload_thread.cc",
++        "//cef/libcef/common/cef_crash_report_upload_thread.h",
++        "//cef/libcef/common/cef_crash_report_utils.cc",
++        "//cef/libcef/common/cef_crash_report_utils.h",
++      ]
++
++      configs += [ "//cef/libcef/features:config" ]
++    }
+   }
+ 
+   if (crashpad_is_android) {

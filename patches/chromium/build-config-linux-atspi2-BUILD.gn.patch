@@ -1,0 +1,13 @@
+diff --git a/build/config/linux/atspi2/BUILD.gn b/build/config/linux/atspi2/BUILD.gn
+index 227ea631fc0f367ca343d6b229c4a19e25146e27..f9cca6a917157aa966c2ab513938f0571b8661a2 100644
+--- a/build/config/linux/atspi2/BUILD.gn
++++ b/build/config/linux/atspi2/BUILD.gn
+@@ -6,7 +6,7 @@ import("//build/config/linux/pkg_config.gni")
+ import("//build/config/ui.gni")
+ 
+ # These packages should _only_ be expected when building for a target.
+-assert(current_toolchain == default_toolchain)
++# assert(current_toolchain == default_toolchain)
+ 
+ if (use_atk) {
+   pkg_config("atspi2") {

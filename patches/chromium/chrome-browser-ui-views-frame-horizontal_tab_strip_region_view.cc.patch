@@ -1,0 +1,14 @@
+diff --git a/chrome/browser/ui/views/frame/horizontal_tab_strip_region_view.cc b/chrome/browser/ui/views/frame/horizontal_tab_strip_region_view.cc
+index ba82864fa392e282996a5f70421224e0c72bf41b..51558852a0a63adf97283d274b03b5b71e24da93 100644
+--- a/chrome/browser/ui/views/frame/horizontal_tab_strip_region_view.cc
++++ b/chrome/browser/ui/views/frame/horizontal_tab_strip_region_view.cc
+@@ -207,8 +207,7 @@ HorizontalTabStripRegionViewOld::HorizontalTabStripRegionViewOld(
+ 
+   // Add and configure the TabStripComboButton.
+   std::unique_ptr<TabStripActionContainer> tab_strip_action_container;
+-  if (browser &&
+-      (browser->GetType() == BrowserWindowInterface::Type::TYPE_NORMAL)) {
++  if (browser && browser->IsNormalBrowser()) {
+     // The Glic button visibility is dynamic and depends on profile state
+     // (e.g., sign-in status, enterprise policies, recoverable errors).
+     // We instantiate the action container if the profile is eligible (even if

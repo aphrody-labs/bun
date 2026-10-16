@@ -1,0 +1,15 @@
+diff --git a/chrome/browser/ui/views/tab_contents/chrome_web_contents_view_delegate_views_mac.mm b/chrome/browser/ui/views/tab_contents/chrome_web_contents_view_delegate_views_mac.mm
+index 564c8c000c5be649a59bfc845fc8158bd6534240..fce6219db06feb493f90f5fc4ba28163dfdcf223 100644
+--- a/chrome/browser/ui/views/tab_contents/chrome_web_contents_view_delegate_views_mac.mm
++++ b/chrome/browser/ui/views/tab_contents/chrome_web_contents_view_delegate_views_mac.mm
+@@ -213,6 +213,10 @@ void ChromeWebContentsViewDelegateViewsMac::ShowMenu(
+   context_menu_->Show();
+ }
+ 
++bool ChromeWebContentsViewDelegateViewsMac::IsMenuRunning() {
++  return context_menu_ && context_menu_->IsRunning();
++}
++
+ content::RenderWidgetHostView*
+ ChromeWebContentsViewDelegateViewsMac::GetActiveRenderWidgetHostView() const {
+   return web_contents_->GetTopLevelRenderWidgetHostView();

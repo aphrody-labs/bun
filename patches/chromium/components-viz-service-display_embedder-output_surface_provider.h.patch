@@ -1,0 +1,14 @@
+diff --git a/components/viz/service/display_embedder/output_surface_provider.h b/components/viz/service/display_embedder/output_surface_provider.h
+index 7fbb05e606fc26364c674c6330b8a5eb9c016fb3..027feba29a4daec872d5fb59aafe9dc5c29f1141 100644
+--- a/components/viz/service/display_embedder/output_surface_provider.h
++++ b/components/viz/service/display_embedder/output_surface_provider.h
+@@ -42,7 +42,8 @@ class OutputSurfaceProvider {
+       mojom::DisplayClient* display_client,
+       DisplayCompositorMemoryAndTaskController* gpu_dependency,
+       const RendererSettings& renderer_settings,
+-      const DebugRendererSettings* debug_settings) = 0;
++      const DebugRendererSettings* debug_settings,
++      bool use_proxy_output_device) = 0;
+ 
+   virtual gpu::SharedImageManager* GetSharedImageManager() = 0;
+   virtual gpu::SyncPointManager* GetSyncPointManager() = 0;
