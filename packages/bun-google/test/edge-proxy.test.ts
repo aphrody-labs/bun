@@ -33,31 +33,24 @@ afterAll(() => {
 const proxy = () =>
   createEdgeProxy({
     cacheDir,
-    route: (url) => {
+    route: url => {
       if (url.pathname === "/escape")
         return { upstream: new URL("/style.css", upstream.url), cacheKey: "../x", kind: "text" };
-      const target = { "/css": "/style.css", "/f.woff2": "/font.woff2", "/gone": "/missing" }[
-        url.pathname
-      ];
+      const target = { "/css": "/style.css", "/f.woff2": "/font.woff2", "/gone": "/missing" }[url.pathname];
       if (!target) return null;
       return {
         upstream: new URL(target, upstream.url),
         cacheKey: url.pathname === "/css" ? "css/a.css" : url.pathname.slice(1),
         kind: url.pathname === "/f.woff2" ? "immutable" : "text",
         transform:
-          url.pathname === "/css"
-            ? (s: string) => s.replaceAll("https://up.example", "https://cdn.test")
-            : undefined,
+          url.pathname === "/css" ? (s: string) => s.replaceAll("https://up.example", "https://cdn.test") : undefined,
       };
     },
   });
 
 test("first request fills, concurrent misses coalesce, later requests hit the disk", async () => {
   const handle = proxy();
-  const [a, b] = await Promise.all([
-    handle(new Request("http://x/css")),
-    handle(new Request("http://x/css")),
-  ]);
+  const [a, b] = await Promise.all([handle(new Request("http://x/css")), handle(new Request("http://x/css"))]);
   expect(hits).toBe(1);
   expect(a.headers.get("x-edge-cache")).toBe("MISS");
   expect(await a.text()).toContain("https://cdn.test/s/a.woff2");
@@ -69,15 +62,11 @@ test("first request fills, concurrent misses coalesce, later requests hit the di
 
 test("brotli twin is served when accepted, identity otherwise", async () => {
   const handle = proxy();
-  const br = await handle(
-    new Request("http://x/css", { headers: { "accept-encoding": "gzip, br" } }),
-  );
+  const br = await handle(new Request("http://x/css", { headers: { "accept-encoding": "gzip, br" } }));
   expect(br.headers.get("content-encoding")).toBe("br");
   expect(br.headers.get("vary")).toBe("Accept-Encoding");
   const raw = new Uint8Array(await br.arrayBuffer());
-  const plain = await new Response(
-    new Blob([raw]).stream().pipeThrough(new DecompressionStream("brotli")),
-  ).text();
+  const plain = await new Response(new Blob([raw]).stream().pipeThrough(new DecompressionStream("brotli"))).text();
   expect(plain).toContain("https://cdn.test/s/a.woff2");
   expect(raw.byteLength).toBeLessThan(plain.length / 10);
   const id = await handle(new Request("http://x/css", { headers: { "accept-encoding": "gzip" } }));
@@ -99,8 +88,7 @@ test("upstream 404, unknown routes, escaping keys and other methods", async () =
   expect((await handle(new Request("http://x/escape"))).status).toBe(404);
   expect((await handle(new Request("http://x/css", { method: "POST" }))).status).toBe(405);
   expect(validEdgeKey("s/roboto/v1/a.woff2")).toBe(true);
-  for (const k of ["../a", "a/../b", "/abs", "a//b", "a/./b", "a b"])
-    expect(validEdgeKey(k)).toBe(false);
+  for (const k of ["../a", "a/../b", "/abs", "a//b", "a/./b", "a b"]) expect(validEdgeKey(k)).toBe(false);
 });
 
 test("cache keys longer than a file name are stored under a digest name", async () => {

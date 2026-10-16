@@ -586,7 +586,8 @@ const dll = Object.freeze({
     let from;
     if (options !== undefined) {
       validateObject(options, "options");
-      if (options.from !== undefined) from = require("node:path").resolve(dllPathArg(options.from, "options.from"));
+      const { from: optionsFrom } = options;
+      if (optionsFrom !== undefined) from = require("node:path").resolve(dllPathArg(optionsFrom, "options.from"));
     }
     return dllResolveNative(name, from);
   },

@@ -7,33 +7,33 @@
  * flavor napi-rs can build is listed, because `NAPI_RS_NATIVE_LIBRARY_PATH`
  * can point the loader at a WASI artifact this package does not build itself.
  */
-export declare const __napiBindingTarget: 'native' | 'wasm32-wasi' | 'wasm32-wasip1'
+export declare const __napiBindingTarget: "native" | "wasm32-wasi" | "wasm32-wasip1";
 
 export interface Comment {
-  type: 'Line' | 'Block'
-  value: string
-  start: number
-  end: number
+  type: "Line" | "Block";
+  value: string;
+  start: number;
+  end: number;
 }
 
 export interface ErrorLabel {
-  message: string | null
-  start: number
-  end: number
+  message: string | null;
+  start: number;
+  end: number;
 }
 
 export interface OxcError {
-  severity: Severity
-  message: string
-  labels: Array<ErrorLabel>
-  helpMessage: string | null
-  codeframe: string | null
+  severity: Severity;
+  message: string;
+  labels: Array<ErrorLabel>;
+  helpMessage: string | null;
+  codeframe: string | null;
 }
 
 export declare const enum Severity {
-  Error = 'Error',
-  Warning = 'Warning',
-  Advice = 'Advice',
+  Error = "Error",
+  Warning = "Warning",
+  Advice = "Advice",
 }
 
 /**
@@ -51,7 +51,7 @@ export declare const enum Severity {
  *
  * Fix ranges are converted from UTF-16 code units to UTF-8 bytes.
  */
-export declare function applyFixes(sourceText: string, fixesJson: string): string | null
+export declare function applyFixes(sourceText: string, fixesJson: string): string | null;
 
 /**
  * Get offset within a `Uint8Array` which is aligned on `BLOCK_ALIGN`.
@@ -59,25 +59,40 @@ export declare function applyFixes(sourceText: string, fixesJson: string): strin
  * Does not check that the offset is within bounds of `buffer`.
  * To ensure it always is, provide a `Uint8Array` of at least `BLOCK_SIZE + BLOCK_ALIGN` bytes.
  */
-export declare function getBufferOffset(buffer: Uint8Array): number
+export declare function getBufferOffset(buffer: Uint8Array): number;
 
 /** JS callback to create a workspace. */
-export type JsCreateWorkspaceCb = ((arg: string) => Promise<undefined>)
+export type JsCreateWorkspaceCb = (arg: string) => Promise<undefined>;
 
 /** JS callback to destroy a workspace. */
-export type JsDestroyWorkspaceCb = ((arg: string) => void)
+export type JsDestroyWorkspaceCb = (arg: string) => void;
 
 /** JS callback to lint a file. */
-export type JsLintFileCb = ((arg0: string, arg1: number, arg2: Uint8Array | undefined | null, arg3: Array<number>, arg4: Array<number>, arg5: string, arg6: string, arg7: boolean, arg8?: string | undefined | null) => string | null)
+export type JsLintFileCb = (
+  arg0: string,
+  arg1: number,
+  arg2: Uint8Array | undefined | null,
+  arg3: Array<number>,
+  arg4: Array<number>,
+  arg5: string,
+  arg6: string,
+  arg7: boolean,
+  arg8?: string | undefined | null,
+) => string | null;
 
 /** JS callback to load JavaScript config files. */
-export type JsLoadJsConfigsCb = ((arg: Array<string>) => Promise<string>)
+export type JsLoadJsConfigsCb = (arg: Array<string>) => Promise<string>;
 
 /** JS callback to load a JS plugin. */
-export type JsLoadPluginCb = ((arg0: string, arg1: string | undefined | null, arg2: boolean, arg3?: string | undefined | null) => Promise<string>)
+export type JsLoadPluginCb = (
+  arg0: string,
+  arg1: string | undefined | null,
+  arg2: boolean,
+  arg3?: string | undefined | null,
+) => Promise<string>;
 
 /** JS callback to setup configs. */
-export type JsSetupRuleConfigsCb = ((arg: string) => string | null)
+export type JsSetupRuleConfigsCb = (arg: string) => string | null;
 
 /**
  * NAPI entry point.
@@ -93,7 +108,15 @@ export type JsSetupRuleConfigsCb = ((arg: string) => string | null)
  *
  * Returns `true` if linting succeeded without errors, `false` otherwise.
  */
-export declare function lint(args: Array<string>, loadPlugin: JsLoadPluginCb, setupRuleConfigs: JsSetupRuleConfigsCb, lintFile: JsLintFileCb, createWorkspace: JsCreateWorkspaceCb, destroyWorkspace: JsDestroyWorkspaceCb, loadJsConfigs: JsLoadJsConfigsCb): Promise<boolean>
+export declare function lint(
+  args: Array<string>,
+  loadPlugin: JsLoadPluginCb,
+  setupRuleConfigs: JsSetupRuleConfigsCb,
+  lintFile: JsLintFileCb,
+  createWorkspace: JsCreateWorkspaceCb,
+  destroyWorkspace: JsDestroyWorkspaceCb,
+  loadJsConfigs: JsLoadJsConfigsCb,
+): Promise<boolean>;
 
 /**
  * Parse AST into provided `Uint8Array` buffer, synchronously.
@@ -123,16 +146,22 @@ export declare function lint(args: Array<string>, loadPlugin: JsLoadPluginCb, se
  *
  * Panics if source text is too long, or AST takes more memory than is available in the buffer.
  */
-export declare function parseRawSync(filename: string, buffer: Uint8Array, sourceStart: number, sourceLen: number, options?: ParserOptions | undefined | null): void
+export declare function parseRawSync(
+  filename: string,
+  buffer: Uint8Array,
+  sourceStart: number,
+  sourceLen: number,
+  options?: ParserOptions | undefined | null,
+): void;
 
 export interface ParserOptions {
   /** Treat the source text as `js`, `jsx`, `ts`, `tsx` or `dts`. */
-  lang?: 'js' | 'jsx' | 'ts' | 'tsx' | 'dts'
+  lang?: "js" | "jsx" | "ts" | "tsx" | "dts";
   /** Treat the source text as `script` or `module` code. */
-  sourceType?: 'script' | 'module' | 'commonjs' | 'unambiguous' | undefined
+  sourceType?: "script" | "module" | "commonjs" | "unambiguous" | undefined;
   /** Ignore non-fatal parsing errors */
-  ignoreNonFatalErrors?: boolean
+  ignoreNonFatalErrors?: boolean;
 }
 
 /** Returns `true` if raw transfer is supported on this platform. */
-export declare function rawTransferSupported(): boolean
+export declare function rawTransferSupported(): boolean;

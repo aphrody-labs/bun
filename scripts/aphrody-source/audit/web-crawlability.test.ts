@@ -65,8 +65,8 @@ describe("HTML analysis (HTMLRewriter)", () => {
     );
     const index = indexDocument(root);
     const names = descendants(root)
-      .filter((n) => n.tag === "button" || n.tag === "input")
-      .map((n) => accessibleName(n, index));
+      .filter(n => n.tag === "button" || n.tag === "input")
+      .map(n => accessibleName(n, index));
     expect(names).toEqual(["Accept", "Wrapped", "Named"]);
   });
 
@@ -155,13 +155,10 @@ describe("crawler metrics, reachability and the verdict", () => {
 
     const worse = page(
       "/",
-      await analyzeHtml(
-        GOOD.replace('alt="An x"', "").replace("<main>", "<main><button></button>"),
-        "http://h/",
-      ),
+      await analyzeHtml(GOOD.replace('alt="An x"', "").replace("<main>", "<main><button></button>"), "http://h/"),
     );
     const violations = evaluate([worse], aggregate([worse]), baseline);
-    expect(violations.map((v) => v.rule)).toEqual(
+    expect(violations.map(v => v.rule)).toEqual(
       expect.arrayContaining(["max.imagesMissingAlt", "max.unnamedInteractive"]),
     );
   });
@@ -170,7 +167,7 @@ describe("crawler metrics, reachability and the verdict", () => {
     const good = page("/", await analyzeHtml(GOOD, "http://h/"));
     const baseline: Baseline = deriveBaseline([good], aggregate([good]));
     const stripped = page("/", await analyzeHtml(doc(`<main><h1>x</h1></main>`), "http://h/"));
-    const rules = evaluate([stripped], aggregate([stripped]), baseline).map((v) => v.rule);
+    const rules = evaluate([stripped], aggregate([stripped]), baseline).map(v => v.rule);
     expect(rules).toEqual(
       expect.arrayContaining([
         "kind.landing.landmark.banner",
@@ -201,6 +198,6 @@ describe("crawler metrics, reachability and the verdict", () => {
       ...deriveBaseline([{ ...p, crawl: { ...p.crawl, textCoverage: 0.8 } }], agg),
       min: { pages: 1, crawledPages: 1, textCoverage: 0.5 },
     };
-    expect(evaluate([p], agg, baseline).map((v) => v.rule)).toContain("min.textCoverage");
+    expect(evaluate([p], agg, baseline).map(v => v.rule)).toContain("min.textCoverage");
   });
 });

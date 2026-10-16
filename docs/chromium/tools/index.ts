@@ -6,10 +6,7 @@ const root = resolve(import.meta.dir, "..");
 const manifestPath = resolve(root, "inventory.json");
 const inventory = await Bun.file(manifestPath).json();
 for (const entry of inventory.entries) {
-  if (
-    entry.error === "Error: No main documentation content" &&
-    /\.(?:png|svg|ai)$/.test(new URL(entry.url).pathname)
-  ) {
+  if (entry.error === "Error: No main documentation content" && /\.(?:png|svg|ai)$/.test(new URL(entry.url).pathname)) {
     entry.status = "excluded";
     entry.error = "Excluded non-document media (original result: No main documentation content)";
   }
@@ -24,9 +21,7 @@ const fetched = inventory.entries.filter((entry: any) => entry.status === "fetch
 const failed = inventory.entries.filter((entry: any) => entry.status === "failed");
 const excluded = inventory.entries.filter((entry: any) => entry.status === "excluded");
 const bytes = fetched.reduce((sum: number, entry: any) => sum + entry.bytes, 0);
-const familyNames = Array.from(
-  new Set<string>(inventory.entries.map((entry: any) => entry.family)),
-).sort();
+const familyNames = Array.from(new Set<string>(inventory.entries.map((entry: any) => entry.family))).sort();
 const link = (path: string) => path.split("/").map(encodeURIComponent).join("/");
 const lines = [
   "# Catalogue des sources récupérées",
@@ -38,9 +33,7 @@ const lines = [
 for (const family of familyNames) {
   lines.push(`## ${family}`, "");
   for (const entry of fetched.filter((entry: any) => entry.family === family)) {
-    lines.push(
-      `- [${entry.path.replace(/^sources\//, "")} ](${link(entry.path)}) — [origine](${entry.url})`,
-    );
+    lines.push(`- [${entry.path.replace(/^sources\//, "")} ](${link(entry.path)}) — [origine](${entry.url})`);
   }
   lines.push("");
 }
@@ -94,9 +87,7 @@ report.push(
   "| --- | --- |",
 );
 for (const entry of failed)
-  report.push(
-    `| [${entry.url}](${entry.url}) | ${String(entry.error).replaceAll("|", "\\|").replaceAll("\n", " ")} |`,
-  );
+  report.push(`| [${entry.url}](${entry.url}) | ${String(entry.error).replaceAll("|", "\\|").replaceAll("\n", " ")} |`);
 report.push(
   "",
   "Une URL LICENSE absente ne constitue pas une licence implicite. Une URL",

@@ -166,7 +166,7 @@ export async function qualifyPortableCrate(
   const toolchain = (
     await run(root, ["rustc", "+stable", "--version", "--verbose"], undefined, join(output, "toolchain.log"))
   ).trim();
-  const logs = [];
+  const logs: Array<{ name: string; sha256: string }> = [];
   for (const [index, args] of portableCrateCommands().entries()) {
     const name = `gate-${index}.log`;
     await run(root, ["cargo", "+stable", ...args], join(output, "cargo"), join(output, name));

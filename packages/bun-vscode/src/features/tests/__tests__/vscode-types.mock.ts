@@ -227,7 +227,10 @@ export class MockTestItemCollection implements vscode.TestItemCollection {
     }
   }
 
-  forEach(callback: (item: vscode.TestItem, collection: vscode.TestItemCollection) => unknown, thisArg?: unknown): void {
+  forEach(
+    callback: (item: vscode.TestItem, collection: vscode.TestItemCollection) => unknown,
+    thisArg?: unknown,
+  ): void {
     this.items.forEach(item => callback.call(thisArg, item, this));
   }
 
@@ -385,12 +388,20 @@ export class MockTestRun implements vscode.TestRun {
     // Mock implementation
   }
 
-  errored(_test: vscode.TestItem, _message: vscode.TestMessage | readonly vscode.TestMessage[], _duration?: number): void {
+  errored(
+    _test: vscode.TestItem,
+    _message: vscode.TestMessage | readonly vscode.TestMessage[],
+    _duration?: number,
+  ): void {
     if (this._ended) return;
     // Mock implementation
   }
 
-  failed(_test: vscode.TestItem, _message: vscode.TestMessage | readonly vscode.TestMessage[], _duration?: number): void {
+  failed(
+    _test: vscode.TestItem,
+    _message: vscode.TestMessage | readonly vscode.TestMessage[],
+    _duration?: number,
+  ): void {
     if (this._ended) return;
     // Mock implementation
   }

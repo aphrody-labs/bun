@@ -104,8 +104,7 @@ export default function unmapWritesPlugin(sourcemaps: boolean, debug: boolean): 
             const args = node.arguments;
             if (args.length !== arity) {
               throw new Error(
-                `\`${callee.name}\` takes ${arity} arguments, found ${args.length}: `
-                  + `${path}:${node.start}`,
+                `\`${callee.name}\` takes ${arity} arguments, found ${args.length}: ` + `${path}:${node.start}`,
               );
             }
 
@@ -135,8 +134,8 @@ export default function unmapWritesPlugin(sourcemaps: boolean, debug: boolean): 
             const { params } = node;
             if (params.length !== arity) {
               throw new Error(
-                `\`${id.name}\` defined with ${params.length} parameters, expected ${arity}: `
-                  + `${path}:${node.start}`,
+                `\`${id.name}\` defined with ${params.length} parameters, expected ${arity}: ` +
+                  `${path}:${node.start}`,
               );
             }
 
@@ -161,13 +160,11 @@ export default function unmapWritesPlugin(sourcemaps: boolean, debug: boolean): 
             const specifierNames = new Set<string>();
             for (const specifier of node.specifiers) {
               if (
-                specifier.type !== "ImportSpecifier"
-                || specifier.importKind === "type"
-                || specifier.imported.type !== "Identifier"
+                specifier.type !== "ImportSpecifier" ||
+                specifier.importKind === "type" ||
+                specifier.imported.type !== "Identifier"
               ) {
-                throw new Error(
-                  `Only simple imports from \`${WRITE_MODULE}\` are supported: ${path}`,
-                );
+                throw new Error(`Only simple imports from \`${WRITE_MODULE}\` are supported: ${path}`);
               }
 
               const name = specifier.imported.name as MappedName;
@@ -206,9 +203,7 @@ export default function unmapWritesPlugin(sourcemaps: boolean, debug: boolean): 
           }
 
           if (missing.length > 0) {
-            throw new Error(
-              `Missing import of ${missing.map((name) => `\`${name}\``).join(", ")}: ${path}`,
-            );
+            throw new Error(`Missing import of ${missing.map(name => `\`${name}\``).join(", ")}: ${path}`);
           }
         }
 

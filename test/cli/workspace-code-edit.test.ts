@@ -7,8 +7,18 @@ test("native workspace previews and applies an import rewrite without another ch
     "consumer.ts": 'import { invoke } from "@aphrody/api/core";\n',
   });
   const args = [
-    bunExe(), "workspace", "code-edit", "replace", "--root", String(dir),
-    "--glob", "*.ts", "--find", "@aphrody/api", "--with", "@aphrody/tauri/api",
+    bunExe(),
+    "workspace",
+    "code-edit",
+    "replace",
+    "--root",
+    String(dir),
+    "--glob",
+    "*.ts",
+    "--find",
+    "@aphrody/api",
+    "--with",
+    "@aphrody/tauri/api",
   ];
   for (const apply of [false, true]) {
     await using proc = Bun.spawn({
@@ -33,8 +43,22 @@ test("workspace path renaming uses Bun even when the project defines a rename sc
     "legacy.ts": "export const legacy = 1;\n",
   });
   await using proc = Bun.spawn({
-    cmd: [bunExe(), "workspace", "code-edit", "rename", "--root", String(dir), "--glob", "*.ts",
-      "--find", "legacy", "--with", "current", "--paths", "--apply"],
+    cmd: [
+      bunExe(),
+      "workspace",
+      "code-edit",
+      "rename",
+      "--root",
+      String(dir),
+      "--glob",
+      "*.ts",
+      "--find",
+      "legacy",
+      "--with",
+      "current",
+      "--paths",
+      "--apply",
+    ],
     cwd: String(dir),
     env: bunEnv,
     stdout: "pipe",

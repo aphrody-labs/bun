@@ -126,7 +126,7 @@ async function runtimeDetails() {
     details.dotnet = {
       hostArch: info.hostArch,
       installs: info.installs?.length ?? 0,
-      sdk: info.sdk?.version ?? null,
+      sdk: info.sdk?.selected?.version ?? null,
       netFramework: info.netFramework?.length ?? 0,
     };
   } catch (error) {

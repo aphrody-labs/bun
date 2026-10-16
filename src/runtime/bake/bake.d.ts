@@ -5,7 +5,7 @@
 // /// <reference path="/path/to/bun/src/bake/bake.d.ts" />
 
 declare module "bun" {
-  declare namespace Bake {
+  namespace Bake {
     interface Options {
       /**
        * Bun provides built-in support for using React as a framework by passing
@@ -266,7 +266,8 @@ declare module "bun" {
     }
 
     type ReactRefreshSignatureFunction = () =>
-      void | ((func: Function, hash: string, force?: bool, customHooks?: () => Function[]) => void);
+      | void
+      | ((func: Function, hash: string, force?: bool, customHooks?: () => Function[]) => void);
 
     /** This API is similar, but unrelated to `Bun.FileSystemRouter`  */
     interface FrameworkFileSystemRouterType {
@@ -533,12 +534,12 @@ declare module "bun" {
     }
   }
 
-  declare interface BaseServeOptions {
+  interface BaseServeOptions {
     /** Add a fullstack web app to this server using Bun Bake */
     app?: Bake.Options | undefined;
   }
 
-  declare interface PluginBuilder {
+  interface PluginBuilder {
     /**
      * Inject a module into the development server's runtime, to be loaded
      * before all other user code.
@@ -546,7 +547,7 @@ declare module "bun" {
     addPreload(...args: any): void;
   }
 
-  declare interface OnLoadArgs {
+  interface OnLoadArgs {
     /**
      * When using server-components, the same bundle has both client and server
      * files; A single plugin can operate on files from both module graphs.
@@ -568,17 +569,17 @@ declare module "bun:bake/server" {
    *
    * To perform SSR with client components, see `ssrManifest`
    */
-  declare const serverManifest: ServerManifest;
+  const serverManifest: ServerManifest;
   /**
    * Entries in this manifest map from client-side files to their respective SSR
    * bundles. They can be loaded by `await import()` or `require()`.
    */
-  declare const ssrManifest: SSRManifest;
+  const ssrManifest: SSRManifest;
 
   /** (insert teaser trailer) */
-  declare const actionManifest: never;
+  const actionManifest: never;
 
-  declare interface ServerManifest {
+  interface ServerManifest {
     /**
      * Concatenation of the component file ID and the instance id with '#'
      * Example: 'components/Navbar.tsx#default' (dev) or 'l2#a' (prod/minified)
@@ -588,7 +589,7 @@ declare module "bun:bake/server" {
     [combinedComponentId: string]: ServerManifestEntry;
   }
 
-  declare interface ServerManifestEntry {
+  interface ServerManifestEntry {
     /**
      * The `id` in ReactClientManifest.
      * Correlates but is not required to be the filename
@@ -603,7 +604,7 @@ declare module "bun:bake/server" {
     chunks: [];
   }
 
-  declare interface SSRManifest {
+  interface SSRManifest {
     /** ServerManifest[...].id */
     [id: string]: {
       /** ServerManifest[...].name */
@@ -611,7 +612,7 @@ declare module "bun:bake/server" {
     };
   }
 
-  declare interface SSRManifestEntry {
+  interface SSRManifestEntry {
     /** Valid specifier to import */
     specifier: string;
     /** Export name */

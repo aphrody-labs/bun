@@ -21,7 +21,7 @@ await updatePendingFixStatus(ruleEntries);
 await syncTypeScriptPluginStatusWithEslintPluginStatus(ruleEntries);
 
 // Helper to gather stats for a plugin
-const statsForPlugin = (pluginName) => {
+const statsForPlugin = pluginName => {
   const prefix = `${pluginName}/`;
   const entries = Array.from(ruleEntries.entries()).filter(([name]) => name.startsWith(prefix));
   const filtered = entries.filter(([_name, e]) => !e.isNotSupported);
@@ -34,7 +34,7 @@ const statsForPlugin = (pluginName) => {
 
 // Compute per-plugin and overall stats
 const pluginNames = Array.from(ALL_TARGET_PLUGINS.keys());
-const perPlugin = pluginNames.map((name) => statsForPlugin(name));
+const perPlugin = pluginNames.map(name => statsForPlugin(name));
 
 const overall = perPlugin.reduce(
   (acc, cur) => ({
@@ -59,11 +59,8 @@ for (const { pluginName, total, implemented, notImplemented, notSupported } of p
 }
 
 // Print overall summary
-const overallPct =
-  overall.total === 0 ? "-" : `${((overall.implemented / overall.total) * 100).toFixed(2)}%`;
-console.log(
-  "-----------------------------------------------------------------------------------------",
-);
+const overallPct = overall.total === 0 ? "-" : `${((overall.implemented / overall.total) * 100).toFixed(2)}%`;
+console.log("-----------------------------------------------------------------------------------------");
 console.log(
   `${"total".padEnd(12)} Implemented: ${overall.implemented.toString().padStart(4)} / ${overall.total
     .toString()

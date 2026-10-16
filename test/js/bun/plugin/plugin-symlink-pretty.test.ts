@@ -43,11 +43,7 @@ test("build plugins preserve native symlink paths while formatting canonical dis
     stdout: "pipe",
     stderr: "pipe",
   });
-  const [stdout, stderr, exitCode] = await Promise.all([
-    child.stdout.text(),
-    child.stderr.text(),
-    child.exited,
-  ]);
+  const [stdout, stderr, exitCode] = await Promise.all([child.stdout.text(), child.stderr.text(), child.exited]);
   expect(stderr).not.toContain("Expected pretty file path");
   expect(exitCode).toBe(0);
   expect(stdout.trim()).toBe("42");

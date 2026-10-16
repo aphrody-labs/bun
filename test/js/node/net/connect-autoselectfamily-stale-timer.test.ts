@@ -33,18 +33,13 @@ test.concurrent.skipIf(!isMacOS)(
   },
 );
 
-test.concurrent(
-  "autoSelectFamily: destroy() while an attempt is pending does not leave the per-attempt timer to fire",
-  async () => {
-    const { stdout, stderr, exitCode } = await run("connect-autoselectfamily-destroy-fixture.js");
-    expect({ exitCode, stdout, stderr }).toMatchObject({
-      exitCode: 0,
-      // "connecting at destroy: true" = scenario exercised; "SKIP_SYNC_FAIL"
-      // = this host has no route to TEST-NET-1 (documented for darwin CI).
-      stdout: expect.stringMatching(
-        /connecting at destroy: true\nattempt failed at destroy: ECANCELED\n|SKIP_SYNC_FAIL/,
-      ),
-    });
-    expect(stdout).toContain("OK");
-  },
-);
+test.concurrent("autoSelectFamily: destroy() while an attempt is pending does not leave the per-attempt timer to fire", async () => {
+  const { stdout, stderr, exitCode } = await run("connect-autoselectfamily-destroy-fixture.js");
+  expect({ exitCode, stdout, stderr }).toMatchObject({
+    exitCode: 0,
+    // "connecting at destroy: true" = scenario exercised; "SKIP_SYNC_FAIL"
+    // = this host has no route to TEST-NET-1 (documented for darwin CI).
+    stdout: expect.stringMatching(/connecting at destroy: true\nattempt failed at destroy: ECANCELED\n|SKIP_SYNC_FAIL/),
+  });
+  expect(stdout).toContain("OK");
+});

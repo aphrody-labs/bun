@@ -16,10 +16,7 @@ const INLINE_FUNC_PATH = pathJoin(import.meta.dirname, "../src-js/plugins/tokens
 const FILES = ["/src-js/plugins/tokens_methods.ts", "/src-js/plugins/comments_methods.ts"];
 
 // Get details of the function to be inlined
-const { fnParams, returnParamIndex, fnBodySource } = extractInlinedFunction(
-  INLINE_FUNC_PATH,
-  INLINE_FUNC_NAME,
-);
+const { fnParams, returnParamIndex, fnBodySource } = extractInlinedFunction(INLINE_FUNC_PATH, INLINE_FUNC_NAME);
 
 /**
  * Plugin to inline calls to binary search helper function `firstTokenAtOrAfter` into its call sites.
@@ -50,7 +47,7 @@ const plugin: Plugin = {
   name: "inline-binary-search",
   transform: {
     filter: {
-      id: new RegExp("(?:" + FILES.map((filename) => RegExp.escape(filename)).join("|") + ")$"),
+      id: new RegExp("(?:" + FILES.map(filename => RegExp.escape(filename)).join("|") + ")$"),
     },
 
     handler(code, path, meta) {
@@ -100,11 +97,11 @@ const plugin: Plugin = {
             return;
           }
 
-          const args = callNode.arguments.map((arg) => {
+          const args = callNode.arguments.map(arg => {
             if (arg.type !== "Identifier" && arg.type !== "Literal") {
               throw new Error(
-                `Unexpected parameter type in \`${INLINE_FUNC_NAME}\` call `
-                  + `at line ${lineNumber(arg.start)}: ${arg.type}`,
+                `Unexpected parameter type in \`${INLINE_FUNC_NAME}\` call ` +
+                  `at line ${lineNumber(arg.start)}: ${arg.type}`,
               );
             }
             return code.slice(arg.start, arg.end);
@@ -112,8 +109,8 @@ const plugin: Plugin = {
 
           if (args.length !== fnParams.length) {
             throw new Error(
-              `\`${INLINE_FUNC_NAME}\` called with ${args.length} args, expected ${fnParams.length} `
-                + `at line ${lineNumber(callNode.start)}`,
+              `\`${INLINE_FUNC_NAME}\` called with ${args.length} args, expected ${fnParams.length} ` +
+                `at line ${lineNumber(callNode.start)}`,
             );
           }
 
@@ -143,8 +140,8 @@ const plugin: Plugin = {
         CallExpression(callExpr) {
           if (isTargetCall(callExpr) && !inlinedCallExprs.has(callExpr)) {
             throw new Error(
-              `\`${INLINE_FUNC_NAME}\` call on line ${lineNumber(callExpr.start)} could not be inlined. `
-                + "All calls must be in a variable declaration.",
+              `\`${INLINE_FUNC_NAME}\` call on line ${lineNumber(callExpr.start)} could not be inlined. ` +
+                "All calls must be in a variable declaration.",
             );
           }
         },
@@ -169,11 +166,7 @@ export default plugin;
  * @returns `true` if `node` is a call to the function to be inlined
  */
 function isTargetCall(node: ESTree.Node): node is ESTree.CallExpression {
-  return (
-    node.type === "CallExpression"
-    && node.callee.type === "Identifier"
-    && node.callee.name === INLINE_FUNC_NAME
-  );
+  return node.type === "CallExpression" && node.callee.type === "Identifier" && node.callee.name === INLINE_FUNC_NAME;
 }
 
 /**
@@ -206,7 +199,7 @@ function extractInlinedFunction(
   if (!funcDecl) throw new Error(`Failed to find function \`${funcName}\``);
 
   // Get function parameter names
-  const fnParams = funcDecl.params.map((param) => {
+  const fnParams = funcDecl.params.map(param => {
     if (param.type !== "Identifier") {
       throw new Error(`Unexpected parameter type in \`${funcName}\`: ${param.type}`);
     }
@@ -218,11 +211,7 @@ function extractInlinedFunction(
   if (body === null) throw new Error(`\`${funcName}\` has no body`);
 
   const lastStmt = body.body.at(-1);
-  if (
-    !lastStmt
-    || lastStmt.type !== "ReturnStatement"
-    || lastStmt.argument?.type !== "Identifier"
-  ) {
+  if (!lastStmt || lastStmt.type !== "ReturnStatement" || lastStmt.argument?.type !== "Identifier") {
     throw new Error(`\`${funcName}\` must end with \`return <identifier>;\``);
   }
 

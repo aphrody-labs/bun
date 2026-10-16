@@ -94,8 +94,8 @@ function buildApk(p: Pkg): { bytes: Buffer; identity: Buffer; size: number } {
     `arch = x86_64`,
     `origin = ${p.name}`,
     `license = MIT`,
-    ...(p.depends ?? []).map((d) => `depend = ${d}`),
-    ...(p.provides ?? []).map((d) => `provides = ${d}`),
+    ...(p.depends ?? []).map(d => `depend = ${d}`),
+    ...(p.provides ?? []).map(d => `provides = ${d}`),
     `datahash = ${datahash}`,
     "",
   ].join("\n");
@@ -200,11 +200,7 @@ async function apk(dir: string, args: string[], keys = true) {
     stdout: "pipe",
     stderr: "pipe",
   });
-  const [stdout, stderr, exitCode] = await Promise.all([
-    proc.stdout.text(),
-    proc.stderr.text(),
-    proc.exited,
-  ]);
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
   return { stdout, stderr, exitCode };
 }
 

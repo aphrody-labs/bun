@@ -51,9 +51,7 @@ describe("notify without a socket", () => {
 
   test("unixAddress marks abstract sockets with a leading NUL", () => {
     const abstract = unixAddress("@name");
-    expect([abstract.addr[0], abstract.addr[2], abstract.addr[3], abstract.length]).toEqual([
-      1, 0, 110, 7,
-    ]);
+    expect([abstract.addr[0], abstract.addr[2], abstract.addr[3], abstract.length]).toEqual([1, 0, 110, 7]);
     const path = unixAddress("/run/notify");
     expect([path.addr[2], path.length]).toEqual([0x2f, 14]);
   });
@@ -83,8 +81,7 @@ describe.skipIf(!isLinux)("notify over a unix datagram socket", () => {
     };
   }
 
-  const abstractName = () =>
-    `@bun-supervisor-test-${process.pid}-${Math.random().toString(36).slice(2)}`;
+  const abstractName = () => `@bun-supervisor-test-${process.pid}-${Math.random().toString(36).slice(2)}`;
 
   test("sends ready, status, stopping and reloading to an abstract address", async () => {
     const name = abstractName();

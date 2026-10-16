@@ -182,33 +182,46 @@ describe("readableStreamToFormData", () => {
     }
 
     test("response.formData()", async () => {
-      expect((await responseWithPull().formData()).entries().toArray().sort()).toEqual(expected.entries().toArray().sort());
-      expect((await responseWithStart().formData()).entries().toArray().sort()).toEqual(expected.entries().toArray().sort());
-      expect((await responseWithPullAsync().formData()).entries().toArray().sort()).toEqual(expected.entries().toArray().sort());
+      expect((await responseWithPull().formData()).entries().toArray().sort()).toEqual(
+        expected.entries().toArray().sort(),
+      );
+      expect((await responseWithStart().formData()).entries().toArray().sort()).toEqual(
+        expected.entries().toArray().sort(),
+      );
+      expect((await responseWithPullAsync().formData()).entries().toArray().sort()).toEqual(
+        expected.entries().toArray().sort(),
+      );
     });
 
     test("Bun.readableStreamToFormData", async () => {
       expect(
-        (
-          await Bun.readableStreamToFormData(await responseWithPull().body, "WebKitFormBoundary7MA4YWxkTrZu0gW")
-        ).entries().toArray().sort(),
+        (await Bun.readableStreamToFormData(await responseWithPull().body, "WebKitFormBoundary7MA4YWxkTrZu0gW"))
+          .entries()
+          .toArray()
+          .sort(),
       ).toEqual(expected.entries().toArray().sort());
     });
 
     test("FormData.from", async () => {
-      expect(FormData.from(await responseWithPull().text(), "WebKitFormBoundary7MA4YWxkTrZu0gW").entries().toArray().sort()).toEqual(
-        expected.entries().toArray().sort(),
-      );
-
-      expect(FormData.from(await responseWithPull().blob(), "WebKitFormBoundary7MA4YWxkTrZu0gW").entries().toArray().sort()).toEqual(
-        expected.entries().toArray().sort(),
-      );
+      expect(
+        FormData.from(await responseWithPull().text(), "WebKitFormBoundary7MA4YWxkTrZu0gW")
+          .entries()
+          .toArray()
+          .sort(),
+      ).toEqual(expected.entries().toArray().sort());
 
       expect(
-        FormData.from(
-          await (await responseWithPull().blob()).arrayBuffer(),
-          "WebKitFormBoundary7MA4YWxkTrZu0gW",
-        ).entries().toArray().sort(),
+        FormData.from(await responseWithPull().blob(), "WebKitFormBoundary7MA4YWxkTrZu0gW")
+          .entries()
+          .toArray()
+          .sort(),
+      ).toEqual(expected.entries().toArray().sort());
+
+      expect(
+        FormData.from(await (await responseWithPull().blob()).arrayBuffer(), "WebKitFormBoundary7MA4YWxkTrZu0gW")
+          .entries()
+          .toArray()
+          .sort(),
       ).toEqual(expected.entries().toArray().sort());
     });
   }
@@ -4813,14 +4826,12 @@ describe("direct stream edge cases", () => {
     });
 
     // close(error) rejects the promise the caller holds, so the caller decides whether the rejection is handled.
-    test.concurrent(
-      "close(error) is reported as unhandled only when the caller ignores the rejection, and then once",
-      async () => {
-        await using proc = Bun.spawn({
-          cmd: [
-            bunExe(),
-            "-e",
-            `
+    test.concurrent("close(error) is reported as unhandled only when the caller ignores the rejection, and then once", async () => {
+      await using proc = Bun.spawn({
+        cmd: [
+          bunExe(),
+          "-e",
+          `
           const later = () => new Promise(r => setImmediate(r));
           const unhandled = [];
           process.on("unhandledRejection", e => unhandled.push(e?.message));
@@ -4856,29 +4867,28 @@ describe("direct stream edge cases", () => {
           console.log(JSON.stringify(out));
           process.exit(0);
           `,
-          ],
-          env: bunEnv,
-          stderr: "inherit",
-        });
-        const [stdout, exitCode] = await Promise.all([proc.stdout.text(), proc.exited]);
-        const each = {
-          handled: "rejected: source failed",
-          strayWhenHandled: [],
-          reportedWhenIgnored: ["source failed"],
-        };
-        const everyConsumer = {
-          "new Response(s).bytes()": each,
-          "new Response(s).arrayBuffer()": each,
-          "Bun.readableStreamToBytes": each,
-          "Bun.readableStreamToArrayBuffer": each,
-        };
-        expect(JSON.parse(stdout)).toEqual({
-          "before the first await": everyConsumer,
-          "after an await": everyConsumer,
-        });
-        expect(exitCode).toBe(0);
-      },
-    );
+        ],
+        env: bunEnv,
+        stderr: "inherit",
+      });
+      const [stdout, exitCode] = await Promise.all([proc.stdout.text(), proc.exited]);
+      const each = {
+        handled: "rejected: source failed",
+        strayWhenHandled: [],
+        reportedWhenIgnored: ["source failed"],
+      };
+      const everyConsumer = {
+        "new Response(s).bytes()": each,
+        "new Response(s).arrayBuffer()": each,
+        "Bun.readableStreamToBytes": each,
+        "Bun.readableStreamToArrayBuffer": each,
+      };
+      expect(JSON.parse(stdout)).toEqual({
+        "before the first await": everyConsumer,
+        "after an await": everyConsumer,
+      });
+      expect(exitCode).toBe(0);
+    });
   });
 
   describe("pipes", () => {

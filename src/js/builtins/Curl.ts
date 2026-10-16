@@ -18,11 +18,17 @@ export async function run(argv: string[], options: NonNullable<Parameters<typeof
       throw new TypeError(`Unsupported Curl.run option: ${key}`);
   }
   const input = options.stdin;
-  const stdin = input instanceof ArrayBuffer ? new Uint8Array(input) : input ?? "ignore";
+  const stdin = input instanceof ArrayBuffer ? new Uint8Array(input) : (input ?? "ignore");
   await using child = Bun.spawn({
     cmd: [process.execPath, "--bun-internal-curl", ...argv],
-    stdin, stdout: "pipe", stderr: "pipe",
-    cwd: options.cwd, env: options.env, signal: options.signal, timeout, killSignal: "SIGKILL",
+    stdin,
+    stdout: "pipe",
+    stderr: "pipe",
+    cwd: options.cwd,
+    env: options.env,
+    signal: options.signal,
+    timeout,
+    killSignal: "SIGKILL",
   });
   let total = 0;
   async function collect(stream: typeof child.stdout) {
@@ -45,9 +51,14 @@ export async function run(argv: string[], options: NonNullable<Parameters<typeof
       }
       const output = new Uint8Array(length);
       let offset = 0;
-      for (const chunk of chunks) { output.set(chunk, offset); offset += chunk.byteLength; }
+      for (const chunk of chunks) {
+        output.set(chunk, offset);
+        offset += chunk.byteLength;
+      }
       return output;
-    } finally { reader.releaseLock(); }
+    } finally {
+      reader.releaseLock();
+    }
   }
   const [stdout, stderr, exit] = await Promise.allSettled([collect(child.stdout), collect(child.stderr), child.exited]);
   if (stdout.status === "rejected") throw stdout.reason;

@@ -2300,57 +2300,54 @@ describe("css source maps", () => {
 
   for (const sourcemap of ["external", "linked", "inline"] as const) {
     for (const minify of [false, true]) {
-      test.concurrent(
-        `Bun.build maps CSS rules to their sources (sourcemap: ${sourcemap}, minify: ${minify})`,
-        async () => {
-          using dir = tempDir("css-sourcemap", files);
-          const result = await Bun.build({
-            entrypoints: [join(String(dir), "entry.css")],
-            outdir: join(String(dir), "out"),
-            sourcemap,
-            minify,
-          });
-          expect(result.logs).toEqual([]);
-          const css = result.outputs.find(output => output.path.endsWith(".css"))!;
-          const code = await css.text();
-          expect(code).not.toContain("//#");
+      test.concurrent(`Bun.build maps CSS rules to their sources (sourcemap: ${sourcemap}, minify: ${minify})`, async () => {
+        using dir = tempDir("css-sourcemap", files);
+        const result = await Bun.build({
+          entrypoints: [join(String(dir), "entry.css")],
+          outdir: join(String(dir), "out"),
+          sourcemap,
+          minify,
+        });
+        expect(result.logs).toEqual([]);
+        const css = result.outputs.find(output => output.path.endsWith(".css"))!;
+        const code = await css.text();
+        expect(code).not.toContain("//#");
 
-          let map: any;
-          if (sourcemap === "inline") {
-            const match = code.match(/\/\*# sourceMappingURL=data:application\/json;base64,([A-Za-z0-9+/=]+) \*\/\n$/);
-            expect(match).not.toBeNull();
-            map = JSON.parse(Buffer.from(match![1], "base64").toString());
-          } else {
-            const mapOutput = result.outputs.find(output => output.kind === "sourcemap");
-            expect(mapOutput?.path).toBe(css.path + ".map");
-            map = JSON.parse(await mapOutput!.text());
-            if (sourcemap === "linked") expect(code).toEndWith("/*# sourceMappingURL=entry.css.map */\n");
-            else expect(code).not.toContain("sourceMappingURL");
-          }
+        let map: any;
+        if (sourcemap === "inline") {
+          const match = code.match(/\/\*# sourceMappingURL=data:application\/json;base64,([A-Za-z0-9+/=]+) \*\/\n$/);
+          expect(match).not.toBeNull();
+          map = JSON.parse(Buffer.from(match![1], "base64").toString());
+        } else {
+          const mapOutput = result.outputs.find(output => output.kind === "sourcemap");
+          expect(mapOutput?.path).toBe(css.path + ".map");
+          map = JSON.parse(await mapOutput!.text());
+          if (sourcemap === "linked") expect(code).toEndWith("/*# sourceMappingURL=entry.css.map */\n");
+          else expect(code).not.toContain("sourceMappingURL");
+        }
 
-          expect(map.sources).toEqual(["../b.css", "../entry.css"]);
-          expect(map.sourcesContent).toEqual([files["b.css"], files["entry.css"]]);
+        expect(map.sources).toEqual(["../b.css", "../entry.css"]);
+        expect(map.sourcesContent).toEqual([files["b.css"], files["entry.css"]]);
 
-          const lines = code.split("\n");
-          const positionOf = (needle: RegExp) => {
-            const line = lines.findIndex(l => needle.test(l));
-            return { line: line + 1, column: lines[line].search(needle) };
+        const lines = code.split("\n");
+        const positionOf = (needle: RegExp) => {
+          const line = lines.findIndex(l => needle.test(l));
+          return { line: line + 1, column: lines[line].search(needle) };
+        };
+        await SourceMapConsumer.with(map, null, consumer => {
+          const original = (needle: RegExp) => {
+            const { source, line, column } = consumer.originalPositionFor({
+              ...positionOf(needle),
+              bias: 1,
+            });
+            return { source, line, column };
           };
-          await SourceMapConsumer.with(map, null, consumer => {
-            const original = (needle: RegExp) => {
-              const { source, line, column } = consumer.originalPositionFor({
-                ...positionOf(needle),
-                bias: 1,
-              });
-              return { source, line, column };
-            };
-            expect(original(/\.b ?\{/)).toEqual({ source: "../b.css", line: 2, column: 0 });
-            expect(original(/\.a ?\{/)).toEqual({ source: "../entry.css", line: 3, column: 0 });
-            expect(original(/@media/)).toEqual({ source: "../entry.css", line: 7, column: 0 });
-            expect(original(/\.c ?\{/)).toEqual({ source: "../entry.css", line: 8, column: 2 });
-          });
-        },
-      );
+          expect(original(/\.b ?\{/)).toEqual({ source: "../b.css", line: 2, column: 0 });
+          expect(original(/\.a ?\{/)).toEqual({ source: "../entry.css", line: 3, column: 0 });
+          expect(original(/@media/)).toEqual({ source: "../entry.css", line: 7, column: 0 });
+          expect(original(/\.c ?\{/)).toEqual({ source: "../entry.css", line: 8, column: 2 });
+        });
+      });
     }
   }
 });

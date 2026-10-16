@@ -47,14 +47,7 @@ export function printFunction(node: ESTree.Function, state: State): void {
     writeWithMap(state, "declare ", CAT_OTHER, node.start, node.end, node);
     writeIdent(state, node.async ? "async function" : "function");
   } else {
-    writeWithMap(
-      state,
-      node.async ? "async function" : "function",
-      CAT_IDENT,
-      node.start,
-      node.end,
-      node,
-    );
+    writeWithMap(state, node.async ? "async function" : "function", CAT_IDENT, node.start, node.end, node);
   }
 
   if (node.generator) write(state, "* ", CAT_OTHER);

@@ -66,7 +66,7 @@ void (async () => {
   // Render list and update if necessary
   //
   const results = await Promise.allSettled(
-    Array.from(targetPluginNames).map((pluginName) => {
+    Array.from(targetPluginNames).map(pluginName => {
       const pluginMeta = /** @type {import("./eslint-rules.mjs").TargetPluginMeta} */ (
         ALL_TARGET_PLUGINS.get(pluginName)
       );

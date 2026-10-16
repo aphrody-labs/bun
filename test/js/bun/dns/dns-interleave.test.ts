@@ -352,20 +352,17 @@ function reached(bound: string[]) {
 // Whatever the system resolver says about these names (most answer neither
 // `localhost.` nor `*.localhost`), a listener on either loopback address is
 // reachable through them.
-describe.concurrent(
-  "fetch(), WebSocket and Bun.connect() reach a listener on 127.0.0.1 or ::1 through a localhost name",
-  () => {
-    test.each(["localhost", "localhost.", "bun-dns-test.localhost", "bun-dns-test.localhost."])("%s", async name => {
-      const { out, stderr, exitCode, signal } = await run(reachThroughName(name, ["127.0.0.1", "::1"]));
-      expect({ out, stderr, exitCode, signal }).toEqual({
-        out: { bound: expect.arrayContaining(["127.0.0.1"]), results: reached(out.bound ?? []) },
-        stderr: "",
-        exitCode: 0,
-        signal: null,
-      });
+describe.concurrent("fetch(), WebSocket and Bun.connect() reach a listener on 127.0.0.1 or ::1 through a localhost name", () => {
+  test.each(["localhost", "localhost.", "bun-dns-test.localhost", "bun-dns-test.localhost."])("%s", async name => {
+    const { out, stderr, exitCode, signal } = await run(reachThroughName(name, ["127.0.0.1", "::1"]));
+    expect({ out, stderr, exitCode, signal }).toEqual({
+      out: { bound: expect.arrayContaining(["127.0.0.1"]), results: reached(out.bound ?? []) },
+      stderr: "",
+      exitCode: 0,
+      signal: null,
     });
-  },
-);
+  });
+});
 
 // Debian, Ubuntu, Alpine and every Docker container list these names for ::1 in
 // /etc/hosts (Fedora uses localhost6). On a host whose only IPv6 address is ::1,
@@ -382,22 +379,19 @@ const hostsFileLoopbackNames = await Promise.all(
   }),
 );
 
-describe.concurrent(
-  "fetch(), WebSocket and Bun.connect() reach the listener a hosts-file loopback name maps to",
-  () => {
-    for (const { name, addresses } of hostsFileLoopbackNames) {
-      test.skipIf(addresses.length === 0)(
-        `${name} -> ${addresses.join(", ") || "(not in this host's hosts file)"}`,
-        async () => {
-          const { out, stderr, exitCode, signal } = await run(reachThroughName(name, addresses));
-          expect({ out, stderr, exitCode, signal }).toEqual({
-            out: { bound: out.bound ?? [], results: reached(out.bound ?? []) },
-            stderr: "",
-            exitCode: 0,
-            signal: null,
-          });
-        },
-      );
-    }
-  },
-);
+describe.concurrent("fetch(), WebSocket and Bun.connect() reach the listener a hosts-file loopback name maps to", () => {
+  for (const { name, addresses } of hostsFileLoopbackNames) {
+    test.skipIf(addresses.length === 0)(
+      `${name} -> ${addresses.join(", ") || "(not in this host's hosts file)"}`,
+      async () => {
+        const { out, stderr, exitCode, signal } = await run(reachThroughName(name, addresses));
+        expect({ out, stderr, exitCode, signal }).toEqual({
+          out: { bound: out.bound ?? [], results: reached(out.bound ?? []) },
+          stderr: "",
+          exitCode: 0,
+          signal: null,
+        });
+      },
+    );
+  }
+});

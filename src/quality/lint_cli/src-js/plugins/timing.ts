@@ -4,10 +4,7 @@ export interface RuleTiming {
   calls: number;
 }
 
-export function timeCall<ReturnValue>(
-  timing: RuleTiming,
-  callback: () => ReturnValue,
-): ReturnValue {
+export function timeCall<ReturnValue>(timing: RuleTiming, callback: () => ReturnValue): ReturnValue {
   const start = performance.now();
   try {
     return callback();

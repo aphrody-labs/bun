@@ -444,16 +444,12 @@ describe.skipIf(isDebug || isASAN)("the last idle collection drops code that can
   );
 
   // The first of two is a collection like any other: it has run, and the code is still there.
-  test.concurrent(
-    "the first of two does not",
-    async () => {
-      const { before, after, idleCollections, log } = await run("1,30", 1);
-      expect(before, log).toBeGreaterThan(60);
-      expect(idleCollections, log).toBe(1);
-      expect(after, log).toBeGreaterThan(before - 40);
-    },
-    15_000,
-  );
+  test.concurrent("the first of two does not", async () => {
+    const { before, after, idleCollections, log } = await run("1,30", 1);
+    expect(before, log).toBeGreaterThan(60);
+    expect(idleCollections, log).toBe(1);
+    expect(after, log).toBeGreaterThan(before - 40);
+  }, 15_000);
 });
 
 // Those idle full collections are tagged (GCRequest::isIdle) so JSC may also let idle FTL code — which has no execution

@@ -547,8 +547,7 @@ class Application {
     if (!Array.isArray(dictionaries) || dictionaries.some(value => typeof value !== "string"))
       throw new TypeError("bun:winui: resources must be XAML or an array of XAML strings");
     const resources = this.application.get("Resources");
-    if (!(resources instanceof Element))
-      throw new TypeError("bun:winui: application resources are disabled");
+    if (!(resources instanceof Element)) throw new TypeError("bun:winui: application resources are disabled");
     const merged = resources.get("MergedDictionaries");
     for (const source of dictionaries) Element.invoke(merged, "Append", [this.load(source)]);
     return this;

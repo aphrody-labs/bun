@@ -73,7 +73,8 @@ if (!existsSync(buildOptionsRs) || !existsSync(lolhtmlCargo) || !existsSync(argo
   if (run("bun", ["run", "build", "--configure-only"]).status !== 0) process.exit(1);
   if (
     (!existsSync(lolhtmlCargo) || !existsSync(argon2Cargo) || !existsSync(uutilsCargo)) &&
-    run("bun", ["run", "build", "--target=clone-lolhtml", "--target=clone-rust-argon2", "--target=clone-uutils"]).status !== 0
+    run("bun", ["run", "build", "--target=clone-lolhtml", "--target=clone-rust-argon2", "--target=clone-uutils"])
+      .status !== 0
   ) {
     process.exit(1);
   }

@@ -2,9 +2,7 @@ import { describe, expect, test } from "bun:test";
 
 describe("Bun.HTML persistent browser DOM", () => {
   test("CSS uses the shared Bun AST and preserves rule boundaries", () => {
-    const rules = Bun.HTML.parseCSS(
-      '[data-mark="{"] { content: "}"; width: 12px } .next { height: 8px }',
-    );
+    const rules = Bun.HTML.parseCSS('[data-mark="{"] { content: "}"; width: 12px } .next { height: 8px }');
     expect(rules).toHaveLength(2);
     expect(rules[0].prelude).toContain("data-mark");
     expect(rules[0].body).toContain("12px");
@@ -49,9 +47,7 @@ describe("Bun.HTML persistent browser DOM", () => {
     expect(document.attribute(svg, "viewbox")).toBeNull();
   });
   test("HTML5 recovery, selectors, text and serialization use the browser tree", () => {
-    const document = Bun.HTML.parse(
-      "<!doctype html><table><tr><td>A &amp; B</table><p id='first'>one<p>two",
-    );
+    const document = Bun.HTML.parse("<!doctype html><table><tr><td>A &amp; B</table><p id='first'>one<p>two");
     expect(document.select("table > tbody > tr > td")).toHaveLength(1);
     const paragraphs = document.select("p");
     expect(paragraphs).toHaveLength(2);

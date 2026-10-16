@@ -1595,21 +1595,18 @@ describe.skipIf(!canTrace || isWindows)("function tracer, following children", (
     });
   });
 
-  it.concurrent(
-    "gives a process that execs itself in place a second record instead of truncating the first",
-    async () => {
-      const { stdout, exitCode, traces } = await traceSelfExec(await following(), "trace-%p.bin", "again");
-      expect({ stdout, exitCode }).toEqual({ stdout: ["3", "4"], exitCode: 0 });
-      const { parent, ...again } = traces;
-      expect({
-        parent,
-        again: Object.entries(again).map(([file, names]) => [file.replace(/\d+/, "PID"), names]),
-      }).toEqual({
-        parent: ["parent_only"],
-        again: [["trace-PID.bin.1", ["child_only"]]],
-      });
-    },
-  );
+  it.concurrent("gives a process that execs itself in place a second record instead of truncating the first", async () => {
+    const { stdout, exitCode, traces } = await traceSelfExec(await following(), "trace-%p.bin", "again");
+    expect({ stdout, exitCode }).toEqual({ stdout: ["3", "4"], exitCode: 0 });
+    const { parent, ...again } = traces;
+    expect({
+      parent,
+      again: Object.entries(again).map(([file, names]) => [file.replace(/\d+/, "PID"), names]),
+    }).toEqual({
+      parent: ["parent_only"],
+      again: [["trace-PID.bin.1", ["child_only"]]],
+    });
+  });
 
   it.concurrent("leaves children alone unless asked, whatever the file is called", async () => {
     const { stdout, exitCode, traces } = await traceSelfExec({}, "trace-%p.bin");

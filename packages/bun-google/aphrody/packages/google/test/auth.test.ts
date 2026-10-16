@@ -18,9 +18,7 @@ test("Google CLI resolves the canonical multi-call owner before legacy links", (
   try {
     const which = (name: string) => (name === "aphrody" ? "/native/aphrody" : "/legacy/google");
     expect(resolveGoogleCommand(which)).toEqual(["/native/aphrody", "google"]);
-    expect(resolveGoogleCommand(name => (name === "google" ? "/native/google" : null))).toEqual([
-      "/native/google",
-    ]);
+    expect(resolveGoogleCommand(name => (name === "google" ? "/native/google" : null))).toEqual(["/native/google"]);
     expect(() => resolveGoogleCommand(() => null)).toThrow("install aphrody");
     Bun.env.APHRODY_GOOGLE_BIN = "/configured/google";
     expect(resolveGoogleCommand(() => null)).toEqual(["/configured/google"]);

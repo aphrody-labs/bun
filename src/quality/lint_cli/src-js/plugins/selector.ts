@@ -65,11 +65,7 @@ const ESQUERY_OPTIONS: ESQueryOptions = {
  * @param _ancestors - AST node's ancestors
  * @returns `true` if node matches class
  */
-function matchesSelectorClass(
-  className: string,
-  node: EsqueryNode,
-  _ancestors: EsqueryNode[],
-): boolean {
+function matchesSelectorClass(className: string, node: EsqueryNode, _ancestors: EsqueryNode[]): boolean {
   // Types don't match exactly.
   // All AST nodes have `parent` property (which `EsqueryNode` doesn't).
   typeAssertIs<ESTreeNode>(node);
@@ -90,20 +86,16 @@ function matchesSelectorClass(
 
     case "expression":
       return (
-        type.endsWith("Expression")
-        || type.endsWith("Literal")
+        type.endsWith("Expression") ||
+        type.endsWith("Literal") ||
         // ESLint / ESQuery uses `ancestors[0].type` instead of `node.parent.type`.
         // `node.parent.type` is faster, but functionally equivalent.
-        || (type === "Identifier" && node.parent.type !== "MetaProperty")
-        || type === "MetaProperty"
+        (type === "Identifier" && node.parent.type !== "MetaProperty") ||
+        type === "MetaProperty"
       );
 
     case "function":
-      return (
-        type === "FunctionDeclaration"
-        || type === "FunctionExpression"
-        || type === "ArrowFunctionExpression"
-      );
+      return type === "FunctionDeclaration" || type === "FunctionExpression" || type === "ArrowFunctionExpression";
 
     default:
       // Should have been caught already when compiling the selector in `analyzeSelector`
@@ -219,10 +211,7 @@ export function parseSelector(key: string): Selector {
  * @param selector - `Selector` which has its `isComplex` and `specificity` properties updated.
  * @returns Array of node type IDs the selector matches, or `null` if it matches all nodes.
  */
-function analyzeSelector(
-  esquerySelector: EsquerySelector,
-  selector: Selector,
-): NodeTypeId[] | null {
+function analyzeSelector(esquerySelector: EsquerySelector, selector: Selector): NodeTypeId[] | null {
   switch (esquerySelector.type) {
     case "identifier": {
       debugAssert(
@@ -240,11 +229,7 @@ function analyzeSelector(
     }
 
     case "not":
-      for (
-        let i = 0, childSelectors = esquerySelector.selectors, len = childSelectors.length;
-        i < len;
-        i++
-      ) {
+      for (let i = 0, childSelectors = esquerySelector.selectors, len = childSelectors.length; i < len; i++) {
         analyzeSelector(childSelectors[i], selector);
       }
       selector.isComplex = true;
@@ -253,11 +238,7 @@ function analyzeSelector(
     case "matches": {
       // OR matcher. Matches a node if any of child selectors matches it.
       let nodeTypes: NodeTypeId[] | null = [];
-      for (
-        let i = 0, childSelectors = esquerySelector.selectors, len = childSelectors.length;
-        i < len;
-        i++
-      ) {
+      for (let i = 0, childSelectors = esquerySelector.selectors, len = childSelectors.length; i < len; i++) {
         const childNodeTypes = analyzeSelector(childSelectors[i], selector);
         if (childNodeTypes === null) {
           nodeTypes = null;
@@ -291,7 +272,7 @@ function analyzeSelector(
         } else {
           // Selector only matches intersection of all child selectors.
           // TODO: Could make this faster if `analyzeSelector` always returned an ordered array.
-          nodeTypes = childNodeTypes.filter((nodeType) => nodeTypes!.includes(nodeType));
+          nodeTypes = childNodeTypes.filter(nodeType => nodeTypes!.includes(nodeType));
         }
       }
       return nodeTypes;
@@ -357,10 +338,7 @@ function analyzeSelector(
  * @param esquerySelector - `EsquerySelector` object
  * @returns Wrapped visit function
  */
-export function wrapVisitFnWithSelectorMatch(
-  visitFn: VisitFn,
-  esquerySelector: EsquerySelector,
-): VisitFn {
+export function wrapVisitFnWithSelectorMatch(visitFn: VisitFn, esquerySelector: EsquerySelector): VisitFn {
   return (node: Node) => {
     if (
       esqueryMatches(

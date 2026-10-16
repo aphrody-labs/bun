@@ -111,9 +111,7 @@ export async function runMigratePrettier() {
   // `printWidth` has different default between Prettier and Oxfmt.
   // Oxfmt default is 100, Prettier default is 80.
   if (typeof oxfmtrc.printWidth !== "number") {
-    console.error(
-      `  - "printWidth" is not set in Prettier config, defaulting to 80 (Oxfmt default: 100)`,
-    );
+    console.error(`  - "printWidth" is not set in Prettier config, defaulting to 80 (Oxfmt default: 100)`);
     oxfmtrc.printWidth = 80;
   }
   // `sortPackageJson` is enabled by default in Oxfmt, but Prettier does not have this.
@@ -127,11 +125,7 @@ export async function runMigratePrettier() {
   // Plugin options: only enable when the corresponding Prettier plugin is used.
   // Empty object means "enabled with defaults"; both Tailwind and Svelte are disabled by default.
   if (hasTailwindcssPlugin) {
-    oxfmtrc.sortTailwindcss = migrateMappedOptions(
-      prettierConfig!,
-      TAILWIND_OPTION_MAPPING,
-      filterTailwindRegex,
-    );
+    oxfmtrc.sortTailwindcss = migrateMappedOptions(prettierConfig!, TAILWIND_OPTION_MAPPING, filterTailwindRegex);
     console.log("Migrated prettier-plugin-tailwindcss options to sortTailwindcss");
   }
   if (hasSveltePlugin) {
@@ -244,10 +238,7 @@ function migrateMappedOptions(
 // `tailwindFunctions` / `tailwindAttributes` accept regex strings (e.g. `/^tw-/`)
 // which Oxfmt does not support. Drop them and warn.
 function filterTailwindRegex(prettierKey: string, value: unknown): unknown {
-  if (
-    (prettierKey !== "tailwindFunctions" && prettierKey !== "tailwindAttributes")
-    || !Array.isArray(value)
-  ) {
+  if ((prettierKey !== "tailwindFunctions" && prettierKey !== "tailwindAttributes") || !Array.isArray(value)) {
     return value;
   }
   return (value as unknown[]).filter((item): item is string => {

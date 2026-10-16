@@ -157,10 +157,7 @@ function printExponent(state: State, formatted: string, exponentIndex: number): 
       : formatted.slice(exponentIndex + 1);
 
   if (exponentIndex > 1) {
-    debugAssert(
-      formatted.charCodeAt(1) === ".".charCodeAt(0),
-      "Exponent notation has 1 digit up front",
-    );
+    debugAssert(formatted.charCodeAt(1) === ".".charCodeAt(0), "Exponent notation has 1 digit up front");
 
     const folded = String(Number(exponent) - (exponentIndex - 2));
     if (folded.length <= exponent.length) {

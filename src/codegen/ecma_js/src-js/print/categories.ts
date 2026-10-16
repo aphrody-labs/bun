@@ -209,13 +209,13 @@ export const ALL_CATEGORIES: Category[] = [
 if (DEBUG) {
   for (const category of ALL_CATEGORIES) {
     debugAssert(
-      ((category | 1) === CAT_START_OF_STMT)
-        === (category === CAT_START_OF_STMT || category === CAT_START_OF_DEFAULT_EXPORT),
+      ((category | 1) === CAT_START_OF_STMT) ===
+        (category === CAT_START_OF_STMT || category === CAT_START_OF_DEFAULT_EXPORT),
       `Category ${category} disagrees with \`(last | 1) === CAT_START_OF_STMT\``,
     );
     debugAssert(
-      (((category - 1) | 1) === CAT_START_OF_STMT)
-        === (category === CAT_START_OF_STMT || category === CAT_START_OF_ARROW_EXPR),
+      (((category - 1) | 1) === CAT_START_OF_STMT) ===
+        (category === CAT_START_OF_STMT || category === CAT_START_OF_ARROW_EXPR),
       `Category ${category} disagrees with \`((last - 1) | 1) === CAT_START_OF_STMT\``,
     );
   }

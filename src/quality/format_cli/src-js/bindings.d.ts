@@ -7,33 +7,33 @@
  * flavor napi-rs can build is listed, because `NAPI_RS_NATIVE_LIBRARY_PATH`
  * can point the loader at a WASI artifact this package does not build itself.
  */
-export declare const __napiBindingTarget: 'native' | 'wasm32-wasi' | 'wasm32-wasip1'
+export declare const __napiBindingTarget: "native" | "wasm32-wasi" | "wasm32-wasip1";
 
 export interface Comment {
-  type: 'Line' | 'Block'
-  value: string
-  start: number
-  end: number
+  type: "Line" | "Block";
+  value: string;
+  start: number;
+  end: number;
 }
 
 export interface ErrorLabel {
-  message: string | null
-  start: number
-  end: number
+  message: string | null;
+  start: number;
+  end: number;
 }
 
 export interface OxcError {
-  severity: Severity
-  message: string
-  labels: Array<ErrorLabel>
-  helpMessage: string | null
-  codeframe: string | null
+  severity: Severity;
+  message: string;
+  labels: Array<ErrorLabel>;
+  helpMessage: string | null;
+  codeframe: string | null;
 }
 
 export declare const enum Severity {
-  Error = 'Error',
-  Warning = 'Warning',
-  Advice = 'Advice',
+  Error = "Error",
+  Warning = "Warning",
+  Advice = "Advice",
 }
 
 /**
@@ -44,13 +44,24 @@ export declare const enum Severity {
  * # Panics
  * Panics if the current working directory cannot be determined.
  */
-export declare function format(filename: string, sourceText: string, options: any | undefined | null, formatFileCb: (options: Record<string, any>, code: string) => Promise<{ ok: true; code: string; } | { ok: false; error: string }>, formatEmbeddedCb: (options: Record<string, any>, code: string) => Promise<string | null>, formatEmbeddedDocCb: (options: Record<string, any>, code: string) => Promise<string | null>, sortTailwindClassesCb: (options: Record<string, any>, classes: string[]) => Promise<string[] | null>): Promise<FormatResult>
+export declare function format(
+  filename: string,
+  sourceText: string,
+  options: any | undefined | null,
+  formatFileCb: (
+    options: Record<string, any>,
+    code: string,
+  ) => Promise<{ ok: true; code: string } | { ok: false; error: string }>,
+  formatEmbeddedCb: (options: Record<string, any>, code: string) => Promise<string | null>,
+  formatEmbeddedDocCb: (options: Record<string, any>, code: string) => Promise<string | null>,
+  sortTailwindClassesCb: (options: Record<string, any>, classes: string[]) => Promise<string[] | null>,
+): Promise<FormatResult>;
 
 export interface FormatResult {
   /** The formatted code. */
-  code: string
+  code: string;
   /** Parse and format errors. */
-  errors: Array<OxcError>
+  errors: Array<OxcError>;
 }
 
 /**
@@ -59,7 +70,19 @@ export interface FormatResult {
  * This API is specialized for JS/TS snippets embedded in non-JS files.
  * Unlike `format()`, it is called only for js-in-xxx `textToDoc()` flow.
  */
-export declare function jsTextToDoc(sourceExt: string, sourceText: string, oxfmtPluginOptionsJson: string, parentContext: string, formatFileCb: (options: Record<string, any>, code: string) => Promise<{ ok: true; code: string; } | { ok: false; error: string }>, formatEmbeddedCb: (options: Record<string, any>, code: string) => Promise<string | null>, formatEmbeddedDocCb: (options: Record<string, any>, code: string) => Promise<string | null>, sortTailwindClassesCb: (options: Record<string, any>, classes: string[]) => Promise<string[] | null>): Promise<string | null>
+export declare function jsTextToDoc(
+  sourceExt: string,
+  sourceText: string,
+  oxfmtPluginOptionsJson: string,
+  parentContext: string,
+  formatFileCb: (
+    options: Record<string, any>,
+    code: string,
+  ) => Promise<{ ok: true; code: string } | { ok: false; error: string }>,
+  formatEmbeddedCb: (options: Record<string, any>, code: string) => Promise<string | null>,
+  formatEmbeddedDocCb: (options: Record<string, any>, code: string) => Promise<string | null>,
+  sortTailwindClassesCb: (options: Record<string, any>, classes: string[]) => Promise<string[] | null>,
+): Promise<string | null>;
 
 /**
  * NAPI based JS CLI entry point.
@@ -77,4 +100,15 @@ export declare function jsTextToDoc(sourceExt: string, sourceText: string, oxfmt
  * - `mode`: If main logic will run in JS side, use this to indicate which mode
  * - `exitCode`: If main logic already ran in Rust side, return the exit code
  */
-export declare function runCli(args: Array<string>, loadJsConfigCb: (path: string) => Promise<any>, initExternalServicesCb: (numThreads: number) => Promise<void>, formatFileCb: (options: Record<string, any>, code: string) => Promise<{ ok: true; code: string; } | { ok: false; error: string }>, formatEmbeddedCb: (options: Record<string, any>, code: string) => Promise<string | null>, formatEmbeddedDocCb: (options: Record<string, any>, code: string) => Promise<string | null>, sortTailwindcssClassesCb: (options: Record<string, any>, classes: string[]) => Promise<string[] | null>): Promise<[string, number | undefined | null]>
+export declare function runCli(
+  args: Array<string>,
+  loadJsConfigCb: (path: string) => Promise<any>,
+  initExternalServicesCb: (numThreads: number) => Promise<void>,
+  formatFileCb: (
+    options: Record<string, any>,
+    code: string,
+  ) => Promise<{ ok: true; code: string } | { ok: false; error: string }>,
+  formatEmbeddedCb: (options: Record<string, any>, code: string) => Promise<string | null>,
+  formatEmbeddedDocCb: (options: Record<string, any>, code: string) => Promise<string | null>,
+  sortTailwindcssClassesCb: (options: Record<string, any>, classes: string[]) => Promise<string[] | null>,
+): Promise<[string, number | undefined | null]>;

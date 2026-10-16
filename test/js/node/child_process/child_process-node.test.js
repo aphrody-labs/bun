@@ -665,48 +665,45 @@ describe("fork", () => {
     });
     // This test fails due to a DataCloneError or due to "Unable to deserialize data."
     // This test was originally marked as TODO before the process changes.
-    it.todo(
-      "Ensure that the second argument of `fork` and `fork` should parse options correctly if args is undefined or null",
-      done => {
-        const invalidSecondArgs = [0, true, () => {}, Symbol("t")];
-        try {
-          invalidSecondArgs.forEach(arg => {
-            expect(() => fork(fixtures.path("child-process-echo-options.js"), arg)).toThrow({
-              code: "ERR_INVALID_ARG_TYPE",
-              name: "TypeError",
-              message: `The \"args\" argument must be an instance of Array. Received ${arg?.toString()}`,
-            });
+    it.todo("Ensure that the second argument of `fork` and `fork` should parse options correctly if args is undefined or null", done => {
+      const invalidSecondArgs = [0, true, () => {}, Symbol("t")];
+      try {
+        invalidSecondArgs.forEach(arg => {
+          expect(() => fork(fixtures.path("child-process-echo-options.js"), arg)).toThrow({
+            code: "ERR_INVALID_ARG_TYPE",
+            name: "TypeError",
+            message: `The \"args\" argument must be an instance of Array. Received ${arg?.toString()}`,
           });
-        } catch (e) {
-          done(e);
-          return;
-        }
-
-        const argsLists = [[]];
-
-        const { mustCall } = createCallCheckCtx(done);
-
-        argsLists.forEach(args => {
-          const cp = fork(fixtures.path("child-process-echo-options.js"), args, {
-            env: { ...bunEnv, ...expectedEnv },
-          });
-
-          cp.on(
-            "message",
-            mustCall(({ env }) => {
-              assert.strictEqual(env.foo, expectedEnv.foo);
-            }),
-          );
-
-          cp.on(
-            "exit",
-            mustCall(code => {
-              assert.strictEqual(code, 0);
-            }),
-          );
         });
-      },
-    );
+      } catch (e) {
+        done(e);
+        return;
+      }
+
+      const argsLists = [[]];
+
+      const { mustCall } = createCallCheckCtx(done);
+
+      argsLists.forEach(args => {
+        const cp = fork(fixtures.path("child-process-echo-options.js"), args, {
+          env: { ...bunEnv, ...expectedEnv },
+        });
+
+        cp.on(
+          "message",
+          mustCall(({ env }) => {
+            assert.strictEqual(env.foo, expectedEnv.foo);
+          }),
+        );
+
+        cp.on(
+          "exit",
+          mustCall(code => {
+            assert.strictEqual(code, 0);
+          }),
+        );
+      });
+    });
     const invalidThirdArgs = [0, true, () => {}, Symbol("t")];
     invalidThirdArgs.forEach(arg => {
       it(`Ensure that the third argument should be type of object if provided :: ${String(arg)}`, () => {

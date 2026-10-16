@@ -208,9 +208,7 @@ interface StrictVisitorObject {
   ) => void;
   PropertyDefinition?: (node: ESTree.PropertyDefinition) => void;
   "PropertyDefinition:exit"?: (node: ESTree.PropertyDefinition) => void;
-  RestElement?: (
-    node: ESTree.AssignmentTargetRest | ESTree.BindingRestElement | ESTree.FormalParameterRest,
-  ) => void;
+  RestElement?: (node: ESTree.AssignmentTargetRest | ESTree.BindingRestElement | ESTree.FormalParameterRest) => void;
   "RestElement:exit"?: (
     node: ESTree.AssignmentTargetRest | ESTree.BindingRestElement | ESTree.FormalParameterRest,
   ) => void;
@@ -339,9 +337,7 @@ interface StrictVisitorObject {
   TSModuleBlock?: (node: ESTree.TSModuleBlock) => void;
   "TSModuleBlock:exit"?: (node: ESTree.TSModuleBlock) => void;
   TSModuleDeclaration?: (node: ESTree.TSModuleDeclaration | ESTree.TSGlobalDeclaration) => void;
-  "TSModuleDeclaration:exit"?: (
-    node: ESTree.TSModuleDeclaration | ESTree.TSGlobalDeclaration,
-  ) => void;
+  "TSModuleDeclaration:exit"?: (node: ESTree.TSModuleDeclaration | ESTree.TSGlobalDeclaration) => void;
   TSNamedTupleMember?: (node: ESTree.TSNamedTupleMember) => void;
   "TSNamedTupleMember:exit"?: (node: ESTree.TSNamedTupleMember) => void;
   TSNamespaceExportDeclaration?: (node: ESTree.TSNamespaceExportDeclaration) => void;
@@ -393,7 +389,5 @@ interface StrictVisitorObject {
 }
 
 export type VisitorObject = {
-  [K in keyof StrictVisitorObject]?:
-    | BivarianceHackHandler<Exclude<StrictVisitorObject[K], undefined>>
-    | undefined;
+  [K in keyof StrictVisitorObject]?: BivarianceHackHandler<Exclude<StrictVisitorObject[K], undefined>> | undefined;
 } & Record<string, BivarianceHackHandler<(node: ESTree.Node) => void> | undefined>;

@@ -27,15 +27,7 @@ if (apply) {
   await run("Bun lock verification", ["bun", "install", "--frozen-lockfile"]);
   await run(
     "Cargo lock verification",
-    [
-      "bun",
-      "scripts/build/rust/cargo-serial.ts",
-      "--msvc",
-      "metadata",
-      "--locked",
-      "--no-deps",
-      "--format-version=1",
-    ],
+    ["bun", "scripts/build/rust/cargo-serial.ts", "--msvc", "metadata", "--locked", "--no-deps", "--format-version=1"],
     true,
   );
 }

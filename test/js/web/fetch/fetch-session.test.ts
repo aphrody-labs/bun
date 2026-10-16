@@ -109,8 +109,11 @@ describe("Bun.FetchSession", () => {
     using server = Bun.serve({ port: 0, fetch: () => new Response("ok") });
     using session = new Bun.FetchSession({ har: true });
     for (let batch = 0; batch < 13; batch++) {
-      await Promise.all(Array.from({ length: 20 }, (_, index) =>
-        session.fetch(`${server.url}${batch * 20 + index}`).then(response => response.text())));
+      await Promise.all(
+        Array.from({ length: 20 }, (_, index) =>
+          session.fetch(`${server.url}${batch * 20 + index}`).then(response => response.text()),
+        ),
+      );
     }
     const log = JSON.parse(session.exportHAR()).log;
     expect(log.entries).toHaveLength(256);
@@ -214,17 +217,13 @@ describe("Bun.FetchSession", () => {
 
   // The socket timer sweeps every 4 seconds, so this takes two sweeps; it runs
   // alongside the tests below.
-  test.concurrent(
-    "keepAlive.idleTimeout closes a connection that sat idle for that long",
-    async () => {
-      using server = await closeObservingServer();
-      using session = new Bun.FetchSession({ keepAlive: { idleTimeout: 1 } });
-      expect(await (await fetch(server.url, { session })).text()).toBe("ok");
-      // The client closes it; nothing else in this test would.
-      await server.closed;
-    },
-    20_000,
-  );
+  test.concurrent("keepAlive.idleTimeout closes a connection that sat idle for that long", async () => {
+    using server = await closeObservingServer();
+    using session = new Bun.FetchSession({ keepAlive: { idleTimeout: 1 } });
+    expect(await (await fetch(server.url, { session })).text()).toBe("ok");
+    // The client closes it; nothing else in this test would.
+    await server.closed;
+  }, 20_000);
 
   test.concurrent("collecting a session closes its idle connections", async () => {
     using server = await closeObservingServer();
@@ -263,29 +262,26 @@ describe("Bun.FetchSession", () => {
     }
   });
 
-  test.concurrent(
-    "a request with its own tls does not reuse a connection the session's checkServerIdentity approved",
-    async () => {
-      const server = connectionCountingServer();
-      const port = await server.listen();
-      try {
-        let approved = 0;
-        using session = new Bun.FetchSession({
-          tls: { ca: tlsCert.cert, checkServerIdentity: () => void approved++ },
-        });
-        const url = `https://localhost:${port}/`;
-        expect(await (await fetch(url, { session })).text()).toBe("ok");
-        expect(await (await fetch(url, { session })).text()).toBe("ok");
-        expect([approved, server.connections]).toEqual([1, 1]);
-        // Its `tls` replaces the session's, callback included: the session's
-        // verdict does not cover this request.
-        expect(await (await fetch(url, { session, tls: { ca: tlsCert.cert } })).text()).toBe("ok");
-        expect([approved, server.connections]).toEqual([1, 2]);
-      } finally {
-        server.close();
-      }
-    },
-  );
+  test.concurrent("a request with its own tls does not reuse a connection the session's checkServerIdentity approved", async () => {
+    const server = connectionCountingServer();
+    const port = await server.listen();
+    try {
+      let approved = 0;
+      using session = new Bun.FetchSession({
+        tls: { ca: tlsCert.cert, checkServerIdentity: () => void approved++ },
+      });
+      const url = `https://localhost:${port}/`;
+      expect(await (await fetch(url, { session })).text()).toBe("ok");
+      expect(await (await fetch(url, { session })).text()).toBe("ok");
+      expect([approved, server.connections]).toEqual([1, 1]);
+      // Its `tls` replaces the session's, callback included: the session's
+      // verdict does not cover this request.
+      expect(await (await fetch(url, { session, tls: { ca: tlsCert.cert } })).text()).toBe("ok");
+      expect([approved, server.connections]).toEqual([1, 2]);
+    } finally {
+      server.close();
+    }
+  });
 
   test.concurrent("concurrent requests of a session share its pool afterwards", async () => {
     const counting = connectionCountingServer();

@@ -328,7 +328,16 @@ console.log(JSON.stringify([
       { compress: "gzip" },
     ).bytes();
     const hash = new Bun.CryptoHasher("sha512").update(archive).digest("hex");
-    const rids = ["win-x64", "win-arm64", "linux-x64", "linux-arm64", "linux-musl-x64", "linux-musl-arm64", "osx-x64", "osx-arm64"];
+    const rids = [
+      "win-x64",
+      "win-arm64",
+      "linux-x64",
+      "linux-arm64",
+      "linux-musl-x64",
+      "linux-musl-arm64",
+      "osx-x64",
+      "osx-arm64",
+    ];
     const files = (version: string, sha: string) =>
       rids.map(rid => ({
         name: `dotnet-runtime-${rid}.${rid.startsWith("win") ? "zip" : "tar.gz"}`,

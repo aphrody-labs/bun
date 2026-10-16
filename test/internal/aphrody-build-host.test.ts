@@ -13,7 +13,7 @@ import { runtimePlatforms } from "../../scripts/aphrody/publish-runtime";
 
 describe("aphrody release targets", () => {
   test("upstream's release platforms, with upstream's asset names", () => {
-    expect(releaseTargets.map((t) => [t.target, t.triplet, t.baselineAlias])).toEqual([
+    expect(releaseTargets.map(t => [t.target, t.triplet, t.baselineAlias])).toEqual([
       ["linux-x64", "bun-linux-x64", "bun-linux-x64-baseline"],
       ["linux-aarch64", "bun-linux-aarch64", undefined],
       ["linux-x64-musl", "bun-linux-x64-musl", "bun-linux-x64-musl-baseline"],
@@ -26,7 +26,7 @@ describe("aphrody release targets", () => {
   });
 
   test("every target has an npm platform package", () => {
-    const assets = new Set(runtimePlatforms.map((p) => p.asset));
+    const assets = new Set(runtimePlatforms.map(p => p.asset));
     for (const t of releaseTargets) expect(assets.has(`${t.triplet}.zip`)).toBe(true);
   });
 
@@ -37,17 +37,15 @@ describe("aphrody release targets", () => {
   });
 
   test("build flags", () => {
-    expect(buildArgs(findTarget("linux-x64-musl"), { lto: true, versionTag: "aphrody.2" })).toEqual(
-      [
-        "--profile=release",
-        "--os=linux",
-        "--arch=x64",
-        "--abi=musl",
-        "--lto=on",
-        "--canary=off",
-        "--version-tag=aphrody.2",
-      ],
-    );
+    expect(buildArgs(findTarget("linux-x64-musl"), { lto: true, versionTag: "aphrody.2" })).toEqual([
+      "--profile=release",
+      "--os=linux",
+      "--arch=x64",
+      "--abi=musl",
+      "--lto=on",
+      "--canary=off",
+      "--version-tag=aphrody.2",
+    ]);
     expect(buildArgs(findTarget("windows-aarch64"), { lto: false })).toEqual([
       "--profile=release",
       "--os=windows",
@@ -68,9 +66,7 @@ describe("aphrody release targets", () => {
 
 describe("aphrody build host provisioning", () => {
   test("splitSections", () => {
-    const { header, sections } = splitSections(
-      "#!/bin/sh\nset -e\n# ---- a\necho a\n# ---- b c\necho b\n",
-    );
+    const { header, sections } = splitSections("#!/bin/sh\nset -e\n# ---- a\necho a\n# ---- b c\necho b\n");
     expect(header).toBe("#!/bin/sh\nset -e\n");
     expect([...sections]).toEqual([
       ["a", "echo a\n"],
@@ -116,9 +112,7 @@ describe("factory resource qualification", () => {
     const profile = deriveFactoryProfile(live, config);
     expect(profile.heavySlots).toBe(live.cpu);
     expect(profile.lightSlots).toBe(live.cpu);
-    expect(profile.heavySlots * 2048 + profile.reserveMemoryMiB).toBeLessThanOrEqual(
-      live.availableMemoryMiB,
-    );
+    expect(profile.heavySlots * 2048 + profile.reserveMemoryMiB).toBeLessThanOrEqual(live.availableMemoryMiB);
     const smaller = deriveFactoryProfile({ ...live, cpu: 4, availableMemoryMiB: 12288 }, config);
     expect(smaller.heavySlots).toBeLessThan(profile.heavySlots);
     expect(smaller.heavySlots).toBeLessThanOrEqual(4);
@@ -128,36 +122,25 @@ describe("factory resource qualification", () => {
     expect(() => deriveFactoryProfile({ ...observation(), freeDiskMiB: 512 }, config)).toThrow(
       /operating system reserve/,
     );
-    expect(() => deriveFactoryProfile({ ...observation(), filesystem: "tmpfs" }, config)).toThrow(
-      /persistent disk/,
+    expect(() => deriveFactoryProfile({ ...observation(), filesystem: "tmpfs" }, config)).toThrow(/persistent disk/);
+    expect(() => deriveFactoryProfile({ ...observation(), availableMemoryMiB: 1024 }, config)).toThrow(
+      /insufficient memory/,
     );
     expect(() =>
-      deriveFactoryProfile({ ...observation(), availableMemoryMiB: 1024 }, config),
-    ).toThrow(/insufficient memory/);
-    expect(() =>
-      deriveFactoryProfile(
-        { ...observation(), observedAt: new Date(Date.now() - 600000).toISOString() },
-        config,
-      ),
+      deriveFactoryProfile({ ...observation(), observedAt: new Date(Date.now() - 600000).toISOString() }, config),
     ).toThrow(/stale/);
-    expect(() =>
-      deriveFactoryProfile(observation(), { ...config, factoryRoot: "/tmp/build" }),
-    ).toThrow(/temporary/);
-    expect(() =>
-      deriveFactoryProfile(observation(), { ...config, factoryRoot: "/home/owner/../other" }),
-    ).toThrow(/absolute host/);
-    expect(() => deriveFactoryProfile(observation(), { ...config, sourceTree: "main" })).toThrow(
-      /exact Git/,
+    expect(() => deriveFactoryProfile(observation(), { ...config, factoryRoot: "/tmp/build" })).toThrow(/temporary/);
+    expect(() => deriveFactoryProfile(observation(), { ...config, factoryRoot: "/home/owner/../other" })).toThrow(
+      /absolute host/,
     );
+    expect(() => deriveFactoryProfile(observation(), { ...config, sourceTree: "main" })).toThrow(/exact Git/);
   });
 });
 
 describe("npm placeholder", () => {
   test("only an undeprecated 0.0.0-stage is retired", () => {
     expect(placeholderNeedsRetiring({ versions: { "0.0.0-stage": {}, "1.0.0": {} } })).toBe(true);
-    expect(placeholderNeedsRetiring({ versions: { "0.0.0-stage": { deprecated: "x" } } })).toBe(
-      false,
-    );
+    expect(placeholderNeedsRetiring({ versions: { "0.0.0-stage": { deprecated: "x" } } })).toBe(false);
     expect(placeholderNeedsRetiring({ versions: { "1.0.0": {} } })).toBe(false);
     expect(placeholderNeedsRetiring({})).toBe(false);
   });

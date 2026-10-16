@@ -66,7 +66,7 @@ export async function planMediaRelease(input: MediaReleasePlanInput) {
     if (!targets.some(candidate => candidate.target === target))
       throw new Error(`Unknown media release target: ${target}`);
   const factory = vpsRuntimeReleasePlan(input.source);
-  const platforms = [];
+  const platforms: Array<Record<string, unknown> & { ready: boolean }> = [];
   for (const target of targets) {
     const supplied = input.platforms?.[target.target];
     const missing: string[] = [];

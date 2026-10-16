@@ -28,20 +28,10 @@ import { printIndent } from "./indent.ts";
 import { CTX_NONE } from "./operators.ts";
 import { PREC_CALL, PREC_COMMA, PREC_LOWEST, PREC_POSTFIX } from "./precedence.ts";
 import { printStatement } from "./statement.ts";
-import {
-  printTSIndexSignature,
-  printTypeAnnotation,
-  printTypeArguments,
-  printTypeParameters,
-} from "./typescript.ts";
+import { printTSIndexSignature, printTypeAnnotation, printTypeArguments, printTypeParameters } from "./typescript.ts";
 
 import type { State } from "../state.ts";
-import type {
-  AccessorPropertyNode,
-  ClassBodyNode,
-  MethodDefinitionNode,
-  PropertyDefinitionNode,
-} from "./types.ts";
+import type { AccessorPropertyNode, ClassBodyNode, MethodDefinitionNode, PropertyDefinitionNode } from "./types.ts";
 import type * as ESTree from "../../../../../packages/bun-oxc/adapters/types_npm/types.d.ts";
 
 /**

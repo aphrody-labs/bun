@@ -178,9 +178,9 @@ describe.skipIf(skip)("node:tls under injected syscall faults", () => {
     let received = "";
     let arrived = Promise.withResolvers<void>();
     const socket = await Bun.connect({
-      ...(unix
+      ...((unix
         ? { unix: streaming.address() as string }
-        : { hostname: "127.0.0.1", port: (streaming.address() as AddressInfo).port }),
+        : { hostname: "127.0.0.1", port: (streaming.address() as AddressInfo).port }) as { unix: string }),
       tls: { ca: certs.cert, serverName: "localhost" },
       socket: {
         handshake: () => handshake.resolve(),
@@ -349,7 +349,10 @@ describe.skipIf(skip)("node:tls under injected syscall faults", () => {
     await using ending = tls.createServer({ key: certs.key, cert: certs.cert, allowHalfOpen: true });
     await once(ending.listen(0, "127.0.0.1"), "listening");
     const accepted = once(ending, "secureConnection") as Promise<[tls.TLSSocket]>;
-    const writer = connect({ port: (ending.address() as AddressInfo).port, allowHalfOpen: true });
+    const writer = connect({
+      port: (ending.address() as AddressInfo).port,
+      allowHalfOpen: true,
+    } as tls.ConnectionOptions);
     const seen = observe(writer);
     const [[peer]] = await Promise.all([accepted, once(writer, "secureConnect")]);
     peer.on("error", () => {});

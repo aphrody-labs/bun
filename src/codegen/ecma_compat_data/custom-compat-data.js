@@ -1,7 +1,7 @@
 // Custom compatibility data for features not yet in compat-table
 // This file contains manually maintained browser support information
 
-const f = (es) => (item) => {
+const f = es => item => {
   item.es = es;
   return item;
 };

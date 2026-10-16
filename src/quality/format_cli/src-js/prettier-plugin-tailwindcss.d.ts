@@ -25,9 +25,7 @@ declare module "prettier-plugin-tailwindcss" {
     collapseWhitespace?: boolean | { start?: boolean; end?: boolean };
   }
 
-  export function getTailwindConfig(
-    options: Partial<PluginOptions & { filepath?: string }>,
-  ): Promise<TailwindContext>;
+  export function getTailwindConfig(options: Partial<PluginOptions & { filepath?: string }>): Promise<TailwindContext>;
 
   export function sortClasses(classString: string, options: SortClassesOptions): string;
 }

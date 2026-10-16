@@ -48,9 +48,7 @@ export function getDisableDirectives(): { problems: Problem[]; directives: Direc
     const comment = comments[i];
 
     const sepMatch = JUSTIFICATION_SEP_PATTERN.exec(comment.value);
-    const directivePart = (
-      sepMatch === null ? comment.value : comment.value.slice(0, sepMatch.index)
-    ).trim();
+    const directivePart = (sepMatch === null ? comment.value : comment.value.slice(0, sepMatch.index)).trim();
 
     const match = LABEL_PATTERN.exec(directivePart);
     if (match === null) continue;
@@ -69,8 +67,7 @@ export function getDisableDirectives(): { problems: Problem[]; directives: Direc
     }
 
     const value = directivePart.slice(match[0].length).trim();
-    const justification =
-      sepMatch === null ? "" : comment.value.slice(sepMatch.index + sepMatch[0].length).trim();
+    const justification = sepMatch === null ? "" : comment.value.slice(sepMatch.index + sepMatch[0].length).trim();
 
     directives.push({ type, node: comment, value, justification });
   }

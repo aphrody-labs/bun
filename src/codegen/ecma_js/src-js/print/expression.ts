@@ -31,12 +31,7 @@ import {
   writeWithMapNoLast,
 } from "./write.ts";
 import { printClass } from "./class.ts";
-import {
-  printFunction,
-  printFunctionBody,
-  printParenParams,
-  printParenParamsArrow,
-} from "./function.ts";
+import { printFunction, printFunctionBody, printParenParams, printParenParamsArrow } from "./function.ts";
 import { printSpaceBeforeIdentifier, printSpaceBeforeOperator } from "./space.ts";
 import { printIndent } from "./indent.ts";
 import { printJSXElement, printJSXFragment } from "./jsx.ts";
@@ -265,11 +260,7 @@ export function printExpression(
  * 1. A bare `let` as the object.
  * 2. Member access straight onto an integer literal.
  */
-export function printMemberExpression(
-  node: ESTree.MemberExpression,
-  state: State,
-  ctx: number,
-): void {
+export function printMemberExpression(node: ESTree.MemberExpression, state: State, ctx: number): void {
   const { object } = node;
   if (node.computed) {
     // `(let)[0]` - a bare `let` object must be wrapped
@@ -314,12 +305,7 @@ export function printMemberExpression(
  * Writing that paren also re-marks the start of a statement or of an `export default`,
  * so the callee inside the parens is still read as the leftmost token of the construct.
  */
-function printCallExpression(
-  node: ESTree.CallExpression,
-  state: State,
-  precedence: number,
-  ctx: number,
-): void {
+function printCallExpression(node: ESTree.CallExpression, state: State, precedence: number, ctx: number): void {
   const wrap = precedence >= PREC_NEW || (ctx & CTX_FORBID_CALL) !== 0;
 
   if (wrap) {
@@ -389,11 +375,7 @@ function printArguments(
  * operand also prints at `PREC_COMPARE`, preserving parentheses around relational and
  * lower-precedence expressions, with `CTX_FORBID_IN` set.
  */
-export function printPrivateInExpression(
-  node: ESTree.PrivateInExpression,
-  state: State,
-  precedence: number,
-): void {
+export function printPrivateInExpression(node: ESTree.PrivateInExpression, state: State, precedence: number): void {
   const wrap = precedence >= PREC_COMPARE;
   if (wrap) write(state, "(", CAT_OTHER);
 
@@ -462,10 +444,7 @@ function printObjectProperty(node: ESTree.ObjectPropertyKind, state: State): voi
   }
 
   const { key, value } = node;
-  if (
-    value.type === "FunctionExpression"
-    || (TS && value.type === "TSEmptyBodyFunctionExpression")
-  ) {
+  if (value.type === "FunctionExpression" || (TS && value.type === "TSEmptyBodyFunctionExpression")) {
     markMapStart(state, node.start, node.end, node);
 
     const { kind } = node;
@@ -526,10 +505,10 @@ function printObjectProperty(node: ESTree.ObjectPropertyKind, state: State): voi
   let { computed } = node;
   // `{ -1: 0 }` and `{ 1/0: 0 }` must print as `{ [-1]: 0 }` / `{ [1 / 0]: 0 }`
   if (
-    !computed
-    && key.type === "Literal"
-    && typeof key.value === "number"
-    && (key.value < 0 || Object.is(key.value, -0) || !Number.isFinite(key.value))
+    !computed &&
+    key.type === "Literal" &&
+    typeof key.value === "number" &&
+    (key.value < 0 || Object.is(key.value, -0) || !Number.isFinite(key.value))
   ) {
     computed = true;
   }
@@ -651,12 +630,7 @@ function printAssignmentExpression(
  * The operator's own category is recorded as it is written, which is how an adjacent `+` or `-`
  * knows to leave a space rather than glue into `---x`.
  */
-function printUpdateExpression(
-  node: ESTree.UpdateExpression,
-  state: State,
-  precedence: number,
-  ctx: number,
-): void {
+function printUpdateExpression(node: ESTree.UpdateExpression, state: State, precedence: number, ctx: number): void {
   const selfPrecedence = node.prefix ? PREC_PREFIX : PREC_POSTFIX;
   const wrap = precedence >= selfPrecedence;
   if (wrap) write(state, "(", CAT_OTHER);
@@ -684,12 +658,7 @@ function printUpdateExpression(
  * A `!` written straight after a `<` records a category of its own, so that a `--`
  * printed next is spaced off it and cannot complete `<!--`.
  */
-function printUnaryExpression(
-  node: ESTree.UnaryExpression,
-  state: State,
-  precedence: number,
-  ctx: number,
-): void {
+function printUnaryExpression(node: ESTree.UnaryExpression, state: State, precedence: number, ctx: number): void {
   const wrap = precedence >= PREC_PREFIX;
   if (wrap) write(state, "(", CAT_OTHER);
 
@@ -701,8 +670,7 @@ function printUnaryExpression(
     writeWithMap(state, operator, CAT_IDENT, node.start, node.end, node);
     write(state, " ", CAT_OTHER);
     // `delete Infinity` is a syntax error in strict mode
-    isDeleteInfinity =
-      operator === "delete" && node.argument.type === "Literal" && node.argument.value === Infinity;
+    isDeleteInfinity = operator === "delete" && node.argument.type === "Literal" && node.argument.value === Infinity;
   } else {
     let operatorCode = unaryOperatorCode(operator);
     printSpaceBeforeOperator(state, operatorCode);
@@ -769,12 +737,7 @@ function printConditionalExpression(
  * `CTX_FORBID_CALL` is cleared for the elements, since every position which sets that flag
  * also passes a precedence at or above `PREC_COMMA`, so the parens are already written by then.
  */
-function printSequenceExpression(
-  node: ESTree.SequenceExpression,
-  state: State,
-  precedence: number,
-  ctx: number,
-): void {
+function printSequenceExpression(node: ESTree.SequenceExpression, state: State, precedence: number, ctx: number): void {
   const wrap = precedence >= PREC_COMMA;
   if (wrap) write(state, "(", CAT_OTHER);
 
@@ -902,12 +865,7 @@ function templateQuasiRaw(quasi: ESTree.TemplateElement): string {
  * Wraps from `PREC_PREFIX` upwards like the other unary operators, and prints its argument
  * at `PREC_EXPONENTIATION` - `await a ** b` does not parse, so the `**` takes parens.
  */
-function printAwaitExpression(
-  node: ESTree.AwaitExpression,
-  state: State,
-  precedence: number,
-  ctx: number,
-): void {
+function printAwaitExpression(node: ESTree.AwaitExpression, state: State, precedence: number, ctx: number): void {
   const wrap = precedence >= PREC_PREFIX;
   if (wrap) write(state, "(", CAT_OTHER);
 
@@ -922,12 +880,7 @@ function printAwaitExpression(
  * Wraps from `PREC_ASSIGN` upwards. The argument prints at `PREC_YIELD`, one level below assignment,
  * so a nested `yield` or an assignment stays bare while a comma sequence parenthesizes.
  */
-function printYieldExpression(
-  node: ESTree.YieldExpression,
-  state: State,
-  precedence: number,
-  ctx: number,
-): void {
+function printYieldExpression(node: ESTree.YieldExpression, state: State, precedence: number, ctx: number): void {
   const wrap = precedence >= PREC_ASSIGN;
   const argumentCtx = wrap ? CTX_NONE : ctx & CTX_FORBID_IN;
   if (wrap) write(state, "(", CAT_OTHER);
@@ -951,12 +904,7 @@ function printYieldExpression(
  *
  * A `phase` prints as `import.<phase>(...)`, and import options follow the source as a second argument.
  */
-function printImportExpression(
-  node: ESTree.ImportExpression,
-  state: State,
-  precedence: number,
-  ctx: number,
-): void {
+function printImportExpression(node: ESTree.ImportExpression, state: State, precedence: number, ctx: number): void {
   const wrap = precedence >= PREC_NEW || (ctx & CTX_FORBID_CALL) !== 0;
   if (wrap) write(state, "(", CAT_OTHER);
 
@@ -987,12 +935,7 @@ function printImportExpression(
  * and printed from `PREC_LOWEST` - the chain has to stop at the paren, instead of running on
  * into the enclosing member access or `new`.
  */
-function printChainExpression(
-  node: ESTree.ChainExpression,
-  state: State,
-  precedence: number,
-  ctx: number,
-): void {
+function printChainExpression(node: ESTree.ChainExpression, state: State, precedence: number, ctx: number): void {
   const wrap = precedence >= PREC_POSTFIX || (ctx & CTX_FORBID_CALL) !== 0;
   if (wrap) {
     write(state, "(", CAT_OTHER);

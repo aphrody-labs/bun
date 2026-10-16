@@ -133,9 +133,7 @@ describe("release id and queue decisions", () => {
     const r = await resolveAll(app, { releases });
     expect(r.id).toBe(`${shaA.slice(0, 7)}-${shaB.slice(0, 7)}-bun-v1.4.4`);
     const shaA2 = await a.push("two");
-    expect((await resolveAll(app, { releases })).id).toBe(
-      `${shaA2.slice(0, 7)}-${shaB.slice(0, 7)}-bun-v1.4.4`,
-    );
+    expect((await resolveAll(app, { releases })).id).toBe(`${shaA2.slice(0, 7)}-${shaB.slice(0, 7)}-bun-v1.4.4`);
   });
 
   test("decide skips the deployed id and known-bad ids", () => {
@@ -154,9 +152,9 @@ describe("release id and queue decisions", () => {
     return {
       resolve: async () => next(),
       deployedId: async () => deployed.id,
-      build: async (r) => (calls.push(`build ${r.id}`), "/dir"),
-      transfer: async (r) => void calls.push(`transfer ${r.id}`),
-      activate: async (r) => ((deployed.id = r.id), calls.push(`activate ${r.id}`), { ok: true }),
+      build: async r => (calls.push(`build ${r.id}`), "/dir"),
+      transfer: async r => void calls.push(`transfer ${r.id}`),
+      activate: async r => ((deployed.id = r.id), calls.push(`activate ${r.id}`), { ok: true }),
       log: () => {},
     };
   }
@@ -217,9 +215,9 @@ describe("release id and queue decisions", () => {
       "2222",
       "dbfr-wg",
     ]);
-    expect(
-      substitute("{src.shenron}/dist/{id}/{unknown}", { "src.shenron": "/w/s", id: "a-b" }),
-    ).toBe("/w/s/dist/a-b/{unknown}");
+    expect(substitute("{src.shenron}/dist/{id}/{unknown}", { "src.shenron": "/w/s", id: "a-b" })).toBe(
+      "/w/s/dist/a-b/{unknown}",
+    );
   });
 });
 
@@ -228,9 +226,7 @@ describe("artifacts", () => {
     using dir = tempDir("deploy-sums", { bin: "binary", "release.json": "{}" });
     const d = String(dir);
     expect(writeSums(d)).toEqual(["bin", "release.json"]);
-    expect(readFileSync(join(d, "SHA256SUMS"), "utf8")).toContain(
-      `${sha256File(join(d, "bin"))}  bin`,
-    );
+    expect(readFileSync(join(d, "SHA256SUMS"), "utf8")).toContain(`${sha256File(join(d, "bin"))}  bin`);
     expect(verifySums(d)).toEqual([]);
     writeFileSync(join(d, "bin"), "tampered");
     expect(verifySums(d)).toEqual(["bin"]);
@@ -293,7 +289,7 @@ describe.skipIf(isWindows)("activate with a fake systemctl", () => {
       coordLog: join(String(dir), "coord.log"),
       clean: async () => void cleaned++,
       pollMs: 5,
-      log: (e) => events.push(e),
+      log: e => events.push(e),
     });
     expect(r.ok).toBe(true);
     expect(readlinkSync(join(s.root, "current"))).toEndWith("new");
@@ -301,12 +297,10 @@ describe.skipIf(isWindows)("activate with a fake systemctl", () => {
     expect(
       readFileSync(s.log, "utf8")
         .split("\n")
-        .filter((l) => l.startsWith("restart")),
+        .filter(l => l.startsWith("restart")),
     ).toEqual(["restart shenron"]);
     expect(JSON.parse(readFileSync(join(s.root, "current/release.json"), "utf8")).id).toBe("new");
-    expect(readFileSync(join(String(dir), "coord.log"), "utf8")).toContain(
-      "activation shenron new",
-    );
+    expect(readFileSync(join(String(dir), "coord.log"), "utf8")).toContain("activation shenron new");
     expect(cleaned).toBe(1);
   });
 
@@ -326,7 +320,7 @@ describe.skipIf(isWindows)("activate with a fake systemctl", () => {
       free: () => 100 * 1024 ** 3,
       timeoutMs: 200,
       pollMs: 5,
-      log: (e) => events.push(e),
+      log: e => events.push(e),
     });
     expect(r).toMatchObject({ ok: false, rolledBack: true, code: EXIT.activate });
     expect(readlinkSync(join(s.root, "current"))).toEndWith("old");
@@ -334,7 +328,7 @@ describe.skipIf(isWindows)("activate with a fake systemctl", () => {
     expect(
       readFileSync(s.log, "utf8")
         .split("\n")
-        .filter((l) => l.startsWith("restart")),
+        .filter(l => l.startsWith("restart")),
     ).toHaveLength(2);
     expect(events).toContain("rolled-back");
   });
@@ -380,9 +374,7 @@ describe.skipIf(isWindows)("activate with a fake systemctl", () => {
       free: () => 100 * 1024 ** 3,
     };
     writeFileSync(join(s.root, "releases/new/server"), "corrupt");
-    expect((await activateRelease({ ...base, releaseDir: join(s.root, "releases/new") })).ok).toBe(
-      false,
-    );
+    expect((await activateRelease({ ...base, releaseDir: join(s.root, "releases/new") })).ok).toBe(false);
     writeSums(join(s.root, "releases/new"));
     const full = await activateRelease({
       ...base,
@@ -408,7 +400,7 @@ describe("clean", () => {
       tmpDir: root,
       dryRun: false,
       free: () => 50 * 1024 ** 3,
-      exec: async (cmd) => {
+      exec: async cmd => {
         calls.push(cmd);
         const stdout =
           cmd[1] === "images"
@@ -419,19 +411,14 @@ describe("clean", () => {
         return { code: 0, stdout, stderr: "" };
       },
     });
-    expect(calls.filter((cmd) => cmd[1] === "image" && cmd[2] === "rm")).toEqual([
+    expect(calls.filter(cmd => cmd[1] === "image" && cmd[2] === "rm")).toEqual([
       ["docker", "image", "rm", "aaaaaaaaaaaa"],
     ]);
   });
 
   test("clean CLI rejects missing values before cleanup or locking", async () => {
     await using proc = Bun.spawn({
-      cmd: [
-        bunExe(),
-        join(import.meta.dir, "../../scripts/aphrody/deploy/clean.ts"),
-        "--dry-run",
-        "--root",
-      ],
+      cmd: [bunExe(), join(import.meta.dir, "../../scripts/aphrody/deploy/clean.ts"), "--dry-run", "--root"],
       env: bunEnv,
       stdout: "pipe",
       stderr: "pipe",
@@ -496,10 +483,7 @@ describe("clean", () => {
     utimesSync(join(tmp, "tmux-1000"), old, old);
     return { root, home, tmp };
   }
-  const exec = (calls: string[][]) => async (cmd: string[]) => (
-    calls.push(cmd),
-    { code: 0, stdout: "", stderr: "" }
-  );
+  const exec = (calls: string[][]) => async (cmd: string[]) => (calls.push(cmd), { code: 0, stdout: "", stderr: "" });
 
   test.skipIf(isWindows)(
     "prod keeps only current, drops previous, prunes caches, never touches protected paths",
@@ -527,14 +511,12 @@ describe("clean", () => {
       expect(existsSync(join(tmp, "tmux-1000"))).toBe(true);
       expect(existsSync(join(tmp, "old-build"))).toBe(false);
       expect(existsSync(join(tmp, "fresh"))).toBe(true);
-      const cmds = calls.map((c) => c.join(" "));
+      const cmds = calls.map(c => c.join(" "));
       expect(cmds).toContain("docker image prune -f");
       expect(cmds).toContain("docker builder prune -f");
       expect(cmds).toContain("journalctl --vacuum-size=200M");
-      expect(cmds.some((c) => c.includes("volume"))).toBe(false);
-      expect(
-        report.removed.map((r) => r.path.replaceAll("\\", "/")).some((p) => p.includes("/src/")),
-      ).toBe(false);
+      expect(cmds.some(c => c.includes("volume"))).toBe(false);
+      expect(report.removed.map(r => r.path.replaceAll("\\", "/")).some(p => p.includes("/src/"))).toBe(false);
     },
   );
 
@@ -552,7 +534,7 @@ describe("clean", () => {
         exec: exec([]),
         free: () => 50 * 1024 ** 3,
       });
-      expect(dry.removed.map((r) => r.path)).toContain(join(root, "releases/a"));
+      expect(dry.removed.map(r => r.path)).toContain(join(root, "releases/a"));
       expect(existsSync(join(root, "releases/a"))).toBe(true);
       expect(dry.freedBytes).toBeGreaterThan(0);
       const calls: string[][] = [];
@@ -567,7 +549,7 @@ describe("clean", () => {
       });
       expect(low.aggressive).toBe(true);
       expect(low.ok).toBe(false);
-      expect(calls.map((c) => c.join(" "))).toContain("docker builder prune -af");
+      expect(calls.map(c => c.join(" "))).toContain("docker builder prune -af");
     },
   );
 
@@ -582,31 +564,23 @@ describe("clean", () => {
     });
     expect(applyPlan(plan)).toHaveLength(plan.length);
     expect(applyPlan(plan)).toEqual([]);
-    const unit = readFileSync(
-      join(prefix, "/etc/systemd/system/aphrody-deploy-clean.service"),
-      "utf8",
-    );
+    const unit = readFileSync(join(prefix, "/etc/systemd/system/aphrody-deploy-clean.service"), "utf8");
     expect(unit).toContain(
       "ExecStart=/home/ubuntu/.local/bin/bun /usr/local/lib/aphrody-deploy/clean.ts --host-role prod --root /home/ubuntu/apps/shenron-app",
     );
     expect(() => planInstall({ role: "prod", home: "/h" })).toThrow("--root");
     const build = planInstall({ role: "build", home: "/home/ubuntu", prefix });
-    expect(
-      build.map((i) => i.dest.replaceAll("\\", "/").replace(prefix.replaceAll("\\", "/"), "")),
-    ).toContain("/home/ubuntu/.local/bin/aphrody-deploy");
-    expect(build.find((i) => i.dest.endsWith("aphrody-deploy"))!.content).not.toMatch(
-      /ghp_|token=/,
+    expect(build.map(i => i.dest.replaceAll("\\", "/").replace(prefix.replaceAll("\\", "/"), ""))).toContain(
+      "/home/ubuntu/.local/bin/aphrody-deploy",
     );
+    expect(build.find(i => i.dest.endsWith("aphrody-deploy"))!.content).not.toMatch(/ghp_|token=/);
   });
 });
 
 describe("upstream interface mirror", () => {
   test("adapts only the proven root-relative Pagefind dynamic loader", () => {
-    const loader =
-      'let c=["","_pagefind","pagefind.js"].join("/");Z=Function("u","return import(u)")(c)';
-    expect(rewritePagefindLoader(loader)).toBe(
-      'let c=["","_pagefind","pagefind.js"].join("/");Z=import(c)',
-    );
+    const loader = 'let c=["","_pagefind","pagefind.js"].join("/");Z=Function("u","return import(u)")(c)';
+    expect(rewritePagefindLoader(loader)).toBe('let c=["","_pagefind","pagefind.js"].join("/");Z=import(c)');
     expect(rewritePagefindLoader('import("./ordinary.js")')).toBe('import("./ordinary.js")');
     const backend = 'function init_pagefind(){};const file="pagefind.js";';
     expect(rewritePagefindLoader(backend)).toBe(backend);
@@ -631,28 +605,19 @@ describe("upstream interface mirror", () => {
     expect(adapted).toContain("upstream benchmark results are not fork measurements");
     expect(() => adaptHtml(html, "HEAD")).toThrow("source SHA");
     expect(
-      localReferences(
-        '<a href="#x">x</a><script src="page.js"></script><img src="https://bun.com/a.png">',
-      ),
+      localReferences('<a href="#x">x</a><script src="page.js"></script><img src="https://bun.com/a.png">'),
     ).toEqual(["page.js"]);
     expect(mirrorCommand("capture")).toContain("--resolve-cdns");
   });
   test("keeps capture bytes intact and uses public fallback for missing linked assets", () => {
     using capture = tempDir("site-mirror-capture", {
       "report.json": JSON.stringify({ pages: 1 }),
-      "upstream/bun.com/index.html":
-        '<html><head></head><body><img src="missing.png"></body></html>',
+      "upstream/bun.com/index.html": '<html><head></head><body><img src="missing.png"></body></html>',
     });
     using destination = tempDir("site-mirror-output", {});
     const original = readFileSync(join(String(capture), "upstream/bun.com/index.html"), "utf8");
-    const coverage = buildMirror(
-      String(capture),
-      join(String(destination), "preview"),
-      "b".repeat(40),
-    );
-    expect(readFileSync(join(String(capture), "upstream/bun.com/index.html"), "utf8")).toBe(
-      original,
-    );
+    const coverage = buildMirror(String(capture), join(String(destination), "preview"), "b".repeat(40));
+    expect(readFileSync(join(String(capture), "upstream/bun.com/index.html"), "utf8")).toBe(original);
     expect(readFileSync(join(String(destination), "preview/index.html"), "utf8")).toContain(
       'src="https://bun.com/missing.png"',
     );
@@ -683,7 +648,7 @@ test("mirror externalizes only executable inline scripts in source order", () =>
   const original =
     '<script data-example="a>b">first()</script><script type="module">second()</script><script type="application/ld+json">{"name":"Bun"}</script><script src="page.js"></script>';
   const adapted = externalizeInlineScripts(original);
-  expect(adapted.assets.map((asset) => asset.content)).toEqual(["first()", "second()"]);
+  expect(adapted.assets.map(asset => asset.content)).toEqual(["first()", "second()"]);
   expect(adapted.html).toContain('data-example="a>b" src="aphrody-inline-');
   expect(adapted.html).toContain('<script type="module" src="aphrody-inline-');
   expect(adapted.html).toContain('<script type="application/ld+json">{"name":"Bun"}</script>');
@@ -700,9 +665,7 @@ test("redirect repair plans only captured in-scope HTML aliases", () => {
     { page: "index.html", href: "../outside/index.html" },
     { page: "index.html", href: "https://other.example/index.html" },
   ]);
-  expect(requests).toEqual([
-    { path: "docs/cli/test/index.html", url: "https://bun.com/docs/cli/test/" },
-  ]);
+  expect(requests).toEqual([{ path: "docs/cli/test/index.html", url: "https://bun.com/docs/cli/test/" }]);
 });
 
 test("captured relative asset hosts stay inside the preview web root", () => {
@@ -769,15 +732,9 @@ test("reference supplementation rejects authenticated and noncanonical inputs", 
   expect(capturePath(String(root), "https://bun.com/reference/Bun/serve")).toBe(
     join(String(root), "bun.com/reference/Bun/serve/index.html"),
   );
-  expect(() => capturePath(String(root), "https://user:password@bun.com/reference/Bun")).toThrow(
-    "canonical public",
-  );
-  expect(() => capturePath(String(root), "https://bun.com/reference/Bun?token=secret")).toThrow(
-    "canonical public",
-  );
-  expect(() => capturePath(String(root), "https://other.example/reference/Bun")).toThrow(
-    "canonical public",
-  );
+  expect(() => capturePath(String(root), "https://user:password@bun.com/reference/Bun")).toThrow("canonical public");
+  expect(() => capturePath(String(root), "https://bun.com/reference/Bun?token=secret")).toThrow("canonical public");
+  expect(() => capturePath(String(root), "https://other.example/reference/Bun")).toThrow("canonical public");
 });
 
 test("reference rate limits use observed Retry-After before exponential defaults", () => {

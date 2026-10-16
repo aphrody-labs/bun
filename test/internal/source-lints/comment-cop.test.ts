@@ -24,87 +24,73 @@ describe("source Markdown and Rust comment selection", () => {
   test("ignores comment markers in strings, raw strings, characters and lifetimes", () => {
     const source = `let url = "https://host/pour";\nlet raw = br###"// pour ceci /* les */"###;\nlet c = '/';\nfn borrowed<'a>(x: &'a str) {}\n// pour cette fonction\n/* outer /* nested */ dans ceci */\n`;
     const comments = selectRustComments("src/example.rs", source, "abc");
-    expect(comments.map((c) => c.text)).toEqual([
-      "// pour cette fonction",
-      "/* outer /* nested */ dans ceci */",
-    ]);
+    expect(comments.map(c => c.text)).toEqual(["// pour cette fonction", "/* outer /* nested */ dans ceci */"]);
     expect(comments[0]!.line).toBe(5);
     expect(reviewedReplacement(source, comments[0]!, "// Reviewed function contract")).toContain(
       "// Reviewed function contract",
     );
-    expect(() => reviewedReplacement(source + " ", comments[0]!, "// Changed")).toThrow(
-      "Source changed",
-    );
-    expect(() => reviewedReplacement(source, comments[0]!, "// Changed\nunsafe();")).toThrow(
-      "boundaries",
-    );
-    expect(() => reviewedReplacement(source, comments[1]!, "/* nested /* unclosed */")).toThrow(
-      "boundaries",
-    );
+    expect(() => reviewedReplacement(source + " ", comments[0]!, "// Changed")).toThrow("Source changed");
+    expect(() => reviewedReplacement(source, comments[0]!, "// Changed\nunsafe();")).toThrow("boundaries");
+    expect(() => reviewedReplacement(source, comments[1]!, "/* nested /* unclosed */")).toThrow("boundaries");
   });
 
   test("protects legal and safety notices", () => {
     const source = "// Copyright example\n// SAFETY: valid pointer\n";
     const comments = selectRustComments("src/example.rs", source, "abc");
     expect(comments).toHaveLength(2);
-    expect(comments.every((c) => c.protected)).toBe(true);
+    expect(comments.every(c => c.protected)).toBe(true);
     expect(() => reviewedReplacement(source, comments[0]!, "// Reworded")).toThrow("Protected");
   });
 
-  test.each(["vendor/example/crates/linter", "src/quality/linter"])("records invalid %s fixtures but rejects invalid product declarations", owner => {
-    const invalid = '{"name":';
-    const fixture = `${owner}/fixtures/import/broken/package.json`;
-    const texts = new Map([
-      ["package.json", '{"version":"1.4.4"}'],
-      [fixture, invalid],
-    ]);
-    const tree = {
-      sha: "immutable-source",
-      files: new Map([...texts.keys()].map((path) => [path, "blob"])),
-      read: (paths: string[]) => new Map(paths.map((path) => [path, texts.get(path)!])),
-    };
-    const inventory = markdownInventory(tree);
-    expect(inventory.packages).toEqual([]);
-    expect(inventory.unresolvedManifests).toHaveLength(1);
-    expect(inventory.unresolvedManifests[0]!.path).toBe(fixture);
-    expect(inventory.unresolvedManifests[0]!.sha256).toBe(
-      createHash("sha256").update(invalid).digest("hex"),
-    );
-    expect(inventory.unresolvedManifests[0]!.parseError).toContain("SyntaxError");
-    expect(renderRootMarkdown(inventory).get("SOURCE-INDEX.md")).toContain(fixture);
-    expect(texts.get(fixture)).toBe(invalid);
-    for (const path of ["packages/product/package.json", "vendor/product/package.json", "src/product/package.json"]) {
-      const bad = new Map([
+  test.each(["vendor/example/crates/linter", "src/quality/linter"])(
+    "records invalid %s fixtures but rejects invalid product declarations",
+    owner => {
+      const invalid = '{"name":';
+      const fixture = `${owner}/fixtures/import/broken/package.json`;
+      const texts = new Map([
         ["package.json", '{"version":"1.4.4"}'],
-        [path, invalid],
+        [fixture, invalid],
       ]);
-      expect(() =>
-        markdownInventory({
-          ...tree,
-          files: new Map([...bad.keys()].map((name) => [name, "blob"])),
-          read: (paths: string[]) => new Map(paths.map((name) => [name, bad.get(name)!])),
-        }),
-      ).toThrow("Invalid product manifest " + path);
-    }
-  });
+      const tree = {
+        sha: "immutable-source",
+        files: new Map([...texts.keys()].map(path => [path, "blob"])),
+        read: (paths: string[]) => new Map(paths.map(path => [path, texts.get(path)!])),
+      };
+      const inventory = markdownInventory(tree);
+      expect(inventory.packages).toEqual([]);
+      expect(inventory.unresolvedManifests).toHaveLength(1);
+      expect(inventory.unresolvedManifests[0]!.path).toBe(fixture);
+      expect(inventory.unresolvedManifests[0]!.sha256).toBe(createHash("sha256").update(invalid).digest("hex"));
+      expect(inventory.unresolvedManifests[0]!.parseError).toContain("SyntaxError");
+      expect(renderRootMarkdown(inventory).get("SOURCE-INDEX.md")).toContain(fixture);
+      expect(texts.get(fixture)).toBe(invalid);
+      for (const path of ["packages/product/package.json", "vendor/product/package.json", "src/product/package.json"]) {
+        const bad = new Map([
+          ["package.json", '{"version":"1.4.4"}'],
+          [path, invalid],
+        ]);
+        expect(() =>
+          markdownInventory({
+            ...tree,
+            files: new Map([...bad.keys()].map(name => [name, "blob"])),
+            read: (paths: string[]) => new Map(paths.map(name => [name, bad.get(name)!])),
+          }),
+        ).toThrow("Invalid product manifest " + path);
+      }
+    },
+  );
 
   test("renders only declared source facts and preserves source licenses", () => {
     const texts = new Map([
-      [
-        "package.json",
-        JSON.stringify({ version: "9.1.0", scripts: { bd: "bun scripts/build.ts" } }),
-      ],
-      [
-        "packages/a/package.json",
-        JSON.stringify({ name: "@example/a", version: "2", private: true }),
-      ],
+      ["package.json", JSON.stringify({ version: "9.1.0", scripts: { bd: "bun scripts/build.ts" } })],
+      ["packages/a/package.json", JSON.stringify({ name: "@example/a", version: "2", private: true })],
       ["src/resolve_builtins/HardcodedModule.rs", '#[strum(serialize = "bun:actual")]'],
       ["LICENSE", "Copyright example\nPermission is hereby granted"],
     ]);
     const tree = {
       sha: "immutable-sha",
-      files: new Map([...texts.keys()].map((p) => [p, "blob"])),
-      read: (paths: string[]) => new Map(paths.map((p) => [p, texts.get(p)!])),
+      files: new Map([...texts.keys()].map(p => [p, "blob"])),
+      read: (paths: string[]) => new Map(paths.map(p => [p, texts.get(p)!])),
     };
     const inventory = markdownInventory(tree);
     const output = renderRootMarkdown(inventory);
@@ -113,7 +99,7 @@ describe("source Markdown and Rust comment selection", () => {
     expect(output.get("SOURCE-INDEX.md")).toContain("immutable-sha");
     expect(output.get("BUILD-COMMANDS.md")).toContain("bun scripts/build.ts");
     expect(inventory.modules).toEqual(["bun:actual"]);
-    expect(inventory.inputs.find((p) => p.path === "LICENSE")!.sha256).toHaveLength(64);
+    expect(inventory.inputs.find(p => p.path === "LICENSE")!.sha256).toHaveLength(64);
     expect([...renderRootMarkdown(markdownInventory(tree))]).toEqual([...output]);
     expect(texts.get("LICENSE")).toBe("Copyright example\nPermission is hereby granted");
   });
@@ -121,13 +107,10 @@ describe("source Markdown and Rust comment selection", () => {
 
 const repoRoot = join(import.meta.dir, "..", "..", "..");
 
-const workflow = Bun.YAML.parse(
-  readFileSync(join(repoRoot, ".github", "workflows", "comment-cop.yml"), "utf8"),
-) as {
+const workflow = Bun.YAML.parse(readFileSync(join(repoRoot, ".github", "workflows", "comment-cop.yml"), "utf8")) as {
   jobs: { "comment-cop": { steps: { with?: { script?: string } }[] } };
 };
-const scanScript = workflow.jobs["comment-cop"].steps.find((step) => step.with?.script)!.with!
-  .script!;
+const scanScript = workflow.jobs["comment-cop"].steps.find(step => step.with?.script)!.with!.script!;
 
 const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor as new (
   ...args: string[]
@@ -139,28 +122,19 @@ const HEAD_SHA = "0123456789abcdef0123456789abcdef01234567";
 const PATH = "src/runtime/example.rs";
 
 /** Same key the workflow derives for a comment group: path plus a hash of the comment text. */
-const keyFor = (text: string) =>
-  `${PATH}:${createHash("sha256").update(text).digest("hex").slice(0, 12)}`;
+const keyFor = (text: string) => `${PATH}:${createHash("sha256").update(text).digest("hex").slice(0, 12)}`;
 /** What one of the workflow's own comments looks like when read back from the PR. */
 const botComment = (key: string) => `<!-- comment-cop:${key} -->\nplease delete this comment\n`;
 
 // Two three-line comment groups, added at lines 2-4 and 6-8 of the new file.
-const firstGroup = [
-  "// first group, line one",
-  "// first group, line two",
-  "// first group, line three",
-];
-const secondGroup = [
-  "// second group, line one",
-  "// second group, line two",
-  "// second group, line three",
-];
+const firstGroup = ["// first group, line one", "// first group, line two", "// first group, line three"];
+const secondGroup = ["// second group, line one", "// second group, line two", "// second group, line three"];
 const patch = [
   "@@ -1,2 +1,9 @@",
   " use bun_core::Output;",
-  ...firstGroup.map((line) => `+${line}`),
+  ...firstGroup.map(line => `+${line}`),
   "+fn first() {}",
-  ...secondGroup.map((line) => `+${line}`),
+  ...secondGroup.map(line => `+${line}`),
   "+fn second() {}",
   " fn existing() {}",
 ].join("\n");
@@ -234,13 +208,7 @@ async function scan(reviewComments: string[]) {
 
 describe("comment-cop with the GraphQL quota exhausted", () => {
   test("posts the groups that are not flagged yet and skips the one that is", async () => {
-    expect(
-      await scan([
-        botComment(FIRST),
-        "nit: rename this (a human review comment)",
-        botComment(STALE),
-      ]),
-    ).toEqual({
+    expect(await scan([botComment(FIRST), "nit: rename this (a human review comment)", botComment(STALE)])).toEqual({
       posted: [expectedPost(SECOND, 6, 8)],
       graphqlRequests: [],
       warnings: [],
@@ -255,7 +223,7 @@ describe("comment-cop with the GraphQL quota exhausted", () => {
       warnings: [],
     });
 
-    expect(await scan(firstRun.posted.map((comment) => comment.body))).toEqual({
+    expect(await scan(firstRun.posted.map(comment => comment.body))).toEqual({
       posted: [],
       graphqlRequests: [],
       warnings: [],

@@ -3675,38 +3675,34 @@ describe("Bun.ModuleGraph — differential fuzz: random module graphs evaluate l
     return { files, n };
   }
   for (const seed of [1, 2, 3, 5, 8, 13, 21, 34, 55, 89, 144, 233, 377, 610, 987, 1597, 2584, 4181]) {
-    test.concurrent(
-      `seed ${seed}: every entry point settles the same way (resolve/reject + message) and logs the same start/end sequence set as the host`,
-      async () => {
-        const { files, n } = gen(seed);
-        const dir = fixture(files);
-        const entries: number[] = [];
-        for (let entry = 0; entry < n; entry += Math.max(1, Math.floor(n / 3))) entries.push(entry);
-        // host: a fresh process per entry so its registry is clean (all started up front); graph: a fresh graph
-        const hostRuns = entries.map(entry => {
-          const hostScript = `globalThis.__log = []; const r = await import(${JSON.stringify(join(dir, `m${entry}.mjs`))}).then(m => "ok:" + m.id, e => "err:" + e.message); console.log(JSON.stringify({ r, log: globalThis.__log }))`;
-          return runBun(["-e", hostScript]);
-        });
-        for (const [index, entry] of entries.entries()) {
-          const p = join(dir, `m${entry}.mjs`);
-          const h = JSON.parse((await hostRuns[index]).stdout || "null");
-          const log: string[] = [];
-          const g = await ModuleGraph({ globals: { __log: log } })
-            .import(p)
-            .then(
-              (m: any) => "ok:" + m.id,
-              (e: any) => "err:" + e.message,
-            );
-          expect({ entry, r: g }).toEqual({ entry, r: h.r });
-          // async siblings may interleave differently run-to-run; compare as multisets and check per-module start-before-end
-          expect({ entry, log: [...log].sort() }).toEqual({ entry, log: [...h.log].sort() });
-          for (const e of log.filter(x => x.startsWith("end:")))
-            expect(log.indexOf("start:" + e.slice(4))).toBeLessThan(log.indexOf(e));
-        }
-        rmSync(dir, { recursive: true, force: true });
-      },
-      60_000,
-    );
+    test.concurrent(`seed ${seed}: every entry point settles the same way (resolve/reject + message) and logs the same start/end sequence set as the host`, async () => {
+      const { files, n } = gen(seed);
+      const dir = fixture(files);
+      const entries: number[] = [];
+      for (let entry = 0; entry < n; entry += Math.max(1, Math.floor(n / 3))) entries.push(entry);
+      // host: a fresh process per entry so its registry is clean (all started up front); graph: a fresh graph
+      const hostRuns = entries.map(entry => {
+        const hostScript = `globalThis.__log = []; const r = await import(${JSON.stringify(join(dir, `m${entry}.mjs`))}).then(m => "ok:" + m.id, e => "err:" + e.message); console.log(JSON.stringify({ r, log: globalThis.__log }))`;
+        return runBun(["-e", hostScript]);
+      });
+      for (const [index, entry] of entries.entries()) {
+        const p = join(dir, `m${entry}.mjs`);
+        const h = JSON.parse((await hostRuns[index]).stdout || "null");
+        const log: string[] = [];
+        const g = await ModuleGraph({ globals: { __log: log } })
+          .import(p)
+          .then(
+            (m: any) => "ok:" + m.id,
+            (e: any) => "err:" + e.message,
+          );
+        expect({ entry, r: g }).toEqual({ entry, r: h.r });
+        // async siblings may interleave differently run-to-run; compare as multisets and check per-module start-before-end
+        expect({ entry, log: [...log].sort() }).toEqual({ entry, log: [...h.log].sort() });
+        for (const e of log.filter(x => x.startsWith("end:")))
+          expect(log.indexOf("start:" + e.slice(4))).toBeLessThan(log.indexOf(e));
+      }
+      rmSync(dir, { recursive: true, force: true });
+    }, 60_000);
   }
 });
 

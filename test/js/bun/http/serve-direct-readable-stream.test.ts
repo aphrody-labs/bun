@@ -303,10 +303,8 @@ test.skipIf(!isASAN)(
 // the sink as aborted (not merely done) and drop the request silently. The
 // first request is the control: with the client still connected, the same
 // rejection is reported and the connection is force-closed.
-test.concurrent(
-  "pull() rejecting after the client aborted releases the request without reporting the error",
-  async () => {
-    const fixture = `
+test.concurrent("pull() rejecting after the client aborted releases the request without reporting the error", async () => {
+  const fixture = `
     const net = require("node:net");
 
     let gate, cancelled;
@@ -377,21 +375,19 @@ test.concurrent(
     console.log(JSON.stringify({ pendingAfterAbort, probe }));
   `;
 
-    await using proc = Bun.spawn({
-      cmd: [bunExe(), "-e", fixture],
-      env: bunEnv,
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  await using proc = Bun.spawn({
+    cmd: [bunExe(), "-e", fixture],
+    env: bunEnv,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
 
-    expect(stderr).toContain("PULL-REJECTED-connected");
-    expect(stderr).not.toContain("PULL-REJECTED-aborted");
-    expect(JSON.parse(stdout)).toEqual({ pendingAfterAbort: 1, probe: "probe" });
-    expect(exitCode).toBe(0);
-  },
-  60_000,
-);
+  expect(stderr).toContain("PULL-REJECTED-connected");
+  expect(stderr).not.toContain("PULL-REJECTED-aborted");
+  expect(JSON.parse(stdout)).toEqual({ pendingAfterAbort: 1, probe: "probe" });
+  expect(exitCode).toBe(0);
+}, 60_000);
 
 // The request context used to arm its uWS onAborted callback only once the
 // fetch handler had returned (toAsync). A direct stream runs pull() before
@@ -794,38 +790,35 @@ describe("a pull() that outlives its own end() does not hold the request", () =>
 
   // close(error) fails the body: the request closes the connection as
   // incomplete when it hears of it, which also used to wait for pull().
-  test.concurrent(
-    "close(error), then pull() never returns: the response fails and the request is released",
-    async () => {
-      await using server = Bun.serve({
-        port: 0,
-        development: false,
-        error: () => new Response("error()", { status: 500 }),
-        fetch: () =>
-          new Response(
-            new ReadableStream({
-              type: "direct",
-              async pull(c: any) {
-                c.write("partial");
-                await c.flush();
-                await later();
-                c.close(new Error("source failed"));
-                await never();
-              },
-            } as any),
-          ),
-      });
+  test.concurrent("close(error), then pull() never returns: the response fails and the request is released", async () => {
+    await using server = Bun.serve({
+      port: 0,
+      development: false,
+      error: () => new Response("error()", { status: 500 }),
+      fetch: () =>
+        new Response(
+          new ReadableStream({
+            type: "direct",
+            async pull(c: any) {
+              c.write("partial");
+              await c.flush();
+              await later();
+              c.close(new Error("source failed"));
+              await never();
+            },
+          } as any),
+        ),
+    });
 
-      const failed = await fetch(server.url)
-        .then(res => res.text())
-        .then(
-          () => false,
-          () => true,
-        );
-      expect({ failed, pendingRequests: server.pendingRequests }).toEqual({ failed: true, pendingRequests: 0 });
-      await server.stop();
-    },
-  );
+    const failed = await fetch(server.url)
+      .then(res => res.text())
+      .then(
+        () => false,
+        () => true,
+      );
+    expect({ failed, pendingRequests: server.pendingRequests }).toEqual({ failed: true, pendingRequests: 0 });
+    await server.stop();
+  });
 
   // One buffered write below the high water mark and an end() in the same
   // tick make a single tryEnd() of the whole body. The client is not reading,

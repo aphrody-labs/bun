@@ -542,12 +542,9 @@ describe("sliceAnsi ambiguousIsNarrow fuzz", () => {
       const n = 5 + Math.floor(rng() * 30);
       for (let j = 0; j < n; j++) {
         const r = rng();
-        if (r < 0.3)
-          pieces.push(String.fromCodePoint(0x03b1 + Math.floor(rng() * 24))); // Greek
-        else if (r < 0.5)
-          pieces.push(String.fromCharCode(0x21 + Math.floor(rng() * 94))); // ASCII
-        else if (r < 0.6)
-          pieces.push(`\x1b[${30 + Math.floor(rng() * 8)}m`); // SGR
+        if (r < 0.3) pieces.push(String.fromCodePoint(0x03b1 + Math.floor(rng() * 24))); // Greek
+        else if (r < 0.5) pieces.push(String.fromCharCode(0x21 + Math.floor(rng() * 94))); // ASCII
+        else if (r < 0.6) pieces.push(`\x1b[${30 + Math.floor(rng() * 8)}m`); // SGR
         else pieces.push(String.fromCodePoint(0x0410 + Math.floor(rng() * 32))); // Cyrillic (ambiguous)
       }
       const s = pieces.join("") + "\x1b[0m";

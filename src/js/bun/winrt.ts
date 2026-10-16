@@ -50,10 +50,7 @@ function check(hr, what) {
 }
 
 function guid(text) {
-  if (
-    typeof text !== "string" ||
-    !/^\{?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\}?$/i.test(text)
-  ) {
+  if (typeof text !== "string" || !/^\{?[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\}?$/i.test(text)) {
     throw new TypeError(`invalid WinRT GUID: ${text}`);
   }
   if ((text.startsWith("{") && !text.endsWith("}")) || (!text.startsWith("{") && text.endsWith("}"))) {

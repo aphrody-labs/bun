@@ -66,11 +66,9 @@ process.on('message', (m, server) => {
   // the 'message' listener has to hold the server before that poll. The server is emitted from its
   // 'listening' event; while that was a 1ms timer, the poll ran first and the connections landed on a
   // server nobody was listening on.
-  test.concurrent(
-    "connections queued before a net.Server handoff reach the receiver's 'connection' listener",
-    async () => {
-      using dir = tempDir("ipc-handle-server-backlog", {
-        "parent.js": `
+  test.concurrent("connections queued before a net.Server handoff reach the receiver's 'connection' listener", async () => {
+    using dir = tempDir("ipc-handle-server-backlog", {
+      "parent.js": `
 const { fork } = require('node:child_process');
 const net = require('node:net');
 const N = 20;
@@ -111,28 +109,27 @@ server.listen(0, '127.0.0.1', () => {
   }
 });
 `,
-        "child.js": `
+      "child.js": `
 process.on('message', (m, server) => {
   server.on('connection', s => s.end('C'));
   process.send({ acceptedBeforeDelivery: server._connections });
 });
 `,
-      });
-      await using proc = Bun.spawn({
-        cmd: [bunExe(), "parent.js"],
-        env: bunEnv,
-        cwd: String(dir),
-        stdout: "pipe",
-        stderr: "pipe",
-      });
-      const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
-      expect({ out: JSON.parse(stdout.trim()), stderr }).toEqual({
-        out: { served: 20, acceptedBeforeDelivery: 0 },
-        stderr: "",
-      });
-      expect(exitCode).toBe(0);
-    },
-  );
+    });
+    await using proc = Bun.spawn({
+      cmd: [bunExe(), "parent.js"],
+      env: bunEnv,
+      cwd: String(dir),
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    expect({ out: JSON.parse(stdout.trim()), stderr }).toEqual({
+      out: { served: 20, acceptedBeforeDelivery: 0 },
+      stderr: "",
+    });
+    expect(exitCode).toBe(0);
+  });
 
   // A plain message sent after a handle is only written once the handle is acked, so the receiver
   // has to emit the handle before it reads that message. A received net.Server is emitted from its
@@ -542,11 +539,9 @@ process.on('message', (m, sock) => {
     expect(exitCode).toBe(0);
   });
 
-  test.concurrent(
-    "channel close: written handle callback fires null; unsent queued handle callback never fires",
-    async () => {
-      using dir = tempDir("ipc-handle-abort-unsent", {
-        "parent.js": `
+  test.concurrent("channel close: written handle callback fires null; unsent queued handle callback never fires", async () => {
+    using dir = tempDir("ipc-handle-abort-unsent", {
+      "parent.js": `
 const { fork } = require('node:child_process');
 const net = require('node:net');
 const child = fork('child.js');
@@ -569,31 +564,28 @@ server.listen(0, '127.0.0.1', () => {
   }).on('error', () => {});
 });
 `,
-        "child.js": `const end = Date.now() + 30_000; while (Date.now() < end) {}`,
-      });
-      await using proc = Bun.spawn({
-        cmd: [bunExe(), "parent.js"],
-        env: bunEnv,
-        cwd: String(dir),
-        stdout: "pipe",
-        stderr: "pipe",
-      });
-      const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
-      expect({ out: JSON.parse(stdout.trim()), stderr }).toEqual({
-        out: { aWasNull: true, bCalled: false },
-        stderr: expect.any(String),
-      });
-      expect(exitCode).toBe(0);
-    },
-  );
+      "child.js": `const end = Date.now() + 30_000; while (Date.now() < end) {}`,
+    });
+    await using proc = Bun.spawn({
+      cmd: [bunExe(), "parent.js"],
+      env: bunEnv,
+      cwd: String(dir),
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    expect({ out: JSON.parse(stdout.trim()), stderr }).toEqual({
+      out: { aWasNull: true, bCalled: false },
+      stderr: expect.any(String),
+    });
+    expect(exitCode).toBe(0);
+  });
 
-  test.concurrent(
-    "sending a tls.TLSSocket throws ERR_INVALID_HANDLE_TYPE instead of silently dropping the handle",
-    async () => {
-      using dir = tempDir("ipc-handle-tls-socket", {
-        "cert.pem": tls.cert,
-        "key.pem": tls.key,
-        "parent.js": `
+  test.concurrent("sending a tls.TLSSocket throws ERR_INVALID_HANDLE_TYPE instead of silently dropping the handle", async () => {
+    using dir = tempDir("ipc-handle-tls-socket", {
+      "cert.pem": tls.cert,
+      "key.pem": tls.key,
+      "parent.js": `
 const { fork } = require('node:child_process');
 const tlsMod = require('node:tls');
 const fs = require('node:fs');
@@ -614,30 +606,27 @@ server.listen(0, '127.0.0.1', () => {
   });
 });
 `,
-        "child.js": `process.on('message', m => process.send('unexpected:' + m));`,
-      });
-      await using proc = Bun.spawn({
-        cmd: [bunExe(), "parent.js"],
-        env: bunEnv,
-        cwd: String(dir),
-        stdout: "pipe",
-        stderr: "pipe",
-      });
-      const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
-      expect({ out: JSON.parse(stdout.trim()), stderr }).toEqual({
-        out: { serverCode: "ERR_INVALID_HANDLE_TYPE", clientCode: "ERR_INVALID_HANDLE_TYPE", childReceived: null },
-        stderr: expect.any(String),
-      });
-      expect(exitCode).toBe(0);
-    },
-  );
+      "child.js": `process.on('message', m => process.send('unexpected:' + m));`,
+    });
+    await using proc = Bun.spawn({
+      cmd: [bunExe(), "parent.js"],
+      env: bunEnv,
+      cwd: String(dir),
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    expect({ out: JSON.parse(stdout.trim()), stderr }).toEqual({
+      out: { serverCode: "ERR_INVALID_HANDLE_TYPE", clientCode: "ERR_INVALID_HANDLE_TYPE", childReceived: null },
+      stderr: expect.any(String),
+    });
+    expect(exitCode).toBe(0);
+  });
 
-  test.concurrent(
-    "sending an http.Server throws ERR_INVALID_HANDLE_TYPE instead of silently dropping the handle",
-    async () => {
-      // An http.Server listens through Bun.serve and has no handle to pass.
-      using dir = tempDir("ipc-handle-http-server", {
-        "parent.js": `
+  test.concurrent("sending an http.Server throws ERR_INVALID_HANDLE_TYPE instead of silently dropping the handle", async () => {
+    // An http.Server listens through Bun.serve and has no handle to pass.
+    using dir = tempDir("ipc-handle-http-server", {
+      "parent.js": `
 const { fork } = require('node:child_process');
 const http = require('node:http');
 const child = fork('child.js');
@@ -648,23 +637,22 @@ server.listen(0, '127.0.0.1', () => {
   try { child.send('server', server); } catch (err) { finish({ code: err.code, childReceived: null }); }
 });
 `,
-        "child.js": `process.on('message', (m, handle) => process.send('unexpected:' + m + ':' + typeof handle));`,
-      });
-      await using proc = Bun.spawn({
-        cmd: [bunExe(), "parent.js"],
-        env: bunEnv,
-        cwd: String(dir),
-        stdout: "pipe",
-        stderr: "pipe",
-      });
-      const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
-      expect({ out: JSON.parse(stdout.trim()), stderr }).toEqual({
-        out: { code: "ERR_INVALID_HANDLE_TYPE", childReceived: null },
-        stderr: expect.any(String),
-      });
-      expect(exitCode).toBe(0);
-    },
-  );
+      "child.js": `process.on('message', (m, handle) => process.send('unexpected:' + m + ':' + typeof handle));`,
+    });
+    await using proc = Bun.spawn({
+      cmd: [bunExe(), "parent.js"],
+      env: bunEnv,
+      cwd: String(dir),
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    expect({ out: JSON.parse(stdout.trim()), stderr }).toEqual({
+      out: { code: "ERR_INVALID_HANDLE_TYPE", childReceived: null },
+      stderr: expect.any(String),
+    });
+    expect(exitCode).toBe(0);
+  });
 
   test.concurrent("a received handle that lands on fd 0 is adopted", async () => {
     using dir = tempDir("ipc-handle-fd0", {
@@ -708,11 +696,9 @@ process.on('message', (m, sock) => {
   // node: a sent socket is detached from the sender's net.Socket (no 'end'/'close' there when the
   // receiver finishes with it), and disconnect() waits for the messages queued behind an un-acked
   // handle to be delivered. https://github.com/nodejs/node/blob/v26.3.0/lib/internal/child_process.js
-  test.concurrent(
-    "handoff detaches the sender's socket; disconnect() reports disconnected at once but flushes messages queued behind the handle",
-    async () => {
-      using dir = tempDir("ipc-handle-detach-flush", {
-        "parent.js": `
+  test.concurrent("handoff detaches the sender's socket; disconnect() reports disconnected at once but flushes messages queued behind the handle", async () => {
+    using dir = tempDir("ipc-handle-detach-flush", {
+      "parent.js": `
 const { fork } = require('node:child_process');
 const net = require('node:net');
 const child = fork('child.js');
@@ -738,32 +724,31 @@ server.listen(0, '127.0.0.1', () => {
   client.on('error', () => {});
 });
 `,
-        "child.js": `
+      "child.js": `
 let sawQueued = false;
 process.on('message', (m, sock) => { if (sock) sock.destroy(); else sawQueued = m.type === 'after-handle'; });
 process.on('disconnect', () => process.exit(sawQueued ? 0 : 3));
 `,
-      });
-      await using proc = Bun.spawn({
-        cmd: [bunExe(), "parent.js"],
-        env: bunEnv,
-        cwd: String(dir),
-        stdout: "pipe",
-        stderr: "pipe",
-      });
-      const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
-      expect({ out: JSON.parse(stdout.trim()), stderr }).toEqual({
-        out: {
-          childSawQueuedMessage: true,
-          senderEvents: [],
-          connectedAfterDisconnect: false,
-          secondDisconnect: "ERR_IPC_DISCONNECTED",
-        },
-        stderr: "",
-      });
-      expect(exitCode).toBe(0);
-    },
-  );
+    });
+    await using proc = Bun.spawn({
+      cmd: [bunExe(), "parent.js"],
+      env: bunEnv,
+      cwd: String(dir),
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    expect({ out: JSON.parse(stdout.trim()), stderr }).toEqual({
+      out: {
+        childSawQueuedMessage: true,
+        senderEvents: [],
+        connectedAfterDisconnect: false,
+        secondDisconnect: "ERR_IPC_DISCONNECTED",
+      },
+      stderr: "",
+    });
+    expect(exitCode).toBe(0);
+  });
 
   // The child sends a server and disconnects at once. node: process.connected drops immediately, a
   // second disconnect() errors, and the parent receives the server, then the message queued behind

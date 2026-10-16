@@ -34,35 +34,30 @@ let installed = false;
 function installResolver(): void {
   if (installed) return;
   installed = true;
-  const react = (spec: string, from: string) =>
-    JSON.stringify(Bun.resolveSync(spec, resolve(UI, from)));
+  const react = (spec: string, from: string) => JSON.stringify(Bun.resolveSync(spec, resolve(UI, from)));
   plugin({
     name: "web-crawlability-react",
     setup(build) {
-      build.onLoad({ filter: /web-crawlability-pages\.tsx$/ }, async (args) => {
+      build.onLoad({ filter: /web-crawlability-pages\.tsx$/ }, async args => {
         // Classic JSX (`React.createElement`) because Transpiler output carries no runtime import.
         const transpiled = new Bun.Transpiler({
           loader: "tsx",
           tsconfig: { compilerOptions: { jsx: "react" } },
         }).transformSync(await Bun.file(args.path).text());
-        const contents =
-          `import React from ${react("react", "m3-primitives")};\n${transpiled}`.replace(
-            /from\s*(["'])(react(?:-dom)?(?:\/[\w.-]+)*|react-hook-form)\1/g,
-            (_whole, _quote, spec: string) =>
-              `from ${react(spec, spec === "react-hook-form" ? "m3-forms" : "m3-primitives")}`,
-          );
+        const contents = `import React from ${react("react", "m3-primitives")};\n${transpiled}`.replace(
+          /from\s*(["'])(react(?:-dom)?(?:\/[\w.-]+)*|react-hook-form)\1/g,
+          (_whole, _quote, spec: string) =>
+            `from ${react(spec, spec === "react-hook-form" ? "m3-forms" : "m3-primitives")}`,
+        );
         return { contents, loader: "js" };
       });
-      build.onLoad(
-        { filter: /\/swiper@[^/]+\/node_modules\/swiper\/swiper-react\.mjs$/ },
-        async (args) => ({
-          contents: (await Bun.file(args.path).text()).replace(
-            /from\s+(["'])react\1/g,
-            `from ${react("react", "m3-reader")}`,
-          ),
-          loader: "js",
-        }),
-      );
+      build.onLoad({ filter: /\/swiper@[^/]+\/node_modules\/swiper\/swiper-react\.mjs$/ }, async args => ({
+        contents: (await Bun.file(args.path).text()).replace(
+          /from\s+(["'])react\1/g,
+          `from ${react("react", "m3-reader")}`,
+        ),
+        loader: "js",
+      }));
     },
   });
 }
@@ -88,12 +83,11 @@ export async function renderFixtureSite(): Promise<SitePage[]> {
 
 /** Replaces the placeholder origin so canonical URLs, JSON-LD and the sitemap match the served origin. */
 export function withOrigin(site: readonly SitePage[], origin: string): SitePage[] {
-  return site.map((page) => ({ ...page, html: page.html.replaceAll(FIXTURE_ORIGIN, origin) }));
+  return site.map(page => ({ ...page, html: page.html.replaceAll(FIXTURE_ORIGIN, origin) }));
 }
 
 const titleOf = (html: string) => /<title>([^<]*)<\/title>/.exec(html)?.[1] ?? "";
-const descriptionOf = (html: string) =>
-  /<meta name="description" content="([^"]*)"/.exec(html)?.[1] ?? "";
+const descriptionOf = (html: string) => /<meta name="description" content="([^"]*)"/.exec(html)?.[1] ?? "";
 
 /** robots.txt, sitemap.xml and llms.txt for the site, built with the m3-next generators. */
 export function crawlSupportFiles(
@@ -111,7 +105,7 @@ export function crawlSupportFiles(
     "/sitemap.xml": {
       type: "application/xml; charset=utf-8",
       body: m3SitemapXml(
-        site.map((page) => ({ path: page.path, changefreq: "weekly" as const })),
+        site.map(page => ({ path: page.path, changefreq: "weekly" as const })),
         origin,
       ),
     },
@@ -127,7 +121,7 @@ export function crawlSupportFiles(
         sections: [
           {
             title: "Pages",
-            links: site.map((page) => ({
+            links: site.map(page => ({
               title: titleOf(page.html) || page.path,
               path: page.path,
               notes: descriptionOf(page.html) || undefined,

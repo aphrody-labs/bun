@@ -2,9 +2,7 @@ import { expect, test } from "bun:test";
 import { bunEnv, bunExe } from "harness";
 
 test("BrowserRealm evaluates page JavaScript against its shared native DOM", () => {
-  const document = Bun.HTML.parse(
-    `<main><p class="item">first</p><p class="item">second</p></main>`,
-  );
+  const document = Bun.HTML.parse(`<main><p class="item">first</p><p class="item">second</p></main>`);
   const page = Bun.BrowserRealm.create(document, "https://example.test", "main-frame");
 
   expect(page.evaluate(`__bunDOM.origin`)).toBe("https://example.test");
@@ -20,11 +18,7 @@ test("BrowserRealm evaluates page JavaScript against its shared native DOM", () 
 });
 
 test("BrowserRealm has only page intrinsics and recovers after timed interruption", () => {
-  const page = Bun.BrowserRealm.create(
-    Bun.HTML.parse("<p>safe</p>"),
-    "https://isolated.test",
-    "child-1",
-  );
+  const page = Bun.BrowserRealm.create(Bun.HTML.parse("<p>safe</p>"), "https://isolated.test", "child-1");
   expect(
     page.evaluate(`[
     typeof Bun, typeof process, typeof require, typeof fetch, typeof document,
@@ -33,11 +27,7 @@ test("BrowserRealm has only page intrinsics and recovers after timed interruptio
   ).toBe("undefined,undefined,undefined,undefined,undefined,object");
   expect(() => page.evaluate(`while (true) {}`, "https://isolated.test/slow.js", 10)).toThrow();
   expect(() =>
-    page.evaluate(
-      `({ toString() { while (true) {} } })`,
-      "https://isolated.test/hostile-result.js",
-      10,
-    ),
+    page.evaluate(`({ toString() { while (true) {} } })`, "https://isolated.test/hostile-result.js", 10),
   ).toThrow();
   expect(() =>
     page.evaluate(
@@ -74,16 +64,10 @@ test("BrowserRealm checkpoints page callbacks before destruction without running
 });
 
 test("BrowserRealm rejects invalid native DOM node IDs before integer conversion", () => {
-  const page = Bun.BrowserRealm.create(
-    Bun.HTML.parse("<p>safe</p>"),
-    "https://ids.test",
-    "main-frame",
-  );
+  const page = Bun.BrowserRealm.create(Bun.HTML.parse("<p>safe</p>"), "https://ids.test", "main-frame");
   try {
     for (const id of ["NaN", "Infinity", "-Infinity", "-1", "0.5", "4294967296", '"0"']) {
-      expect(() => page.evaluate(`__bunDOM.textContent(${id})`)).toThrow(
-        "node ID must be an unsigned integer",
-      );
+      expect(() => page.evaluate(`__bunDOM.textContent(${id})`)).toThrow("node ID must be an unsigned integer");
     }
     expect(page.evaluate("__bunDOM.textContent()")).toBe("safe");
   } finally {
@@ -92,18 +76,14 @@ test("BrowserRealm rejects invalid native DOM node IDs before integer conversion
 });
 
 test("BrowserRealm rejects callable objects as native DOM receivers", () => {
-  const page = Bun.BrowserRealm.create(
-    Bun.HTML.parse("<p>safe</p>"),
-    "https://receiver.test",
-    "main-frame",
-  );
+  const page = Bun.BrowserRealm.create(Bun.HTML.parse("<p>safe</p>"), "https://receiver.test", "main-frame");
   try {
-    expect(() =>
-      page.evaluate("Function.prototype.call.call(__bunDOM.textContent, __bunDOM.outerHTML)"),
-    ).toThrow("Illegal __bunDOM receiver");
-    expect(() =>
-      page.evaluate("Function.prototype.call.call(__bunDOM.querySelectorAll, {}, 'p')"),
-    ).toThrow("Illegal __bunDOM receiver");
+    expect(() => page.evaluate("Function.prototype.call.call(__bunDOM.textContent, __bunDOM.outerHTML)")).toThrow(
+      "Illegal __bunDOM receiver",
+    );
+    expect(() => page.evaluate("Function.prototype.call.call(__bunDOM.querySelectorAll, {}, 'p')")).toThrow(
+      "Illegal __bunDOM receiver",
+    );
     expect(page.evaluate("__bunDOM.textContent()")).toBe("safe");
   } finally {
     page.destroy();
@@ -127,11 +107,7 @@ test("BrowserRealm GC and process teardown release page contexts", async () => {
     stdout: "pipe",
     stderr: "pipe",
   });
-  const [stdout, stderr, exitCode] = await Promise.all([
-    child.stdout.text(),
-    child.stderr.text(),
-    child.exited,
-  ]);
+  const [stdout, stderr, exitCode] = await Promise.all([child.stdout.text(), child.stderr.text(), child.exited]);
   expect(stderr).toBe("");
   expect(stdout).toBe("PAGE_REALM_GC_OK\n");
   expect(exitCode).toBe(0);

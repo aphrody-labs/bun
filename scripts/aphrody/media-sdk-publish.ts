@@ -454,7 +454,8 @@ export async function publishMediaSDK(plan: Awaited<ReturnType<typeof mediaPubli
     (await hashSDKFile(plan.artifact)) !== plan.receipt.asset.sha256
   )
     throw new Error("SDK artifact changed before publication");
-  const { createClient, credentialsFromEnv, loadCloudflareEnvironment } = await import("../../packages/bun-cloudflare/src/api");
+  const { createClient, credentialsFromEnv, loadCloudflareEnvironment } =
+    await import("../../packages/bun-cloudflare/src/api");
   const env = await loadCloudflareEnvironment();
   const credentials = credentialsFromEnv(env);
   if (!credentials.accountId) throw new Error("Protected Cloudflare account configuration is missing");

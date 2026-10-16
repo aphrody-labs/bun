@@ -1348,10 +1348,8 @@ describe("ES Decorators", () => {
       expect(exitCode).toBe(0);
     });
 
-    test.concurrent(
-      "undecorated private members stay native, and every initializer reaches a lowered one",
-      async () => {
-        const { stdout, stderr, exitCode } = await runDecorator(`
+    test.concurrent("undecorated private members stay native, and every initializer reaches a lowered one", async () => {
+      const { stdout, stderr, exitCode } = await runDecorator(`
         function d(t, k) {}
         class D { static #p = 5; static a = D.#p; static b = this.#p; #q = 6; d = this.#q; e() { return D.#p + this.#q } @d m() {} }
         class E {
@@ -1367,11 +1365,10 @@ describe("ES Decorators", () => {
         const e = new E();
         console.log(D.a, D.b, new D().d, new D().e(), e.a, e.b(), E.c, E.d, e.f, E.read(e));
       `);
-        expect(stderr).toBe("");
-        expect(stdout).toBe("5 5 6 11 7 7 8 8 true [ 7, 7, 7 ]\n");
-        expect(exitCode).toBe(0);
-      },
-    );
+      expect(stderr).toBe("");
+      expect(stdout).toBe("5 5 6 11 7 7 8 8 true [ 7, 7, 7 ]\n");
+      expect(exitCode).toBe(0);
+    });
 
     test.concurrent("new.target stays undefined in field initializers and static blocks", async () => {
       const { stdout, stderr, exitCode } = await runDecorator(`
@@ -1498,10 +1495,8 @@ describe("ES Decorators", () => {
       expect(exitCode).toBe(0);
     });
 
-    test.concurrent(
-      "class decorators run before static fields, extra initializers right after their field",
-      async () => {
-        const { stdout, stderr, exitCode } = await runDecorator(`
+    test.concurrent("class decorators run before static fields, extra initializers right after their field", async () => {
+      const { stdout, stderr, exitCode } = await runDecorator(`
         const log = [];
         const cls = (C, ctx) => { log.push("class:" + Object.hasOwn(C, "s")); ctx.addInitializer(function () { log.push("class extra:" + this.s) }) };
         const field = (v, ctx) => { ctx.addInitializer(function () { log.push(ctx.name + " extra:" + Object.keys(this)) }) };
@@ -1517,11 +1512,10 @@ describe("ES Decorators", () => {
         new A();
         console.log(log.join(" | "));
       `);
-        expect(stderr).toBe("");
-        expect(stdout).toBe("class:false | s | class extra:1 | new | m extra: | a | a extra:a | b | c | c extra:a,c\n");
-        expect(exitCode).toBe(0);
-      },
-    );
+      expect(stderr).toBe("");
+      expect(stdout).toBe("class:false | s | class extra:1 | new | m extra: | a | a extra:a | b | c | c extra:a,c\n");
+      expect(exitCode).toBe(0);
+    });
 
     test.concurrent("an anonymous class expression keeps the name its context gives it", async () => {
       const { stdout, stderr, exitCode } = await runDecorator(`
@@ -1584,10 +1578,8 @@ describe("ES Decorators", () => {
       expect(exitCode).toBe(0);
     });
 
-    test.concurrent(
-      "a class with no key for its decorator lists: private names, extends and the inner name",
-      async () => {
-        const { stdout, stderr, exitCode } = await runDecorator(`
+    test.concurrent("a class with no key for its decorator lists: private names, extends and the inner name", async () => {
+      const { stdout, stderr, exitCode } = await runDecorator(`
         const dec = (v) => v, order = [];
         let inB, inA;
         class B { @(inB = (o) => #m in o, dec) #m() { return 1 } }
@@ -1606,13 +1598,12 @@ describe("ES Decorators", () => {
         class Shadow { @dec #s = 1 }
         console.log(later[1]() === Named, JSON.stringify([B, A, Shadow].map(C => Object.getOwnPropertyNames(C))));
       `);
-        expect(stderr).toBe("");
-        expect(stdout).toBe(
-          'true true false extends,dec m,dec x true\nx 5 ["h",null]\ntrue [["length","name","prototype"],["length","name","prototype"],["length","name","prototype"]]\n',
-        );
-        expect(exitCode).toBe(0);
-      },
-    );
+      expect(stderr).toBe("");
+      expect(stdout).toBe(
+        'true true false extends,dec m,dec x true\nx 5 ["h",null]\ntrue [["length","name","prototype"],["length","name","prototype"],["length","name","prototype"]]\n',
+      );
+      expect(exitCode).toBe(0);
+    });
 
     test.concurrent("a class decorator on a class whose context name is not an identifier", async () => {
       const { stdout, stderr, exitCode } = await runDecorator(`

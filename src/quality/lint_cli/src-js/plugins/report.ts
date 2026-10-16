@@ -22,10 +22,7 @@ import type { LineColumn, Ranged } from "./location.ts";
  */
 // This is the type of the value passed to `Context#report()` by user.
 // `DiagnosticReport` (see below) is the type of diagnostics used internally on JS side, and sent to Rust.
-export type Diagnostic = RequireAtLeastOne<
-  RequireAtLeastOne<DiagnosticBase, "node" | "loc">,
-  "message" | "messageId"
->;
+export type Diagnostic = RequireAtLeastOne<RequireAtLeastOne<DiagnosticBase, "node" | "loc">, "message" | "messageId">;
 
 interface DiagnosticBase {
   message?: string | null | undefined;
@@ -102,11 +99,7 @@ export const PLACEHOLDER_REGEX = /\{\{([^{}]+)\}\}/gu;
  * @param ruleDetails - `RuleDetails` object, containing rule-specific details e.g. `isFixable`
  * @throws {TypeError} If `diagnostic` is invalid
  */
-export function report(
-  diagnostic: Diagnostic,
-  extraArgs: unknown[],
-  ruleDetails: RuleDetails,
-): void {
+export function report(diagnostic: Diagnostic, extraArgs: unknown[], ruleDetails: RuleDetails): void {
   if (filePath === null) throw new Error("Cannot report errors in `createOnce`");
 
   // Handle legacy positional forms
@@ -178,12 +171,12 @@ export function report(
     // Do type validation checks here, to ensure no error in serialization / deserialization.
     // Range validation happens on Rust side.
     if (
-      typeof start !== "number"
-      || typeof end !== "number"
-      || start < 0
-      || end < 0
-      || (start | 0) !== start
-      || (end | 0) !== end
+      typeof start !== "number" ||
+      typeof end !== "number" ||
+      start < 0 ||
+      end < 0 ||
+      (start | 0) !== start ||
+      (end | 0) !== end
     ) {
       throw new TypeError("`node.range[0]` and `node.range[1]` must be non-negative integers");
     }
@@ -285,15 +278,13 @@ export function getMessage(
 function resolveMessageFromMessageId(messageId: string, ruleDetails: RuleDetails): string {
   const { messages } = ruleDetails;
   if (messages === null) {
-    throw new Error(
-      `Cannot use messageId '${messageId}' - rule does not define any messages in \`meta.messages\``,
-    );
+    throw new Error(`Cannot use messageId '${messageId}' - rule does not define any messages in \`meta.messages\``);
   }
 
   if (!Object.hasOwn(messages, messageId)) {
     throw new Error(
       `Unknown messageId '${messageId}'. Available \`messageIds\`: ${Object.keys(messages)
-        .map((msg) => `'${msg}'`)
+        .map(msg => `'${msg}'`)
         .join(", ")}`,
     );
   }
@@ -335,12 +326,7 @@ export function replacePlaceholders(message: string, data: DiagnosticData): stri
  */
 function getOffsetFromLineColumn(lineCol: LineColumn): number {
   const { line, column } = lineCol;
-  if (
-    typeof line !== "number"
-    || typeof column !== "number"
-    || (line | 0) !== line
-    || (column | 0) !== column
-  ) {
+  if (typeof line !== "number" || typeof column !== "number" || (line | 0) !== line || (column | 0) !== column) {
     throw new TypeError("Expected an object with integer `line` and `column` properties");
   }
 
@@ -360,8 +346,8 @@ function getOffsetFromLineColumn(lineCol: LineColumn): number {
     }
 
     throw new RangeError(
-      `Line number out of range (line ${line} requested). `
-        + `Line numbers should be 1-based, and less than or equal to number of lines in file (${lineStartIndices.length}).`,
+      `Line number out of range (line ${line} requested). ` +
+        `Line numbers should be 1-based, and less than or equal to number of lines in file (${lineStartIndices.length}).`,
     );
   }
 

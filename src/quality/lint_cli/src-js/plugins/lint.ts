@@ -72,17 +72,7 @@ export function lintFile(
   const timings: RuleTiming[] | null = collectTimings ? [] : null;
 
   try {
-    lintFileImpl(
-      filePath,
-      bufferId,
-      buffer,
-      ruleIds,
-      optionsIds,
-      settingsJSON,
-      globalsJSON,
-      workspaceUri,
-      timings,
-    );
+    lintFileImpl(filePath, bufferId, buffer, ruleIds, optionsIds, settingsJSON, globalsJSON, workspaceUri, timings);
 
     let ret: string | null = null;
 
@@ -104,8 +94,7 @@ export function lintFile(
   } catch (err) {
     runAfterHooks(false);
 
-    const timingOutput =
-      timings === null ? undefined : { rules: timings, runtimeMs: performance.now() - start };
+    const timingOutput = timings === null ? undefined : { rules: timings, runtimeMs: performance.now() - start };
     const message = getErrorMessage(err);
     const failure = { Failure: { message, timings: timingOutput } };
 
@@ -162,16 +151,10 @@ export function lintFileImpl(
   typeAssertIs<BufferWithArrays>(buffer);
 
   // Debug asserts that input is valid
-  debugAssert(
-    typeof filePath === "string" && filePath.length > 0,
-    "`filePath` should be a non-empty string",
-  );
+  debugAssert(typeof filePath === "string" && filePath.length > 0, "`filePath` should be a non-empty string");
   debugAssert(Array.isArray(ruleIds) && ruleIds.length > 0, "`ruleIds` should be non-empty array");
   debugAssert(Array.isArray(optionsIds), "`optionsIds` should be an array");
-  debugAssert(
-    ruleIds.length === optionsIds.length,
-    "`ruleIds` and `optionsIds` should be same length",
-  );
+  debugAssert(ruleIds.length === optionsIds.length, "`ruleIds` and `optionsIds` should be same length");
 
   // The order rules run in is indeterminate.
   // To make order predictable in tests, in debug builds, sort rules by ID in ascending order.
@@ -180,9 +163,9 @@ export function lintFileImpl(
   if (DEBUG) {
     const rules = ruleIds.map((ruleId, index) => ({ ruleId, optionsId: optionsIds[index], index }));
     rules.sort((rule1, rule2) => rule1.ruleId - rule2.ruleId);
-    ruleIds = rules.map((rule) => rule.ruleId);
-    optionsIds = rules.map((rule) => rule.optionsId);
-    ruleIndexes = rules.map((rule) => rule.index);
+    ruleIds = rules.map(rule => rule.ruleId);
+    optionsIds = rules.map(rule => rule.optionsId);
+    ruleIndexes = rules.map(rule => rule.index);
   }
 
   // Switch to requested workspace.
@@ -232,8 +215,7 @@ export function lintFileImpl(
     // If the rule has no user-provided options, use the plugin-provided default
     // options (which falls back to `DEFAULT_OPTIONS`).
     // Reuse `OPTIONS_DESCRIPTOR` object to avoid unnecessarily creating a temporary object each time.
-    OPTIONS_DESCRIPTOR.value =
-      optionsId === DEFAULT_OPTIONS_ID ? ruleDetails.defaultOptions : allOptions[optionsId];
+    OPTIONS_DESCRIPTOR.value = optionsId === DEFAULT_OPTIONS_ID ? ruleDetails.defaultOptions : allOptions[optionsId];
     Object.defineProperty(ruleDetails.context, "options", OPTIONS_DESCRIPTOR);
 
     let { visitor } = ruleDetails;

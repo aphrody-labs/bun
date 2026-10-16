@@ -88,23 +88,20 @@ describe("proxy RSTs client", () => {
     // after the request head, so `first-client-byte` never fires — skip
     // that combination.
     if (!originTls && stage === "first-client-byte") continue;
-    test.concurrent(
-      `${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin, RST at '${stage}' keepalive=${keepalive}`,
-      async () => {
-        await using origin = await createAdversarialOrigin({ tls: originTls, body: "never" });
-        await using proxy = await createAdversarialProxy({ tls: proxyTls, killClientAt: stage });
+    test.concurrent(`${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin, RST at '${stage}' keepalive=${keepalive}`, async () => {
+      await using origin = await createAdversarialOrigin({ tls: originTls, body: "never" });
+      await using proxy = await createAdversarialProxy({ tls: proxyTls, killClientAt: stage });
 
-        const code = await expectConnectionFailure(
-          fetch(origin.url, {
-            proxy: proxy.url,
-            keepalive,
-            tls: laxTls,
-            signal: AbortSignal.timeout(HANG_GUARD_MS),
-          }),
-        );
-        expect(code).toMatch(/ECONNRESET|ConnectionClosed|ECONNREFUSED|ConnectionRefused|EPROTO|SocketError|EPIPE/);
-      },
-    );
+      const code = await expectConnectionFailure(
+        fetch(origin.url, {
+          proxy: proxy.url,
+          keepalive,
+          tls: laxTls,
+          signal: AbortSignal.timeout(HANG_GUARD_MS),
+        }),
+      );
+      expect(code).toMatch(/ECONNRESET|ConnectionClosed|ECONNREFUSED|ConnectionRefused|EPROTO|SocketError|EPIPE/);
+    });
   }
 });
 
@@ -119,35 +116,32 @@ describe("proxy RSTs client during upload", () => {
     stage: CLIENT_KILL_STAGES,
     bodyKind: ["string", "stream"] as const,
   })) {
-    test.concurrent(
-      `${proxyTls ? "https" : "http"}-proxy → https-origin, ${bodyKind} upload, RST at '${stage}'`,
-      async () => {
-        await using origin = await createAdversarialOrigin({ tls: true, echo: true });
-        await using proxy = await createAdversarialProxy({ tls: proxyTls, killClientAt: stage });
-        const body =
-          bodyKind === "string"
-            ? Buffer.alloc(16 * 1024, "u").toString("latin1")
-            : new ReadableStream({
-                start(c) {
-                  c.enqueue(new Uint8Array(8192).fill(0x55));
-                  c.enqueue(new Uint8Array(8192).fill(0x55));
-                  c.close();
-                },
-              });
-        const code = await expectConnectionFailure(
-          fetch(origin.url, {
-            method: "POST",
-            body,
-            ...(bodyKind === "stream" ? { duplex: "half" as const } : {}),
-            proxy: proxy.url,
-            keepalive: false,
-            tls: laxTls,
-            signal: AbortSignal.timeout(HANG_GUARD_MS),
-          }),
-        );
-        expect(code).toMatch(/ECONNRESET|ConnectionClosed|ECONNREFUSED|ConnectionRefused|EPROTO|SocketError|EPIPE/);
-      },
-    );
+    test.concurrent(`${proxyTls ? "https" : "http"}-proxy → https-origin, ${bodyKind} upload, RST at '${stage}'`, async () => {
+      await using origin = await createAdversarialOrigin({ tls: true, echo: true });
+      await using proxy = await createAdversarialProxy({ tls: proxyTls, killClientAt: stage });
+      const body =
+        bodyKind === "string"
+          ? Buffer.alloc(16 * 1024, "u").toString("latin1")
+          : new ReadableStream({
+              start(c) {
+                c.enqueue(new Uint8Array(8192).fill(0x55));
+                c.enqueue(new Uint8Array(8192).fill(0x55));
+                c.close();
+              },
+            });
+      const code = await expectConnectionFailure(
+        fetch(origin.url, {
+          method: "POST",
+          body,
+          ...(bodyKind === "stream" ? { duplex: "half" as const } : {}),
+          proxy: proxy.url,
+          keepalive: false,
+          tls: laxTls,
+          signal: AbortSignal.timeout(HANG_GUARD_MS),
+        }),
+      );
+      expect(code).toMatch(/ECONNRESET|ConnectionClosed|ECONNREFUSED|ConnectionRefused|EPROTO|SocketError|EPIPE/);
+    });
   }
 });
 
@@ -204,39 +198,36 @@ describe("origin RSTs through tunnel", () => {
     // 200 = mid-body (with a 512-byte body).
     killAfter: [0, 10, 60, 200] as const,
   })) {
-    test.concurrent(
-      `${proxyTls ? "https" : "http"}-proxy → https-origin, origin RST after ${killAfter} response bytes`,
-      async () => {
-        await using origin = await createAdversarialOrigin({
-          tls: true,
-          body: Buffer.alloc(512, "x"),
-          framing: "content-length",
-          killAfterBytes: killAfter,
-        });
-        await using proxy = await createAdversarialProxy({ tls: proxyTls });
+    test.concurrent(`${proxyTls ? "https" : "http"}-proxy → https-origin, origin RST after ${killAfter} response bytes`, async () => {
+      await using origin = await createAdversarialOrigin({
+        tls: true,
+        body: Buffer.alloc(512, "x"),
+        framing: "content-length",
+        killAfterBytes: killAfter,
+      });
+      await using proxy = await createAdversarialProxy({ tls: proxyTls });
 
-        let outcome: string;
-        try {
-          const res = await fetch(origin.url, {
-            proxy: proxy.url,
-            keepalive: false,
-            tls: laxTls,
-            signal: AbortSignal.timeout(HANG_GUARD_MS),
-          });
-          // With a truncated content-length body, .text() should reject.
-          await res.text();
-          outcome = `resolved:${res.status}`;
-        } catch (e) {
-          outcome = errcode(e);
-        }
-        expect(outcome).not.toBe("TimeoutError");
-        expect(outcome).not.toBe("AbortError");
-        // A truncated body surfaces as ConnectionClosed / ECONNRESET. A
-        // response that never got to the status line is ConnectionRefused
-        // / ConnectionClosed.
-        expect(outcome).not.toBe("resolved:200");
-      },
-    );
+      let outcome: string;
+      try {
+        const res = await fetch(origin.url, {
+          proxy: proxy.url,
+          keepalive: false,
+          tls: laxTls,
+          signal: AbortSignal.timeout(HANG_GUARD_MS),
+        });
+        // With a truncated content-length body, .text() should reject.
+        await res.text();
+        outcome = `resolved:${res.status}`;
+      } catch (e) {
+        outcome = errcode(e);
+      }
+      expect(outcome).not.toBe("TimeoutError");
+      expect(outcome).not.toBe("AbortError");
+      // A truncated body surfaces as ConnectionClosed / ECONNRESET. A
+      // response that never got to the status line is ConnectionRefused
+      // / ConnectionClosed.
+      expect(outcome).not.toBe("resolved:200");
+    });
   }
 });
 

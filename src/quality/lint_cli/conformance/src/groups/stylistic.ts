@@ -3,13 +3,7 @@ import { RuleTester } from "../rule_tester.ts";
 import repos from "../../repos.json" with { type: "json" };
 
 import type { MockFn, TestGroup } from "../index.ts";
-import type {
-  ValidTestCase,
-  InvalidTestCase,
-  TestCase,
-  LanguageOptions,
-  ParserOptions,
-} from "../rule_tester.ts";
+import type { ValidTestCase, InvalidTestCase, TestCase, LanguageOptions, ParserOptions } from "../rule_tester.ts";
 import type { RuleTester as RuleTesterType } from "#oxlint/plugins-dev";
 import type { Rule } from "#oxlint/plugins";
 
@@ -47,22 +41,16 @@ const group: TestGroup = {
     if (code.match(/^\s*\/\*\s*eslint\s/)) return true;
 
     // Invalid code, cannot parse
-    if (
-      err.message === "Parsing failed"
-      && ruleName === "comma-spacing"
-      && ["let foo,", "let foo ,"].includes(code)
-    ) {
+    if (err.message === "Parsing failed" && ruleName === "comma-spacing" && ["let foo,", "let foo ,"].includes(code)) {
       return true;
     }
 
     // Test cases should be parsed as Flow. AST is different when parsed as TS.
     if (
-      ruleName === "object-curly-newline"
-      && test._parser?.specifier === "@babel/eslint-parser"
-      && (test.languageOptions?.parserOptions as any)?.babelOptions?.parserOpts?.plugins?.includes(
-        "flow",
-      )
-      && [
+      ruleName === "object-curly-newline" &&
+      test._parser?.specifier === "@babel/eslint-parser" &&
+      (test.languageOptions?.parserOptions as any)?.babelOptions?.parserOpts?.plugins?.includes("flow") &&
+      [
         "function foo({\n a,\n b\n} : { a : string, b : string }) {}",
         "function foo({ a, b } : { a : string, b : string }) {}",
       ].includes(code)
@@ -71,10 +59,7 @@ const group: TestGroup = {
     }
 
     // Invalid code, Oxc's AST does not match TS-ESLint
-    if (
-      ruleName === "space-infix-ops"
-      && compact(code) === "class Test {\n accessor optional?= false;\n }"
-    ) {
+    if (ruleName === "space-infix-ops" && compact(code) === "class Test {\n accessor optional?= false;\n }") {
       return true;
     }
 
@@ -82,39 +67,32 @@ const group: TestGroup = {
     // Oxc parser does not accept `TSIndexSignature`s with more than 1 param, so the AST the rule receives
     // in Oxlint is not the same as what it gets in TS-ESLint, so it behaves differently. That's expected.
     if (
-      ruleName === "comma-style"
-      && compact(code)
-        === "type foo = {\n"
-          + " new (\n a,\n b\n , c\n ): any,\n"
-          + " (\n a,\n b\n , c\n ): any,\n"
-          + " [\n a: string,\n b: string\n , c: string\n ]: string,\n"
-          + " f(\n a: string,\n b: string\n , c: string\n ): number,\n"
-          + "}"
+      ruleName === "comma-style" &&
+      compact(code) ===
+        "type foo = {\n" +
+          " new (\n a,\n b\n , c\n ): any,\n" +
+          " (\n a,\n b\n , c\n ): any,\n" +
+          " [\n a: string,\n b: string\n , c: string\n ]: string,\n" +
+          " f(\n a: string,\n b: string\n , c: string\n ): number,\n" +
+          "}"
     ) {
       return true;
     }
 
     // Code contains `do` expressions which Oxc parser does not support
-    if (
-      ruleName === "jsx-indent"
-      && err.message === "Parsing failed"
-      && code.match(/^\s*<span>\s*\{\(?do \{/)
-    ) {
+    if (ruleName === "jsx-indent" && err.message === "Parsing failed" && code.match(/^\s*<span>\s*\{\(?do \{/)) {
       return true;
     }
 
     // Use custom language plugin
-    if (
-      (ruleName === "eol-last" || ruleName === "linebreak-style")
-      && (test as any).configs?.plugins !== undefined
-    ) {
+    if ((ruleName === "eol-last" || ruleName === "linebreak-style") && (test as any).configs?.plugins !== undefined) {
       return true;
     }
 
     // Faulty test cases - no message or message ID provided for the errors
     if (
-      ruleName === "one-var-declaration-per-line"
-      && err.message === "Test error must specify either a `messageId` or `message`"
+      ruleName === "one-var-declaration-per-line" &&
+      err.message === "Test error must specify either a `messageId` or `message`"
     ) {
       return true;
     }
@@ -196,7 +174,7 @@ function createStylisticRuleRunnerMock(tsEslintParser: TSEslintParser) {
   return {
     run(options: StylisticRunOptions) {
       // Validate options
-      const extraKeys = Object.keys(options).filter((key) => !OPTIONS_KEYS.has(key));
+      const extraKeys = Object.keys(options).filter(key => !OPTIONS_KEYS.has(key));
       if (extraKeys.length > 0) {
         throw new Error(`Unexpected keys in options passed to \`run\`: ${extraKeys.join(", ")}`);
       }
@@ -311,10 +289,7 @@ function modifyTestCase(test: StylisticTestCase) {
  * @param languageOptions - Language options from test case object
  * @returns `LanguageOptions` to add to config / test case, combining `parserOptions` and `languageOptions`
  */
-function getLanguageOptions(
-  parserOptions: StylisticParserOptions,
-  languageOptions?: LanguageOptions,
-): LanguageOptions {
+function getLanguageOptions(parserOptions: StylisticParserOptions, languageOptions?: LanguageOptions): LanguageOptions {
   languageOptions = { ...languageOptions };
   parserOptions = { ...parserOptions };
 

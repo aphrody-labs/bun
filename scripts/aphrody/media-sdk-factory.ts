@@ -290,7 +290,7 @@ export async function qualifyMediaSDKClosure(target: MediaSDKTarget, prefix: str
       .filter(image => image.file.startsWith("bin/") && image.file.endsWith(".dll"))
       .map(image => image.file.slice(4).toLowerCase()),
   );
-  const files = [];
+  const files: Array<{ file: string; sha256: string; needed: string[] }> = [];
   for (const image of images) {
     const needed = await binaryImports(image.path, target);
     if (needed.some(name => !isMediaSystemDLL(name) && !bundled.has(name.toLowerCase())))

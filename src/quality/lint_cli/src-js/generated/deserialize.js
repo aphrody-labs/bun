@@ -92,11 +92,7 @@ function deserializeProgram(pos) {
       start = first.start;
       if (first.type === "ExportNamedDeclaration" || first.type === "ExportDefaultDeclaration") {
         let { declaration } = first;
-        if (
-          declaration !== null
-          && declaration.type === "ClassDeclaration"
-          && declaration.decorators.length > 0
-        ) {
+        if (declaration !== null && declaration.type === "ClassDeclaration" && declaration.decorators.length > 0) {
           let decoratorStart = declaration.decorators[0].start;
           decoratorStart < start && (start = decoratorStart);
         }
@@ -613,11 +609,9 @@ function deserializeTemplateElement(pos) {
     start = deserializeI32(pos) - 1,
     end = deserializeI32(pos + 4) + 2 - tail,
     value = deserializeTemplateElementValue(pos + 16);
-  value.cooked !== null
-    && deserializeBool(pos + 13)
-    && (value.cooked = value.cooked.replace(/\uFFFD(.{4})/g, (_, hex) =>
-      String.fromCodePoint(parseInt(hex, 16)),
-    ));
+  value.cooked !== null &&
+    deserializeBool(pos + 13) &&
+    (value.cooked = value.cooked.replace(/\uFFFD(.{4})/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16))));
   return {
     __proto__: NodeProto,
     type: "TemplateElement",
@@ -2722,9 +2716,7 @@ function deserializeClass(pos) {
   node.typeParameters = deserializeOptionBoxTSTypeParameterDeclaration(pos + 72);
   node.superClass = superClass;
   node.superTypeArguments =
-    superClass === null
-      ? null
-      : deserializeOptionBoxTSTypeParameterInstantiation(pos + 80 + (pos + 16 - pos));
+    superClass === null ? null : deserializeOptionBoxTSTypeParameterInstantiation(pos + 80 + (pos + 16 - pos));
   node.implements = deserializeVecTSClassImplements(pos + 104);
   node.body = deserializeBoxClassBody(pos + 128);
   parent = previousParent;
@@ -3132,9 +3124,9 @@ function deserializeExportDeclaration(pos) {
     declaration = deserializeDeclaration(pos + 16);
   node.declaration = declaration;
   node.exportKind =
-    declaration.declare === true
-    || declaration.type === "TSTypeAliasDeclaration"
-    || declaration.type === "TSInterfaceDeclaration"
+    declaration.declare === true ||
+    declaration.type === "TSTypeAliasDeclaration" ||
+    declaration.type === "TSInterfaceDeclaration"
       ? "type"
       : "value";
   parent = previousParent;
@@ -3428,10 +3420,7 @@ function deserializeNumericLiteral(pos) {
     __proto__: NodeProto,
     type: "Literal",
     value: deserializeF64(pos + 32),
-    raw:
-      int32[(pos >> 2) + 4] === 0 && int32[(pos >> 2) + 5] === 0
-        ? null
-        : sourceText.slice(start, end),
+    raw: int32[(pos >> 2) + 4] === 0 && int32[(pos >> 2) + 5] === 0 ? null : sourceText.slice(start, end),
     start,
     end,
     range: [start, end],
@@ -3447,20 +3436,15 @@ function deserializeStringLiteral(pos) {
       __proto__: NodeProto,
       type: "Literal",
       value: null,
-      raw:
-        int32[(pos >> 2) + 8] === 0 && int32[(pos >> 2) + 9] === 0
-          ? null
-          : sourceText.slice(start, end),
+      raw: int32[(pos >> 2) + 8] === 0 && int32[(pos >> 2) + 9] === 0 ? null : sourceText.slice(start, end),
       start,
       end,
       range: [start, end],
       parent,
     }),
     value = deserializeStr(pos + 16);
-  deserializeBool(pos + 12)
-    && (value = value.replace(/\uFFFD(.{4})/g, (_, hex) =>
-      String.fromCodePoint(parseInt(hex, 16)),
-    ));
+  deserializeBool(pos + 12) &&
+    (value = value.replace(/\uFFFD(.{4})/g, (_, hex) => String.fromCodePoint(parseInt(hex, 16))));
   node.value = value;
   parent = previousParent;
   return node;
@@ -3474,10 +3458,7 @@ function deserializeBigIntLiteral(pos) {
     __proto__: NodeProto,
     type: "Literal",
     value: BigInt(bigint),
-    raw:
-      int32[(pos >> 2) + 8] === 0 && int32[(pos >> 2) + 9] === 0
-        ? null
-        : sourceText.slice(start, end),
+    raw: int32[(pos >> 2) + 8] === 0 && int32[(pos >> 2) + 9] === 0 ? null : sourceText.slice(start, end),
     bigint,
     start,
     end,
@@ -3494,10 +3475,7 @@ function deserializeRegExpLiteral(pos) {
       __proto__: NodeProto,
       type: "Literal",
       value: null,
-      raw:
-        int32[(pos >> 2) + 12] === 0 && int32[(pos >> 2) + 13] === 0
-          ? null
-          : sourceText.slice(start, end),
+      raw: int32[(pos >> 2) + 12] === 0 && int32[(pos >> 2) + 13] === 0 ? null : sourceText.slice(start, end),
       regex: null,
       start,
       end,
@@ -4012,10 +3990,7 @@ function deserializeJSXText(pos) {
     __proto__: NodeProto,
     type: "JSXText",
     value: deserializeStr(pos + 16),
-    raw:
-      int32[(pos >> 2) + 8] === 0 && int32[(pos >> 2) + 9] === 0
-        ? null
-        : sourceText.slice(start, end),
+    raw: int32[(pos >> 2) + 8] === 0 && int32[(pos >> 2) + 9] === 0 ? null : sourceText.slice(start, end),
     start,
     end,
     range: [start, end],
@@ -6083,8 +6058,7 @@ function deserializeStr(pos) {
   pos = int32[pos32];
   let end = pos + len,
     isInSourceRegion = pos >= sourceStartPos;
-  if (isInSourceRegion && end <= firstNonAsciiPos)
-    return sourceTextLatin.substr(pos - sourceStartPos, len);
+  if (isInSourceRegion && end <= firstNonAsciiPos) return sourceTextLatin.substr(pos - sourceStartPos, len);
   // Use `utf8Slice` for strings longer than 64 bytes
   if (len > 64) return utf8Slice.call(uint8, pos, end);
   // If string is in source region, use slice of `sourceTextLatin` if all ASCII
@@ -6372,9 +6346,7 @@ function deserializeBoxTSTypeParameterInstantiation(pos) {
 }
 
 function deserializeOptionBoxTSTypeParameterInstantiation(pos) {
-  return int32[pos >> 2] === 0 && int32[(pos >> 2) + 1] === 0
-    ? null
-    : deserializeBoxTSTypeParameterInstantiation(pos);
+  return int32[pos >> 2] === 0 && int32[(pos >> 2) + 1] === 0 ? null : deserializeBoxTSTypeParameterInstantiation(pos);
 }
 
 function deserializeOptionStr(pos) {
@@ -6434,9 +6406,7 @@ function deserializeBoxAssignmentTargetRest(pos) {
 }
 
 function deserializeOptionBoxAssignmentTargetRest(pos) {
-  return int32[pos >> 2] === 0 && int32[(pos >> 2) + 1] === 0
-    ? null
-    : deserializeBoxAssignmentTargetRest(pos);
+  return int32[pos >> 2] === 0 && int32[(pos >> 2) + 1] === 0 ? null : deserializeBoxAssignmentTargetRest(pos);
 }
 
 function deserializeVecAssignmentTargetProperty(pos) {
@@ -6588,9 +6558,7 @@ function deserializeBoxTSTypeAnnotation(pos) {
 }
 
 function deserializeOptionBoxTSTypeAnnotation(pos) {
-  return int32[pos >> 2] === 0 && int32[(pos >> 2) + 1] === 0
-    ? null
-    : deserializeBoxTSTypeAnnotation(pos);
+  return int32[pos >> 2] === 0 && int32[(pos >> 2) + 1] === 0 ? null : deserializeBoxTSTypeAnnotation(pos);
 }
 
 function deserializeOptionStatement(pos) {
@@ -6602,9 +6570,7 @@ function deserializeOptionForStatementInit(pos) {
 }
 
 function deserializeOptionLabelIdentifier(pos) {
-  return int32[(pos >> 2) + 4] === 0 && int32[(pos >> 2) + 5] === 0
-    ? null
-    : deserializeLabelIdentifier(pos);
+  return int32[(pos >> 2) + 4] === 0 && int32[(pos >> 2) + 5] === 0 ? null : deserializeLabelIdentifier(pos);
 }
 
 function deserializeVecSwitchCase(pos) {
@@ -6624,15 +6590,11 @@ function deserializeBoxCatchClause(pos) {
 }
 
 function deserializeOptionBoxCatchClause(pos) {
-  return int32[pos >> 2] === 0 && int32[(pos >> 2) + 1] === 0
-    ? null
-    : deserializeBoxCatchClause(pos);
+  return int32[pos >> 2] === 0 && int32[(pos >> 2) + 1] === 0 ? null : deserializeBoxCatchClause(pos);
 }
 
 function deserializeOptionBoxBlockStatement(pos) {
-  return int32[pos >> 2] === 0 && int32[(pos >> 2) + 1] === 0
-    ? null
-    : deserializeBoxBlockStatement(pos);
+  return int32[pos >> 2] === 0 && int32[(pos >> 2) + 1] === 0 ? null : deserializeBoxBlockStatement(pos);
 }
 
 function deserializeOptionCatchParameter(pos) {
@@ -6672,9 +6634,7 @@ function deserializeBoxBindingRestElement(pos) {
 }
 
 function deserializeOptionBoxBindingRestElement(pos) {
-  return int32[pos >> 2] === 0 && int32[(pos >> 2) + 1] === 0
-    ? null
-    : deserializeBoxBindingRestElement(pos);
+  return int32[pos >> 2] === 0 && int32[(pos >> 2) + 1] === 0 ? null : deserializeBoxBindingRestElement(pos);
 }
 
 function deserializeOptionBindingPattern(pos) {
@@ -6694,9 +6654,7 @@ function deserializeVecOptionBindingPattern(pos) {
 }
 
 function deserializeOptionBindingIdentifier(pos) {
-  return int32[(pos >> 2) + 4] === 0 && int32[(pos >> 2) + 5] === 0
-    ? null
-    : deserializeBindingIdentifier(pos);
+  return int32[(pos >> 2) + 4] === 0 && int32[(pos >> 2) + 5] === 0 ? null : deserializeBindingIdentifier(pos);
 }
 
 function deserializeBoxTSTypeParameterDeclaration(pos) {
@@ -6704,9 +6662,7 @@ function deserializeBoxTSTypeParameterDeclaration(pos) {
 }
 
 function deserializeOptionBoxTSTypeParameterDeclaration(pos) {
-  return int32[pos >> 2] === 0 && int32[(pos >> 2) + 1] === 0
-    ? null
-    : deserializeBoxTSTypeParameterDeclaration(pos);
+  return int32[pos >> 2] === 0 && int32[(pos >> 2) + 1] === 0 ? null : deserializeBoxTSTypeParameterDeclaration(pos);
 }
 
 function deserializeBoxTSThisParameter(pos) {
@@ -6714,9 +6670,7 @@ function deserializeBoxTSThisParameter(pos) {
 }
 
 function deserializeOptionBoxTSThisParameter(pos) {
-  return int32[pos >> 2] === 0 && int32[(pos >> 2) + 1] === 0
-    ? null
-    : deserializeBoxTSThisParameter(pos);
+  return int32[pos >> 2] === 0 && int32[(pos >> 2) + 1] === 0 ? null : deserializeBoxTSThisParameter(pos);
 }
 
 function deserializeBoxFormalParameters(pos) {
@@ -6728,9 +6682,7 @@ function deserializeBoxFunctionBody(pos) {
 }
 
 function deserializeOptionBoxFunctionBody(pos) {
-  return int32[pos >> 2] === 0 && int32[(pos >> 2) + 1] === 0
-    ? null
-    : deserializeBoxFunctionBody(pos);
+  return int32[pos >> 2] === 0 && int32[(pos >> 2) + 1] === 0 ? null : deserializeBoxFunctionBody(pos);
 }
 
 function deserializeVecFormalParameter(pos) {
@@ -6762,9 +6714,7 @@ function deserializeBoxExpression(pos) {
 }
 
 function deserializeOptionBoxExpression(pos) {
-  return int32[pos >> 2] === 0 && int32[(pos >> 2) + 1] === 0
-    ? null
-    : deserializeBoxExpression(pos);
+  return int32[pos >> 2] === 0 && int32[(pos >> 2) + 1] === 0 ? null : deserializeBoxExpression(pos);
 }
 
 function deserializeOptionTSAccessibility(pos) {
@@ -6868,9 +6818,7 @@ function deserializeVecImportDeclarationSpecifier(pos) {
 }
 
 function deserializeOptionVecImportDeclarationSpecifier(pos) {
-  return int32[pos >> 2] === 0 && int32[(pos >> 2) + 1] === 0
-    ? null
-    : deserializeVecImportDeclarationSpecifier(pos);
+  return int32[pos >> 2] === 0 && int32[(pos >> 2) + 1] === 0 ? null : deserializeVecImportDeclarationSpecifier(pos);
 }
 
 function deserializeBoxWithClause(pos) {
@@ -6878,9 +6826,7 @@ function deserializeBoxWithClause(pos) {
 }
 
 function deserializeOptionBoxWithClause(pos) {
-  return int32[pos >> 2] === 0 && int32[(pos >> 2) + 1] === 0
-    ? null
-    : deserializeBoxWithClause(pos);
+  return int32[pos >> 2] === 0 && int32[(pos >> 2) + 1] === 0 ? null : deserializeBoxWithClause(pos);
 }
 
 function deserializeBoxImportSpecifier(pos) {
@@ -6952,9 +6898,7 @@ function deserializeBoxJSXClosingElement(pos) {
 }
 
 function deserializeOptionBoxJSXClosingElement(pos) {
-  return int32[pos >> 2] === 0 && int32[(pos >> 2) + 1] === 0
-    ? null
-    : deserializeBoxJSXClosingElement(pos);
+  return int32[pos >> 2] === 0 && int32[(pos >> 2) + 1] === 0 ? null : deserializeBoxJSXClosingElement(pos);
 }
 
 function deserializeVecJSXAttributeItem(pos) {
@@ -7270,9 +7214,7 @@ function deserializeBoxTSModuleBlock(pos) {
 }
 
 function deserializeOptionBoxTSModuleBlock(pos) {
-  return int32[pos >> 2] === 0 && int32[(pos >> 2) + 1] === 0
-    ? null
-    : deserializeBoxTSModuleBlock(pos);
+  return int32[pos >> 2] === 0 && int32[(pos >> 2) + 1] === 0 ? null : deserializeBoxTSModuleBlock(pos);
 }
 
 function deserializeBoxTSTypeParameter(pos) {
@@ -7280,9 +7222,7 @@ function deserializeBoxTSTypeParameter(pos) {
 }
 
 function deserializeOptionBoxObjectExpression(pos) {
-  return int32[pos >> 2] === 0 && int32[(pos >> 2) + 1] === 0
-    ? null
-    : deserializeBoxObjectExpression(pos);
+  return int32[pos >> 2] === 0 && int32[(pos >> 2) + 1] === 0 ? null : deserializeBoxObjectExpression(pos);
 }
 
 function deserializeOptionTSImportTypeQualifier(pos) {

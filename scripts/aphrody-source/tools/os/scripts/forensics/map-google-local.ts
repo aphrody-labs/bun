@@ -15,8 +15,7 @@ import { join, relative, extname, resolve } from "node:path";
 const args = process.argv.slice(2);
 const [targetGiven, outArg, hashArg] = args;
 const localAppData = process.platform === "win32" ? process.env.LOCALAPPDATA : undefined;
-const targetArg =
-  targetGiven || (localAppData === undefined ? undefined : join(localAppData, "Google", "Google"));
+const targetArg = targetGiven || (localAppData === undefined ? undefined : join(localAppData, "Google", "Google"));
 if (targetArg === undefined || args.includes("--help") || args.includes("-h")) {
   console.log(
     "Usage: bun scripts/tools/os/scripts/forensics/map-google-local.ts [target-dir] [out-dir] [max-hash-bytes]\n" +
@@ -52,7 +51,7 @@ const SECRET_PATTERNS = [
 
 function isSecret(fullPath: string): boolean {
   const lower = fullPath.toLowerCase();
-  return SECRET_PATTERNS.some((pat) => lower.includes(pat));
+  return SECRET_PATTERNS.some(pat => lower.includes(pat));
 }
 
 interface FileEntry {
@@ -125,8 +124,8 @@ console.log(`[forensics] Scanning ${targetDir}...`);
 const fileEntries: FileEntry[] = [];
 await scanRecursive(targetDir, fileEntries);
 
-const hashedCount = fileEntries.filter((f) => f.sha256 !== null).length;
-const secretCount = fileEntries.filter((f) => f.secret_meta_only).length;
+const hashedCount = fileEntries.filter(f => f.sha256 !== null).length;
+const secretCount = fileEntries.filter(f => f.secret_meta_only).length;
 
 const payload = {
   scanned_at: new Date().toISOString(),

@@ -37,7 +37,7 @@ export function edgeConfig(c: EdgeConfig): string {
         location ~ ^/_next/static/ { add_header Cache-Control "public, max-age=31536000, immutable"; try_files $uri ${fallback}; }
         location ~* \.(?:${IMAGES}|js|css|woff2?|ttf|json|txt|zip|gz|tar|wasm)$ { limit_except GET HEAD { deny all; } add_header Cache-Control "${cache}"; try_files $uri ${fallback}; }
         location / { limit_except GET HEAD { deny all; } try_files $uri $uri/index.html ${fallback}; }
-${c.upstream ? "        location @origin { proxy_pass http://edge_origin; proxy_set_header Host $host; proxy_http_version 1.1; proxy_set_header Connection \"\"; proxy_cache edge; proxy_cache_valid 200 10m; proxy_cache_use_stale error timeout updating; proxy_cache_lock on; }\n" : ""}    }`;
+${c.upstream ? '        location @origin { proxy_pass http://edge_origin; proxy_set_header Host $host; proxy_http_version 1.1; proxy_set_header Connection ""; proxy_cache edge; proxy_cache_valid 200 10m; proxy_cache_use_stale error timeout updating; proxy_cache_lock on; }\n' : ""}    }`;
   });
   return `worker_processes auto;
 worker_rlimit_nofile 65536;

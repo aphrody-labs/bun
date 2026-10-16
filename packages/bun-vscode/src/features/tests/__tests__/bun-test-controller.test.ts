@@ -322,7 +322,10 @@ describe("BunTestController", () => {
 
     test("should handle complex stack traces", () => {
       const message = `Error: Complex error\n    at Object.test (/complex/path/to/test.spec.ts:42:16)\n    at async TestRunner.execute (/node_modules/test/runner.js:200:12)\n    at async Suite.run (/node_modules/test/suite.js:50:8)`;
-      const location = new MockLocation(MockUri.parse("file:///complex/path/to/test.spec.ts"), new MockPosition(42, 16));
+      const location = new MockLocation(
+        MockUri.parse("file:///complex/path/to/test.spec.ts"),
+        new MockPosition(42, 16),
+      );
 
       const result = internal.processErrorData(message, location);
       expect(result).toBeDefined();

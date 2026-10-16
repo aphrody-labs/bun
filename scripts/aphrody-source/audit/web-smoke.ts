@@ -12,10 +12,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { AgentBrowser } from "../../../packages/web/rust/packages/agent-browser/src/client.ts";
-import {
-  loadWebConfig,
-  repositoryRoot,
-} from "../../../packages/web/rust/packages/agent-browser/src/config.ts";
+import { loadWebConfig, repositoryRoot } from "../../../packages/web/rust/packages/agent-browser/src/config.ts";
 import {
   installEngineCleanup,
   startEngine,
@@ -51,7 +48,7 @@ export function isPdfBase64(value: string): boolean {
 }
 
 export function summarize(binary: string, version: string, checks: Check[]): SmokeReport {
-  const failed = checks.filter((check) => !check.ok).length;
+  const failed = checks.filter(check => !check.ok).length;
   return {
     schema: "aphrody-web.smoke/1",
     binary,
@@ -94,10 +91,7 @@ export function fixturePages(): Record<string, { type: string; body: string }> {
     },
     "/private/secret": {
       type: "text/html",
-      body: html(
-        "Secret",
-        "<main><h1>Secret</h1><p>robots.txt forbids crawling this page.</p></main>",
-      ),
+      body: html("Secret", "<main><h1>Secret</h1><p>robots.txt forbids crawling this page.</p></main>"),
     },
     "/robots.txt": { type: "text/plain", body: "User-agent: *\nDisallow: /private\n" },
   };
@@ -156,10 +150,7 @@ export async function runSmoke(binaryOverride?: string): Promise<SmokeReport> {
   try {
     await timed(checks, "binary:version", async () => {
       version = await service.version();
-      expect(
-        /^aphrody-web \d/.test(version),
-        `unexpected version output ${JSON.stringify(version)}`,
-      );
+      expect(/^aphrody-web \d/.test(version), `unexpected version output ${JSON.stringify(version)}`);
       return version;
     });
     await timed(checks, "binary:subcommands", async () => {
@@ -187,10 +178,7 @@ export async function runSmoke(binaryOverride?: string): Promise<SmokeReport> {
         timeoutSecs: 20,
       });
       expect(artifact.html.includes("<main>"), "artifact lacks the DOM");
-      expect(
-        artifact.extracted.text.includes("aphrody web smoke"),
-        "artifact lacks extracted text",
-      );
+      expect(artifact.extracted.text.includes("aphrody web smoke"), "artifact lacks extracted text");
       return `html ${artifact.html.length} bytes, ${artifact.scripts.length} scripts`;
     });
     await timed(checks, "cli:fetch-runs-scripts", async () => {
@@ -210,35 +198,27 @@ export async function runSmoke(binaryOverride?: string): Promise<SmokeReport> {
         delayMs: 0,
         timeoutSecs: 30,
       });
-      const urls = report.pages.map((page) => new URL(page.url).pathname);
+      const urls = report.pages.map(page => new URL(page.url).pathname);
       expect(report.schema === "aphrody-web.crawl/1", `schema ${report.schema}`);
-      expect(
-        urls.includes("/") && urls.includes("/about") && urls.includes("/js"),
-        `crawled ${urls.join(",")}`,
-      );
-      expect(
-        !urls.some((path) => path.startsWith("/private")),
-        "crawler fetched a robots-disallowed page",
-      );
+      expect(urls.includes("/") && urls.includes("/about") && urls.includes("/js"), `crawled ${urls.join(",")}`);
+      expect(!urls.some(path => path.startsWith("/private")), "crawler fetched a robots-disallowed page");
       expect(report.stats.robotsBlocked >= 1, "robots block not recorded");
       expect(
-        report.pages[0]?.links?.some((link) => link.endsWith("/about")),
+        report.pages[0]?.links?.some(link => link.endsWith("/about")),
         "links missing from the report",
       );
       return `${report.pages.length} pages, robotsBlocked ${report.stats.robotsBlocked}`;
     });
 
-    const engine = await startEngine({ config, binary, allowPrivateNetwork: true }).catch(
-      (error: unknown) => {
-        checks.push({
-          name: "engine:start",
-          ok: false,
-          ms: 0,
-          detail: error instanceof Error ? error.message : String(error),
-        });
-        return undefined;
-      },
-    );
+    const engine = await startEngine({ config, binary, allowPrivateNetwork: true }).catch((error: unknown) => {
+      checks.push({
+        name: "engine:start",
+        ok: false,
+        ms: 0,
+        detail: error instanceof Error ? error.message : String(error),
+      });
+      return undefined;
+    });
     if (engine) {
       checks.push({
         name: "engine:start",
@@ -263,10 +243,7 @@ export async function runSmoke(binaryOverride?: string): Promise<SmokeReport> {
           expect((await page.getText("#result")) !== "", "DOM text query is empty");
           await page.fill("#query", "typed");
           await page.click("#submit");
-          expect(
-            (await page.evaluate<string>("document.title")) === "typed",
-            "click handler did not run",
-          );
+          expect((await page.evaluate<string>("document.title")) === "typed", "click handler did not run");
           return `${snapshot.refs.size} refs`;
         } finally {
           await page.close();
@@ -323,9 +300,7 @@ if (import.meta.main) {
       console.log(
         `${check.ok ? "ok  " : "FAIL"} ${check.name.padEnd(30)} ${String(check.ms).padStart(6)} ms  ${check.detail}`,
       );
-    console.log(
-      `\nweb smoke: ${report.passed} passed, ${report.failed} failed (${report.binary} ${report.version})`,
-    );
+    console.log(`\nweb smoke: ${report.passed} passed, ${report.failed} failed (${report.binary} ${report.version})`);
   }
   process.exit(report.ok ? 0 : 1);
 }

@@ -1,12 +1,7 @@
 import { setCwd } from "./context.ts";
 import { setRegisteredPluginNames, setRegisteredRules } from "./load.ts";
 import { setAllOptions } from "./options.ts";
-import {
-  workspaces,
-  currentWorkspace,
-  currentWorkspaceUri,
-  setCurrentWorkspace,
-} from "../workspace/index.ts";
+import { workspaces, currentWorkspace, currentWorkspaceUri, setCurrentWorkspace } from "../workspace/index.ts";
 import { debugAssertIsNonNull } from "../utils/asserts.ts";
 
 export { currentWorkspace };

@@ -55,9 +55,7 @@ async function directory() {
   return path;
 }
 afterEach(async () => {
-  await Promise.all(
-    directories.splice(0).map((path) => rm(path, { recursive: true, force: true })),
-  );
+  await Promise.all(directories.splice(0).map(path => rm(path, { recursive: true, force: true })));
 });
 
 test("projects actual CLI fields and hashes exact exported UTF8, not markdown/private metadata", () => {
@@ -83,9 +81,9 @@ test("projects actual CLI fields and hashes exact exported UTF8, not markdown/pr
   });
   expect(snapshot.provenance.policySha256).toBe(publicSha256(canonicalPublicJson(mutablePolicy())));
   const originalPolicy = { ...mutablePolicy(), seeds: ["https://example.com"] };
-  expect(
-    buildPublicSnapshot(report(), originalPolicy, revision, context).provenance.policySha256,
-  ).toBe(publicSha256(canonicalPublicJson(originalPolicy)));
+  expect(buildPublicSnapshot(report(), originalPolicy, revision, context).provenance.policySha256).toBe(
+    publicSha256(canonicalPublicJson(originalPolicy)),
+  );
   expect(canonicalPublicJson({ z: 1, a: { z: 2, a: 3 } })).toBe('{"a":{"a":3,"z":2},"z":1}');
   expect(JSON.stringify(snapshot)).not.toContain("markdown");
 });
@@ -141,8 +139,7 @@ test("retains incomplete coverage and rejects persisted frontier counters", () =
   const partial = report();
   partial.frontier.pending = 3;
   expect(
-    buildPublicSnapshot(partial, mutablePolicy(), revision, { ...context, timedOut: true })
-      .coverage,
+    buildPublicSnapshot(partial, mutablePolicy(), revision, { ...context, timedOut: true }).coverage,
   ).toMatchObject({ complete: false, pending: 3, timedOut: true, exported: 1 });
   partial.frontier.done = 9;
   expect(() => buildPublicSnapshot(partial, mutablePolicy(), revision, context)).toThrow();
@@ -158,9 +155,7 @@ test("retains incomplete coverage and rejects persisted frontier counters", () =
     pages: [],
     frontier: { pending: 0, locked: 0, done: 0, failed: 0 },
   };
-  expect(
-    buildPublicSnapshot(unfinished, mutablePolicy(), revision, context).coverage.complete,
-  ).toBe(false);
+  expect(buildPublicSnapshot(unfinished, mutablePolicy(), revision, context).coverage.complete).toBe(false);
   expect(() =>
     buildPublicSnapshot(report(), mutablePolicy(), revision, {
       ...context,
@@ -193,12 +188,7 @@ test("rejects private/credentialed/foreign URLs even on unsuccessful pages", () 
   const privateReport = { ...report(), profile: "aphrody" };
   expect(() => buildPublicSnapshot(privateReport, mutablePolicy(), revision, context)).toThrow();
   expect(() =>
-    buildPublicSnapshot(
-      report(),
-      { ...mutablePolicy(), hosts: ["service.internal"] },
-      revision,
-      context,
-    ),
+    buildPublicSnapshot(report(), { ...mutablePolicy(), hosts: ["service.internal"] }, revision, context),
   ).toThrow();
 });
 
@@ -223,9 +213,7 @@ test("enforces requests, depth, text, UTF8, document and total-byte budgets", ()
   }));
   const largerPolicy = { ...mutablePolicy(), maxRequests: 2000 };
   expect(() => buildPublicSnapshot(oversized, largerPolicy, revision, context)).toThrow();
-  oversized.pages = oversized.pages
-    .slice(0, 150)
-    .map((page) => ({ ...page, text: "x".repeat(32768) }));
+  oversized.pages = oversized.pages.slice(0, 150).map(page => ({ ...page, text: "x".repeat(32768) }));
   expect(() => buildPublicSnapshot(oversized, largerPolicy, revision, context)).toThrow();
 });
 
@@ -240,15 +228,11 @@ test("publishes immutable verified bytes, invalidates pointer, and retains rollb
   const second = await publishPublicSnapshot(root, updated, mutablePolicy(), revision, context);
   expect(second.pointer.sha256).not.toBe(first.pointer.sha256);
   expect(await readFile(join(root, second.rollbackFile!), "utf8")).toBe(previous.toString());
-  expect(JSON.parse(await readFile(join(root, "public-docs.pointer.json"), "utf8"))).toEqual(
+  expect(JSON.parse(await readFile(join(root, "public-docs.pointer.json"), "utf8"))).toEqual(second.pointer);
+  expect((await readdir(root)).some(file => file.endsWith(".tmp") || file.endsWith(".lock"))).toBe(false);
+  expect((await publishPublicSnapshot(root, updated, mutablePolicy(), revision, context)).pointer).toEqual(
     second.pointer,
   );
-  expect(
-    (await readdir(root)).some((file) => file.endsWith(".tmp") || file.endsWith(".lock")),
-  ).toBe(false);
-  expect(
-    (await publishPublicSnapshot(root, updated, mutablePolicy(), revision, context)).pointer,
-  ).toEqual(second.pointer);
 });
 
 test("rejects corrupt existing snapshot and preserves pointer", async () => {
@@ -256,9 +240,7 @@ test("rejects corrupt existing snapshot and preserves pointer", async () => {
   const first = await publishPublicSnapshot(root, report(), mutablePolicy(), revision, context);
   const previous = await readFile(join(root, "public-docs.pointer.json"));
   await writeFile(join(root, first.pointer.file), "tampered");
-  await expect(
-    publishPublicSnapshot(root, report(), mutablePolicy(), revision, context),
-  ).rejects.toThrow();
+  await expect(publishPublicSnapshot(root, report(), mutablePolicy(), revision, context)).rejects.toThrow();
   expect(await readFile(join(root, "public-docs.pointer.json"))).toEqual(previous);
 });
 
@@ -266,9 +248,7 @@ test("validation and foreign pointer refusal never publish or replace anything",
   const root = await directory();
   const invalid = report();
   invalid.pages[0]!.text = "x".repeat(32769);
-  await expect(
-    publishPublicSnapshot(root, invalid, mutablePolicy(), revision, context),
-  ).rejects.toThrow();
+  await expect(publishPublicSnapshot(root, invalid, mutablePolicy(), revision, context)).rejects.toThrow();
   expect(await readdir(root)).toEqual([]);
   const foreign = JSON.stringify({
     schemaVersion: 1,
@@ -277,9 +257,7 @@ test("validation and foreign pointer refusal never publish or replace anything",
     sha256: "b".repeat(64),
   });
   await writeFile(join(root, "public-docs.pointer.json"), foreign);
-  await expect(
-    publishPublicSnapshot(root, report(), mutablePolicy(), revision, context),
-  ).rejects.toThrow();
+  await expect(publishPublicSnapshot(root, report(), mutablePolicy(), revision, context)).rejects.toThrow();
   expect(await readFile(join(root, "public-docs.pointer.json"), "utf8")).toBe(foreign);
   expect(await readdir(root)).toEqual(["public-docs.pointer.json"]);
 });
@@ -289,26 +267,16 @@ test("rejects symlink roots and symlink pointers without reading targets", async
   const target = await directory();
   const link = join(base, "linked");
   await symlink(target, link, process.platform === "win32" ? "junction" : "dir");
-  await expect(
-    publishPublicSnapshot(link, report(), mutablePolicy(), revision, context),
-  ).rejects.toThrow();
-  await symlink(
-    target,
-    join(base, "public-docs.pointer.json"),
-    process.platform === "win32" ? "junction" : "dir",
-  );
-  await expect(
-    publishPublicSnapshot(base, report(), mutablePolicy(), revision, context),
-  ).rejects.toThrow();
+  await expect(publishPublicSnapshot(link, report(), mutablePolicy(), revision, context)).rejects.toThrow();
+  await symlink(target, join(base, "public-docs.pointer.json"), process.platform === "win32" ? "junction" : "dir");
+  await expect(publishPublicSnapshot(base, report(), mutablePolicy(), revision, context)).rejects.toThrow();
   expect(await readdir(target)).toEqual([]);
 });
 
 test("publication refuses an existing lock and a hash-valid foreign snapshot", async () => {
   const root = await directory();
   await writeFile(join(root, "public-docs.publish.lock"), "foreign-owner");
-  await expect(
-    publishPublicSnapshot(root, report(), mutablePolicy(), revision, context),
-  ).rejects.toThrow();
+  await expect(publishPublicSnapshot(root, report(), mutablePolicy(), revision, context)).rejects.toThrow();
   expect(await readFile(join(root, "public-docs.publish.lock"), "utf8")).toBe("foreign-owner");
   await rm(join(root, "public-docs.publish.lock"));
   const foreign = Buffer.from(
@@ -327,9 +295,7 @@ test("publication refuses an existing lock and a hash-valid foreign snapshot", a
     sha256: sha,
   });
   await writeFile(join(root, "public-docs.pointer.json"), pointer);
-  await expect(
-    publishPublicSnapshot(root, report(), mutablePolicy(), revision, context),
-  ).rejects.toThrow();
+  await expect(publishPublicSnapshot(root, report(), mutablePolicy(), revision, context)).rejects.toThrow();
   expect(await readFile(join(root, "public-docs.pointer.json"), "utf8")).toBe(pointer);
   expect(await readdir(root)).toHaveLength(2);
 });
@@ -341,16 +307,7 @@ test("CLI requires explicit completion receipt and plans without publishing", as
   const policyFile = join(inputs, "policy.json");
   await writeFile(reportFile, JSON.stringify(report()));
   await writeFile(policyFile, JSON.stringify(mutablePolicy()));
-  const args = [
-    "--report",
-    reportFile,
-    "--policy",
-    policyFile,
-    "--source-revision",
-    revision,
-    "--root",
-    root,
-  ];
+  const args = ["--report", reportFile, "--policy", policyFile, "--source-revision", revision, "--root", root];
   await expect(runPublicSnapshotCli(args)).rejects.toThrow();
   expect(await readdir(root)).toEqual([]);
   args.push("--generated-at", context.generatedAt, "--timed-out", "false");

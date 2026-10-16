@@ -391,12 +391,10 @@ test("a factory that require()s the module it is mocking also patches the requir
   expect(require(path).extra).toBe("extra");
 });
 
-test.concurrent(
-  "tests in a file do not start until a top-level mock.module with a pending factory has patched its static imports",
-  async () => {
-    using dir = tempDir("mock-module-pending-toplevel", {
-      "a.ts": `export function a() { return "real-a"; }\nexport function b() { return "real-b"; }`,
-      "partial.test.ts": `
+test.concurrent("tests in a file do not start until a top-level mock.module with a pending factory has patched its static imports", async () => {
+  using dir = tempDir("mock-module-pending-toplevel", {
+    "a.ts": `export function a() { return "real-a"; }\nexport function b() { return "real-b"; }`,
+    "partial.test.ts": `
       import { expect, mock, test } from "bun:test";
       import { a, b } from "./a";
 
@@ -411,26 +409,23 @@ test.concurrent(
         expect(b()).toBe("real-b");
       });
     `,
-    });
-    await using proc = Bun.spawn({
-      cmd: [bunExe(), "test", "partial.test.ts"],
-      cwd: String(dir),
-      env: bunEnv,
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-    const [, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
-    expect(stderr).toContain(" 1 pass");
-    expect(exitCode).toBe(0);
-  },
-);
+  });
+  await using proc = Bun.spawn({
+    cmd: [bunExe(), "test", "partial.test.ts"],
+    cwd: String(dir),
+    env: bunEnv,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  expect(stderr).toContain(" 1 pass");
+  expect(exitCode).toBe(0);
+});
 
-test.concurrent(
-  "a top-level mock.module whose pending factory rejects fails the run when the returned promise is not awaited",
-  async () => {
-    using dir = tempDir("mock-module-pending-toplevel-reject", {
-      "a.ts": `export function a() { return "real-a"; }`,
-      "reject.test.ts": `
+test.concurrent("a top-level mock.module whose pending factory rejects fails the run when the returned promise is not awaited", async () => {
+  using dir = tempDir("mock-module-pending-toplevel-reject", {
+    "a.ts": `export function a() { return "real-a"; }`,
+    "reject.test.ts": `
       import { expect, mock, test } from "bun:test";
       import { a } from "./a";
 
@@ -443,27 +438,24 @@ test.concurrent(
         expect(a()).toBe("real-a");
       });
     `,
-    });
-    await using proc = Bun.spawn({
-      cmd: [bunExe(), "test", "reject.test.ts"],
-      cwd: String(dir),
-      env: bunEnv,
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-    const [, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
-    expect(stderr).toContain("error: factory failed");
-    expect(stderr).toContain(" 1 error");
-    expect(exitCode).toBe(1);
-  },
-);
+  });
+  await using proc = Bun.spawn({
+    cmd: [bunExe(), "test", "reject.test.ts"],
+    cwd: String(dir),
+    env: bunEnv,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  expect(stderr).toContain("error: factory failed");
+  expect(stderr).toContain(" 1 error");
+  expect(exitCode).toBe(1);
+});
 
-test.concurrent(
-  "a mock.module patch that a test leaves pending or that was replaced does not hold up a file",
-  async () => {
-    using dir = tempDir("mock-module-pending-leftover", {
-      "a.ts": `export function a() { return "real-a"; }`,
-      "1.test.ts": `
+test.concurrent("a mock.module patch that a test leaves pending or that was replaced does not hold up a file", async () => {
+  using dir = tempDir("mock-module-pending-leftover", {
+    "a.ts": `export function a() { return "real-a"; }`,
+    "1.test.ts": `
       import { expect, mock, test } from "bun:test";
       import { a } from "./a";
 
@@ -472,7 +464,7 @@ test.concurrent(
         expect(a()).toBe("real-a");
       });
     `,
-      "2.test.ts": `
+    "2.test.ts": `
       import { expect, mock, test } from "bun:test";
       import { a } from "./a";
 
@@ -484,19 +476,18 @@ test.concurrent(
         expect(a()).toBe("mocked-a");
       });
     `,
-    });
-    await using proc = Bun.spawn({
-      cmd: [bunExe(), "test", "./1.test.ts", "./2.test.ts"],
-      cwd: String(dir),
-      env: bunEnv,
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-    const [, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
-    expect(stderr).toContain(" 2 pass");
-    expect(exitCode).toBe(0);
-  },
-);
+  });
+  await using proc = Bun.spawn({
+    cmd: [bunExe(), "test", "./1.test.ts", "./2.test.ts"],
+    cwd: String(dir),
+    env: bunEnv,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  expect(stderr).toContain(" 2 pass");
+  expect(exitCode).toBe(0);
+});
 
 test.concurrent("mock.module() of a module whose import() is still loading its dependencies", async () => {
   using dir = tempDir("mock-module-import-in-flight", {
@@ -762,15 +753,13 @@ test.concurrent("jest.resetModules, jest.isolateModules and jest.isolateModulesA
   expect(exitCode).toBe(0);
 });
 
-test.concurrent(
-  "require() of a mocked builtin, the default export of a mocked loaded module, static imports after resetModules",
-  async () => {
-    const { stderr, exitCode } = await runJestModuleTest(
-      "jest-mock-builtin-default",
-      {
-        "math-default.js": `export function add(a, b) { return a + b; }\nexport default { kind: "real" };`,
-        "esm-counter.js": `globalThis.esmLoads = (globalThis.esmLoads ?? 0) + 1;\nexport const load = globalThis.esmLoads;`,
-        "limits.test.js": `
+test.concurrent("require() of a mocked builtin, the default export of a mocked loaded module, static imports after resetModules", async () => {
+  const { stderr, exitCode } = await runJestModuleTest(
+    "jest-mock-builtin-default",
+    {
+      "math-default.js": `export function add(a, b) { return a + b; }\nexport default { kind: "real" };`,
+      "esm-counter.js": `globalThis.esmLoads = (globalThis.esmLoads ?? 0) + 1;\nexport const load = globalThis.esmLoads;`,
+      "limits.test.js": `
         import { expect, jest, test } from "bun:test";
         import mathDefault, { add } from "./math-default";
         import { load as staticLoad } from "./esm-counter";
@@ -805,11 +794,10 @@ test.concurrent(
           expect(staticLoad).toBe(1);
         });
       `,
-      },
-      "limits.test.js",
-    );
-    expect(stderr).toContain(" 3 pass");
-    expect(stderr).toContain(" 0 fail");
-    expect(exitCode).toBe(0);
-  },
-);
+    },
+    "limits.test.js",
+  );
+  expect(stderr).toContain(" 3 pass");
+  expect(stderr).toContain(" 0 fail");
+  expect(exitCode).toBe(0);
+});

@@ -321,13 +321,10 @@ function convertRule(rule: Rule, afterHooksState: AfterHooksState) {
     beforeHook: BeforeHook | null,
     setupAfterHook: ((program: Program) => void) | null;
 
-  rule.create = (eslintContext) => {
+  rule.create = eslintContext => {
     // Lazily call `createOnce` on first invocation of `create`
     if (context === null) {
-      ({ context, visitor, beforeHook, setupAfterHook } = createContextAndVisitor(
-        rule,
-        afterHooksState,
-      ));
+      ({ context, visitor, beforeHook, setupAfterHook } = createContextAndVisitor(rule, afterHooksState));
     }
     debugAssertIsNonNull(visitor);
 

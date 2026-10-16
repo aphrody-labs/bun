@@ -408,23 +408,20 @@ describe.skipIf(!isLinux || !cc)(
       });
     });
 
-    test.concurrent(
-      "Bun.spawn with a buffer stdin closes the stdin pipe exactly once and releases the Subprocess",
-      async () => {
-        // On Linux a buffer stdin normally travels through a memfd and never gets
-        // a writer; disabling that takes the pipe writer path every other
-        // platform uses.
-        expect(await runFixture("stdin-buffer", { BUN_FEATURE_FLAG_DISABLE_MEMFD: "1" })).toEqual({
-          report: {
-            error: { code: "ENOSPC", message: "ENOSPC: no space left on device, epoll_ctl" },
-            leakedFds: 0,
-            leakedWrappers: 0,
-          },
-          stderr: "",
-          exitCode: 0,
-        });
-      },
-    );
+    test.concurrent("Bun.spawn with a buffer stdin closes the stdin pipe exactly once and releases the Subprocess", async () => {
+      // On Linux a buffer stdin normally travels through a memfd and never gets
+      // a writer; disabling that takes the pipe writer path every other
+      // platform uses.
+      expect(await runFixture("stdin-buffer", { BUN_FEATURE_FLAG_DISABLE_MEMFD: "1" })).toEqual({
+        report: {
+          error: { code: "ENOSPC", message: "ENOSPC: no space left on device, epoll_ctl" },
+          leakedFds: 0,
+          leakedWrappers: 0,
+        },
+        stderr: "",
+        exitCode: 0,
+      });
+    });
 
     // The call throws, so nobody is handed the child to end it another way than with its killSignal.
     test.concurrent("Bun.spawn with a buffer stdin ends a child that its killSignal does not", async () => {

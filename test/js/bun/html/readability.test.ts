@@ -89,7 +89,13 @@ describe("Bun.HTML.extract", () => {
           { key: "snippet", selector: ".snippet", attribute: "textContent" },
         ],
       },
-      { selector: "a", attributes: [{ key: "href", attribute: "href" }, { key: "rel", attribute: "rel" }] },
+      {
+        selector: "a",
+        attributes: [
+          { key: "href", attribute: "href" },
+          { key: "rel", attribute: "rel" },
+        ],
+      },
       { selector: "[[invalid", attributes: [{ key: "x", attribute: "id" }] },
     ]);
     expect(out).toEqual([

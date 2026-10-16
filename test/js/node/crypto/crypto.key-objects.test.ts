@@ -1510,7 +1510,8 @@ describe("crypto.KeyObjects", () => {
   });
 
   type TestRunInContextArg =
-    { fn: typeof runInContext; isIsolated: true } | { fn: typeof runInThisContext; isIsolated?: false };
+    | { fn: typeof runInContext; isIsolated: true }
+    | { fn: typeof runInThisContext; isIsolated?: false };
 
   function testRunInContext({ fn, isIsolated }: TestRunInContextArg) {
     if (isIsolated) {

@@ -20,10 +20,7 @@ import type * as ESTree from "../../../../../packages/bun-oxc/adapters/types_npm
  *
  * `RestElement` appears in object and array patterns.
  */
-type BindingPatternNode =
-  | ESTree.BindingPattern
-  | ESTree.BindingRestElement
-  | ESTree.FormalParameterRest;
+type BindingPatternNode = ESTree.BindingPattern | ESTree.BindingRestElement | ESTree.FormalParameterRest;
 
 /**
  * Print anything which can be bound to - a name, a destructuring pattern, or one carrying a default.
@@ -100,11 +97,7 @@ function printBindingProperty(node: ESTree.BindingProperty, state: State): void 
   if (!node.computed && key.type === "Identifier") {
     if (value.type === "Identifier" && key.name === value.name) {
       shorthand = true;
-    } else if (
-      value.type === "AssignmentPattern"
-      && value.left.type === "Identifier"
-      && key.name === value.left.name
-    ) {
+    } else if (value.type === "AssignmentPattern" && value.left.type === "Identifier" && key.name === value.left.name) {
       shorthand = true;
     }
   }

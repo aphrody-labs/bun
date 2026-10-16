@@ -319,9 +319,7 @@ export var __decorateElement = (array, flags, name, decorators, target, extra) =
   }
 
   return (
-    k || __decoratorMetadata(array, target),
-    desc && __defProp(target, name, desc),
-    p ? (k ^ 4 ? extra : desc) : target
+    k || __decoratorMetadata(array, target), desc && __defProp(target, name, desc), p ? (k ^ 4 ? extra : desc) : target
   );
 };
 

@@ -37,8 +37,8 @@ const nodeVersions = require("fs")
   .trim()
   .split("\n")
   .reverse()
-  .map((version) => {
-    const versions = version.split(".").map((n) => parseInt(n, 10));
+  .map(version => {
+    const versions = version.split(".").map(n => parseInt(n, 10));
     return {
       id: "node" + versions.join("_"),
       name: "node",
@@ -46,10 +46,10 @@ const nodeVersions = require("fs")
     };
   });
 const es5NodeVersions = new Set(["node0_4", "node0_6", "node0_8"]);
-const es5EnvsVersions = envsVersions["node"].filter((n) => es5NodeVersions.has(n.id));
+const es5EnvsVersions = envsVersions["node"].filter(n => es5NodeVersions.has(n.id));
 envsVersions["node"] = es5EnvsVersions.concat(nodeVersions);
 
-const compatSources = ["es5", "es6", "es2016plus", "esnext"].map((source) => {
+const compatSources = ["es5", "es6", "es2016plus", "esnext"].map(source => {
   const data = require(`./compat-table/data-${source}`);
   interpolateAllResults(data.tests, envs);
   return data;
@@ -109,10 +109,10 @@ const reformatNodeCompatTable = () => {
   return tests;
 };
 
-const flattenFeatureData = (tests) => {
-  return tests.flatMap((test) => {
+const flattenFeatureData = tests => {
+  return tests.flatMap(test => {
     if (!test.subtests) return test;
-    return test.subtests.map((subtest) =>
+    return test.subtests.map(subtest =>
       Object.assign({}, subtest, {
         name: test.name + " / " + subtest.name,
         group: test.name,
@@ -121,15 +121,15 @@ const flattenFeatureData = (tests) => {
   });
 };
 
-const compatibilityTests = compatSources.flatMap((data) => flattenFeatureData(data.tests));
+const compatibilityTests = compatSources.flatMap(data => flattenFeatureData(data.tests));
 const nodeTests = flattenFeatureData(reformatNodeCompatTable());
 
 // Merge nodeTests into compatibilityTests
-compatibilityTests.forEach((t) => {
-  const found = nodeTests.find((test) => t.name == test.name);
+compatibilityTests.forEach(t => {
+  const found = nodeTests.find(test => t.name == test.name);
   if (found) {
     // Remove all node data from compatibilityTests then merge nodeTests into it.
-    Object.keys(t.res).forEach((key) => {
+    Object.keys(t.res).forEach(key => {
       if (key.startsWith("node")) {
         t.res[key] = undefined;
       }
@@ -137,14 +137,14 @@ compatibilityTests.forEach((t) => {
     Object.assign(t.res, found.res);
   } else {
     // Add missing node data.
-    nodeVersions.forEach((v) => {
+    nodeVersions.forEach(v => {
       t.res[v.id] = true;
     });
   }
 });
 
 const getLowestImplementedVersion = ({ features }, env, exclude = () => false) => {
-  const tests = compatibilityTests.filter((test) => {
+  const tests = compatibilityTests.filter(test => {
     let ok = features.includes(test.name);
     ok ||= test.group && features.includes(test.group);
     ok ||= features.length === 1 && test.name.startsWith(features[0]);
@@ -167,7 +167,7 @@ const getLowestImplementedVersion = ({ features }, env, exclude = () => false) =
     return envsVersions[env][i + 1];
   });
 
-  if (envTests.length === 0 || envTests.some((t) => !t)) return null;
+  if (envTests.length === 0 || envTests.some(t => !t)) return null;
 
   const result = envTests.reduce((a, b) => {
     return compareVersions(a, b) > 0 ? a : b;
@@ -179,18 +179,16 @@ const getLowestImplementedVersion = ({ features }, env, exclude = () => false) =
   return result.version.join(".").replace(/\.0$/, "");
 };
 
-const expandFeatures = (features) =>
-  features.flatMap((feat) => {
+const expandFeatures = features =>
+  features.flatMap(feat => {
     if (feat.includes("/")) return [feat];
-    return compatibilityTests
-      .map((test) => test.name)
-      .filter((name) => name === feat || name.startsWith(feat + " / "));
+    return compatibilityTests.map(test => test.name).filter(name => name === feat || name.startsWith(feat + " / "));
   });
 
 const generateData = (environments, items) => {
   for (const item of items) {
     const targets = {};
-    environments.forEach((env) => {
+    environments.forEach(env => {
       const version = getLowestImplementedVersion(
         {
           features: expandFeatures(item.features),

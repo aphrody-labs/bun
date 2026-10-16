@@ -26,8 +26,7 @@ export function parseCrawlArgs(argv: string[]): {
   let out: string | undefined;
   const number = (flag: string, raw: string | undefined): number => {
     const value = Number(raw);
-    if (!Number.isInteger(value) || value < 0)
-      throw new Error(`${flag} needs a non-negative integer`);
+    if (!Number.isInteger(value) || value < 0) throw new Error(`${flag} needs a non-negative integer`);
     return value;
   };
   for (let i = 0; i < argv.length; i++) {
@@ -50,7 +49,7 @@ export function parseCrawlArgs(argv: string[]): {
 
 export function summarizeCrawl(report: CrawlReport): string {
   const lines = report.pages.map(
-    (page) =>
+    page =>
       `${String(page.status).padEnd(4)} d${page.depth} ${String(page.wordCount).padStart(6)} words  ${page.url}${page.duplicate ? "  (duplicate)" : ""}`,
   );
   for (const error of report.errors) lines.push(`ERR  ${error.url}: ${error.error}`);

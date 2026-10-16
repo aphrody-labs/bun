@@ -16,8 +16,8 @@ export type FormatFileResult = { ok: true; code: string } | { ok: false; error: 
  */
 export async function toFormatFileResult(run: Promise<string>): Promise<FormatFileResult> {
   return run
-    .then((code) => ({ ok: true as const, code }))
-    .catch((err) => ({ ok: false as const, error: errorToMessage(err) }));
+    .then(code => ({ ok: true as const, code }))
+    .catch(err => ({ ok: false as const, error: errorToMessage(err) }));
 }
 
 /**

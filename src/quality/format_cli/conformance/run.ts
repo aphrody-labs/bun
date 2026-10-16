@@ -1,15 +1,7 @@
 // oxlint-disable no-console, no-await-in-loop
 
 import { createTwoFilesPatch } from "diff";
-import {
-  existsSync,
-  globSync,
-  mkdirSync,
-  readdirSync,
-  readFileSync,
-  rmSync,
-  writeFileSync,
-} from "node:fs";
+import { existsSync, globSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, relative } from "node:path";
 import prettier from "prettier";
 import * as sveltePlugin from "prettier-plugin-svelte";
@@ -47,10 +39,7 @@ const categories: Category[] = [
       { dir: join(EXTERNALS_DIR, "vue-vben-admin"), ext: ".vue" },
       { dir: join(FIXTURES_DIR, "edge-cases", "js-in-vue") },
     ],
-    optionSets: [
-      { printWidth: 80 },
-      { printWidth: 100, vueIndentScriptAndStyle: true, singleQuote: true },
-    ],
+    optionSets: [{ printWidth: 80 }, { printWidth: 100, vueIndentScriptAndStyle: true, singleQuote: true }],
   },
   {
     name: "gql-in-js",
@@ -149,7 +138,7 @@ const categories: Category[] = [
         dir: join(EXTERNALS_DIR, "plugin-svelte"),
         ext: "input.html",
         excludes: ["syntax-error"],
-        resolveFilePath: (name) => name.replace("/input.html", ".svelte"),
+        resolveFilePath: name => name.replace("/input.html", ".svelte"),
       },
     ],
     optionSets: [
@@ -267,9 +256,7 @@ for (const category of categories) {
 
 writeReport(results, divergences);
 
-const failedNames = new Set(
-  results.flatMap((r) => r.optionSetResults.flatMap((o) => o.failures.map((f) => f.name))),
-);
+const failedNames = new Set(results.flatMap(r => r.optionSetResults.flatMap(o => o.failures.map(f => f.name))));
 for (const name of failedNames) {
   if (!divergences.has(name)) {
     console.warn(`WARNING: "${name}" fails and no DIVERGENCES.md entry lists it (unclassified)`);
@@ -290,9 +277,7 @@ function collectDivergences(): Map<string, string[]> {
     let slug = "";
     for (const line of readFileSync(join(REPO_ROOT, file), "utf8").split("\n")) {
       if (line.startsWith("## ")) slug = line.slice(3).trim();
-      for (const [, name] of line.matchAll(
-        /`(?:conformance\/fixtures\/)?((?:externals|edge-cases)\/[^`]+)`/g,
-      )) {
+      for (const [, name] of line.matchAll(/`(?:conformance\/fixtures\/)?((?:externals|edge-cases)\/[^`]+)`/g)) {
         map.set(name, [...(map.get(name) ?? []), `${file}#${slug}`]);
       }
     }
@@ -335,7 +320,7 @@ function collectFixtures(sources: Source[]): Fixture[] {
 
       const fullPath = join(entry.parentPath, entry.name);
       const relPath = relative(FIXTURES_DIR, fullPath);
-      if (source.excludes?.some((s) => relPath.includes(s))) continue;
+      if (source.excludes?.some(s => relPath.includes(s))) continue;
 
       const name = source.resolveFilePath?.(relPath) ?? relPath;
       results.push({ name, fullPath });
@@ -354,11 +339,7 @@ async function runCategory(category: Category, fixtures: Fixture[]): Promise<Cat
 
     for (const fixture of fixtures) {
       const content = readFileSync(fixture.fullPath, "utf8");
-      const [oxfmtResult, prettierResult] = await compareWithPrettier(
-        fixture.name,
-        content,
-        options,
-      );
+      const [oxfmtResult, prettierResult] = await compareWithPrettier(fixture.name, content, options);
 
       if (oxfmtResult === prettierResult) {
         passed++;
@@ -505,12 +486,7 @@ function writeDiffFile(
     lines.push("`````");
     lines.push("");
     const lang = fixtureName.split(".").pop() ?? "";
-    const patch = createTwoFilesPatch(
-      "prettier",
-      "oxfmt",
-      entry.failure.prettier,
-      entry.failure.oxfmt,
-    );
+    const patch = createTwoFilesPatch("prettier", "oxfmt", entry.failure.prettier, entry.failure.oxfmt);
     lines.push("### Diff");
     lines.push("");
     lines.push("`````diff");

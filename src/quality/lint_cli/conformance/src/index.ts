@@ -193,8 +193,7 @@ const SNAPSHOTS_DIR_PATH = pathJoin(CONFORMANCE_DIR_PATH, "snapshots");
 const { createRequire } = Module;
 const require = createRequire(import.meta.url);
 
-const normalizePath =
-  pathSep === "\\" ? (path: string) => path.replaceAll("\\", "/") : (path: string) => path;
+const normalizePath = pathSep === "\\" ? (path: string) => path.replaceAll("\\", "/") : (path: string) => path;
 
 // Run
 const mocks = initMocks();
@@ -248,11 +247,7 @@ function runGroup(group: TestGroup, mocks: Mocks) {
   const groupName = group.name;
 
   // Get absolute path to test files directory
-  const testFilesDirPath = pathJoin(
-    SUBMODULES_DIR_PATH,
-    group.submoduleName,
-    group.testFilesDirPath,
-  );
+  const testFilesDirPath = pathJoin(SUBMODULES_DIR_PATH, group.submoduleName, group.testFilesDirPath);
   group.testFilesDirPath = testFilesDirPath;
 
   // Mock `RuleTester` instances.
@@ -336,7 +331,7 @@ function runGroup(group: TestGroup, mocks: Mocks) {
       loadErrorCount++;
     } else {
       const { tests } = rule;
-      if (tests.length > 0 && tests.every((test) => test.isPassed || test.isSkipped)) {
+      if (tests.length > 0 && tests.every(test => test.isPassed || test.isSkipped)) {
         fullyPassingCount++;
       }
     }

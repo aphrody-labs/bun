@@ -564,24 +564,21 @@ for (const [name, peer, url] of tlsDrivers) {
     await server.closed;
   });
 
-  test.concurrent(
-    `${name}: idleTimeout eviction settles against a TLS peer that never answers close_notify`,
-    async () => {
-      using server = peer(holdOpen);
-      const closed = Promise.withResolvers<void>();
-      await using sql = new SQL({
-        url: url(server.port),
-        max: 1,
-        idleTimeout: 0.05,
-        tls: { rejectUnauthorized: false },
-        onclose: () => closed.resolve(),
-      });
-      await sql.connect();
-      await closed.promise;
-      await server.ended;
-      await server.closed;
-    },
-  );
+  test.concurrent(`${name}: idleTimeout eviction settles against a TLS peer that never answers close_notify`, async () => {
+    using server = peer(holdOpen);
+    const closed = Promise.withResolvers<void>();
+    await using sql = new SQL({
+      url: url(server.port),
+      max: 1,
+      idleTimeout: 0.05,
+      tls: { rejectUnauthorized: false },
+      onclose: () => closed.resolve(),
+    });
+    await sql.connect();
+    await closed.promise;
+    await server.ended;
+    await server.closed;
+  });
 
   // Until the server's answer to the close_notify arrived, the next reserve() waited for the
   // slot of the closed reservation and was rejected with its close.
@@ -656,20 +653,17 @@ const protocolViolations = [
 ] as const;
 
 for (const [name, peer, url, code] of protocolViolations) {
-  test.concurrent(
-    `${name}: a protocol violation closes the socket against a TLS peer that never answers close_notify`,
-    async () => {
-      using server = peer();
-      await using sql = new SQL({ url: url(server.port), max: 1, tls: { rejectUnauthorized: false } });
-      const settled = await sql.connect().then(
-        () => "connected",
-        e => e.code,
-      );
-      expect(settled).toBe(code);
-      await server.ended;
-      await server.closed;
-    },
-  );
+  test.concurrent(`${name}: a protocol violation closes the socket against a TLS peer that never answers close_notify`, async () => {
+    using server = peer();
+    await using sql = new SQL({ url: url(server.port), max: 1, tls: { rejectUnauthorized: false } });
+    const settled = await sql.connect().then(
+      () => "connected",
+      e => e.code,
+    );
+    expect(settled).toBe(code);
+    await server.ended;
+    await server.closed;
+  });
 }
 
 // A backend that runs a query answers it first and the client's close_notify after it. The next

@@ -26,7 +26,11 @@ export async function probeMcp(root: string, timeout = 15000): Promise<McpProbe 
     jsonrpc: "2.0",
     id: 1,
     method: "initialize",
-    params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "bun-agent-plugin-doctor", version: "1" } },
+    params: {
+      protocolVersion: "2025-06-18",
+      capabilities: {},
+      clientInfo: { name: "bun-agent-plugin-doctor", version: "1" },
+    },
   };
   let child: ReturnType<typeof Bun.spawn<"pipe", "pipe", "pipe">>;
   try {

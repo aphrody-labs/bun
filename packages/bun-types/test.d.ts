@@ -2308,7 +2308,9 @@ declare module "bun:test" {
     // export type MockFunctionMetadataType = MockMetadataType;
 
     type MockFunctionResult<T extends FunctionLike = UnknownFunction> =
-      MockFunctionResultIncomplete | MockFunctionResultReturn<T> | MockFunctionResultThrow;
+      | MockFunctionResultIncomplete
+      | MockFunctionResultReturn<T>
+      | MockFunctionResultThrow;
 
     interface MockFunctionResultIncomplete {
       type: "incomplete";

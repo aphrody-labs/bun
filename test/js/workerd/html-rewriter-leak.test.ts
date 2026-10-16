@@ -1484,10 +1484,8 @@ test.concurrent("an indexed accessor on Array.prototype never sees a handler", a
 // transform cell, and lol-html goes on to run the handlers for the rest of the
 // chunk. A collection in that window swept the cell, and the next handler to
 // throw recorded its error on a null cell (segfault at address 0x40).
-test.concurrent(
-  "a handler can throw after an earlier one cancelled the output and collected, in the same chunk",
-  async () => {
-    const code = /* js */ `
+test.concurrent("a handler can throw after an earlier one cancelled the output and collected, in the same chunk", async () => {
+  const code = /* js */ `
     const encoder = new TextEncoder();
     const readerAttached = Promise.withResolvers();
     using server = Bun.serve({
@@ -1529,18 +1527,17 @@ test.concurrent(
     process.stdout.write(JSON.stringify({ calls }));
   `;
 
-    await using proc = Bun.spawn({
-      cmd: [bunExe(), "-e", code],
-      env: bunEnv,
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
-    expect(withoutAsanWarning(stderr)).toBe("");
-    expect(stdout).toBe(JSON.stringify({ calls: 2 }));
-    expect(exitCode).toBe(0);
-  },
-);
+  await using proc = Bun.spawn({
+    cmd: [bunExe(), "-e", code],
+    env: bunEnv,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  expect(withoutAsanWarning(stderr)).toBe("");
+  expect(stdout).toBe(JSON.stringify({ calls: 2 }));
+  expect(exitCode).toBe(0);
+});
 
 // Cancelling the output cuts the stream's edge to the transform cell before the
 // pipe tells its input. A collection that finished in between swept the input
@@ -1644,10 +1641,8 @@ test.concurrent("a parked rewrite that dies with its handler promise does not re
 // collection has found that out. Failing the rewrite allocates, and a collection
 // in there freed the output stream that the error was then written to (a release
 // ASAN build reports a heap-use-after-free in ByteStream::on_data).
-test.concurrent(
-  "a parked rewrite that script drops before it is abandoned keeps its streams while it fails",
-  async () => {
-    const code = /* js */ `
+test.concurrent("a parked rewrite that script drops before it is abandoned keeps its streams while it fails", async () => {
+  const code = /* js */ `
     const ROUNDS = 20;
     const encoder = new TextEncoder();
     const tick = () => new Promise(resolve => setImmediate(resolve));
@@ -1684,20 +1679,19 @@ test.concurrent(
     process.stdout.write(JSON.stringify({ rounds: ROUNDS, cancelledSome: cancelled > 0 }));
   `;
 
-    await using proc = Bun.spawn({
-      cmd: [bunExe(), "-e", code],
-      // A full collection at every 25th slow-path allocation: over the rounds, one lands inside a task.
-      env: { ...bunEnv, BUN_JSC_slowPathAllocsBetweenGCs: "25" },
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
-    expect(withoutAsanWarning(stderr)).toBe("");
-    // Some tasks did find their rewrite alive, which is the case under test.
-    expect(stdout).toBe(JSON.stringify({ rounds: 20, cancelledSome: true }));
-    expect(exitCode).toBe(0);
-  },
-);
+  await using proc = Bun.spawn({
+    cmd: [bunExe(), "-e", code],
+    // A full collection at every 25th slow-path allocation: over the rounds, one lands inside a task.
+    env: { ...bunEnv, BUN_JSC_slowPathAllocsBetweenGCs: "25" },
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  expect(withoutAsanWarning(stderr)).toBe("");
+  // Some tasks did find their rewrite alive, which is the case under test.
+  expect(stdout).toBe(JSON.stringify({ rounds: 20, cancelledSome: true }));
+  expect(exitCode).toBe(0);
+});
 
 // dispose() cancels the sources of the streams that the graph's script was given, from native
 // code: nothing on that stack reaches a stream that script has dropped. A collection that

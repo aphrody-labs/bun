@@ -46,42 +46,38 @@ describe("parallel requests, single origin", () => {
     keepalive: [false, true] as const,
   })) {
     const N = 32;
-    test.concurrent(
-      `${N}× parallel ${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin keepalive=${keepalive}`,
-      async () => {
-        // Use Bun.serve here so keepalive reuse actually works on the
-        // origin side (the raw adversarial origin closes after each
-        // response, which defeats the pool).
-        await using origin = Bun.serve({
-          port: 0,
-          tls: originTls ? tlsCert : undefined,
-          fetch: req => new Response(new URL(req.url).searchParams.get("i") ?? "?"),
-        });
-        await using proxy = await createAdversarialProxy({ tls: proxyTls });
+    test.concurrent(`${N}× parallel ${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin keepalive=${keepalive}`, async () => {
+      // Use Bun.serve here so keepalive reuse actually works on the
+      // origin side (the raw adversarial origin closes after each
+      // response, which defeats the pool).
+      await using origin = Bun.serve({
+        port: 0,
+        tls: originTls ? tlsCert : undefined,
+        fetch: req => new Response(new URL(req.url).searchParams.get("i") ?? "?"),
+      });
+      await using proxy = await createAdversarialProxy({ tls: proxyTls });
 
-        const results = await Promise.all(
-          Array.from({ length: N }, (_, i) =>
-            fetch(`${origin.url}?i=${i}`, {
-              proxy: proxy.url,
-              keepalive,
-              tls: laxTls,
-            }).then(async r => ({ status: r.status, body: await r.text() })),
-          ),
-        );
+      const results = await Promise.all(
+        Array.from({ length: N }, (_, i) =>
+          fetch(`${origin.url}?i=${i}`, {
+            proxy: proxy.url,
+            keepalive,
+            tls: laxTls,
+          }).then(async r => ({ status: r.status, body: await r.text() })),
+        ),
+      );
 
-        // Every request got its own response body back — no cross-talk.
-        for (let i = 0; i < N; i++) {
-          expect(results[i]).toEqual({ status: 200, body: String(i) });
-        }
+      // Every request got its own response body back — no cross-talk.
+      for (let i = 0; i < N; i++) {
+        expect(results[i]).toEqual({ status: 200, body: String(i) });
+      }
 
-        // All traffic went through the proxy.
-        expect(proxy.connections.length).toBeGreaterThanOrEqual(1);
-        if (originTls) {
-          expect(proxy.connections.every(c => c.method === "CONNECT")).toBe(true);
-        }
-      },
-      30_000,
-    );
+      // All traffic went through the proxy.
+      expect(proxy.connections.length).toBeGreaterThanOrEqual(1);
+      if (originTls) {
+        expect(proxy.connections.every(c => c.method === "CONNECT")).toBe(true);
+      }
+    }, 30_000);
   }
 });
 
@@ -210,27 +206,24 @@ describe("tunnel reuse", () => {
     context: ["custom", "default"] as const,
     shape: ["content-length", "204", "chunked"] as const,
   })) {
-    test.concurrent(
-      `${proxyTls ? "https" : "http"}-proxy, ${context} TLS context, ${shape} responses: 3 requests share one tunnel`,
-      async () => {
-        await using origin = await keepAliveOrigin(shape);
-        await using proxy = await createAdversarialProxy({ tls: proxyTls });
-        const tlsOption = context === "custom" ? { ca: tlsCert.cert } : { rejectUnauthorized: false };
+    test.concurrent(`${proxyTls ? "https" : "http"}-proxy, ${context} TLS context, ${shape} responses: 3 requests share one tunnel`, async () => {
+      await using origin = await keepAliveOrigin(shape);
+      await using proxy = await createAdversarialProxy({ tls: proxyTls });
+      const tlsOption = context === "custom" ? { ca: tlsCert.cert } : { rejectUnauthorized: false };
 
-        const responses: Array<{ status: number; body: string }> = [];
-        for (let i = 0; i < 3; i++) {
-          const res = await fetch(origin.url, { proxy: proxy.url, keepalive: true, tls: tlsOption });
-          if (shape === "chunked") origin.releaseBody();
-          responses.push({ status: res.status, body: await res.text() });
-        }
+      const responses: Array<{ status: number; body: string }> = [];
+      for (let i = 0; i < 3; i++) {
+        const res = await fetch(origin.url, { proxy: proxy.url, keepalive: true, tls: tlsOption });
+        if (shape === "chunked") origin.releaseBody();
+        responses.push({ status: res.status, body: await res.text() });
+      }
 
-        expect(responses).toEqual([RESPONSES[shape], RESPONSES[shape], RESPONSES[shape]]);
-        expect({ connects: proxy.connectCount(), originConnections: origin.connections }).toEqual({
-          connects: 1,
-          originConnections: 1,
-        });
-      },
-    );
+      expect(responses).toEqual([RESPONSES[shape], RESPONSES[shape], RESPONSES[shape]]);
+      expect({ connects: proxy.connectCount(), originConnections: origin.connections }).toEqual({
+        connects: 1,
+        originConnections: 1,
+      });
+    });
   }
 });
 
@@ -325,37 +318,33 @@ describe("reject_unauthorized pool gate", () => {
 describe("large bidirectional", () => {
   const SIZE = 4 * 1024 * 1024;
   for (const proxyTls of [false, true] as const) {
-    test.concurrent(
-      `${proxyTls ? "https" : "http"}-proxy → https-origin, 4× concurrent ${SIZE}B echo`,
-      async () => {
-        await using origin = Bun.serve({
-          port: 0,
-          tls: tlsCert,
-          fetch: async req => new Response(await req.arrayBuffer()),
-        });
-        await using proxy = await createAdversarialProxy({ tls: proxyTls });
+    test.concurrent(`${proxyTls ? "https" : "http"}-proxy → https-origin, 4× concurrent ${SIZE}B echo`, async () => {
+      await using origin = Bun.serve({
+        port: 0,
+        tls: tlsCert,
+        fetch: async req => new Response(await req.arrayBuffer()),
+      });
+      await using proxy = await createAdversarialProxy({ tls: proxyTls });
 
-        const payload = makeBody(SIZE, "L");
-        const results = await Promise.all(
-          Array.from({ length: 4 }, () =>
-            fetch(origin.url, {
-              method: "POST",
-              body: payload,
-              proxy: proxy.url,
-              keepalive: false,
-              tls: laxTls,
-            }).then(async r => {
-              const t = await r.text();
-              return { status: r.status, len: t.length, ok: t === payload };
-            }),
-          ),
-        );
-        for (const r of results) {
-          expect(r).toEqual({ status: 200, len: SIZE, ok: true });
-        }
-      },
-      60_000,
-    );
+      const payload = makeBody(SIZE, "L");
+      const results = await Promise.all(
+        Array.from({ length: 4 }, () =>
+          fetch(origin.url, {
+            method: "POST",
+            body: payload,
+            proxy: proxy.url,
+            keepalive: false,
+            tls: laxTls,
+          }).then(async r => {
+            const t = await r.text();
+            return { status: r.status, len: t.length, ok: t === payload };
+          }),
+        ),
+      );
+      for (const r of results) {
+        expect(r).toEqual({ status: 200, len: SIZE, ok: true });
+      }
+    }, 60_000);
   }
 });
 
@@ -480,81 +469,77 @@ describe("memory probe (subprocess)", () => {
     // ~i=550 once TIME_WAIT passes ~15k.
     const iterations = isASAN || isWindows || isMacOS ? 300 : isCI ? 1200 : 600;
 
-    test.concurrent(
-      `${proxyTls ? "https" : "http"}-proxy → https-origin mode=${mode} ×${iterations}`,
-      async () => {
-        await using proc = Bun.spawn({
-          cmd: [
-            bunExe(),
-            join(import.meta.dir, "proxy-stress-memory-fixture.ts"),
-            proxyTls ? "https" : "http",
-            mode,
-            String(iterations),
-          ],
-          env: {
-            ...bunEnv,
-            ...proxyFreeEnv,
-            // UAFs on the HTTP thread must abort the process rather
-            // than race the main thread's clean exit.
-            ASAN_OPTIONS: ((bunEnv as any).ASAN_OPTIONS ?? "") + ":abort_on_error=1:halt_on_error=1",
-          },
-          stdout: "pipe",
-          stderr: "pipe",
+    test.concurrent(`${proxyTls ? "https" : "http"}-proxy → https-origin mode=${mode} ×${iterations}`, async () => {
+      await using proc = Bun.spawn({
+        cmd: [
+          bunExe(),
+          join(import.meta.dir, "proxy-stress-memory-fixture.ts"),
+          proxyTls ? "https" : "http",
+          mode,
+          String(iterations),
+        ],
+        env: {
+          ...bunEnv,
+          ...proxyFreeEnv,
+          // UAFs on the HTTP thread must abort the process rather
+          // than race the main thread's clean exit.
+          ASAN_OPTIONS: ((bunEnv as any).ASAN_OPTIONS ?? "") + ":abort_on_error=1:halt_on_error=1",
+        },
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+      if (exitCode !== 0) console.error("fixture stderr:\n" + stderr);
+
+      // Surface the child's final stats line before asserting.
+      const lines = stdout.trim().split("\n");
+      const lastLine = lines[lines.length - 1];
+      let result: {
+        completed: number;
+        failed: number;
+        firstError?: string;
+        rssStart: number;
+        rssEnd: number;
+        rssMax: number;
+      };
+      try {
+        result = JSON.parse(lastLine);
+      } catch {
+        console.error("fixture stdout:\n" + stdout);
+        throw new Error("fixture did not emit a JSON summary line");
+      }
+
+      expect(exitCode).toBe(0);
+      expect(result.completed + result.failed).toBe(iterations);
+      // Non-abort modes must complete every request; abort modes must
+      // have actually aborted something.
+      if (mode.includes("abort")) {
+        expect(result.failed).toBeGreaterThan(0);
+      } else {
+        // Carry `firstError` in the diff so a CI failure shows the
+        // actual fetch error, not just the count.
+        expect({ failed: result.failed, firstError: result.firstError }).toEqual({
+          failed: 0,
+          firstError: undefined,
         });
-        const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
-        if (exitCode !== 0) console.error("fixture stderr:\n" + stderr);
+        expect(result.completed).toBe(iterations);
+      }
 
-        // Surface the child's final stats line before asserting.
-        const lines = stdout.trim().split("\n");
-        const lastLine = lines[lines.length - 1];
-        let result: {
-          completed: number;
-          failed: number;
-          firstError?: string;
-          rssStart: number;
-          rssEnd: number;
-          rssMax: number;
-        };
-        try {
-          result = JSON.parse(lastLine);
-        } catch {
-          console.error("fixture stdout:\n" + stdout);
-          throw new Error("fixture did not emit a JSON summary line");
-        }
-
-        expect(exitCode).toBe(0);
-        expect(result.completed + result.failed).toBe(iterations);
-        // Non-abort modes must complete every request; abort modes must
-        // have actually aborted something.
-        if (mode.includes("abort")) {
-          expect(result.failed).toBeGreaterThan(0);
-        } else {
-          // Carry `firstError` in the diff so a CI failure shows the
-          // actual fetch error, not just the count.
-          expect({ failed: result.failed, firstError: result.firstError }).toEqual({
-            failed: 0,
-            firstError: undefined,
-          });
-          expect(result.completed).toBe(iterations);
-        }
-
-        // RSS leak check: after a warm-up, RSS should plateau. Allow a
-        // generous 3× growth factor (ASAN, fragmentation, per-target pool
-        // entries) — a real leak of one tunnel/request shows as 10×+ with
-        // these iteration counts. Skip the threshold under ASAN because
-        // LeakSanitizer's shadow memory makes RSS non-representative; a
-        // UAF there shows up as a crash, not a slow leak.
-        if (!isASAN) {
-          const growth = result.rssEnd / Math.max(1, result.rssStart);
-          // Carry `mode` + the rounded ratio in the failing diff.
-          expect({ mode, growth: Number(growth.toFixed(2)), withinBound: growth < 3.0 }).toEqual({
-            mode,
-            growth: expect.any(Number),
-            withinBound: true,
-          });
-        }
-      },
-      120_000,
-    );
+      // RSS leak check: after a warm-up, RSS should plateau. Allow a
+      // generous 3× growth factor (ASAN, fragmentation, per-target pool
+      // entries) — a real leak of one tunnel/request shows as 10×+ with
+      // these iteration counts. Skip the threshold under ASAN because
+      // LeakSanitizer's shadow memory makes RSS non-representative; a
+      // UAF there shows up as a crash, not a slow leak.
+      if (!isASAN) {
+        const growth = result.rssEnd / Math.max(1, result.rssStart);
+        // Carry `mode` + the rounded ratio in the failing diff.
+        expect({ mode, growth: Number(growth.toFixed(2)), withinBound: growth < 3.0 }).toEqual({
+          mode,
+          growth: expect.any(Number),
+          withinBound: true,
+        });
+      }
+    }, 120_000);
   }
 });

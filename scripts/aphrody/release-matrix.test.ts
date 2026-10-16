@@ -102,9 +102,7 @@ test("VPS release plan keeps execution with the serialized Infra resource owner"
     expect(step.command).toContain("--link-threads=12");
     expect(step.command).toContain("--cache-dir=/home/ubuntu/build/bun/factory/cache");
     expect(
-      step.command.some(arg =>
-        arg.startsWith("--build-dir=/home/ubuntu/build/bun/factory/artifacts/runtime-release/"),
-      ),
+      step.command.some(arg => arg.startsWith("--build-dir=/home/ubuntu/build/bun/factory/artifacts/runtime-release/")),
     ).toBe(true);
   }
   expect(plan.wasm.runtimeQualified).toBe(false);

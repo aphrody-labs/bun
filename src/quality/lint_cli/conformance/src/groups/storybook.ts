@@ -91,10 +91,7 @@ export default group;
  * @param codeDirPath - Path to `code` directory in submodule
  * @returns Module to replace `@typescript-eslint/rule-tester` module with
  */
-function createTsRuleTester(
-  tsEslintParser: TSEslintParser,
-  codeDirPath: string,
-): { RuleTester: typeof RuleTester } {
+function createTsRuleTester(tsEslintParser: TSEslintParser, codeDirPath: string): { RuleTester: typeof RuleTester } {
   class TsRuleTester extends RuleTester {
     constructor(config?: { languageOptions?: LanguageOptions } | null) {
       super({
@@ -111,11 +108,11 @@ function createTsRuleTester(
     // but many test cases contain TypeScript and/or JSX syntax.
     run(ruleName: string, rule: Rule, tests: TestCases): void {
       tests = {
-        valid: tests.valid.map((test) => {
+        valid: tests.valid.map(test => {
           if (typeof test === "string") test = { code: test };
           return patchTestCase(test, codeDirPath);
         }),
-        invalid: tests.invalid.map((test) => patchTestCase(test, codeDirPath)),
+        invalid: tests.invalid.map(test => patchTestCase(test, codeDirPath)),
       };
       super.run(ruleName, rule, tests);
     }

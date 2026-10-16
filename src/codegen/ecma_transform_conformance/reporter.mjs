@@ -9,9 +9,7 @@ const currentDir = pathJoin(import.meta.dirname, ""),
 export default class CustomReporter {
   onTestRunEnd(testModules) {
     const numTotalTestSuites = testModules.length;
-    const numPassedTestSuites = testModules.filter(
-      (testModule) => testModule.state() === "passed",
-    ).length;
+    const numPassedTestSuites = testModules.filter(testModule => testModule.state() === "passed").length;
 
     const percentPassed = ((numPassedTestSuites * 100) / numTotalTestSuites).toFixed(2);
     console.log(`\nPassed: ${numPassedTestSuites} of ${numTotalTestSuites} (${percentPassed}%)`);
@@ -27,10 +25,10 @@ export default class CustomReporter {
       const moduleErrors = testModule.errors();
       const message =
         moduleErrors.length > 0
-          ? moduleErrors.map((error) => formatMessage(error.stack ?? error.message)).join("\n")
+          ? moduleErrors.map(error => formatMessage(error.stack ?? error.message)).join("\n")
           : [...testModule.children.allTests("failed")]
-              .flatMap((test) => test.result().errors ?? [])
-              .map((error) => formatMessage(error.stack ?? error.message))
+              .flatMap(test => test.result().errors ?? [])
+              .map(error => formatMessage(error.stack ?? error.message))
               .join("\n");
       console.log();
       console.log(name);
@@ -42,7 +40,7 @@ export default class CustomReporter {
 function formatMessage(message) {
   return message
     .split("\n")
-    .filter((line) => !line.includes(vitestPath) && line.trim() !== "at new Promise (<anonymous>)")
-    .map((line) => line.replace("file://", "").replace(rootDir, ""))
+    .filter(line => !line.includes(vitestPath) && line.trim() !== "at new Promise (<anonymous>)")
+    .map(line => line.replace("file://", "").replace(rootDir, ""))
     .join("\n");
 }

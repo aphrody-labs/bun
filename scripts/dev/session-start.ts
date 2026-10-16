@@ -21,13 +21,10 @@ function aliasDefined(alias: string): boolean {
 }
 
 function reach(alias: string): string {
-  const code = Bun.spawnSync(
-    ["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", alias, "true"],
-    {
-      stdout: "ignore",
-      stderr: "ignore",
-    },
-  ).exitCode;
+  const code = Bun.spawnSync(["ssh", "-o", "BatchMode=yes", "-o", "ConnectTimeout=5", alias, "true"], {
+    stdout: "ignore",
+    stderr: "ignore",
+  }).exitCode;
   return `${alias}: ${code === 0 ? "reachable" : "unavailable"}`;
 }
 
@@ -37,8 +34,7 @@ const [branch, head, dirty] = await Promise.all([
   git("status", "--short"),
 ]);
 const kind = process.env.CLAUDE_CODE_REMOTE === "true" ? "cloud" : "local";
-const hosts =
-  ["vps", "dbfr", "wsl"].filter(aliasDefined).map(reach).join(", ") || "no alias defined";
+const hosts = ["vps", "dbfr", "wsl"].filter(aliasDefined).map(reach).join(", ") || "no alias defined";
 const context = [
   `[aphrody] ${kind} session: full autonomy, no human in the loop.`,
   "Resume the open work below end to end: code, gates, commit and push, then hosts through `aphrody infra ssh exec --host vps|dbfr` (plan before apply, see docs/operations/cloud/CLOUD-READY.md in the aphrody repository).",

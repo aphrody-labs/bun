@@ -7,8 +7,7 @@ import { bunEnv, bunExe, tempDir } from "../harness";
 test("public Google and Chromium password subpaths resolve and share an explicit fixture provider", async () => {
   using directory = tempDir("google-password-package-exports", {
     "package.json": '{"type":"module"}',
-    "fixture.csv":
-      "name,url,username,password\nFixture,https://example.test/login,fixture-user,synthetic-password\n",
+    "fixture.csv": "name,url,username,password\nFixture,https://example.test/login,fixture-user,synthetic-password\n",
     "consumer.ts": `
       import { createChromePasswordProvider, createConfiguredChromePasswordProvider } from "@aphrody/bun-google/password-store";
       import { createChromiumPasswordConnection } from "@aphrody/bun-chromium/passwords";
@@ -46,11 +45,7 @@ test("public Google and Chromium password subpaths resolve and share an explicit
     stdout: "pipe",
     stderr: "pipe",
   });
-  const [stdout, stderr, exitCode] = await Promise.all([
-    child.stdout.text(),
-    child.stderr.text(),
-    child.exited,
-  ]);
+  const [stdout, stderr, exitCode] = await Promise.all([child.stdout.text(), child.stderr.text(), child.exited]);
   expect(stdout.trim(), stderr).toBe(
     '{"consumed":true,"records":1,"imported":false,"browserValidated":false,"configurationReads":0}',
   );

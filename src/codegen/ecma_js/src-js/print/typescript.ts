@@ -1,14 +1,7 @@
 // TypeScript (port of `gen.rs` TS sections).
 
 import { typeAssertIs } from "../asserts.ts";
-import {
-  CAT_CLOSE_BRACKET,
-  CAT_IDENT,
-  CAT_LT,
-  CAT_OP_UN_NOT,
-  CAT_OTHER,
-  CAT_QUESTION,
-} from "./categories.ts";
+import { CAT_CLOSE_BRACKET, CAT_IDENT, CAT_LT, CAT_OP_UN_NOT, CAT_OTHER, CAT_QUESTION } from "./categories.ts";
 import {
   debugAssertLastFresh,
   markMapAtStartOffset,
@@ -28,14 +21,7 @@ import { printSpaceBeforeIdentifier } from "./space.ts";
 import { printIndent } from "./indent.ts";
 import { printLiteral } from "./literal.ts";
 import { CTX_NONE, CTX_TYPESCRIPT } from "./operators.ts";
-import {
-  PREC_CALL,
-  PREC_COMMA,
-  PREC_COMPARE,
-  PREC_EXPONENTIATION,
-  PREC_LOWEST,
-  PREC_PREFIX,
-} from "./precedence.ts";
+import { PREC_CALL, PREC_COMMA, PREC_COMPARE, PREC_EXPONENTIATION, PREC_LOWEST, PREC_PREFIX } from "./precedence.ts";
 import { printDirectivesAndStatements } from "./statement.ts";
 import { printString } from "./string.ts";
 
@@ -76,10 +62,7 @@ export function printTSAsOrSatisfiesExpression(
  * A prefix `TSJSDocNullableType` spaces itself off a preceding `?`, as `?` followed by `?T`
  * would otherwise merge into `??`.
  */
-function printTSType(
-  node: ESTree.TSTupleElement | ESTree.TSQualifiedName | UnknownNode,
-  state: State,
-): void {
+function printTSType(node: ESTree.TSTupleElement | ESTree.TSQualifiedName | UnknownNode, state: State): void {
   switch (node.type) {
     case "TSTypeReference":
       printTSTypeName(node.typeName, state);
@@ -334,12 +317,7 @@ function printTSLiteral(literal: ESTree.TSLiteral, state: State): void {
   if (literal.type === "Literal") {
     printLiteral(literal, state, PREC_LOWEST, CTX_TYPESCRIPT);
   } else {
-    printExpression(
-      literal,
-      state,
-      literal.type === "UnaryExpression" ? PREC_COMMA : PREC_LOWEST,
-      CTX_TYPESCRIPT,
-    );
+    printExpression(literal, state, literal.type === "UnaryExpression" ? PREC_COMMA : PREC_LOWEST, CTX_TYPESCRIPT);
   }
 }
 
@@ -715,9 +693,9 @@ function printTSTupleElement(node: ESTree.TSTupleElement, state: State): void {
 function printTSConditionalType(node: ESTree.TSConditionalType, state: State): void {
   const { checkType, extendsType } = node;
   const checkWrap =
-    checkType.type === "TSFunctionType"
-    || checkType.type === "TSConstructorType"
-    || checkType.type === "TSConditionalType";
+    checkType.type === "TSFunctionType" ||
+    checkType.type === "TSConstructorType" ||
+    checkType.type === "TSConditionalType";
 
   if (checkWrap) write(state, "(", CAT_OTHER);
   printTSType(checkType, state);
@@ -800,11 +778,11 @@ function printTSTypeOperator(node: ESTree.TSTypeOperator, state: State): void {
   const ty = tsTypeAnnotationOf(node.typeAnnotation);
   const tyType = ty.type;
   const wrap =
-    tyType === "TSUnionType"
-    || tyType === "TSIntersectionType"
-    || tyType === "TSFunctionType"
-    || tyType === "TSConstructorType"
-    || tyType === "TSConditionalType";
+    tyType === "TSUnionType" ||
+    tyType === "TSIntersectionType" ||
+    tyType === "TSFunctionType" ||
+    tyType === "TSConstructorType" ||
+    tyType === "TSConditionalType";
 
   if (wrap) write(state, "(", CAT_OTHER);
   printTSType(ty, state);
@@ -823,13 +801,7 @@ function printTSTypePredicate(node: ESTree.TSTypePredicate, state: State): void 
     writeIdent(state, "this");
   } else {
     printSpaceBeforeIdentifier(state);
-    writeWithMapNamed(
-      state,
-      parameterName.name,
-      parameterName.start,
-      parameterName.end,
-      parameterName,
-    );
+    writeWithMapNamed(state, parameterName.name, parameterName.start, parameterName.end, parameterName);
   }
 
   if (node.typeAnnotation != null) {
@@ -991,10 +963,7 @@ function printModuleBlock(body: ESTree.TSModuleBlock, state: State): void {
  * The body uses the same one-member-per-line layout as `printTSTypeLiteral`,
  * including the `{}` form when there are no members.
  */
-export function printTSInterfaceDeclaration(
-  node: ESTree.TSInterfaceDeclaration,
-  state: State,
-): void {
+export function printTSInterfaceDeclaration(node: ESTree.TSInterfaceDeclaration, state: State): void {
   printSpaceBeforeIdentifier(state);
 
   if (node.declare) write(state, "declare ", CAT_OTHER);
@@ -1047,10 +1016,7 @@ export function printTSInterfaceDeclaration(
  * An alias body is the one position where a type can need parentheses purely because of what it starts with -
  * see `isLeftmostIntrinsicReference`.
  */
-export function printTSTypeAliasDeclaration(
-  node: ESTree.TSTypeAliasDeclaration,
-  state: State,
-): void {
+export function printTSTypeAliasDeclaration(node: ESTree.TSTypeAliasDeclaration, state: State): void {
   if (node.declare) write(state, "declare ", CAT_OTHER);
 
   write(state, "type ", CAT_OTHER);
@@ -1081,11 +1047,7 @@ function isLeftmostIntrinsicReference(ty: ESTree.TSType): boolean {
   for (;;) {
     switch (ty.type) {
       case "TSTypeReference":
-        return (
-          ty.typeArguments == null
-          && ty.typeName.type === "Identifier"
-          && ty.typeName.name === "intrinsic"
-        );
+        return ty.typeArguments == null && ty.typeName.type === "Identifier" && ty.typeName.name === "intrinsic";
       case "TSArrayType":
         ty = ty.elementType;
         break;
@@ -1185,10 +1147,7 @@ function printTSEnumMember(node: ESTree.TSEnumMember, state: State): void {
  *
  * The `type` modifier goes after `import`, as `import type X = require("mod")` is the spelling TypeScript accepts.
  */
-export function printTSImportEqualsDeclaration(
-  node: ESTree.TSImportEqualsDeclaration,
-  state: State,
-): void {
+export function printTSImportEqualsDeclaration(node: ESTree.TSImportEqualsDeclaration, state: State): void {
   write(state, "import ", CAT_OTHER);
 
   if (node.importKind === "type") write(state, "type ", CAT_OTHER);
@@ -1200,13 +1159,7 @@ export function printTSImportEqualsDeclaration(
   const ref = node.moduleReference;
   if (ref.type === "TSExternalModuleReference") {
     write(state, "require(", CAT_OTHER);
-    printString(
-      state,
-      ref.expression.value,
-      ref.expression.start,
-      ref.expression.end,
-      ref.expression,
-    );
+    printString(state, ref.expression.value, ref.expression.start, ref.expression.end, ref.expression);
     write(state, ")", CAT_CLOSE_BRACKET);
   } else {
     printTSTypeName(ref, state);

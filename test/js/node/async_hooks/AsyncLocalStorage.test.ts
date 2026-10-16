@@ -1509,12 +1509,10 @@ describe("enterWith() does not leak past the callback that called it", () => {
     expect(exitCode).toBe(0);
   });
 
-  test.concurrent(
-    "a server handler's enterWith() is not seen by the next request and its store is collectable",
-    async () => {
-      const { stdout, exitCode } = await run(
-        prelude +
-          `
+  test.concurrent("a server handler's enterWith() is not seen by the next request and its store is collectable", async () => {
+    const { stdout, exitCode } = await run(
+      prelude +
+        `
         const registry = new FinalizationRegistry(id => { collected++; });
         let collected = 0;
         const server = Bun.serve({
@@ -1541,11 +1539,10 @@ describe("enterWith() does not leak past the callback that called it", () => {
           seen.push("collected>=19:" + (collected >= 19));
         })();
       `,
-      );
-      expect(stdout).toEqual(["inherited:0", "collected>=19:true", "exit:undefined"]);
-      expect(exitCode).toBe(0);
-    },
-  );
+    );
+    expect(stdout).toEqual(["inherited:0", "collected>=19:true", "exit:undefined"]);
+    expect(exitCode).toBe(0);
+  });
 });
 
 // With a store active, awaiting and .then() must not allocate side objects to

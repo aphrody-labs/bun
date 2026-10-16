@@ -21,7 +21,7 @@ const server = serve({
       },
     },
 
-    "/api/hello/:name": (req) => {
+    "/api/hello/:name": req => {
       const name = req.params.name;
       return Response.json({
         message: `Hello, ${name}!`,

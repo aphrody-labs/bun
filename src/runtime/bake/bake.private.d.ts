@@ -37,7 +37,7 @@ interface Config {
  * Removed using --drop=ASSERT in releases.
  */
 declare namespace DEBUG {
-  declare function ASSERT(condition: any, message?: string): asserts condition;
+  function ASSERT(condition: any, message?: string): asserts condition;
 }
 
 /** All modules for the initial bundle. */
@@ -90,7 +90,10 @@ declare module "react-server-dom-bun/client.browser" {
   export interface Options {
     callServer?: CallServer;
   }
-  export function createFromReadableStream<T = any>(readable: ReadableStream<Uint8Array>, options?: Options): Promise<T>;
+  export function createFromReadableStream<T = any>(
+    readable: ReadableStream<Uint8Array>,
+    options?: Options,
+  ): Promise<T>;
   export function createFromFetch<T = any>(response: Promise<Response>, options?: Options): Promise<T>;
   export function createServerReference(id: string, callServer: CallServer): (...args: unknown[]) => Promise<unknown>;
   export function encodeReply(value: unknown): Promise<string | FormData>;

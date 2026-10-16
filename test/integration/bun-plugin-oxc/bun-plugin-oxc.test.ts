@@ -17,16 +17,24 @@ beforeAll(async () => {
 }, 20 * 60_000);
 
 describe("API", () => {
-  test("version", () => {
-    expect(oxc.version()).toBe("1.4.4");
-  }, isDebug ? 20_000 : 5_000);
+  test(
+    "version",
+    () => {
+      expect(oxc.version()).toBe("1.4.4");
+    },
+    isDebug ? 20_000 : 5_000,
+  );
 
-  test("transform strips TypeScript", () => {
-    const out = oxc.transform("enum E { A = 1 }\nexport const f = (a: number): number => a + E.A;", "a.ts");
-    expect(out.code).not.toContain(": number");
-    expect(out.code).toContain("export const f");
-    expect(out.map).toBeUndefined();
-  }, isDebug ? 20_000 : 5_000);
+  test(
+    "transform strips TypeScript",
+    () => {
+      const out = oxc.transform("enum E { A = 1 }\nexport const f = (a: number): number => a + E.A;", "a.ts");
+      expect(out.code).not.toContain(": number");
+      expect(out.code).toContain("export const f");
+      expect(out.map).toBeUndefined();
+    },
+    isDebug ? 20_000 : 5_000,
+  );
 
   test("transform JSX runtimes", () => {
     const src = 'export const a = <div id="x">hi</div>;';
@@ -97,18 +105,27 @@ describe("API", () => {
     expect(() => oxc.format("x", "a.unknown")).toThrow("[input]");
   });
 
-  test("lint runs oxlint in process, with config and fixes", () => {
-    expect(oxc.lint("export const x = 1;\n", "a.js").diagnostics).toEqual([]);
-    const report = oxc.lint("debugger;\nexport const x = 1;\n", "a.js", { config: debuggerIsError });
-    expect(report.errorCount).toBe(1);
-    expect(report.diagnostics[0].code).toContain("no-debugger");
-    expect(report.diagnostics[0].fixable).toBe("suggestions");
-    const fixed = oxc.lint("debugger;\nexport const x = 1;\n", "a.js", { config: debuggerIsError, fix: "suggestions" });
-    expect(fixed.fixed).not.toContain("debugger");
-    expect(fixed.errorCount).toBe(0);
-    expect(oxc.lint("debugger;\n", "a.js", { config: debuggerIsError, fix: "safe" }).fixed).toBeUndefined();
-    expect(oxc.lintFix("debugger;\n", "a.js", { config: debuggerIsError, fix: "suggestions" })).not.toContain("debugger");
-  }, isDebug ? 20_000 : 5_000);
+  test(
+    "lint runs oxlint in process, with config and fixes",
+    () => {
+      expect(oxc.lint("export const x = 1;\n", "a.js").diagnostics).toEqual([]);
+      const report = oxc.lint("debugger;\nexport const x = 1;\n", "a.js", { config: debuggerIsError });
+      expect(report.errorCount).toBe(1);
+      expect(report.diagnostics[0].code).toContain("no-debugger");
+      expect(report.diagnostics[0].fixable).toBe("suggestions");
+      const fixed = oxc.lint("debugger;\nexport const x = 1;\n", "a.js", {
+        config: debuggerIsError,
+        fix: "suggestions",
+      });
+      expect(fixed.fixed).not.toContain("debugger");
+      expect(fixed.errorCount).toBe(0);
+      expect(oxc.lint("debugger;\n", "a.js", { config: debuggerIsError, fix: "safe" }).fixed).toBeUndefined();
+      expect(oxc.lintFix("debugger;\n", "a.js", { config: debuggerIsError, fix: "suggestions" })).not.toContain(
+        "debugger",
+      );
+    },
+    isDebug ? 20_000 : 5_000,
+  );
 
   test("lint discovers .oxlintrc.json", () => {
     using dir = tempDir("oxc-lint-config", { ".oxlintrc.json": JSON.stringify(debuggerIsError) });
@@ -185,7 +202,9 @@ describe("oxc-parser / oxc-transform / oxc-minify drop-ins", () => {
       "export declare const v: number;",
     );
     const minify = await import("../../../packages/bun-oxc/src/minify");
-    expect(minify.minifySync("a.js", "const longName = 1; console.log(longName);", { toplevel: true }).code).not.toContain("longName");
+    expect(
+      minify.minifySync("a.js", "const longName = 1; console.log(longName);", { mangle: { toplevel: true } }).code,
+    ).not.toContain("longName");
   });
 });
 

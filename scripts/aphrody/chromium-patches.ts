@@ -293,7 +293,12 @@ export function check(options: PatchOptions) {
 function cefLayer(options: PatchOptions, env: Record<string, string>) {
   const cfg = join(options.cef, "patch", "patch.cfg");
   if (!existsSync(cfg)) return undefined;
-  const result = { applied: [] as string[], pending: [] as string[], conflicts: [] as string[], skipped: [] as string[] };
+  const result = {
+    applied: [] as string[],
+    pending: [] as string[],
+    conflicts: [] as string[],
+    skipped: [] as string[],
+  };
   for (const entry of parseCefConfig(readFileSync(cfg, "utf8"))) {
     const file = join(options.cef, "patch", "patches", `${entry.name}.patch`);
     const repo = entry.path ? join(options.source, entry.path) : options.source;
@@ -310,7 +315,15 @@ function cefLayer(options: PatchOptions, env: Record<string, string>) {
     const run = (reverse: boolean) =>
       git(
         repo,
-        ["apply", "-p0", "--ignore-whitespace", ...(entry.path ? [] : ["--cached"]), ...(reverse ? ["--reverse"] : []), "--check", "-"],
+        [
+          "apply",
+          "-p0",
+          "--ignore-whitespace",
+          ...(entry.path ? [] : ["--cached"]),
+          ...(reverse ? ["--reverse"] : []),
+          "--check",
+          "-",
+        ],
         { input: body, env: entry.path ? {} : env, allowFail: true },
       ).exitCode === 0;
     if (run(true)) result.applied.push(entry.name);

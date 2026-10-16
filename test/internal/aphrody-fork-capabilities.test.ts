@@ -1,10 +1,6 @@
 import { expect, test } from "bun:test";
 import { tempDir, isASAN } from "harness";
-import {
-  exportForkCapabilities,
-  moduleNames,
-  parseDelta,
-} from "../../scripts/aphrody/fork-capabilities.ts";
+import { exportForkCapabilities, moduleNames, parseDelta } from "../../scripts/aphrody/fork-capabilities.ts";
 import { exportForkGraphDocs } from "../../scripts/aphrody/fork-graph-docs.ts";
 import { completeReleaseKnowledge } from "../../scripts/aphrody/release-knowledge.ts";
 import { experimentalFeatureFlags } from "../../scripts/aphrody/release-feature-flags.ts";
@@ -24,9 +20,7 @@ test("gateway measurements record real responses and reject mismatched source pi
     expect(report.measurements[0]!.runs).toHaveLength(2);
     expect(report.measurements[0]!.runs[0]!.bytes).toBe(8);
     expect(report.measurements[0]!.runs[0]!.status).toBe(200);
-    await expect(measureReleaseGateway(server.url.toString(), "different", 2)).rejects.toThrow(
-      "source pin mismatch",
-    );
+    await expect(measureReleaseGateway(server.url.toString(), "different", 2)).rejects.toThrow("source pin mismatch");
   } finally {
     await server.stop(true);
   }
@@ -50,16 +44,8 @@ test("release knowledge includes unlisted guides and graph domains deterministic
   writeFileSync(join(root, "plugin/codex/skills/new/SKILL.md"), "# New skill\n");
   using db = new Database(join(root, "monorepo.sqlite"));
   db.exec("CREATE TABLE release_files(path TEXT, content TEXT, sha256 TEXT)");
-  db.query("INSERT INTO release_files VALUES(?,?,?)").run(
-    "docs/guides/new.mdx",
-    "# New guide\n",
-    "digest",
-  );
-  db.query("INSERT INTO release_files VALUES(?,?,?)").run(
-    "bench/new.ts",
-    "benchmark code",
-    "benchmark-digest",
-  );
+  db.query("INSERT INTO release_files VALUES(?,?,?)").run("docs/guides/new.mdx", "# New guide\n", "digest");
+  db.query("INSERT INTO release_files VALUES(?,?,?)").run("bench/new.ts", "benchmark code", "benchmark-digest");
   db.query("INSERT INTO release_files VALUES(?,?,?)").run(
     "src/bun_core/env_var.rs",
     'new_feature_flag!(pub BUN_FEATURE_FLAG_EXPERIMENTAL_NEW, "BUN_FEATURE_FLAG_EXPERIMENTAL_NEW", {});',
@@ -69,21 +55,15 @@ test("release knowledge includes unlisted guides and graph domains deterministic
   expect(report.guides).toBe(1);
   expect(report.graphDocuments).toBe(1);
   expect(report.committedMeasurementReports).toBe(0);
-  expect(JSON.parse(readFileSync(join(root, "site/knowledge/feature-flags.json"), "utf8"))).toEqual(
-    {
-      source: "immutable",
-      declaration: "src/bun_core/env_var.rs",
-      declarationSha256: "flag-digest",
-      flags: [{ name: "BUN_FEATURE_FLAG_EXPERIMENTAL_NEW", defaultEnabled: false }],
-    },
-  );
-  expect(readFileSync(join(root, "site/llms-full.txt"), "utf8")).toContain(
-    "BUN_FEATURE_FLAG_EXPERIMENTAL_NEW",
-  );
+  expect(JSON.parse(readFileSync(join(root, "site/knowledge/feature-flags.json"), "utf8"))).toEqual({
+    source: "immutable",
+    declaration: "src/bun_core/env_var.rs",
+    declarationSha256: "flag-digest",
+    flags: [{ name: "BUN_FEATURE_FLAG_EXPERIMENTAL_NEW", defaultEnabled: false }],
+  });
+  expect(readFileSync(join(root, "site/llms-full.txt"), "utf8")).toContain("BUN_FEATURE_FLAG_EXPERIMENTAL_NEW");
   expect(readFileSync(join(root, "site/llms-full.txt"), "utf8")).toContain("# New graph");
-  expect(readFileSync(join(root, "site/llms.txt"), "utf8")).toContain(
-    "knowledge/source/docs/guides/new.mdx",
-  );
+  expect(readFileSync(join(root, "site/llms.txt"), "utf8")).toContain("knowledge/source/docs/guides/new.mdx");
   const first = readFileSync(join(root, "site/llms-full.txt"), "utf8");
   const plugin = readFileSync(join(root, "bun-agent-plugin.bin"));
   completeReleaseKnowledge(root);
@@ -98,12 +78,10 @@ test("experimental flag inventory ignores Rust comments and strings and rejects 
     'let ignored = r##"\nnew_feature_flag!(pub BUN_EXPERIMENTAL_STRING, "BUN_EXPERIMENTAL_STRING", {});\n"##;',
     'new_feature_flag!(pub BUN_EXPERIMENTAL_REAL, "BUN_EXPERIMENTAL_REAL", { default: false });',
   ].join("\n");
-  expect(experimentalFeatureFlags(source)).toEqual([
-    { name: "BUN_EXPERIMENTAL_REAL", defaultEnabled: false },
-  ]);
-  expect(() =>
-    experimentalFeatureFlags('new_feature_flag!(pub BUN_EXPERIMENTAL_REAL, "OTHER", {});'),
-  ).toThrow("Ambiguous");
+  expect(experimentalFeatureFlags(source)).toEqual([{ name: "BUN_EXPERIMENTAL_REAL", defaultEnabled: false }]);
+  expect(() => experimentalFeatureFlags('new_feature_flag!(pub BUN_EXPERIMENTAL_REAL, "OTHER", {});')).toThrow(
+    "Ambiguous",
+  );
   expect(() =>
     experimentalFeatureFlags(
       'new_feature_flag!(pub BUN_EXPERIMENTAL_REAL, "BUN_EXPERIMENTAL_REAL", { default: something });',
@@ -168,10 +146,7 @@ test(
       '[package]\nname="future_native"\nversion="1.0.0"\n[lib]\ncrate-type=["cdylib","rlib"]\n',
     );
     await Bun.write(`${root}/packages/unscoped/package.json`, '{"name":"other","version":"1.0.0"}');
-    await Bun.write(
-      `${root}/packages/unversioned/package.json`,
-      '{"name":"@aphrody/unversioned","private":true}',
-    );
+    await Bun.write(`${root}/packages/unversioned/package.json`, '{"name":"@aphrody/unversioned","private":true}');
     run(["add", "."]);
     run(["-c", "core.hooksPath=", "commit", "--quiet", "-m", "fork"]);
     const catalog = await exportForkCapabilities(root, upstream);
@@ -193,18 +168,13 @@ test(
         .update(await Bun.file(`${root}/packages/future/package.json`).bytes())
         .digest("hex"),
     );
-    await Bun.write(
-      `${root}/packages/future/package.json`,
-      '{"name":"@aphrody/future","version":"2.0.0"}',
-    );
+    await Bun.write(`${root}/packages/future/package.json`, '{"name":"@aphrody/future","version":"2.0.0"}');
     await Bun.write(`${root}/untracked-secret.txt`, "not exported");
     const changed = await exportForkCapabilities(root, upstream);
     expect(changed.source.dirty).toBe(true);
     expect(changed.packages[0]!.version).toBe("2.0.0");
-    expect(changed.sourceDelta.some((entry) => entry.path === "untracked-secret.txt")).toBe(false);
-    await expect(exportForkCapabilities(`${root}/packages`, upstream)).rejects.toThrow(
-      "--root must select",
-    );
+    expect(changed.sourceDelta.some(entry => entry.path === "untracked-secret.txt")).toBe(false);
+    await expect(exportForkCapabilities(`${root}/packages`, upstream)).rejects.toThrow("--root must select");
     await Bun.write(
       `${root}/src/demo/index.ts`,
       "function twice(value: number) { return value * 2; }\nexport function answer() { return twice(21); }\n",
@@ -214,7 +184,7 @@ test(
       domains: ["src/demo"],
     });
     expect(
-      evidence.index.domains.map((domain) => ({
+      evidence.index.domains.map(domain => ({
         domain: domain.domain,
         nativeFiles: domain.coverage.nativeFiles,
         parseErrors: domain.coverage.parseErrors,

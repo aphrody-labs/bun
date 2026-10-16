@@ -27,8 +27,8 @@ export const SHOULD_SKIP_CODE = createShouldSkipFn(FILTER_ONLY_CODE);
  */
 function createShouldSkipFn(filter: Filter | null): ShouldSkipFn {
   if (filter === null) return returnFalse;
-  if (Array.isArray(filter)) return (name) => !filter.includes(name);
-  return (name) => name !== filter;
+  if (Array.isArray(filter)) return name => !filter.includes(name);
+  return name => name !== filter;
 }
 
 function returnFalse(): boolean {

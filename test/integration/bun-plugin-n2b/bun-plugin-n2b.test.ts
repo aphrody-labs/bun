@@ -94,7 +94,9 @@ describe("API", () => {
     });
     try {
       const report = await cliApi.scan("project", { cwd: String(dir), mode: "fix", dryRun: true });
-      expect(report.files.some(file => file.findings.some(finding => finding.rule_id === "imports/node-prefix"))).toBe(true);
+      expect(report.files.some(file => file.findings.some(finding => finding.rule_id === "imports/node-prefix"))).toBe(
+        true,
+      );
       expect(readFileSync(join(String(dir), "project/index.ts"), "utf8")).toBe(nodeFile);
       const rules = (await cliApi.rules()) as { id: string }[];
       expect(rules.map(rule => rule.id)).toContain("imports/node-prefix");
@@ -240,9 +242,7 @@ describe("monorepo migration", () => {
     ]) {
       expect(ids).toContain(id);
     }
-    const vitest = report.files
-      .flatMap((f: any) => f.findings)
-      .find((x: any) => x.rule_id === "cli/vitest-run");
+    const vitest = report.files.flatMap((f: any) => f.findings).find((x: any) => x.rule_id === "cli/vitest-run");
     expect(vitest.autofix).toBe(false);
     expect(vitest.replacement).toBe("bun test");
   });

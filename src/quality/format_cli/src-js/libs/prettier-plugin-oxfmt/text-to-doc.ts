@@ -4,8 +4,7 @@ import type { Parser, Doc } from "prettier";
 export const textToDoc: Parser<Doc>["parse"] = async (embeddedSourceText, textToDocOptions) => {
   // `_oxfmtPluginOptionsJson` is a JSON string bundled by Rust (`to_prettier::inject_oxfmt_plugin_payload`),
   // carrying the typed `FormatConfig` + parent filepath for the Rust-side `oxc_formatter`.
-  const { parser, parentParser, filepath, _oxfmtPluginOptionsJson, _oxfmtVueScriptLang } =
-    textToDocOptions;
+  const { parser, parentParser, filepath, _oxfmtPluginOptionsJson, _oxfmtVueScriptLang } = textToDocOptions;
 
   // Detect context from Prettier's internal flags
   const parentContext = detectParentContext(parentParser!, textToDocOptions);
@@ -20,8 +19,7 @@ export const textToDoc: Parser<Doc>["parse"] = async (embeddedSourceText, textTo
   //     - Nor from parsing: a JSX-free tsx block parses fine as plain ts
   //     - So, our host pre-scans the SFC and passes `_oxfmtVueScriptLang: "tsx"` instead
   const isTS = parser === "typescript" || parser === "babel-ts";
-  const isTSX =
-    filepath.endsWith(".tsx") || (parentContext === "vue-script" && _oxfmtVueScriptLang === "tsx");
+  const isTSX = filepath.endsWith(".tsx") || (parentContext === "vue-script" && _oxfmtVueScriptLang === "tsx");
   const embeddedSourceExt = isTS ? (isTSX ? "tsx" : "ts") : "jsx";
 
   const docJSON = await jsTextToDoc(
@@ -91,7 +89,7 @@ function restoreRootDedents(node: unknown): void {
  */
 function resolveRefs(node: unknown, rawRefs: unknown[], cache: unknown[]): unknown {
   if (node === null || typeof node !== "object") return node;
-  if (Array.isArray(node)) return node.map((n) => resolveRefs(n, rawRefs, cache));
+  if (Array.isArray(node)) return node.map(n => resolveRefs(n, rawRefs, cache));
 
   const obj = node as Record<string, unknown>;
   if (typeof obj._REF === "number") {

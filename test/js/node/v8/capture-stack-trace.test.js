@@ -1711,10 +1711,8 @@ test.concurrent("a stack that a collection materializes reads the same as one ma
   expect(exitCode).toBe(0);
 });
 
-test.concurrent(
-  "an error whose stack a collection materialized behaves as one whose stack is materialized on access",
-  async () => {
-    const src = `
+test.concurrent("an error whose stack a collection materialized behaves as one whose stack is materialized on access", async () => {
+  const src = `
     ${materializedByACollection}
     const operations = {
       "line, column, sourceURL": error => [error.line, error.column, typeof error.sourceURL],
@@ -1736,22 +1734,21 @@ test.concurrent(
     }
     console.log(JSON.stringify(rows));
   `;
-    await using proc = Bun.spawn({ cmd: [bunExe(), "-e", src], env: bunEnv, stdout: "pipe", stderr: "pipe" });
-    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
-    expect(stderr).toBe("");
-    const row = onAccess => ({ materializedByACollection: true, same: true, onAccess });
-    expect(JSON.parse(stdout)).toEqual({
-      "line, column, sourceURL": row([expect.any(Number), expect.any(Number), "string"]),
-      "assign stack": row("assigned"),
-      "delete stack": row([true, null]),
-      "define stack": row("defined"),
-      "structuredClone": row(["TypeError: boom"]),
-      "Bun.inspect": row([expect.stringContaining("TypeError: boom")]),
-      "JSON.stringify": row(expect.any(String)),
-    });
-    expect(exitCode).toBe(0);
-  },
-);
+  await using proc = Bun.spawn({ cmd: [bunExe(), "-e", src], env: bunEnv, stdout: "pipe", stderr: "pipe" });
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  expect(stderr).toBe("");
+  const row = onAccess => ({ materializedByACollection: true, same: true, onAccess });
+  expect(JSON.parse(stdout)).toEqual({
+    "line, column, sourceURL": row([expect.any(Number), expect.any(Number), "string"]),
+    "assign stack": row("assigned"),
+    "delete stack": row([true, null]),
+    "define stack": row("defined"),
+    "structuredClone": row(["TypeError: boom"]),
+    "Bun.inspect": row([expect.stringContaining("TypeError: boom")]),
+    "JSON.stringify": row(expect.any(String)),
+  });
+  expect(exitCode).toBe(0);
+});
 
 test.concurrent("a stack that a collection materializes reads the same in a Worker", async () => {
   const src = `
@@ -1808,10 +1805,8 @@ test.concurrent("a stack that a collection materializes reads the same in a Work
 
 // Materializing the stack can throw (a Symbol message). Asking for the property's descriptor must throw
 // that, not report the property found with the exception still pending, however the stack is materialized.
-test.concurrent(
-  "Object.getOwnPropertyDescriptor(error, 'stack') throws what materializing the stack threw",
-  async () => {
-    const src = `
+test.concurrent("Object.getOwnPropertyDescriptor(error, 'stack') throws what materializing the stack threw", async () => {
+  const src = `
     ${materializedByACollection}
     const describe = error => {
       try {
@@ -1827,16 +1822,15 @@ test.concurrent(
     rows.afterACollection = [...new Set(readMaterialized(samples, describe).map(result => JSON.stringify(result)))];
     console.log(JSON.stringify(rows));
   `;
-    await using proc = Bun.spawn({ cmd: [bunExe(), "-e", src], env: bunEnv, stdout: "pipe", stderr: "pipe" });
-    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
-    expect(stderr).toBe("");
-    expect(JSON.parse(stdout)).toEqual({
-      onAccess: ["Cannot convert a symbol to a string", "undefined"],
-      afterACollection: [JSON.stringify(["Cannot convert a symbol to a string", "undefined"])],
-    });
-    expect(exitCode).toBe(0);
-  },
-);
+  await using proc = Bun.spawn({ cmd: [bunExe(), "-e", src], env: bunEnv, stdout: "pipe", stderr: "pipe" });
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  expect(stderr).toBe("");
+  expect(JSON.parse(stdout)).toEqual({
+    onAccess: ["Cannot convert a symbol to a string", "undefined"],
+    afterACollection: [JSON.stringify(["Cannot convert a symbol to a string", "undefined"])],
+  });
+  expect(exitCode).toBe(0);
+});
 
 // Error.captureStackTrace() replaces the trace. With no frames left after the constructor it names,
 // the stack is the header alone, also for an error whose old frames a collection had already formatted.

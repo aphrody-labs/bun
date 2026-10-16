@@ -1424,10 +1424,8 @@ describe("CONNECT pipelined behind a pending response", () => {
   // The throw becomes an uncaught exception, and the handoff stands: the tunnel still echoes, and
   // a response ahead of the CONNECT still completes.
   for (const pipelined of [true, false]) {
-    test.concurrent(
-      `should keep the tunnel when the 'connect' listener throws (${pipelined ? "pipelined" : "first request"})`,
-      async () => {
-        const fixture = /* js */ `
+    test.concurrent(`should keep the tunnel when the 'connect' listener throws (${pipelined ? "pipelined" : "first request"})`, async () => {
+      const fixture = /* js */ `
         const http = require("node:http");
         const net = require("node:net");
         const pipelined = process.env.PIPELINED === "1";
@@ -1467,20 +1465,19 @@ describe("CONNECT pipelined behind a pending response", () => {
           );
         });
       `;
-        await using proc = Bun.spawn({
-          cmd: [bunExe(), "-e", fixture],
-          env: { ...bunEnv, PIPELINED: pipelined ? "1" : "0" },
-          stdout: "pipe",
-          stderr: "pipe",
-        });
-        const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
-        expect({ stdout, stderr, exitCode }).toEqual({
-          stdout: `uncaught: listener threw\n${JSON.stringify({ first: pipelined, echo: true })}\n`,
-          stderr: "",
-          exitCode: 0,
-        });
-      },
-    );
+      await using proc = Bun.spawn({
+        cmd: [bunExe(), "-e", fixture],
+        env: { ...bunEnv, PIPELINED: pipelined ? "1" : "0" },
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+      expect({ stdout, stderr, exitCode }).toEqual({
+        stdout: `uncaught: listener threw\n${JSON.stringify({ first: pipelined, echo: true })}\n`,
+        stderr: "",
+        exitCode: 0,
+      });
+    });
   }
 
   test.concurrent("should not let the end of the tunnel release the response ahead of it", async () => {

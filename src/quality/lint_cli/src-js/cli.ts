@@ -37,7 +37,7 @@ function loadPluginWrapper(
   if (loadPlugin === null) {
     // Use promises here instead of making `loadPluginWrapper` an async function,
     // to avoid a micro-tick and extra wrapper `Promise` in all later calls to `loadPluginWrapper`
-    return import("./plugins/index.ts").then((mod) => {
+    return import("./plugins/index.ts").then(mod => {
       ({ loadPlugin, lintFile, setupRuleConfigs } = mod);
       return loadPlugin(path, pluginName, pluginNameIsAlias, workspaceUri);
     });
@@ -118,7 +118,7 @@ function createWorkspaceWrapper(workspace: string): Promise<undefined> {
   if (createWorkspace === null) {
     // Use promises here instead of making `createWorkspaceWrapper` an async function,
     // to avoid a micro-tick and extra wrapper `Promise` in all later calls to `createWorkspaceWrapper`
-    return import("./workspace/index.ts").then((mod) => {
+    return import("./workspace/index.ts").then(mod => {
       ({ createWorkspace, destroyWorkspace } = mod);
       return createWorkspace(workspace);
     });

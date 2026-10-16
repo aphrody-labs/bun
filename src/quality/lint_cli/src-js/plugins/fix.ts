@@ -9,12 +9,7 @@ import type { Diagnostic, Suggestion, SuggestionReport } from "./report.ts";
 // e.g. `(function*() { yield fix1; yield fix2; })()`
 export type FixFn = (
   fixer: Fixer,
-) =>
-  | Fix
-  | Array<Fix | null | undefined>
-  | IterableIterator<Fix | null | undefined>
-  | null
-  | undefined;
+) => Fix | Array<Fix | null | undefined> | IterableIterator<Fix | null | undefined> | null | undefined;
 
 /**
  * Fix, as returned by `fix` function.
@@ -106,9 +101,7 @@ export function getFixes(diagnostic: Diagnostic, ruleDetails: RuleDetails): FixR
 
   // ESLint does not throw an error if `fix` function returns only falsy values
   if (fixes !== null && ruleDetails.isFixable === false) {
-    throw new Error(
-      'Fixable rules must set the `meta.fixable` property to "code" or "whitespace".',
-    );
+    throw new Error('Fixable rules must set the `meta.fixable` property to "code" or "whitespace".');
   }
 
   return fixes;
@@ -128,10 +121,7 @@ export function getFixes(diagnostic: Diagnostic, ruleDetails: RuleDetails): FixR
  * @throws {Error} If rule is not marked with `meta.hasSuggestions` but produces suggestions
  * @throws {TypeError} If a suggestion's `fix` is not a function, or message is invalid
  */
-export function getSuggestions(
-  diagnostic: Diagnostic,
-  ruleDetails: RuleDetails,
-): SuggestionReport[] | null {
+export function getSuggestions(diagnostic: Diagnostic, ruleDetails: RuleDetails): SuggestionReport[] | null {
   if (!Object.hasOwn(diagnostic, "suggest")) return null;
   const { suggest } = diagnostic;
   if (suggest == null) return null;

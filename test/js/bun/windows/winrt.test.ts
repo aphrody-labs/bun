@@ -29,7 +29,7 @@ test("validates WinRT GUIDs before crossing the ABI", () => {
 describe.skipIf(!isWindows)("bun:winrt", () => {
   test.each(["uninitialized", "mta", "sta"] as const)(
     "toast releases its WinRT apartment after invalid XML (%s)",
-    async (mode) => {
+    async mode => {
       await using child = Bun.spawn({
         cmd: [
           bunExe(),
@@ -68,11 +68,7 @@ describe.skipIf(!isWindows)("bun:winrt", () => {
         stdout: "pipe",
         stderr: "pipe",
       });
-      const [stdout, stderr, code] = await Promise.all([
-        child.stdout.text(),
-        child.stderr.text(),
-        child.exited,
-      ]);
+      const [stdout, stderr, code] = await Promise.all([child.stdout.text(), child.stderr.text(), child.exited]);
       expect(JSON.parse(stdout)).toEqual({
         rejected: true,
         before: -2147221008,
@@ -108,7 +104,7 @@ describe.skipIf(!isWindows)("bun:winrt", () => {
 
     const files = await folder.GetFilesAsyncOverloadDefaultOptionsStartAndCount();
     expect(files.Size).toBe(2);
-    expect([...files].map((file) => file.Name).sort()).toEqual(["a.txt", "b.txt"]);
+    expect([...files].map(file => file.Name).sort()).toEqual(["a.txt", "b.txt"]);
 
     const file = await folder.GetFileAsync("a.txt");
     const stream = await file.OpenReadAsync();

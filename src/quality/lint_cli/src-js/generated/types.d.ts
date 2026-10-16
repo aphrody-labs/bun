@@ -159,10 +159,7 @@ export interface TemplateElementValue {
   cooked: string | null;
 }
 
-export type MemberExpression =
-  | ComputedMemberExpression
-  | StaticMemberExpression
-  | PrivateFieldExpression;
+export type MemberExpression = ComputedMemberExpression | StaticMemberExpression | PrivateFieldExpression;
 
 export interface ComputedMemberExpression extends Span {
   type: "MemberExpression";
@@ -331,9 +328,7 @@ export interface AssignmentTargetWithDefault extends Span {
   parent: Node;
 }
 
-export type AssignmentTargetProperty =
-  | AssignmentTargetPropertyIdentifier
-  | AssignmentTargetPropertyProperty;
+export type AssignmentTargetProperty = AssignmentTargetPropertyIdentifier | AssignmentTargetPropertyProperty;
 
 export interface AssignmentTargetPropertyIdentifier extends Span {
   type: "Property";
@@ -743,12 +738,7 @@ export interface ClassBody extends Span {
   parent: Node;
 }
 
-export type ClassElement =
-  | StaticBlock
-  | MethodDefinition
-  | PropertyDefinition
-  | AccessorProperty
-  | TSIndexSignature;
+export type ClassElement = StaticBlock | MethodDefinition | PropertyDefinition | AccessorProperty | TSIndexSignature;
 
 export interface MethodDefinition extends Span {
   type: MethodDefinitionType;
@@ -846,10 +836,7 @@ export interface ImportDeclaration extends Span {
 
 export type ImportPhase = "source" | "defer";
 
-export type ImportDeclarationSpecifier =
-  | ImportSpecifier
-  | ImportDefaultSpecifier
-  | ImportNamespaceSpecifier;
+export type ImportDeclarationSpecifier = ImportSpecifier | ImportDefaultSpecifier | ImportNamespaceSpecifier;
 
 export interface ImportSpecifier extends Span {
   type: "ImportSpecifier";

@@ -56,7 +56,9 @@ async function main(args: string[]) {
     return;
   }
   if (command !== "build" || !component || !(component in sources)) {
-    throw new Error("usage: bun scripts/aphrody/windows-suite.ts status | build <powershell|roslyn|terminal|vcpkg> [--dry-run]");
+    throw new Error(
+      "usage: bun scripts/aphrody/windows-suite.ts status | build <powershell|roslyn|terminal|vcpkg> [--dry-run]",
+    );
   }
   const name = component as WindowsSource;
   const cmd = buildCommand(name);

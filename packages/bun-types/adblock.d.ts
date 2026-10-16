@@ -72,7 +72,11 @@ declare module "bun:adblock" {
      */
     check(url: string, sourceUrl?: string, requestType?: RequestType, method?: string): CheckResult;
     urlCosmeticResources(url: string): CosmeticResources;
-    hiddenClassIdSelectors(classes: readonly string[], ids: readonly string[], exceptions?: readonly string[]): string[];
+    hiddenClassIdSelectors(
+      classes: readonly string[],
+      ids: readonly string[],
+      exceptions?: readonly string[],
+    ): string[];
     serialize(): Uint8Array;
   }
 

@@ -4,12 +4,7 @@
 const { freeze } = Object;
 
 const $EMPTY = freeze([]),
-  DECORATORS__KEY__TYPE_ANNOTATION__VALUE = freeze([
-    "decorators",
-    "key",
-    "typeAnnotation",
-    "value",
-  ]),
+  DECORATORS__KEY__TYPE_ANNOTATION__VALUE = freeze(["decorators", "key", "typeAnnotation", "value"]),
   LEFT__RIGHT = freeze(["left", "right"]),
   ARGUMENT = freeze(["argument"]),
   BODY = freeze(["body"]),
@@ -27,13 +22,7 @@ const $EMPTY = freeze([]),
   ]),
   TEST__CONSEQUENT__ALTERNATE = freeze(["test", "consequent", "alternate"]),
   LEFT__RIGHT__BODY = freeze(["left", "right", "body"]),
-  ID__TYPE_PARAMETERS__PARAMS__RETURN_TYPE__BODY = freeze([
-    "id",
-    "typeParameters",
-    "params",
-    "returnType",
-    "body",
-  ]),
+  ID__TYPE_PARAMETERS__PARAMS__RETURN_TYPE__BODY = freeze(["id", "typeParameters", "params", "returnType", "body"]),
   KEY__VALUE = freeze(["key", "value"]),
   LOCAL = freeze(["local"]),
   OBJECT__PROPERTY = freeze(["object", "property"]),
@@ -91,10 +80,8 @@ export default freeze({
   CatchClause: freeze(["param", "body"]),
   ChainExpression: EXPRESSION,
   ClassBody: BODY,
-  ClassDeclaration:
-    DECORATORS__ID__TYPE_PARAMETERS__SUPER_CLASS__SUPER_TYPE_ARGUMENTS__IMPLEMENTS__BODY,
-  ClassExpression:
-    DECORATORS__ID__TYPE_PARAMETERS__SUPER_CLASS__SUPER_TYPE_ARGUMENTS__IMPLEMENTS__BODY,
+  ClassDeclaration: DECORATORS__ID__TYPE_PARAMETERS__SUPER_CLASS__SUPER_TYPE_ARGUMENTS__IMPLEMENTS__BODY,
+  ClassExpression: DECORATORS__ID__TYPE_PARAMETERS__SUPER_CLASS__SUPER_TYPE_ARGUMENTS__IMPLEMENTS__BODY,
   ConditionalExpression: TEST__CONSEQUENT__ALTERNATE,
   ContinueStatement: LABEL,
   Decorator: EXPRESSION,

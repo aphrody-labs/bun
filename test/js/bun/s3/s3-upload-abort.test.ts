@@ -170,16 +170,13 @@ const collectWriter = `
 `;
 const twoParts = droppedWriter(`w.write(new Uint8Array(6 * 1024 * 1024)); w.write(new Uint8Array(6 * 1024 * 1024));`);
 
-test.concurrent(
-  "dropped writer with uploaded parts aborts the multipart upload and lets the process exit",
-  async () => {
-    expect(await run({ body: twoParts, waitFor: `reqs.part === 2`, then: collectWriter })).toEqual({
-      stdout: `finalized 1\n{"create":1,"part":2,"complete":0,"abort":1,"put":0}\n`,
-      stderr: "",
-      exited: 0,
-    });
-  },
-);
+test.concurrent("dropped writer with uploaded parts aborts the multipart upload and lets the process exit", async () => {
+  expect(await run({ body: twoParts, waitFor: `reqs.part === 2`, then: collectWriter })).toEqual({
+    stdout: `finalized 1\n{"create":1,"part":2,"complete":0,"abort":1,"put":0}\n`,
+    stderr: "",
+    exited: 0,
+  });
+});
 
 // The Create response is held until the upload has failed. The only signal script gets for that
 // is the dropped writer's pending `flush()`, which rejects.

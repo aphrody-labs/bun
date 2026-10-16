@@ -41,10 +41,7 @@ const MAX_STARTING_INDENT_LEVEL = 1_000;
  */
 const MIN_MAP_POSITIONS_LENGTH = 1024;
 
-debugAssert(
-  MIN_MAP_POSITIONS_LENGTH % 2 === 0,
-  "`MIN_MAP_POSITIONS_LENGTH` must be an even number",
-);
+debugAssert(MIN_MAP_POSITIONS_LENGTH % 2 === 0, "`MIN_MAP_POSITIONS_LENGTH` must be an even number");
 
 /**
  * Deferred source mapping positions - pairs of output offset and source offset.
@@ -123,14 +120,8 @@ export class State {
     let { startingIndentLevel: indentLevel } = options;
     if (indentLevel === undefined) {
       indentLevel = 0;
-    } else if (
-      !Number.isSafeInteger(indentLevel)
-      || indentLevel < 0
-      || indentLevel > MAX_STARTING_INDENT_LEVEL
-    ) {
-      throw new RangeError(
-        "`startingIndentLevel` must be a non-negative safe integer no greater than 1000",
-      );
+    } else if (!Number.isSafeInteger(indentLevel) || indentLevel < 0 || indentLevel > MAX_STARTING_INDENT_LEVEL) {
+      throw new RangeError("`startingIndentLevel` must be a non-negative safe integer no greater than 1000");
     }
     this.indentLevel = indentLevel;
 

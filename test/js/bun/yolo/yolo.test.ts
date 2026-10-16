@@ -122,7 +122,7 @@ describe("bun:yolo native decisions", () => {
       });
       expect(await decide(request, { provider })).toEqual({ route: "a" });
       const inspected = await inspect(request, { provider });
-      expect(inspected).toEqual(raw);
+      expect(inspected).toEqual(raw as typeof inspected);
       expect(selections(request, inspected, 0.8)).toEqual({ route: "a" });
       expect(calls).toBe(2);
       request.state += "a";

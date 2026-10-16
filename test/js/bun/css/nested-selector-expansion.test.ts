@@ -72,16 +72,13 @@ async function runMinifyTest(depth: number, withTargets: boolean) {
   return { stdout, stderr, exitCode, signalCode: proc.signalCode };
 }
 
-test.concurrent(
-  "deeply nested `&` selectors error out instead of expanding without bound when compiling nesting",
-  async () => {
-    const { stdout, stderr, signalCode, exitCode } = await runMinifyTest(24, true);
-    expect(stderr).toBe("");
-    expect(signalCode).toBeNull(); // not killed by the kill switch
-    expect(stdout).toContain("ERR Maximum nesting expansion exceeded");
-    expect(exitCode).toBe(0);
-  },
-);
+test.concurrent("deeply nested `&` selectors error out instead of expanding without bound when compiling nesting", async () => {
+  const { stdout, stderr, signalCode, exitCode } = await runMinifyTest(24, true);
+  expect(stderr).toBe("");
+  expect(signalCode).toBeNull(); // not killed by the kill switch
+  expect(stdout).toContain("ERR Maximum nesting expansion exceeded");
+  expect(exitCode).toBe(0);
+});
 
 test.concurrent("deeply nested `&` selectors still minify when nesting is preserved (no targets)", async () => {
   const { stdout, stderr, signalCode, exitCode } = await runMinifyTest(24, false);

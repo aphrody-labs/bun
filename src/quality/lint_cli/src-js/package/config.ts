@@ -18,15 +18,7 @@ import type {
 
 type Oxlintrc = Omit<FullOxlintrc, "$schema" | "extends">;
 
-export type {
-  AllowWarnDeny,
-  DummyRule,
-  DummyRuleMap,
-  RuleCategories,
-  OxlintGlobals,
-  OxlintEnv,
-  ExternalPluginEntry,
-};
+export type { AllowWarnDeny, DummyRule, DummyRuleMap, RuleCategories, OxlintGlobals, OxlintEnv, ExternalPluginEntry };
 
 export type ExternalPluginsConfig = Exclude<Oxlintrc["jsPlugins"], undefined | null>;
 

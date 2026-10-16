@@ -29,7 +29,7 @@ test("changing the watched package manifest makes the real Ninja Rust plan edge 
   const cwd = String(dir);
   const watched = join(cwd, "Cargo.toml");
   const plan = join(cwd, "plan.json");
-  expect(rustSources.filter((p) => p.endsWith("Cargo.toml"))).toContain(manifest);
+  expect(rustSources.filter(p => p.endsWith("Cargo.toml"))).toContain(manifest);
   writeFileSync(watched, readFileSync(manifest));
   const n = new Ninja({ buildDir: cwd });
   // Only the fields consumed by the real rule/edge emitters are required here.

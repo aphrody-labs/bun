@@ -81,89 +81,73 @@ const cargoLine = (triple: string) =>
   `cargo check --workspace --keep-going --target ${triple} --message-format=short${rustTargetIsTier3(triple) ? ` ${cargoBuildStdArg}` : ""}`;
 
 describe.skipIf(isWindows)("rust:check-all", () => {
-  test.concurrent(
-    "checks the targets whose std is installed, says how to install the rest, and fails if any check failed",
-    async () => {
-      const { lines, stderr, exitCode } = await runCheckAll(
-        ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu", "aarch64-apple-darwin", "aarch64-unknown-freebsd"],
-        {
-          targets: ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"],
-          components: ["rustc-x86_64-unknown-linux-gnu", "rust-std-x86_64-unknown-linux-gnu"],
-          failingTarget: "x86_64-unknown-linux-gnu",
-        },
-      );
-      expect(stderr).toBe("");
-      expect(lines).toEqual(
-        [
-          checkLine("x86_64-unknown-linux-gnu"),
-          cargoLine("x86_64-unknown-linux-gnu"),
-          // --keep-going across targets too: the failure above doesn't stop this one.
-          checkLine("aarch64-unknown-linux-gnu"),
-          cargoLine("aarch64-unknown-linux-gnu"),
-          "[skip] aarch64-apple-darwin  (rustup target add aarch64-apple-darwin)",
-          // Tier 3: there is no rust-std to add; -Zbuild-std wants rust-src instead.
-          "[skip] aarch64-unknown-freebsd  (rustup component add rust-src)",
-          "1 ok, 1 failed, 2 skipped (of 4)",
-        ].sort(),
-      );
-      expect(exitCode).toBe(1);
-    },
-    30_000,
-  );
+  test.concurrent("checks the targets whose std is installed, says how to install the rest, and fails if any check failed", async () => {
+    const { lines, stderr, exitCode } = await runCheckAll(
+      ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu", "aarch64-apple-darwin", "aarch64-unknown-freebsd"],
+      {
+        targets: ["x86_64-unknown-linux-gnu", "aarch64-unknown-linux-gnu"],
+        components: ["rustc-x86_64-unknown-linux-gnu", "rust-std-x86_64-unknown-linux-gnu"],
+        failingTarget: "x86_64-unknown-linux-gnu",
+      },
+    );
+    expect(stderr).toBe("");
+    expect(lines).toEqual(
+      [
+        checkLine("x86_64-unknown-linux-gnu"),
+        cargoLine("x86_64-unknown-linux-gnu"),
+        // --keep-going across targets too: the failure above doesn't stop this one.
+        checkLine("aarch64-unknown-linux-gnu"),
+        cargoLine("aarch64-unknown-linux-gnu"),
+        "[skip] aarch64-apple-darwin  (rustup target add aarch64-apple-darwin)",
+        // Tier 3: there is no rust-std to add; -Zbuild-std wants rust-src instead.
+        "[skip] aarch64-unknown-freebsd  (rustup component add rust-src)",
+        "1 ok, 1 failed, 2 skipped (of 4)",
+      ].sort(),
+    );
+    expect(exitCode).toBe(1);
+  }, 30_000);
 
-  test.concurrent(
-    "with everything installed and no arguments, checks every triple, Tier 3 ones with -Zbuild-std",
-    async () => {
-      const { lines, stderr, exitCode } = await runCheckAll([], {
-        targets: allRustTargets.filter(triple => !rustTargetIsTier3(triple)),
-        components: ["rust-src"],
-      });
-      expect(stderr).toBe("");
-      expect(lines).toEqual(
-        [
-          ...allRustTargets.map(checkLine),
-          ...allRustTargets.map(cargoLine),
-          `${allRustTargets.length} ok, 0 failed, 0 skipped (of ${allRustTargets.length})`,
-        ].sort(),
-      );
-      expect(lines.filter(line => line.startsWith("cargo ") && line.endsWith(cargoBuildStdArg))).toEqual([
+  test.concurrent("with everything installed and no arguments, checks every triple, Tier 3 ones with -Zbuild-std", async () => {
+    const { lines, stderr, exitCode } = await runCheckAll([], {
+      targets: allRustTargets.filter(triple => !rustTargetIsTier3(triple)),
+      components: ["rust-src"],
+    });
+    expect(stderr).toBe("");
+    expect(lines).toEqual(
+      [
+        ...allRustTargets.map(checkLine),
+        ...allRustTargets.map(cargoLine),
+        `${allRustTargets.length} ok, 0 failed, 0 skipped (of ${allRustTargets.length})`,
+      ].sort(),
+    );
+    expect(lines.filter(line => line.startsWith("cargo ") && line.endsWith(cargoBuildStdArg))).toEqual([
+      cargoLine("aarch64-unknown-freebsd"),
+    ]);
+    expect(exitCode).toBe(0);
+  }, 30_000);
+
+  test.concurrent("without a working rustup nothing can be probed, so every requested target is attempted", async () => {
+    const { lines, stderr, exitCode } = await runCheckAll(["aarch64-unknown-linux-gnu", "aarch64-unknown-freebsd"], {
+      rustupMissing: true,
+    });
+    expect(stderr).toBe("");
+    expect(lines).toEqual(
+      [
+        checkLine("aarch64-unknown-linux-gnu"),
+        cargoLine("aarch64-unknown-linux-gnu"),
+        checkLine("aarch64-unknown-freebsd"),
         cargoLine("aarch64-unknown-freebsd"),
-      ]);
-      expect(exitCode).toBe(0);
-    },
-    30_000,
-  );
+        "2 ok, 0 failed, 0 skipped (of 2)",
+      ].sort(),
+    );
+    expect(exitCode).toBe(0);
+  }, 30_000);
 
-  test.concurrent(
-    "without a working rustup nothing can be probed, so every requested target is attempted",
-    async () => {
-      const { lines, stderr, exitCode } = await runCheckAll(["aarch64-unknown-linux-gnu", "aarch64-unknown-freebsd"], {
-        rustupMissing: true,
-      });
-      expect(stderr).toBe("");
-      expect(lines).toEqual(
-        [
-          checkLine("aarch64-unknown-linux-gnu"),
-          cargoLine("aarch64-unknown-linux-gnu"),
-          checkLine("aarch64-unknown-freebsd"),
-          cargoLine("aarch64-unknown-freebsd"),
-          "2 ok, 0 failed, 0 skipped (of 2)",
-        ].sort(),
-      );
-      expect(exitCode).toBe(0);
-    },
-    30_000,
-  );
-
-  test.concurrent(
-    "rejects a triple CI doesn't build",
-    async () => {
-      const { lines, stderr, exitCode } = await runCheckAll(["riscv64gc-unknown-linux-gnu"], {});
-      expect(stderr).toContain("unknown target 'riscv64gc-unknown-linux-gnu'");
-      for (const triple of allRustTargets) expect(stderr).toContain(triple);
-      expect(lines).toEqual([]);
-      expect(exitCode).toBe(2);
-    },
-    30_000,
-  );
+  test.concurrent("rejects a triple CI doesn't build", async () => {
+    const { lines, stderr, exitCode } = await runCheckAll(["riscv64gc-unknown-linux-gnu"], {});
+    expect(stderr).toContain("unknown target 'riscv64gc-unknown-linux-gnu'");
+    for (const triple of allRustTargets) expect(stderr).toContain(triple);
+    expect(lines).toEqual([]);
+    expect(exitCode).toBe(2);
+  }, 30_000);
 });

@@ -78,12 +78,10 @@ const mixedModuleFiles = {
   "mixed.js": `import { x } from "./dep.js";\nmodule.exports = { x };`,
 };
 
-test.concurrent(
-  "import() of a file that mixes import with module.exports rejects with the parser's error",
-  async () => {
-    using dir = tempDir("build-error-mixed-import", {
-      ...mixedModuleFiles,
-      "main.js": `
+test.concurrent("import() of a file that mixes import with module.exports rejects with the parser's error", async () => {
+  using dir = tempDir("build-error-mixed-import", {
+    ...mixedModuleFiles,
+    "main.js": `
       const out = {};
       try {
         await import("./mixed.js");
@@ -97,48 +95,44 @@ test.concurrent(
       }
       console.log(JSON.stringify(out));
     `,
-    });
+  });
 
-    await using proc = Bun.spawn({
-      cmd: [bunExe(), "main.js"],
-      env: bunEnv,
-      cwd: String(dir),
-      stderr: "pipe",
-    });
+  await using proc = Bun.spawn({
+    cmd: [bunExe(), "main.js"],
+    env: bunEnv,
+    cwd: String(dir),
+    stderr: "pipe",
+  });
 
-    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
 
-    if (exitCode !== 0) console.error(stderr);
-    const expected = ["BuildMessage", "Cannot use import statement with CommonJS-only features"];
-    expect(JSON.parse(stdout)).toEqual({ import: expected, require: expected });
-    expect(exitCode).toBe(0);
-  },
-);
+  if (exitCode !== 0) console.error(stderr);
+  const expected = ["BuildMessage", "Cannot use import statement with CommonJS-only features"];
+  expect(JSON.parse(stdout)).toEqual({ import: expected, require: expected });
+  expect(exitCode).toBe(0);
+});
 
-test.concurrent(
-  "unhandled import() of a file that mixes import with module.exports prints the parser's notes",
-  async () => {
-    using dir = tempDir("build-error-mixed-uncaught", {
-      ...mixedModuleFiles,
-      "main.js": `import("./mixed.js");`,
-    });
+test.concurrent("unhandled import() of a file that mixes import with module.exports prints the parser's notes", async () => {
+  using dir = tempDir("build-error-mixed-uncaught", {
+    ...mixedModuleFiles,
+    "main.js": `import("./mixed.js");`,
+  });
 
-    await using proc = Bun.spawn({
-      cmd: [bunExe(), "main.js"],
-      env: bunEnv,
-      cwd: String(dir),
-      stderr: "pipe",
-    });
+  await using proc = Bun.spawn({
+    cmd: [bunExe(), "main.js"],
+    env: bunEnv,
+    cwd: String(dir),
+    stderr: "pipe",
+  });
 
-    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
 
-    expect(stdout).toBe("");
-    expect(stderr).toContain("error: Cannot use import statement with CommonJS-only features");
-    expect(stderr).toContain(`note: Try require("./dep.js") instead`);
-    expect(stderr).toContain("note: This file is CommonJS because 'module' was used");
-    expect(exitCode).toBe(1);
-  },
-);
+  expect(stdout).toBe("");
+  expect(stderr).toContain("error: Cannot use import statement with CommonJS-only features");
+  expect(stderr).toContain(`note: Try require("./dep.js") instead`);
+  expect(stderr).toContain("note: This file is CommonJS because 'module' was used");
+  expect(exitCode).toBe(1);
+});
 
 test("import whose transpile log holds a resolve error rejects with a ResolveMessage next to the BuildMessage", async () => {
   // A macro import that cannot be resolved is logged by the resolver while the

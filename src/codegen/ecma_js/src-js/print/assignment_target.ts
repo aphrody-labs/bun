@@ -111,10 +111,7 @@ function printAssignmentTargetProperty(node: ESTree.AssignmentTargetProperty, st
 /**
  * Print a destructuring target which may carry a default, as the `a = 1` in `({ a = 1 } = obj)`.
  */
-function printAssignmentTargetMaybeDefault(
-  node: ESTree.AssignmentTargetMaybeDefault,
-  state: State,
-): void {
+function printAssignmentTargetMaybeDefault(node: ESTree.AssignmentTargetMaybeDefault, state: State): void {
   if (node.type === "AssignmentPattern") {
     printAssignmentTarget(node.left, state);
     write(state, " = ", CAT_OTHER);

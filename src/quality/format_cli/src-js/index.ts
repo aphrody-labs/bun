@@ -1,11 +1,6 @@
 // napi-JS `oxfmt` API entry point
 
-import {
-  formatFile,
-  formatEmbeddedCode,
-  formatEmbeddedDoc,
-  sortTailwindClasses,
-} from "./libs/apis";
+import { formatFile, formatEmbeddedCode, formatEmbeddedDoc, sortTailwindClasses } from "./libs/apis";
 import { toFormatFileResult, toNullable } from "./libs/napi-callbacks";
 // Types are auto-generated from the JSON Schema.
 import type {

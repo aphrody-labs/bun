@@ -2,14 +2,14 @@ import { describe, expect, test } from "bun:test";
 import { bunEnv, bunExe, isWindows, tempDir } from "harness";
 import { delimiter, dirname, join } from "node:path";
 
-const env: Record<string, string | undefined> = { ...bunEnv, npm_lifecycle_event: undefined, NO_COLOR: "1", FORCE_COLOR: undefined };
+const env: Record<string, string | undefined> = {
+  ...bunEnv,
+  npm_lifecycle_event: undefined,
+  NO_COLOR: "1",
+  FORCE_COLOR: undefined,
+};
 
-async function run(
-  cwd: string,
-  args: string[],
-  extraEnv: Record<string, string | undefined> = {},
-  bunShell = true,
-) {
+async function run(cwd: string, args: string[], extraEnv: Record<string, string | undefined> = {}, bunShell = true) {
   const command = args.indexOf("just");
   if (bunShell && command !== -1) args = [...args.slice(0, command + 1), "--bun-shell", ...args.slice(command + 1)];
   await using child = Bun.spawn([bunExe(), ...args], {

@@ -42,12 +42,7 @@ const EMPTY_OPTIONS: Options = {};
 /**
  * Printer builds, indexed by `(ts ? 1 : 0) + (sourcemap ? 2 : 0)`. Lazily loaded as needed.
  */
-const PRINTER_PATHS = [
-  "./print_js.js",
-  "./print_ts.js",
-  "./print_js_maps.js",
-  "./print_ts_maps.js",
-];
+const PRINTER_PATHS = ["./print_js.js", "./print_ts.js", "./print_js_maps.js", "./print_ts_maps.js"];
 
 /**
  * The loaded builds, in the same order as `PRINTER_PATHS`, and `null` until first used.
@@ -61,10 +56,7 @@ const printers: (PrintModule["printSync"] | null)[] = [null, null, null, null];
  * @param options - Printing options (optional)
  * @returns Object holding the generated code
  */
-export function printSync(
-  node: ESTree.Program | ESTree.Statement,
-  options?: Options,
-): CodegenResult {
+export function printSync(node: ESTree.Program | ESTree.Statement, options?: Options): CodegenResult {
   // The printer is built 4 times, over whether the AST may contain TypeScript and whether
   // source mappings are wanted. This picks the build the options call for and loads it on first use,
   // so a caller printing only JavaScript never pays for the TypeScript printers.

@@ -107,29 +107,25 @@ test.concurrent.skipIf(skip)(
 // child's sockets received any bytes before the server closed them: none in
 // `walk` (every socket is paused), exactly the 5-per-iteration budget in
 // `parked`, which proves the other 59 were parked when stop(true) ran.
-test.concurrent(
-  "TLS server.stop(true): a close handler that closes a sibling does not crash the teardown walk",
-  async () => {
-    const scenario = (kind: string, flightsReceived: number) => ({
-      kind,
-      opened: 64,
-      closed: 64,
-      handshakeFailed: 64,
-      handshakeOk: 0,
-      data: 0,
-      errors: 0,
-      siblingCloses: 42,
-      flightsReceived,
-    });
-    expect(await runFixture("tls-close-all-sibling-fixture.ts")).toEqual({
-      summary: { scenarios: [scenario("walk", 0), scenario("parked", 5)] },
-      signalCode: null,
-      exitCode: 0,
-      stderrTail: "",
-    });
-  },
-  60_000,
-);
+test.concurrent("TLS server.stop(true): a close handler that closes a sibling does not crash the teardown walk", async () => {
+  const scenario = (kind: string, flightsReceived: number) => ({
+    kind,
+    opened: 64,
+    closed: 64,
+    handshakeFailed: 64,
+    handshakeOk: 0,
+    data: 0,
+    errors: 0,
+    siblingCloses: 42,
+    flightsReceived,
+  });
+  expect(await runFixture("tls-close-all-sibling-fixture.ts")).toEqual({
+    summary: { scenarios: [scenario("walk", 0), scenario("parked", 5)] },
+    signalCode: null,
+    exitCode: 0,
+    stderrTail: "",
+  });
+}, 60_000);
 
 // us_socket_pause on a socket that is parked in the low-priority handshake
 // queue only sets is_paused (parking switched its reads off already), and the
@@ -142,26 +138,22 @@ test.concurrent(
 // handshake in that time: exactly the 5-per-iteration budget, read before the
 // pause, which also proves that the other 27 were parked. resume() then brings
 // all 32 back.
-test.concurrent(
-  "TLS low-prio queue: the drain does not resume a socket that was paused while parked",
-  async () => {
-    expect(await runFixture("tls-pause-parked-handshake-fixture.ts")).toEqual({
-      summary: {
-        opened: 32,
-        whilePaused: { handshake: 0, data: 0 },
-        clientHandshakesWhilePaused: 5,
-        serverHandshakes: 32,
-        serverData: 32,
-        pongs: 32,
-        errors: 0,
-      },
-      signalCode: null,
-      exitCode: 0,
-      stderrTail: "",
-    });
-  },
-  60_000,
-);
+test.concurrent("TLS low-prio queue: the drain does not resume a socket that was paused while parked", async () => {
+  expect(await runFixture("tls-pause-parked-handshake-fixture.ts")).toEqual({
+    summary: {
+      opened: 32,
+      whilePaused: { handshake: 0, data: 0 },
+      clientHandshakesWhilePaused: 5,
+      serverHandshakes: 32,
+      serverData: 32,
+      pongs: 32,
+      errors: 0,
+    },
+    signalCode: null,
+    exitCode: 0,
+    stderrTail: "",
+  });
+}, 60_000);
 
 // us_poll_start_rc wraps uv_poll_init_socket on Windows and EPOLL_CTL_ADD /
 // kevent on posix. On Windows the return value was ignored, so an ioctlsocket
@@ -212,8 +204,7 @@ describe.skipIf(!fault.available())("poll_start failure is reported, not a crash
       const server = Bun.listen({ hostname: "127.0.0.1", port: 0, socket: { data() {} } });
       server.stop(true);
       console.log("OK");
-    `),
-  );
+    `));
 
   test.concurrent("Bun.udpSocket", () =>
     run(`
@@ -227,8 +218,7 @@ describe.skipIf(!fault.available())("poll_start failure is reported, not a crash
       const s = await Bun.udpSocket({ hostname: "127.0.0.1", port: 0 });
       s.close();
       console.log("OK");
-    `),
-  );
+    `));
 
   test.concurrent("Bun.connect", () =>
     run(`
@@ -247,8 +237,7 @@ describe.skipIf(!fault.available())("poll_start failure is reported, not a crash
       } finally {
         server.stop(true);
       }
-    `),
-  );
+    `));
 });
 
 // A paused socket whose peer hung up is taken out of epoll by the dispatcher

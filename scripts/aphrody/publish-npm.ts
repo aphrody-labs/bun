@@ -398,7 +398,6 @@ export const PACKAGES: PackageSpec[] = [
   },
 ];
 
-
 /** The scoped npm name of a fork package. */
 export function npmName(spec: PackageSpec): string {
   return `${SCOPE}/${spec.name ?? spec.dir}`;

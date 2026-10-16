@@ -9,10 +9,7 @@ let integratedBytes = 0;
 for (const file of migration.files) {
   const data = readFileSync(resolve(root, file.destination));
   const actual = new Bun.CryptoHasher("sha256").update(data).digest("hex");
-  if (
-    actual !== (file.integratedSha256 ?? file.sha256) ||
-    data.length !== (file.integratedBytes ?? file.bytes)
-  ) {
+  if (actual !== (file.integratedSha256 ?? file.sha256) || data.length !== (file.integratedBytes ?? file.bytes)) {
     throw new Error(`Transferred source differs: ${file.destination}`);
   }
   bytes += file.bytes;

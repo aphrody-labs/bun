@@ -30,7 +30,7 @@ const trackedWeakMaps: TrackedWeakMap[] = [];
 
 // `FinalizationRegistry` to remove entries from `trackedWeakMaps` array when the `WeakMap` they hold
 // is garbage collected.
-const registry = new FinalizationRegistry<TrackedWeakMap>((entryToRemove) => {
+const registry = new FinalizationRegistry<TrackedWeakMap>(entryToRemove => {
   // Remove `entryToRemove` from array using the same method as Rust's `Vec::swap_remove`.
   //
   // * If the element we want to remove is the last one, just pop it off the array.

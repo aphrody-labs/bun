@@ -6,7 +6,7 @@
       "name": "bun",
       "devDependencies": {
         "@aphrody/bun-runtime-sdk": "workspace:*",
-        "@lezer/common": "1.5.2",
+        "@lezer/common": "1.5.3",
         "@lezer/cpp": "1.1.6",
         "@types/react": "18.3.31",
         "@types/react-dom": "18.3.7",
@@ -135,10 +135,6 @@
     "packages/bun-runtime-sdk": {
       "name": "@aphrody/bun-runtime-sdk",
       "version": "1.4.10",
-    },
-    "packages/bun-tauri": {
-      "name": "@aphrody/tauri",
-      "version": "1.4.4",
     },
     "packages/bun-types": {
       "name": "@aphrody/bun-types",
@@ -387,8 +383,6 @@
 
     "@aphrody/scaffold": ["@aphrody/scaffold@1.0.0-canary.2", "", { "bin": { "aphrody-scaffold": "src/cli.ts" } }, "sha512-Ir+QAxOVrHzMG6lrcuvg6XJeMgpI751PwOlEvCDMemYXBtXK4s45ldxYCB8L8W1Rjb6JQXkhK3wpkcL0WmKPXg=="],
 
-    "@aphrody/tauri": ["@aphrody/tauri@workspace:packages/bun-tauri"],
-
     "@aphrody/timeline": ["@aphrody/timeline@workspace:packages/web/rust/packages/timeline"],
 
     "@aphrody/typesafe-sdk": ["@aphrody/typesafe-sdk@0.6.2", "", {}, "sha512-Pnj7gUKWCcTjztzmMBVLX7FNGJVlJKfrwuE3pLDnjGABlZHW7/wb6SakGllIAz65Qjx7+oYd+MYxWbxEpGyVRw=="],
@@ -547,7 +541,7 @@
 
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
 
-    "@lezer/common": ["@lezer/common@1.5.2", "", {}, "sha512-sxQE460fPZyU3sdc8lafxiPwJHBzZRy/udNFynGQky1SePYBdhkBl1kOagA9uT3pxR8K09bOrmTUqA9wb/PjSQ=="],
+    "@lezer/common": ["@lezer/common@1.5.3", "", {}, "sha512-H0iErY4e43LpXbYDyBci5W4v/RwTgGV3YzYOlJPiGZ8RY8w51kVE+xLn1tg3Z6UmSfyETvtsUK3r7YsgDQEI7Q=="],
 
     "@lezer/cpp": ["@lezer/cpp@1.1.6", "", { "dependencies": { "@lezer/common": "^1.2.0", "@lezer/highlight": "^1.0.0", "@lezer/lr": "^1.0.0" } }, "sha512-vh9gWWJOXFVY8HBHK3Twzq8MgwG2iN4GSyzBP9sCGTe37P15x2R14VaBQk0VA0ezTRN1KHYBBsHhvpGZ2Xy/pA=="],
 
@@ -1324,12 +1318,6 @@
     "@aphrody/web-to-tauri/@aphrody/agent-browser": ["@aphrody/agent-browser@1.0.0-canary.1", "", { "dependencies": { "@aphrody/runtime-sdk": "0.1.2" } }, "sha512-f1N9kipxXmjty/7q7xbja+a7yvAlKFfVmlMyN4fJs1kThze13nmihUd0bVHraFWprBjVgeQjiMnqJ7KFQYevyw=="],
 
     "@happy-dom/global-registrator/happy-dom": ["happy-dom@17.6.3", "", { "dependencies": { "webidl-conversions": "^7.0.0", "whatwg-mimetype": "^3.0.0" } }, "sha512-UVIHeVhxmxedbWPCfgS55Jg2rDfwf2BCKeylcPSqazLz5w3Kri7Q4xdBJubsr/+VUzFLh0VjIvh13RaDA2/Xug=="],
-
-    "@lezer/cpp/@lezer/common": ["@lezer/common@1.5.3", "", {}, "sha512-H0iErY4e43LpXbYDyBci5W4v/RwTgGV3YzYOlJPiGZ8RY8w51kVE+xLn1tg3Z6UmSfyETvtsUK3r7YsgDQEI7Q=="],
-
-    "@lezer/highlight/@lezer/common": ["@lezer/common@1.5.3", "", {}, "sha512-H0iErY4e43LpXbYDyBci5W4v/RwTgGV3YzYOlJPiGZ8RY8w51kVE+xLn1tg3Z6UmSfyETvtsUK3r7YsgDQEI7Q=="],
-
-    "@lezer/lr/@lezer/common": ["@lezer/common@1.5.3", "", {}, "sha512-H0iErY4e43LpXbYDyBci5W4v/RwTgGV3YzYOlJPiGZ8RY8w51kVE+xLn1tg3Z6UmSfyETvtsUK3r7YsgDQEI7Q=="],
 
     "@tailwindcss/node/source-map-js": ["source-map-js@1.2.2", "", {}, "sha512-KGj/8Y43x35aZVDtt+J4mK1hoLGHULMYfSkODJNQjNDC3oW1PqPoxMwo0pLUsWM/UEGzON/NxeHywEfNXNP3Vw=="],
 

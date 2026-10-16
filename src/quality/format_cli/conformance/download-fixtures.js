@@ -101,13 +101,12 @@ const sourcesByArchive = Map.groupBy(
 );
 
 await Promise.all(
-  [...sourcesByArchive.values()].map(async (group) => {
+  [...sourcesByArchive.values()].map(async group => {
     // Stamp-based skip (same scheme as `oxc_formatter_tests`' suite provisioning):
     // the stamp is written last, so a half-downloaded tree is always re-done.
     const stale = group.filter(({ name, repo, version }) => {
       const stamp = join(externalsDir, name, ".version");
-      const upToDate =
-        existsSync(stamp) && readFileSync(stamp, "utf8").trim() === `${repo}#${version}`;
+      const upToDate = existsSync(stamp) && readFileSync(stamp, "utf8").trim() === `${repo}#${version}`;
       if (upToDate) console.log(`Up-to-date: ${name}@${version}`);
       return !upToDate;
     });
@@ -118,9 +117,7 @@ await Promise.all(
     console.log(`Downloading ${owner}/${repoName}@${version}...`);
     const tmp = mkdtempSync(join(tmpdir(), "oxfmt-fixtures-"));
     const tarball = join(tmp, "archive.tar.gz");
-    await execAsync(
-      `curl -fsSL -o "${tarball}" https://codeload.github.com/${owner}/${repoName}/tar.gz/${version}`,
-    );
+    await execAsync(`curl -fsSL -o "${tarball}" https://codeload.github.com/${owner}/${repoName}/tar.gz/${version}`);
     const top = await topDirectory(tarball);
 
     for (const { name, repo } of stale) {

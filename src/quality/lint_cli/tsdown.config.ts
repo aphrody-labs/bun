@@ -81,8 +81,7 @@ const pluginEslintPkgConfig = defineConfig({
 // Each rule is a separate CJS file, lazy-loaded on demand.
 const pluginEslintRulesEntries: Record<string, string> = {};
 for (const ruleName of ruleNames) {
-  pluginEslintRulesEntries[`rules/${ruleName}`] =
-    `src-js/generated/plugin-eslint/rules/${ruleName}.cjs`;
+  pluginEslintRulesEntries[`rules/${ruleName}`] = `src-js/generated/plugin-eslint/rules/${ruleName}.cjs`;
 }
 
 // Plugins.

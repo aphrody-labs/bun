@@ -12,14 +12,7 @@ const harnessDir = path.join(__dirname, "../..", "test262", "harness");
 const { Script, createContext, SourceTextModule, runInContext, SyntheticModule } = vm;
 
 async function runCodeInHarness(options = {}) {
-  const {
-    code = "",
-    includes = [],
-    importDir = "",
-    isAsync = false,
-    isModule = true,
-    isRaw = false,
-  } = options;
+  const { code = "", includes = [], importDir = "", isAsync = false, isModule = true, isRaw = false } = options;
   const context = {};
 
   if (process.env.DEBUG) {
@@ -32,7 +25,7 @@ async function runCodeInHarness(options = {}) {
     const moduleCache = new Map();
     const dynamicImportCache = new Map();
 
-    const findModule = (modulePath) => {
+    const findModule = modulePath => {
       let module = moduleCache.get(modulePath);
       if (!module) {
         const code = fs.readFileSync(modulePath, "utf8");
@@ -49,11 +42,11 @@ async function runCodeInHarness(options = {}) {
       return module;
     };
 
-    const linker = (specifier) => {
+    const linker = specifier => {
       return findModule(path.join(importDir, specifier));
     };
 
-    const importModuleDynamically = (specifier) => {
+    const importModuleDynamically = specifier => {
       const where = path.join(importDir, specifier);
       let promise = dynamicImportCache.get(where);
       if (!promise) {
@@ -86,7 +79,7 @@ async function runCodeInHarness(options = {}) {
 
   if (isAsync) {
     await new Promise((resolve, reject) => {
-      context.$DONE = (err) => (err ? reject(err) : resolve());
+      context.$DONE = err => (err ? reject(err) : resolve());
       runCode().catch(reject);
     });
   } else {
@@ -151,7 +144,7 @@ const server = createServer((req, res) => {
   }
   if (req.method === "POST") {
     let body = "";
-    req.on("data", (chunk) => {
+    req.on("data", chunk => {
       body += chunk.toString(); // convert Buffer to string
     });
     req.on("end", async () => {

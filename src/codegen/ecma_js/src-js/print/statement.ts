@@ -3,13 +3,7 @@
 import { typeAssertIs } from "../asserts.ts";
 import { printAssignmentTarget } from "./assignment_target.ts";
 import { printBindingPattern } from "./binding_pattern.ts";
-import {
-  CAT_CLOSE_BRACKET,
-  CAT_IDENT,
-  CAT_OP_UN_NOT,
-  CAT_OTHER,
-  CAT_START_OF_STMT,
-} from "./categories.ts";
+import { CAT_CLOSE_BRACKET, CAT_IDENT, CAT_OP_UN_NOT, CAT_OTHER, CAT_START_OF_STMT } from "./categories.ts";
 import {
   markMapStart,
   write,
@@ -69,10 +63,7 @@ export function printProgram(node: ESTree.Program, state: State): void {
  * The handover is the delicate part - a string literal statement arriving right after the prologue
  * has to be kept from being read back as one more directive.
  */
-export function printDirectivesAndStatements(
-  body: Array<ESTree.Directive | ESTree.Statement>,
-  state: State,
-): void {
+export function printDirectivesAndStatements(body: Array<ESTree.Directive | ESTree.Statement>, state: State): void {
   const { length } = body;
   if (length === 0) return;
 
@@ -335,11 +326,7 @@ function printExpressionStatement(node: ESTree.ExpressionStatement, state: State
  * @param ctx - Passed to every initializer, so a `for` head can hand down `CTX_FORBID_IN` and stop an
  *   `in` operator there being read as the head's own.
  */
-export function printVariableDeclaration(
-  node: ESTree.VariableDeclaration,
-  state: State,
-  ctx: number,
-): void {
+export function printVariableDeclaration(node: ESTree.VariableDeclaration, state: State, ctx: number): void {
   printSpaceBeforeIdentifier(state);
 
   // The node's mapping goes on whichever of these is written first
@@ -743,9 +730,7 @@ function printForOfStatement(node: ESTree.ForOfStatement, state: State): void {
   } else {
     typeAssertIs<ESTree.Expression>(left);
     const bare = withoutParens(left);
-    const wrap =
-      forOfHeadStartsWithLet(left)
-      || (!node.await && bare.type === "Identifier" && bare.name === "async");
+    const wrap = forOfHeadStartsWithLet(left) || (!node.await && bare.type === "Identifier" && bare.name === "async");
     if (wrap) write(state, "(", CAT_OTHER);
     printAssignmentTarget(left, state);
     if (wrap) write(state, ")", CAT_CLOSE_BRACKET);

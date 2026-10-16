@@ -9,13 +9,23 @@ export function loadEmissionSdk(): typeof TypeScript {
   const metadataPath = owner.resolve("typescript/package.json");
   const metadata = owner(metadataPath);
   if (metadata.version !== expected) {
-    throw new Error(`TypeScript emission SDK mismatch: expected ${expected}, found ${metadata.version} at ${metadataPath}`);
+    throw new Error(
+      `TypeScript emission SDK mismatch: expected ${expected}, found ${metadata.version} at ${metadataPath}`,
+    );
   }
   const sdk = owner("typescript");
   if (sdk.version !== expected) {
     throw new Error(`TypeScript emission SDK mismatch: expected ${expected}, loaded ${sdk.version}`);
   }
-  for (const name of ["parseCommandLine", "getParsedCommandLineOfConfigFile", "createProgram", "createCompilerHost", "createIncrementalProgram", "createSolutionBuilder", "createWatchCompilerHost"]) {
+  for (const name of [
+    "parseCommandLine",
+    "getParsedCommandLineOfConfigFile",
+    "createProgram",
+    "createCompilerHost",
+    "createIncrementalProgram",
+    "createSolutionBuilder",
+    "createWatchCompilerHost",
+  ]) {
     if (typeof sdk[name] !== "function") throw new Error(`TypeScript ${expected} emission SDK is missing ${name}`);
   }
   if (!sdk.sys) throw new Error(`TypeScript ${expected} emission SDK is missing its filesystem host`);
@@ -27,11 +37,13 @@ export function emitTypeScript(args: string[], cwd = process.cwd(), sdk?: typeof
   const ts = sdk ?? loadEmissionSdk();
   const system = { ...ts.sys, getCurrentDirectory: () => cwd };
   const report = (diagnostic: TypeScript.Diagnostic) => {
-    process.stderr.write(ts.formatDiagnosticsWithColorAndContext([diagnostic], {
-      getCurrentDirectory: () => cwd,
-      getCanonicalFileName: path => path,
-      getNewLine: () => system.newLine,
-    }));
+    process.stderr.write(
+      ts.formatDiagnosticsWithColorAndContext([diagnostic], {
+        getCurrentDirectory: () => cwd,
+        getCanonicalFileName: path => path,
+        getNewLine: () => system.newLine,
+      }),
+    );
   };
   if (args.includes("-b") || args.includes("--build")) {
     const options: TypeScript.BuildOptions = {};
@@ -52,7 +64,11 @@ export function emitTypeScript(args: string[], cwd = process.cwd(), sdk?: typeof
     if (!projects.length) projects.push(resolve(cwd, "tsconfig.json"));
     if (watch && clean) throw new Error("SDK build --clean cannot be combined with --watch");
     const builder = watch
-      ? ts.createSolutionBuilderWithWatch(ts.createSolutionBuilderWithWatchHost(system, undefined, report), projects, options)
+      ? ts.createSolutionBuilderWithWatch(
+          ts.createSolutionBuilderWithWatchHost(system, undefined, report),
+          projects,
+          options,
+        )
       : ts.createSolutionBuilder(ts.createSolutionBuilderHost(system, undefined, report), projects, options);
     const status = clean ? builder.clean() : builder.build();
     return watch ? undefined : status;
@@ -72,7 +88,9 @@ export function emitTypeScript(args: string[], cwd = process.cwd(), sdk?: typeof
   }
   const config = parsed.options.project
     ? resolve(cwd, parsed.options.project)
-    : parsed.fileNames.length ? undefined : ts.findConfigFile(cwd, system.fileExists);
+    : parsed.fileNames.length
+      ? undefined
+      : ts.findConfigFile(cwd, system.fileExists);
   let configFile: string | undefined;
   if (config) {
     const filename = system.directoryExists(config) ? resolve(config, "tsconfig.json") : config;
@@ -92,17 +110,28 @@ export function emitTypeScript(args: string[], cwd = process.cwd(), sdk?: typeof
   if (parsed.options.watch) {
     const host = configFile
       ? ts.createWatchCompilerHost(configFile, parsed.options, system, undefined, report)
-      : ts.createWatchCompilerHost(parsed.fileNames, parsed.options, system, undefined, report, undefined, parsed.projectReferences);
+      : ts.createWatchCompilerHost(
+          parsed.fileNames,
+          parsed.options,
+          system,
+          undefined,
+          report,
+          undefined,
+          parsed.projectReferences,
+        );
     ts.createWatchProgram(host);
     return;
   }
   const incremental = parsed.options.incremental || parsed.options.composite;
   const host = incremental ? ts.createIncrementalCompilerHost(parsed.options) : ts.createCompilerHost(parsed.options);
   host.getCurrentDirectory = () => cwd;
-  const options = { rootNames: parsed.fileNames, options: parsed.options, projectReferences: parsed.projectReferences, host };
-  const program = incremental
-    ? ts.createIncrementalProgram(options)
-    : ts.createProgram(options);
+  const options = {
+    rootNames: parsed.fileNames,
+    options: parsed.options,
+    projectReferences: parsed.projectReferences,
+    host,
+  };
+  const program = incremental ? ts.createIncrementalProgram(options) : ts.createProgram(options);
   const diagnostics = ts.getPreEmitDiagnostics("getProgram" in program ? program.getProgram() : program);
   const emitted = program.emit();
   const all = [...diagnostics, ...emitted.diagnostics];
@@ -111,6 +140,10 @@ export function emitTypeScript(args: string[], cwd = process.cwd(), sdk?: typeof
 }
 
 if (import.meta.main) {
-  try { process.exitCode = emitTypeScript(process.argv.slice(2)); }
-  catch (error) { console.error(String(error)); process.exitCode = 2; }
+  try {
+    process.exitCode = emitTypeScript(process.argv.slice(2));
+  } catch (error) {
+    console.error(String(error));
+    process.exitCode = 2;
+  }
 }

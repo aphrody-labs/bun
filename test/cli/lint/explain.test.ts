@@ -140,7 +140,9 @@ describe.concurrent("--rules -f json", () => {
     const names = rules.flatMap(it => [it.id, ...it.aliases]);
     expect(names.filter((name, at) => names.indexOf(name) !== at)).toEqual([]);
     expect(rules.filter(it => !it.modes.includes("native")).map(it => it.id)).toEqual([]);
-    expect([...new Set(rules.map(it => it.kind))].sort()).toEqual(["layout", "problem", "suggestion", null].sort());
+    expect([...new Set(rules.map(it => it.kind))].sort() as unknown[]).toEqual(
+      ["layout", "problem", "suggestion", null].sort(),
+    );
   });
 
   test("docs_url points to the rule's page in its plugin's directory", async () => {

@@ -56,11 +56,13 @@ export const curl: Dependency = {
       USE_NGHTTP2: "OFF",
       USE_NGTCP2: "OFF",
       USE_QUICHE: "OFF",
-      ...(cfg.windows ? {} : {
-        OPENSSL_INCLUDE_DIR: resolve(depSourceDir(cfg, "boringssl"), "include"),
-        OPENSSL_SSL_LIBRARY: resolve(depBuildDir(cfg, "boringssl"), `${cfg.libPrefix}boringssl${cfg.libSuffix}`),
-        OPENSSL_CRYPTO_LIBRARY: resolve(depBuildDir(cfg, "boringssl"), `${cfg.libPrefix}boringssl${cfg.libSuffix}`),
-      }),
+      ...(cfg.windows
+        ? {}
+        : {
+            OPENSSL_INCLUDE_DIR: resolve(depSourceDir(cfg, "boringssl"), "include"),
+            OPENSSL_SSL_LIBRARY: resolve(depBuildDir(cfg, "boringssl"), `${cfg.libPrefix}boringssl${cfg.libSuffix}`),
+            OPENSSL_CRYPTO_LIBRARY: resolve(depBuildDir(cfg, "boringssl"), `${cfg.libPrefix}boringssl${cfg.libSuffix}`),
+          }),
     },
   }),
   provides: cfg => ({

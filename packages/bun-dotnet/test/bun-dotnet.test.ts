@@ -4,14 +4,7 @@ import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import bunDotnet from "bun:dotnet";
-import {
-  build,
-  dotnet,
-  generateTypes,
-  loadAssembly,
-  loadNativeAssembly,
-  packageOutput,
-} from "../src/index.ts";
+import { build, dotnet, generateTypes, loadAssembly, loadNativeAssembly, packageOutput } from "../src/index.ts";
 
 const fixture = join(import.meta.dir, "fixture");
 const assembly = join(fixture, "bin", "Interop.dll");

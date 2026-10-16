@@ -34,7 +34,10 @@ for (const path of files) {
   }
 }
 
-const [upstreamTokens, bunTokens] = await Promise.all([import(join(source, "index.ts")), import(join(target, "index.ts"))]);
+const [upstreamTokens, bunTokens] = await Promise.all([
+  import(join(source, "index.ts")),
+  import(join(target, "index.ts")),
+]);
 const comparable = (module: Record<string, unknown>) => ({
   exports: Object.keys(module).sort(),
   values: Object.fromEntries(Object.entries(module).filter(([, value]) => typeof value !== "function")),

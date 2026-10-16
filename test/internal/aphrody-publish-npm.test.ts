@@ -124,18 +124,12 @@ test("portable facade archives preserve exports and import without activating na
     await command([process.execPath, "pm", "pack", "--ignore-scripts", "--filename", archive], sourceRoot);
     const names = (await command(["tar", "-tzf", archive])).trim().split("\n");
     expect(
-      names.every(name =>
-        /^package\/(?:package\.json|LICENSE[^/]*|README\.md|NOTICE|src\/|systemd\/)/.test(
-          name,
-        ),
-      ),
+      names.every(name => /^package\/(?:package\.json|LICENSE[^/]*|README\.md|NOTICE|src\/|systemd\/)/.test(name)),
     ).toBe(true);
     expect(names.some(name => /(?:\.env|cookies|\.sqlite|\.node$|\.dll$|\.so$)/i.test(name))).toBe(false);
     await command(["tar", "-xzf", archive, "-C", consumerRoot]);
     const manifest = await Bun.file(join(consumerRoot, "package/package.json")).json();
-    expect(manifest.name).toBe(
-      dir === "bun-supervisor" ? "@aphrody/supervisor" : "@aphrody/bun-tools",
-    );
+    expect(manifest.name).toBe(dir === "bun-supervisor" ? "@aphrody/supervisor" : "@aphrody/bun-tools");
     const facade = await import(join(consumerRoot, "package/src/index.ts"));
     expect(typeof (dir === "bun-supervisor" ? facade.Supervisor : facade.toolAssetPin)).toBe("function");
   }

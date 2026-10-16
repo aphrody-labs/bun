@@ -2339,33 +2339,30 @@ describe("bundler", () => {
   for (const [name, files] of Object.entries(barrelCycleGraphs)) {
     // With two entry points, the cycle is in the chunk that they share.
     for (const splitting of [true, false]) {
-      test.concurrent(
-        `splitting/BarrelCycleKeepsImportOrder${splitting ? "" : "WithoutSplitting"}: ${name}`,
-        async () => {
-          const entries = splitting ? ["main", "main2"] : ["main"];
-          using dir = tempDir("splitting-barrel-cycle", splitting ? { ...files, "main2.ts": files["main.ts"] } : files);
-          const cwd = String(dir);
-          const [unbundled, build] = await Promise.all([
-            run([bunExe(), "main.ts"], cwd, env),
-            Bun.build({
-              entrypoints: entries.map(entry => join(cwd, entry + ".ts")),
-              outdir: join(cwd, "out"),
-              splitting,
-              target: "bun",
-              format: "esm",
-            }),
-          ]);
-          expect(unbundled.stdout).not.toBe("");
-          expect(unbundled.exitCode).toBe(0);
-          expect(build.logs).toEqual([]);
-          expect(build.outputs.map(output => output.kind).sort()).toEqual(
-            splitting ? ["chunk", "entry-point", "entry-point"] : ["entry-point"],
-          );
-          for (const entry of entries) {
-            expect(await run([bunExe(), join("out", entry + ".js")], cwd, env)).toEqual(unbundled);
-          }
-        },
-      );
+      test.concurrent(`splitting/BarrelCycleKeepsImportOrder${splitting ? "" : "WithoutSplitting"}: ${name}`, async () => {
+        const entries = splitting ? ["main", "main2"] : ["main"];
+        using dir = tempDir("splitting-barrel-cycle", splitting ? { ...files, "main2.ts": files["main.ts"] } : files);
+        const cwd = String(dir);
+        const [unbundled, build] = await Promise.all([
+          run([bunExe(), "main.ts"], cwd, env),
+          Bun.build({
+            entrypoints: entries.map(entry => join(cwd, entry + ".ts")),
+            outdir: join(cwd, "out"),
+            splitting,
+            target: "bun",
+            format: "esm",
+          }),
+        ]);
+        expect(unbundled.stdout).not.toBe("");
+        expect(unbundled.exitCode).toBe(0);
+        expect(build.logs).toEqual([]);
+        expect(build.outputs.map(output => output.kind).sort()).toEqual(
+          splitting ? ["chunk", "entry-point", "entry-point"] : ["entry-point"],
+        );
+        for (const entry of entries) {
+          expect(await run([bunExe(), join("out", entry + ".js")], cwd, env)).toEqual(unbundled);
+        }
+      });
     }
   }
 

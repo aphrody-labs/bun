@@ -61,29 +61,26 @@ describe("CONNECT failure status", () => {
     proxyTls: [false, true] as const,
     status: STATUSES,
   })) {
-    test.concurrent(
-      `${proxyTls ? "https" : "http"}-proxy CONNECT → ${status} rejects with the proxy's status`,
-      async () => {
-        await using origin = await createAdversarialOrigin({ tls: true, body: "unreachable" });
-        await using proxy = await createAdversarialProxy({
-          tls: proxyTls,
-          connectStatus: status,
-          connectStatusBody: `proxy-said-${status}`,
-        });
+    test.concurrent(`${proxyTls ? "https" : "http"}-proxy CONNECT → ${status} rejects with the proxy's status`, async () => {
+      await using origin = await createAdversarialOrigin({ tls: true, body: "unreachable" });
+      await using proxy = await createAdversarialProxy({
+        tls: proxyTls,
+        connectStatus: status,
+        connectStatusBody: `proxy-said-${status}`,
+      });
 
-        const reply = await proxyReply(origin.url, {
-          proxy: proxy.url,
-          keepalive: false,
-          tls: laxTls,
-          signal: AbortSignal.timeout(15_000),
-        });
-        // The proxy's reply never resolves as the origin's response, and the
-        // client does NOT tunnel through.
-        expect({ via: reply.via, status: reply.status }).toEqual({ via: "ERR_PROXY_TUNNEL", status });
-        // The origin must never have been reached.
-        expect(origin.requests.length).toBe(0);
-      },
-    );
+      const reply = await proxyReply(origin.url, {
+        proxy: proxy.url,
+        keepalive: false,
+        tls: laxTls,
+        signal: AbortSignal.timeout(15_000),
+      });
+      // The proxy's reply never resolves as the origin's response, and the
+      // client does NOT tunnel through.
+      expect({ via: reply.via, status: reply.status }).toEqual({ via: "ERR_PROXY_TUNNEL", status });
+      // The origin must never have been reached.
+      expect(origin.requests.length).toBe(0);
+    });
   }
 
   // A 3xx CONNECT reply rejects and is not followed (already covered for 307
@@ -110,27 +107,24 @@ describe("CONNECT failure status", () => {
   }
 
   for (const proxyTls of [false, true] as const) {
-    test.concurrent(
-      `${proxyTls ? "https" : "http"}-proxy CONNECT → 101 fails even when the request asked to upgrade`,
-      async () => {
-        await using origin = await createAdversarialOrigin({ tls: true, body: "unreachable" });
-        await using proxy = await createAdversarialProxy({
-          tls: proxyTls,
-          connectStatus: 101,
-          connectStatusBody: "from-the-proxy",
-        });
+    test.concurrent(`${proxyTls ? "https" : "http"}-proxy CONNECT → 101 fails even when the request asked to upgrade`, async () => {
+      await using origin = await createAdversarialOrigin({ tls: true, body: "unreachable" });
+      await using proxy = await createAdversarialProxy({
+        tls: proxyTls,
+        connectStatus: 101,
+        connectStatusBody: "from-the-proxy",
+      });
 
-        await expect(
-          fetch(origin.url, {
-            proxy: proxy.url,
-            keepalive: false,
-            tls: laxTls,
-            headers: { Connection: "Upgrade", Upgrade: "websocket" },
-          }),
-        ).rejects.toMatchObject({ code: "ERR_PROXY_TUNNEL", status: 101 });
-        expect(origin.requests.length).toBe(0);
-      },
-    );
+      await expect(
+        fetch(origin.url, {
+          proxy: proxy.url,
+          keepalive: false,
+          tls: laxTls,
+          headers: { Connection: "Upgrade", Upgrade: "websocket" },
+        }),
+      ).rejects.toMatchObject({ code: "ERR_PROXY_TUNNEL", status: 101 });
+      expect(origin.requests.length).toBe(0);
+    });
   }
 });
 
@@ -284,55 +278,49 @@ describe("proxy authentication", () => {
 
 describe("inner TLS verification", () => {
   for (const proxyTls of [false, true] as const) {
-    test.concurrent(
-      `${proxyTls ? "https" : "http"}-proxy → https-origin, rejectUnauthorized=true with matching CA`,
-      async () => {
-        await using origin = await createAdversarialOrigin({ tls: true, body: "verified" });
-        await using proxy = await createAdversarialProxy({ tls: proxyTls });
+    test.concurrent(`${proxyTls ? "https" : "http"}-proxy → https-origin, rejectUnauthorized=true with matching CA`, async () => {
+      await using origin = await createAdversarialOrigin({ tls: true, body: "verified" });
+      await using proxy = await createAdversarialProxy({ tls: proxyTls });
+      const res = await fetch(origin.url, {
+        proxy: proxy.url,
+        keepalive: false,
+        tls: { ca: tlsCert.cert, rejectUnauthorized: true },
+      });
+      expect(await res.text()).toBe("verified");
+      expect(res.status).toBe(200);
+    });
+
+    test.concurrent(`${proxyTls ? "https" : "http"}-proxy → https-origin, rejectUnauthorized=true without CA fails`, async () => {
+      await using origin = await createAdversarialOrigin({ tls: true, body: "verified" });
+      await using proxy = await createAdversarialProxy({ tls: proxyTls });
+      let code: string;
+      try {
         const res = await fetch(origin.url, {
           proxy: proxy.url,
           keepalive: false,
-          tls: { ca: tlsCert.cert, rejectUnauthorized: true },
+          tls: { rejectUnauthorized: true },
+          signal: AbortSignal.timeout(15_000),
         });
-        expect(await res.text()).toBe("verified");
-        expect(res.status).toBe(200);
-      },
-    );
-
-    test.concurrent(
-      `${proxyTls ? "https" : "http"}-proxy → https-origin, rejectUnauthorized=true without CA fails`,
-      async () => {
-        await using origin = await createAdversarialOrigin({ tls: true, body: "verified" });
-        await using proxy = await createAdversarialProxy({ tls: proxyTls });
-        let code: string;
-        try {
-          const res = await fetch(origin.url, {
-            proxy: proxy.url,
-            keepalive: false,
-            tls: { rejectUnauthorized: true },
-            signal: AbortSignal.timeout(15_000),
-          });
-          await res.arrayBuffer().catch(() => {});
-          code = `resolved:${res.status}`;
-        } catch (e) {
-          code = errcode(e);
-        }
-        expect(code).not.toBe("resolved:200");
-        expect(code).not.toBe("TimeoutError");
-        expect(code).toMatch(/CERT|TLS|SSL|SELF_SIGNED|UNABLE_TO_VERIFY|DEPTH_ZERO/);
-        // Inner handshake failed, so the origin saw no decrypted request.
-        expect(origin.requests.length).toBe(0);
-        // For an HTTP proxy the outer leg has no TLS; the CONNECT must
-        // have been sent and the failure is the inner handshake. For an
-        // HTTPS proxy the same rejectUnauthorized:true + no CA would
-        // also reject the outer self-signed proxy cert before CONNECT;
-        // either way the fetch must not succeed, but only the http-proxy
-        // case proves the inner-TLS path specifically.
-        if (!proxyTls) {
-          expect(proxy.connectCount()).toBe(1);
-        }
-      },
-    );
+        await res.arrayBuffer().catch(() => {});
+        code = `resolved:${res.status}`;
+      } catch (e) {
+        code = errcode(e);
+      }
+      expect(code).not.toBe("resolved:200");
+      expect(code).not.toBe("TimeoutError");
+      expect(code).toMatch(/CERT|TLS|SSL|SELF_SIGNED|UNABLE_TO_VERIFY|DEPTH_ZERO/);
+      // Inner handshake failed, so the origin saw no decrypted request.
+      expect(origin.requests.length).toBe(0);
+      // For an HTTP proxy the outer leg has no TLS; the CONNECT must
+      // have been sent and the failure is the inner handshake. For an
+      // HTTPS proxy the same rejectUnauthorized:true + no CA would
+      // also reject the outer self-signed proxy cert before CONNECT;
+      // either way the fetch must not succeed, but only the http-proxy
+      // case proves the inner-TLS path specifically.
+      if (!proxyTls) {
+        expect(proxy.connectCount()).toBe(1);
+      }
+    });
 
     test.concurrent(`${proxyTls ? "https" : "http"}-proxy → https-origin, checkServerIdentity rejects`, async () => {
       await using origin = await createAdversarialOrigin({ tls: true, body: "verified" });

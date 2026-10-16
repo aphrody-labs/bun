@@ -104,13 +104,8 @@ const plugin: Plugin = {
         // Error if assertion functions are used in any other way. We lack logic to deal with that.
         Identifier(node) {
           const { name } = node;
-          if (
-            (assertFnNames.has(name) || name.startsWith(DEBUG_ASSERT_PREFIX))
-            && !idents.has(node)
-          ) {
-            throw new Error(
-              `Do not use assertion function \`${name}\` except in function calls: ${path}`,
-            );
+          if ((assertFnNames.has(name) || name.startsWith(DEBUG_ASSERT_PREFIX)) && !idents.has(node)) {
+            throw new Error(`Do not use assertion function \`${name}\` except in function calls: ${path}`);
           }
         },
       });

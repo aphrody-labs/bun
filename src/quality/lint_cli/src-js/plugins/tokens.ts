@@ -364,10 +364,7 @@ export function initTokensBuffer(): void {
     const indexesLen = deserializedTokenIndexes.length;
     if (indexesLen < tokensLen) {
       deserializedTokenIndexes = new Int32Array(
-        Math.max(
-          tokensLen,
-          indexesLen === 0 ? DESERIALIZED_TOKEN_INDEXES_MIN_CAPACITY : indexesLen << 1,
-        ),
+        Math.max(tokensLen, indexesLen === 0 ? DESERIALIZED_TOKEN_INDEXES_MIN_CAPACITY : indexesLen << 1),
       );
     }
   }
@@ -461,9 +458,7 @@ function deserializeTokenIfNeeded(index: number): Token | null {
       // so allocate a new one (doubled, min 16), and copy the existing entries into it.
       const indexesLen = tokensWithRegexIndexes.length;
       if (indexesLen === activeTokensWithRegexCount) {
-        const newArr = new Int32Array(
-          indexesLen === 0 ? REGEX_INDEXES_MIN_CAPACITY : indexesLen << 1,
-        );
+        const newArr = new Int32Array(indexesLen === 0 ? REGEX_INDEXES_MIN_CAPACITY : indexesLen << 1);
         newArr.set(tokensWithRegexIndexes, 0);
         tokensWithRegexIndexes = newArr;
       }
@@ -548,9 +543,7 @@ function debugCheckDeserializedTokens(): void {
     const { start, end } = cachedTokens[i];
     if (end <= start) throw new Error(`Invalid deserialized token range: ${start}-${end}`);
     if (start < lastEnd) {
-      throw new Error(
-        `Deserialized tokens not in order: last end: ${lastEnd}, next start: ${start}`,
-      );
+      throw new Error(`Deserialized tokens not in order: last end: ${lastEnd}, next start: ${start}`);
     }
     lastEnd = end;
   }
@@ -591,10 +584,7 @@ export function resetTokens() {
 
     allTokensDeserialized = false;
 
-    debugAssert(
-      deserializedTokensLen === 0,
-      "Deserialized tokens counter should have been reset to 0",
-    );
+    debugAssert(deserializedTokensLen === 0, "Deserialized tokens counter should have been reset to 0");
   }
 
   // Reset `#loc` on tokens where `loc` has been accessed

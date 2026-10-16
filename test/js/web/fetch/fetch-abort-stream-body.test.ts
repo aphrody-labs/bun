@@ -11,23 +11,20 @@ import { Readable } from "node:stream";
 // (arrayBuffer/text/json) never rejected and awaiting it hung forever.
 // Runs in a subprocess because the buggy build leaves zombie requests behind
 // that keep the process from exiting.
-test.concurrent(
-  "abort mid-response rejects buffered body promises while the request body stream is active",
-  async () => {
-    await using proc = Bun.spawn({
-      cmd: [bunExe(), join(import.meta.dir, "fetch-abort-buffered-body-fixture.ts")],
-      env: bunEnv,
-      stdout: "pipe",
-      stderr: "pipe",
-    });
+test.concurrent("abort mid-response rejects buffered body promises while the request body stream is active", async () => {
+  await using proc = Bun.spawn({
+    cmd: [bunExe(), join(import.meta.dir, "fetch-abort-buffered-body-fixture.ts")],
+    env: bunEnv,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
 
-    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
 
-    expect(stderr).toBe("");
-    expect(stdout).toBe("arrayBuffer rejected AbortError\ntext rejected AbortError\n");
-    expect(exitCode).toBe(0);
-  },
-);
+  expect(stderr).toBe("");
+  expect(stdout).toBe("arrayBuffer rejected AbortError\ntext rejected AbortError\n");
+  expect(exitCode).toBe(0);
+});
 
 // The stream's native NewSource box is owned by a PreciseAllocation source cell
 // that GC sweeps synchronously; the Response wrapper (MarkedBlock) is swept
@@ -88,42 +85,39 @@ test
 // same moment the HTTP thread reads it; both have to go through the buffer's
 // mutex. Every iteration has to reject with pull's own error, and clearing the
 // callback must not deadlock against the HTTP thread holding the buffer.
-test.concurrent(
-  "request body pull() that writes and then throws rejects the fetch while the upload is in flight",
-  async () => {
-    await using server = Bun.serve({
-      port: 0,
-      async fetch(req) {
-        // Only answer once the client has torn the upload down, so the rejection
-        // below can only come from pull()'s error, never from a response.
-        await req.arrayBuffer().catch(() => {});
-        return new Response("unreachable");
+test.concurrent("request body pull() that writes and then throws rejects the fetch while the upload is in flight", async () => {
+  await using server = Bun.serve({
+    port: 0,
+    async fetch(req) {
+      // Only answer once the client has torn the upload down, so the rejection
+      // below can only come from pull()'s error, never from a response.
+      await req.arrayBuffer().catch(() => {});
+      return new Response("unreachable");
+    },
+  });
+
+  const iterations = 50;
+  // Several chunks over the sink's 16 KiB high water mark, so the HTTP thread
+  // is woken and has something to flush (and report drained) while pull()
+  // throws on the JS thread.
+  const chunk = Buffer.alloc(64 * 1024, "x");
+  let pulls = 0;
+
+  for (let i = 0; i < iterations; i++) {
+    const error = new Error(`pull ${i}`);
+    const body = new ReadableStream({
+      type: "direct",
+      pull(controller) {
+        pulls++;
+        for (let j = 0; j < 4; j++) controller.write(chunk);
+        throw error;
       },
     });
+    await expect(fetch(server.url, { method: "POST", body })).rejects.toBe(error);
+  }
 
-    const iterations = 50;
-    // Several chunks over the sink's 16 KiB high water mark, so the HTTP thread
-    // is woken and has something to flush (and report drained) while pull()
-    // throws on the JS thread.
-    const chunk = Buffer.alloc(64 * 1024, "x");
-    let pulls = 0;
-
-    for (let i = 0; i < iterations; i++) {
-      const error = new Error(`pull ${i}`);
-      const body = new ReadableStream({
-        type: "direct",
-        pull(controller) {
-          pulls++;
-          for (let j = 0; j < 4; j++) controller.write(chunk);
-          throw error;
-        },
-      });
-      await expect(fetch(server.url, { method: "POST", body })).rejects.toBe(error);
-    }
-
-    expect(pulls).toBe(iterations);
-  },
-);
+  expect(pulls).toBe(iterations);
+});
 
 test("aborting fetch with a ReadableStream request body does not double-cancel the sink", async () => {
   await using proc = Bun.spawn({

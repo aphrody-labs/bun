@@ -104,9 +104,7 @@ const plugin: Plugin = {
         Identifier(node) {
           const { name } = node;
           if (assertFnNames.has(name) && !idents.has(node)) {
-            throw new Error(
-              `Do not use \`${name}\` imported from \`asserts.ts\` except in function calls: ${path}`,
-            );
+            throw new Error(`Do not use \`${name}\` imported from \`asserts.ts\` except in function calls: ${path}`);
           }
         },
       });

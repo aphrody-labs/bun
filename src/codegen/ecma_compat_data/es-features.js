@@ -1,7 +1,7 @@
 // https://github.com/babel/babel/blob/v7.26.2/packages/babel-compat-data/scripts/data/plugin-features.js
 // https://github.com/evanw/esbuild/blob/v0.24.0/compat-table/src/index.ts
 
-const f = (es) => (item) => {
+const f = es => item => {
   item.es = es;
   return item;
 };
@@ -113,10 +113,7 @@ const es2015 = [
   {
     name: "StickyRegex",
     babel: "transform-sticky-regex",
-    features: [
-      'RegExp "y" and "u" flags / "y" flag, lastIndex',
-      'RegExp "y" and "u" flags / "y" flag',
-    ],
+    features: ['RegExp "y" and "u" flags / "y" flag, lastIndex', 'RegExp "y" and "u" flags / "y" flag'],
   },
   {
     name: "UnicodeEscapes",

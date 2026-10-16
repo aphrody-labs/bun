@@ -10,15 +10,7 @@ import {
   symlinkSync,
   writeFileSync,
 } from "fs";
-import {
-  bunEnv,
-  bunExe,
-  isASAN,
-  isWindows,
-  normalizeBunSnapshot,
-  tempDir,
-  tempDirWithFiles,
-} from "harness";
+import { bunEnv, bunExe, isASAN, isWindows, normalizeBunSnapshot, tempDir, tempDirWithFiles } from "harness";
 import path from "path";
 
 // TODO: we need to install build-essential and Apple SDK in CI.
@@ -155,10 +147,7 @@ describe("given a source file with syntax errors", () => {
 // cc() wraps a symbol that returns a cstring in a closure, not in script made from a string.
 // TinyCC's setjmp/longjmp error handling conflicts with ASan.
 describe.skipIf(isASAN)("given a symbol that returns a cstring", () => {
-  for (const flag of [
-    "--disallow-code-generation-from-strings",
-    "--disallow-code-generation-from-strings=strict",
-  ]) {
+  for (const flag of ["--disallow-code-generation-from-strings", "--disallow-code-generation-from-strings=strict"]) {
     it(`is called with ${flag}`, async () => {
       using dir = tempDir("bun-ffi-cc-cstring", {
         "hello.c": /* c */ `const char* hello(int n) { return n ? "hello from c" : 0; }`,
@@ -179,11 +168,7 @@ describe.skipIf(isASAN)("given a symbol that returns a cstring", () => {
         stdout: "pipe",
         stderr: "pipe",
       });
-      const [stdout, , exitCode] = await Promise.all([
-        proc.stdout.text(),
-        proc.stderr.text(),
-        proc.exited,
-      ]);
+      const [stdout, , exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
       expect(JSON.parse(stdout)).toEqual(["hello from c", null, "function"]);
       expect(exitCode).toBe(0);
     });
@@ -543,7 +528,7 @@ describe.skipIf(isWindows || isASAN)("threadsafe JSCallback invoked from a forei
     while (!done) {
       const tmp = new JSCallback(() => {}, { returns: "void" });
       tmp.close();
-      await new Promise((r) => setImmediate(r));
+      await new Promise(r => setImmediate(r));
     }
 
     expect(library.symbols.join_thread()).toBe(0);
@@ -559,11 +544,7 @@ describe.skipIf(isWindows || isASAN)("threadsafe JSCallback invoked from a forei
       stderr: "pipe",
     });
 
-    const [stdout, stderr, exitCode] = await Promise.all([
-      proc.stdout.text(),
-      proc.stderr.text(),
-      proc.exited,
-    ]);
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
 
     expect(stderr).toBe("");
     expect(stdout).toBe("ok\n");
@@ -629,11 +610,7 @@ describe.skipIf(isASAN)("GC liveness of compiled symbols and callbacks", () => {
       stderr: "pipe",
     });
 
-    const [stdout, stderr, exitCode] = await Promise.all([
-      proc.stdout.text(),
-      proc.stderr.text(),
-      proc.exited,
-    ]);
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
 
     // stderr is included in the received object so failures show it, but is not
     // asserted empty: debug builds emit benign startup warnings.
@@ -740,11 +717,7 @@ describe.skipIf(isASAN)("variadic functions inside cc()-compiled C", () => {
       stderr: "pipe",
     });
 
-    const [stdout, stderr, exitCode] = await Promise.all([
-      proc.stdout.text(),
-      proc.stderr.text(),
-      proc.exited,
-    ]);
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
 
     // stderr is included in the received object so failures show it, but is not
     // asserted empty: debug builds emit benign startup warnings.
@@ -764,12 +737,10 @@ describe.skipIf(isASAN)("variadic functions inside cc()-compiled C", () => {
 // long double is 16 bytes on x86_64 and always va_arg'd through the stack; on
 // aarch64 it is binary128 and its arithmetic needs soft-float helpers
 // (__addtf3, ...) that Bun's TCC states do not provide, so x64 only.
-describe.skipIf(isASAN || process.arch !== "x64")(
-  "long double varargs inside cc()-compiled C",
-  () => {
-    it("va_arg over long double", async () => {
-      using dir = tempDir("bun-ffi-cc-varargs-ld", {
-        "ld.c": /* c */ `
+describe.skipIf(isASAN || process.arch !== "x64")("long double varargs inside cc()-compiled C", () => {
+  it("va_arg over long double", async () => {
+    using dir = tempDir("bun-ffi-cc-varargs-ld", {
+      "ld.c": /* c */ `
         #include <stdarg.h>
 
         static double sum_long_doubles(int count, ...) {
@@ -783,7 +754,7 @@ describe.skipIf(isASAN || process.arch !== "x64")(
 
         double long_doubles(void) { return sum_long_doubles(3, 1.5L, 2.25L, 3.25L); }
       `,
-        "fixture.js": /* js */ `
+      "fixture.js": /* js */ `
         import { cc } from "bun:ffi";
         import path from "path";
 
@@ -793,29 +764,24 @@ describe.skipIf(isASAN || process.arch !== "x64")(
         });
         console.log(JSON.stringify({ long_doubles: symbols.long_doubles() }));
       `,
-      });
-
-      await using proc = Bun.spawn({
-        cmd: [bunExe(), "fixture.js"],
-        env: bunEnv,
-        cwd: String(dir),
-        stderr: "pipe",
-      });
-
-      const [stdout, stderr, exitCode] = await Promise.all([
-        proc.stdout.text(),
-        proc.stderr.text(),
-        proc.exited,
-      ]);
-
-      const results = stdout.startsWith("{") ? JSON.parse(stdout) : stdout;
-      expect({ results, stderr, exitCode }).toMatchObject({
-        results: { long_doubles: 7 },
-        exitCode: 0,
-      });
     });
-  },
-);
+
+    await using proc = Bun.spawn({
+      cmd: [bunExe(), "fixture.js"],
+      env: bunEnv,
+      cwd: String(dir),
+      stderr: "pipe",
+    });
+
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+
+    const results = stdout.startsWith("{") ? JSON.parse(stdout) : stdout;
+    expect({ results, stderr, exitCode }).toMatchObject({
+      results: { long_doubles: 7 },
+      exitCode: 0,
+    });
+  });
+});
 
 // TinyCC emits Local-Exec TLS, which has no PT_TLS segment to target under
 // in-memory relocation and would alias the host's own thread block; it must be
@@ -935,11 +901,7 @@ describe("double <-> JSValue conversions", () => {
       stderr: "pipe",
     });
 
-    const [stdout, stderr, exitCode] = await Promise.all([
-      proc.stdout.text(),
-      proc.stderr.text(),
-      proc.exited,
-    ]);
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
 
     // stderr is included in the received object so failures show it, but is not
     // asserted empty: debug builds emit benign startup warnings.
@@ -1022,11 +984,7 @@ describe("double <-> JSValue conversions", () => {
       stderr: "pipe",
     });
 
-    const [stdout, stderr, exitCode] = await Promise.all([
-      proc.stdout.text(),
-      proc.stderr.text(),
-      proc.exited,
-    ]);
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
 
     const results = stdout.startsWith("{") ? JSON.parse(stdout) : stdout;
     expect({ results, stderr, exitCode }).toMatchObject({
@@ -1110,11 +1068,7 @@ describe("double <-> JSValue conversions", () => {
       stderr: "pipe",
     });
 
-    const [stdout, stderr, exitCode] = await Promise.all([
-      proc.stdout.text(),
-      proc.stderr.text(),
-      proc.exited,
-    ]);
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
 
     // stderr is included in the received object so failures show it, but is not
     // asserted empty: debug builds emit benign startup warnings.
@@ -1205,11 +1159,7 @@ describe("double <-> JSValue conversions", () => {
       stderr: "pipe",
     });
 
-    const [stdout, stderr, exitCode] = await Promise.all([
-      proc.stdout.text(),
-      proc.stderr.text(),
-      proc.exited,
-    ]);
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
 
     const results = stdout.startsWith("{") ? JSON.parse(stdout) : stdout;
     expect({ results, stderr, exitCode }).toMatchObject({
@@ -1230,11 +1180,9 @@ describe("double <-> JSValue conversions", () => {
   // verbatim, so they are the same boundary. cc()-compiled C resolves napi_*
   // from the host process; that lookup is only exercised on POSIX today (see
   // cc-fixture.c).
-  it.skipIf(isWindows)(
-    "impure NaNs through napi_create_double and napi_create_date are purified",
-    async () => {
-      using dir = tempDir("bun-ffi-impure-nan-napi", {
-        "impure_napi.c": /* c */ `
+  it.skipIf(isWindows)("impure NaNs through napi_create_double and napi_create_date are purified", async () => {
+    using dir = tempDir("bun-ffi-impure-nan-napi", {
+      "impure_napi.c": /* c */ `
         typedef struct napi_env_fake* napi_env_t;
         typedef struct napi_value_fake* napi_value_t;
         union caster { unsigned long long u; double d; };
@@ -1253,7 +1201,7 @@ describe("double <-> JSValue conversions", () => {
           return result;
         }
       `,
-        "fixture.js": /* js */ `
+      "fixture.js": /* js */ `
         import { cc } from "bun:ffi";
         import path from "path";
 
@@ -1276,31 +1224,26 @@ describe("double <-> JSValue conversions", () => {
           }),
         );
       `,
-      });
+    });
 
-      await using proc = Bun.spawn({
-        cmd: [bunExe(), "fixture.js"],
-        env: bunEnv,
-        cwd: String(dir),
-        stderr: "pipe",
-      });
+    await using proc = Bun.spawn({
+      cmd: [bunExe(), "fixture.js"],
+      env: bunEnv,
+      cwd: String(dir),
+      stderr: "pipe",
+    });
 
-      const [stdout, stderr, exitCode] = await Promise.all([
-        proc.stdout.text(),
-        proc.stderr.text(),
-        proc.exited,
-      ]);
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
 
-      const results = stdout.startsWith("{") ? JSON.parse(stdout) : stdout;
-      expect({ results, stderr, exitCode }).toMatchObject({
-        results: {
-          double: ["number", "NaN"],
-          date: [true, "NaN"],
-        },
-        exitCode: 0,
-      });
-    },
-  );
+    const results = stdout.startsWith("{") ? JSON.parse(stdout) : stdout;
+    expect({ results, stderr, exitCode }).toMatchObject({
+      results: {
+        double: ["number", "NaN"],
+        date: [true, "NaN"],
+      },
+      exitCode: 0,
+    });
+  });
 });
 
 describe.skipIf(isASAN)("compiler runtime header directory under BUN_TMPDIR", () => {
@@ -1341,33 +1284,28 @@ describe.skipIf(isASAN)("compiler runtime header directory under BUN_TMPDIR", ()
 
     const [stdout, stderr, exitCode] = await runFixture(String(dir));
 
-    expect(
-      readFileSync(path.join(String(dir), `bun-cc-${process.getuid!()}`, "stdbool.h"), "utf8"),
-    ).toContain("_STDBOOL_H");
+    expect(readFileSync(path.join(String(dir), `bun-cc-${process.getuid!()}`, "stdbool.h"), "utf8")).toContain(
+      "_STDBOOL_H",
+    );
     expect(stdout).toBe("3\n");
     expect(exitCode).toBe(0);
   });
 
-  it.skipIf(isWindows)(
-    "does not write compiler runtime headers through a symlinked entry",
-    async () => {
-      using dir = tempDir("bun-ffi-cc-rt-dir-symlink", files);
-      for (const name of ["bun-cc", `bun-cc-${process.getuid!()}`]) {
-        const headerDir = path.join(String(dir), name);
-        mkdirSync(headerDir, { recursive: true });
-        chmodSync(headerDir, 0o755);
-        symlinkSync("../sentinel.txt", path.join(headerDir, "stdbool.h"));
-      }
+  it.skipIf(isWindows)("does not write compiler runtime headers through a symlinked entry", async () => {
+    using dir = tempDir("bun-ffi-cc-rt-dir-symlink", files);
+    for (const name of ["bun-cc", `bun-cc-${process.getuid!()}`]) {
+      const headerDir = path.join(String(dir), name);
+      mkdirSync(headerDir, { recursive: true });
+      chmodSync(headerDir, 0o755);
+      symlinkSync("../sentinel.txt", path.join(headerDir, "stdbool.h"));
+    }
 
-      const [stdout, stderr, exitCode] = await runFixture(String(dir));
+    const [stdout, stderr, exitCode] = await runFixture(String(dir));
 
-      expect(readFileSync(path.join(String(dir), "sentinel.txt"), "utf8")).toBe(
-        "sentinel-unchanged\n",
-      );
-      expect(stdout).toBe("3\n");
-      expect(exitCode).toBe(0);
-    },
-  );
+    expect(readFileSync(path.join(String(dir), "sentinel.txt"), "utf8")).toBe("sentinel-unchanged\n");
+    expect(stdout).toBe("3\n");
+    expect(exitCode).toBe(0);
+  });
 
   it.skipIf(isWindows)(
     "does not place compiler runtime headers in a pre-existing group- and world-writable directory",
@@ -1384,12 +1322,8 @@ describe.skipIf(isASAN)("compiler runtime header directory under BUN_TMPDIR", ()
 
       const [stdout, stderr, exitCode] = await runFixture(String(dir));
 
-      expect(readFileSync(path.join(String(dir), "bun-cc", "stdbool.h"), "utf8")).toBe(
-        plantedHeader,
-      );
-      expect(readFileSync(path.join(String(dir), sharedName, "stdbool.h"), "utf8")).toBe(
-        plantedHeader,
-      );
+      expect(readFileSync(path.join(String(dir), "bun-cc", "stdbool.h"), "utf8")).toBe(plantedHeader);
+      expect(readFileSync(path.join(String(dir), sharedName, "stdbool.h"), "utf8")).toBe(plantedHeader);
       expect(stdout).toBe("3\n");
       expect(exitCode).toBe(0);
     },
@@ -1404,15 +1338,10 @@ describe.skipIf(isASAN)("compiler runtime header directory under BUN_TMPDIR", ()
     const [stdout, stderr, exitCode] = await runFixture(String(dir));
 
     const staged = readdirSync(String(dir)).filter(
-      (name) =>
-        name !== "bun-cc" &&
-        name.includes("bun-cc") &&
-        existsSync(path.join(String(dir), name, "stdbool.h")),
+      name => name !== "bun-cc" && name.includes("bun-cc") && existsSync(path.join(String(dir), name, "stdbool.h")),
     );
     expect(staged.length).toBe(1);
-    expect(readFileSync(path.join(String(dir), staged[0], "stdbool.h"), "utf8")).toContain(
-      "_STDBOOL_H",
-    );
+    expect(readFileSync(path.join(String(dir), staged[0], "stdbool.h"), "utf8")).toContain("_STDBOOL_H");
     expect(readdirSync(fixedDir).sort()).toEqual(["stdbool.h"]);
     expect(readFileSync(path.join(fixedDir, "stdbool.h"), "utf8")).toBe(plantedHeader);
     expect(stdout).toBe("3\n");
@@ -1478,9 +1407,7 @@ describe("cc() called by several Workers at once", () => {
   for (let index = 0; index < workers; index++) {
     files[`add${index}.c`] = `int add${index}(int a, int b) { return a + b + ${index}; }\n`;
   }
-  const expected = JSON.stringify(
-    Array.from({ length: workers }, (_, index) => [100 + index, 101 + index]),
-  );
+  const expected = JSON.stringify(Array.from({ length: workers }, (_, index) => [100 + index, 101 + index]));
 
   it("compiles every source correctly", async () => {
     using dir = tempDir("bun-ffi-cc-workers", files);
@@ -1515,9 +1442,7 @@ describe.concurrent("disabling cc()", () => {
   `;
   const probe = probeWith("console.log");
 
-  async function run(
-    ...args: string[]
-  ): Promise<[stdout: string, stderr: string, exitCode: number]> {
+  async function run(...args: string[]): Promise<[stdout: string, stderr: string, exitCode: number]> {
     await using proc = Bun.spawn({
       cmd: [bunExe(), ...args],
       env: bunEnv,
@@ -1552,9 +1477,7 @@ describe.concurrent("disabling cc()", () => {
       'require("bun:ffi").cc({ source: "does-not-exist.c", symbols: {} })',
     );
     expect(stdout).toBe("");
-    expect(stderr).toContain(
-      "error: Cannot compile C code because the bun:ffi C compiler is disabled.",
-    );
+    expect(stderr).toContain("error: Cannot compile C code because the bun:ffi C compiler is disabled.");
     expect(stderr).toContain('code: "ERR_FFI_CC_DISABLED"');
     expect(exitCode).toBe(1);
   });
@@ -1566,11 +1489,7 @@ describe.concurrent("disabling cc()", () => {
       stdout: "pipe",
       stderr: "pipe",
     });
-    const [stdout, stderr, exitCode] = await Promise.all([
-      proc.stdout.text(),
-      proc.stderr.text(),
-      proc.exited,
-    ]);
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
     expect(stdout).toBe("ERR_FFI_CC_DISABLED\n");
     expect(exitCode).toBe(0);
   });

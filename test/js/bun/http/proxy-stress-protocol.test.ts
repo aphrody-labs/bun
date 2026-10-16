@@ -84,23 +84,20 @@ describe("early reply during upload", () => {
     originTls: [false, true] as const,
     status: [413, 400, 500] as const,
   })) {
-    test.concurrent(
-      `${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin, ${status} after 1KB of a 1MB upload`,
-      async () => {
-        await using origin = await makeEarlyReplyOrigin(status, 1024, originTls);
-        const proxy = sharedProxy(proxyTls);
-        const res = await fetch(origin.url, {
-          method: "POST",
-          body: Buffer.alloc(1024 * 1024, "u"),
-          proxy: proxy.url,
-          keepalive: true,
-          tls: laxTls,
-          signal: AbortSignal.timeout(15_000),
-        });
-        expect(await res.text()).toBe("early");
-        expect(res.status).toBe(status);
-      },
-    );
+    test.concurrent(`${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin, ${status} after 1KB of a 1MB upload`, async () => {
+      await using origin = await makeEarlyReplyOrigin(status, 1024, originTls);
+      const proxy = sharedProxy(proxyTls);
+      const res = await fetch(origin.url, {
+        method: "POST",
+        body: Buffer.alloc(1024 * 1024, "u"),
+        proxy: proxy.url,
+        keepalive: true,
+        tls: laxTls,
+        signal: AbortSignal.timeout(15_000),
+      });
+      expect(await res.text()).toBe("early");
+      expect(res.status).toBe(status);
+    });
   }
 });
 
@@ -120,38 +117,35 @@ describe("multi-hop redirect through proxy", () => {
       [true, false, true, false, true],
     ] as const,
   })) {
-    test.concurrent(
-      `${proxyTls ? "https" : "http"}-proxy, ${chain.length}-hop [${chain.map(t => (t ? "s" : "h")).join("→")}]`,
-      async () => {
-        const origins: Array<{ close: () => void; url: string }> = [];
-        // Build chain back-to-front.
-        let next: string | undefined;
-        const finalBody = `final-${chain.length}`;
-        for (let i = chain.length - 1; i >= 0; i--) {
-          const o = await createAdversarialOrigin({
-            tls: chain[i],
-            ...(next ? { redirectTo: next } : { body: finalBody }),
-          });
-          origins.push({ close: () => o.close(), url: o.url });
-          next = o.url;
+    test.concurrent(`${proxyTls ? "https" : "http"}-proxy, ${chain.length}-hop [${chain.map(t => (t ? "s" : "h")).join("→")}]`, async () => {
+      const origins: Array<{ close: () => void; url: string }> = [];
+      // Build chain back-to-front.
+      let next: string | undefined;
+      const finalBody = `final-${chain.length}`;
+      for (let i = chain.length - 1; i >= 0; i--) {
+        const o = await createAdversarialOrigin({
+          tls: chain[i],
+          ...(next ? { redirectTo: next } : { body: finalBody }),
+        });
+        origins.push({ close: () => o.close(), url: o.url });
+        next = o.url;
+      }
+      // This test inspects proxy.connections, so it needs a dedicated proxy.
+      await using proxy = await createAdversarialProxy({ tls: proxyTls });
+      try {
+        const res = await fetch(next!, { proxy: proxy.url, keepalive: false, tls: laxTls });
+        expect(await res.text()).toBe(finalBody);
+        expect(res.status).toBe(200);
+        // Every hop went through the proxy.
+        expect(proxy.connections.length).toBe(chain.length);
+        // Each hop's method matches its scheme.
+        for (let i = 0; i < chain.length; i++) {
+          expect(proxy.connections[i].method).toBe(chain[i] ? "CONNECT" : "GET");
         }
-        // This test inspects proxy.connections, so it needs a dedicated proxy.
-        await using proxy = await createAdversarialProxy({ tls: proxyTls });
-        try {
-          const res = await fetch(next!, { proxy: proxy.url, keepalive: false, tls: laxTls });
-          expect(await res.text()).toBe(finalBody);
-          expect(res.status).toBe(200);
-          // Every hop went through the proxy.
-          expect(proxy.connections.length).toBe(chain.length);
-          // Each hop's method matches its scheme.
-          for (let i = 0; i < chain.length; i++) {
-            expect(proxy.connections[i].method).toBe(chain[i] ? "CONNECT" : "GET");
-          }
-        } finally {
-          for (const o of origins) o.close();
-        }
-      },
-    );
+      } finally {
+        for (const o of origins) o.close();
+      }
+    });
   }
 });
 
@@ -165,22 +159,19 @@ describe("large response headers through tunnel", () => {
     originTls: [false, true] as const,
     size: [512, 4096, 16 * 1024] as const,
   })) {
-    test.concurrent(
-      `${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin, ${size}B header value`,
-      async () => {
-        const bigValue = Buffer.alloc(size, "H").toString("latin1");
-        await using origin = await createAdversarialOrigin({
-          tls: originTls,
-          body: "big",
-          headers: { "X-Big": bigValue },
-        });
-        const proxy = sharedProxy(proxyTls);
-        const res = await fetch(origin.url, { proxy: proxy.url, keepalive: false, tls: laxTls });
-        expect(await res.text()).toBe("big");
-        expect(res.headers.get("x-big")).toBe(bigValue);
-        expect(res.status).toBe(200);
-      },
-    );
+    test.concurrent(`${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin, ${size}B header value`, async () => {
+      const bigValue = Buffer.alloc(size, "H").toString("latin1");
+      await using origin = await createAdversarialOrigin({
+        tls: originTls,
+        body: "big",
+        headers: { "X-Big": bigValue },
+      });
+      const proxy = sharedProxy(proxyTls);
+      const res = await fetch(origin.url, { proxy: proxy.url, keepalive: false, tls: laxTls });
+      expect(await res.text()).toBe("big");
+      expect(res.headers.get("x-big")).toBe(bigValue);
+      expect(res.status).toBe(200);
+    });
   }
 });
 
@@ -194,22 +185,19 @@ describe("large request headers through tunnel", () => {
     originTls: [false, true] as const,
     size: [512, 4096] as const,
   })) {
-    test.concurrent(
-      `${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin, request header ${size}B`,
-      async () => {
-        const bigValue = Buffer.alloc(size, "Q").toString("latin1");
-        await using origin = await createAdversarialOrigin({ tls: originTls, body: "ok" });
-        const proxy = sharedProxy(proxyTls);
-        const res = await fetch(origin.url, {
-          proxy: proxy.url,
-          keepalive: false,
-          tls: laxTls,
-          headers: { "X-Big-Req": bigValue },
-        });
-        expect(res.status).toBe(200);
-        expect(origin.requests[0].headers["x-big-req"]).toBe(bigValue);
-      },
-    );
+    test.concurrent(`${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin, request header ${size}B`, async () => {
+      const bigValue = Buffer.alloc(size, "Q").toString("latin1");
+      await using origin = await createAdversarialOrigin({ tls: originTls, body: "ok" });
+      const proxy = sharedProxy(proxyTls);
+      const res = await fetch(origin.url, {
+        proxy: proxy.url,
+        keepalive: false,
+        tls: laxTls,
+        headers: { "X-Big-Req": bigValue },
+      });
+      expect(res.status).toBe(200);
+      expect(origin.requests[0].headers["x-big-req"]).toBe(bigValue);
+    });
   }
 });
 
@@ -244,23 +232,20 @@ describe("1xx through tunnel", () => {
     originTls: [false, true] as const,
     info: ["100 Continue", "102 Processing", "103 Early Hints"] as const,
   })) {
-    test.concurrent(
-      `${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin, ${info} then 200`,
-      async () => {
-        await using origin = await make1xxOrigin(originTls, info);
-        const proxy = sharedProxy(proxyTls);
-        const res = await fetch(origin.url, {
-          method: "POST",
-          body: "x",
-          proxy: proxy.url,
-          keepalive: false,
-          tls: laxTls,
-          signal: AbortSignal.timeout(15_000),
-        });
-        expect(await res.text()).toBe("done");
-        expect(res.status).toBe(200);
-      },
-    );
+    test.concurrent(`${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin, ${info} then 200`, async () => {
+      await using origin = await make1xxOrigin(originTls, info);
+      const proxy = sharedProxy(proxyTls);
+      const res = await fetch(origin.url, {
+        method: "POST",
+        body: "x",
+        proxy: proxy.url,
+        keepalive: false,
+        tls: laxTls,
+        signal: AbortSignal.timeout(15_000),
+      });
+      expect(await res.text()).toBe("done");
+      expect(res.status).toBe(200);
+    });
   }
 });
 
@@ -311,34 +296,31 @@ describe("many proxy.headers", () => {
     originTls: [false, true] as const,
     count: [1, 10, 50] as const,
   })) {
-    test.concurrent(
-      `${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin, ${count} proxy headers`,
-      async () => {
-        await using origin = await createAdversarialOrigin({ tls: originTls, body: "ok" });
-        // This test inspects proxy.connections, so it needs a dedicated proxy.
-        await using proxy = await createAdversarialProxy({ tls: proxyTls });
-        const headers: Record<string, string> = {};
-        for (let i = 0; i < count; i++) headers[`X-Proxy-${i}`] = `v${i}`;
-        const res = await fetch(origin.url, {
-          proxy: { url: proxy.url, headers },
-          keepalive: false,
-          tls: laxTls,
-        });
-        expect(res.status).toBe(200);
-        const seen = proxy.connections[0].headers;
-        for (let i = 0; i < count; i++) {
-          expect(seen[`x-proxy-${i}`]).toBe(`v${i}`);
-        }
-        // For a CONNECT tunnel, proxy.headers go only in the CONNECT
-        // envelope; the tunneled inner request does not carry them.
-        // Absolute-form proxies forward the whole request head, so the
-        // origin sees them there — that's the proxy's forwarding, not
-        // the client's.
-        if (originTls) {
-          expect(origin.requests[0].headers[`x-proxy-0`]).toBeUndefined();
-        }
-      },
-    );
+    test.concurrent(`${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin, ${count} proxy headers`, async () => {
+      await using origin = await createAdversarialOrigin({ tls: originTls, body: "ok" });
+      // This test inspects proxy.connections, so it needs a dedicated proxy.
+      await using proxy = await createAdversarialProxy({ tls: proxyTls });
+      const headers: Record<string, string> = {};
+      for (let i = 0; i < count; i++) headers[`X-Proxy-${i}`] = `v${i}`;
+      const res = await fetch(origin.url, {
+        proxy: { url: proxy.url, headers },
+        keepalive: false,
+        tls: laxTls,
+      });
+      expect(res.status).toBe(200);
+      const seen = proxy.connections[0].headers;
+      for (let i = 0; i < count; i++) {
+        expect(seen[`x-proxy-${i}`]).toBe(`v${i}`);
+      }
+      // For a CONNECT tunnel, proxy.headers go only in the CONNECT
+      // envelope; the tunneled inner request does not carry them.
+      // Absolute-form proxies forward the whole request head, so the
+      // origin sees them there — that's the proxy's forwarding, not
+      // the client's.
+      if (originTls) {
+        expect(origin.requests[0].headers[`x-proxy-0`]).toBeUndefined();
+      }
+    });
   }
 });
 
@@ -395,16 +377,13 @@ describe("HTTP/1.0 origin through tunnel", () => {
     proxyTls: [false, true] as const,
     originTls: [false, true] as const,
   })) {
-    test.concurrent(
-      `${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin HTTP/1.0`,
-      async () => {
-        await using origin = await makeHttp10Origin(originTls);
-        const proxy = sharedProxy(proxyTls);
-        const res = await fetch(origin.url, { proxy: proxy.url, keepalive: false, tls: laxTls });
-        expect(await res.text()).toBe("old-school");
-        expect(res.status).toBe(200);
-      },
-    );
+    test.concurrent(`${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin HTTP/1.0`, async () => {
+      await using origin = await makeHttp10Origin(originTls);
+      const proxy = sharedProxy(proxyTls);
+      const res = await fetch(origin.url, { proxy: proxy.url, keepalive: false, tls: laxTls });
+      expect(await res.text()).toBe("old-school");
+      expect(res.status).toBe(200);
+    });
   }
 });
 
@@ -418,25 +397,22 @@ describe('redirect: "manual" through proxy', () => {
     proxyTls: [false, true] as const,
     originTls: [false, true] as const,
   })) {
-    test.concurrent(
-      `${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin 302 manual`,
-      async () => {
-        await using target = await createAdversarialOrigin({ tls: originTls, body: "should-not-reach" });
-        await using origin = await createAdversarialOrigin({ tls: originTls, redirectTo: target.url });
-        // This test inspects proxy.connections, so it needs a dedicated proxy.
-        await using proxy = await createAdversarialProxy({ tls: proxyTls });
-        const res = await fetch(origin.url, {
-          proxy: proxy.url,
-          keepalive: false,
-          tls: laxTls,
-          redirect: "manual",
-        });
-        expect(res.status).toBe(302);
-        expect(res.headers.get("location")).toBe(target.url);
-        expect(proxy.connections.length).toBe(1);
-        expect(target.requests.length).toBe(0);
-      },
-    );
+    test.concurrent(`${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin 302 manual`, async () => {
+      await using target = await createAdversarialOrigin({ tls: originTls, body: "should-not-reach" });
+      await using origin = await createAdversarialOrigin({ tls: originTls, redirectTo: target.url });
+      // This test inspects proxy.connections, so it needs a dedicated proxy.
+      await using proxy = await createAdversarialProxy({ tls: proxyTls });
+      const res = await fetch(origin.url, {
+        proxy: proxy.url,
+        keepalive: false,
+        tls: laxTls,
+        redirect: "manual",
+      });
+      expect(res.status).toBe(302);
+      expect(res.headers.get("location")).toBe(target.url);
+      expect(proxy.connections.length).toBe(1);
+      expect(target.requests.length).toBe(0);
+    });
   }
 });
 
@@ -449,26 +425,23 @@ describe('redirect: "error" through proxy', () => {
     proxyTls: [false, true] as const,
     originTls: [false, true] as const,
   })) {
-    test.concurrent(
-      `${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin 302 error`,
-      async () => {
-        await using origin = await createAdversarialOrigin({
-          tls: originTls,
-          redirectTo: "http://never-reached.invalid/",
-        });
-        // This test inspects proxy.connections, so it needs a dedicated proxy.
-        await using proxy = await createAdversarialProxy({ tls: proxyTls });
-        await expect(
-          fetch(origin.url, {
-            proxy: proxy.url,
-            keepalive: false,
-            tls: laxTls,
-            redirect: "error",
-          }),
-        ).rejects.toThrow();
-        expect(proxy.connections.length).toBe(1);
-      },
-    );
+    test.concurrent(`${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin 302 error`, async () => {
+      await using origin = await createAdversarialOrigin({
+        tls: originTls,
+        redirectTo: "http://never-reached.invalid/",
+      });
+      // This test inspects proxy.connections, so it needs a dedicated proxy.
+      await using proxy = await createAdversarialProxy({ tls: proxyTls });
+      await expect(
+        fetch(origin.url, {
+          proxy: proxy.url,
+          keepalive: false,
+          tls: laxTls,
+          redirect: "error",
+        }),
+      ).rejects.toThrow();
+      expect(proxy.connections.length).toBe(1);
+    });
   }
 });
 
@@ -482,38 +455,35 @@ describe("response body consumers through tunnel", () => {
     originTls: [false, true] as const,
     consumer: ["text", "arrayBuffer", "bytes", "blob", "json"] as const,
   })) {
-    test.concurrent(
-      `${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin .${consumer}()`,
-      async () => {
-        const payload = consumer === "json" ? '{"k":"v","n":42}' : makeBody(4096, "C");
-        await using origin = await createAdversarialOrigin({
-          tls: originTls,
-          body: payload,
-          headers: consumer === "json" ? { "Content-Type": "application/json" } : {},
-        });
-        const proxy = sharedProxy(proxyTls);
-        const res = await fetch(origin.url, { proxy: proxy.url, keepalive: false, tls: laxTls });
-        expect(res.status).toBe(200);
-        switch (consumer) {
-          case "text":
-            expect(await res.text()).toBe(payload);
-            break;
-          case "arrayBuffer":
-            expect(new TextDecoder().decode(await res.arrayBuffer())).toBe(payload);
-            break;
-          case "bytes":
-            expect(new TextDecoder().decode(await res.bytes())).toBe(payload);
-            break;
-          case "blob": {
-            const b = await res.blob();
-            expect(await b.text()).toBe(payload);
-            break;
-          }
-          case "json":
-            expect(await res.json()).toEqual({ k: "v", n: 42 });
-            break;
+    test.concurrent(`${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin .${consumer}()`, async () => {
+      const payload = consumer === "json" ? '{"k":"v","n":42}' : makeBody(4096, "C");
+      await using origin = await createAdversarialOrigin({
+        tls: originTls,
+        body: payload,
+        headers: consumer === "json" ? { "Content-Type": "application/json" } : {},
+      });
+      const proxy = sharedProxy(proxyTls);
+      const res = await fetch(origin.url, { proxy: proxy.url, keepalive: false, tls: laxTls });
+      expect(res.status).toBe(200);
+      switch (consumer) {
+        case "text":
+          expect(await res.text()).toBe(payload);
+          break;
+        case "arrayBuffer":
+          expect(new TextDecoder().decode(await res.arrayBuffer())).toBe(payload);
+          break;
+        case "bytes":
+          expect(new TextDecoder().decode(await res.bytes())).toBe(payload);
+          break;
+        case "blob": {
+          const b = await res.blob();
+          expect(await b.text()).toBe(payload);
+          break;
         }
-      },
-    );
+        case "json":
+          expect(await res.json()).toEqual({ k: "v", n: 42 });
+          break;
+      }
+    });
   }
 });

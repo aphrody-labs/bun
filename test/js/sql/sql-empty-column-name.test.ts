@@ -80,18 +80,14 @@ describe.each(["postgres", "mysql"] as const)("%s: a result set with an empty co
     30_000,
   );
 
-  test.concurrent(
-    "a single unnamed column decodes over the prepared-statement protocol",
-    async () => {
-      expect(await decodeThroughMockServer(adapter, "prepared", [""])).toEqual({
-        rows: [{ "": "v0" }],
-        exitCode: 0,
-        signalCode: null,
-        stderr: expect.any(String),
-      });
-    },
-    30_000,
-  );
+  test.concurrent("a single unnamed column decodes over the prepared-statement protocol", async () => {
+    expect(await decodeThroughMockServer(adapter, "prepared", [""])).toEqual({
+      rows: [{ "": "v0" }],
+      exitCode: 0,
+      signalCode: null,
+      stderr: expect.any(String),
+    });
+  }, 30_000);
 });
 
 // Real-server coverage: `select ''` is enough to get an unnamed column out of

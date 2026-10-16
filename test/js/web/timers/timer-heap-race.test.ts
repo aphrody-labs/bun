@@ -29,20 +29,14 @@ async function runFixture(fixture: string, args: string[] = [], env: Record<stri
   return { stdout, stderr, signal: proc.signalCode, exitCode };
 }
 
-it.concurrent(
-  "timer heap survives cross-thread Atomics.waitAsync timeout cancellation",
-  async () => {
-    expect(await runFixture("timer-heap-atomics-fixture.ts", [String(ATOMICS_PUMPS), String(ATOMICS_WORKERS)])).toEqual(
-      {
-        stdout: `OK ${ATOMICS_WORKERS} workers ${ATOMICS_WORKERS * ATOMICS_PUMPS} pumps\n`,
-        stderr: expect.any(String),
-        signal: null,
-        exitCode: 0,
-      },
-    );
-  },
-  20_000,
-);
+it.concurrent("timer heap survives cross-thread Atomics.waitAsync timeout cancellation", async () => {
+  expect(await runFixture("timer-heap-atomics-fixture.ts", [String(ATOMICS_PUMPS), String(ATOMICS_WORKERS)])).toEqual({
+    stdout: `OK ${ATOMICS_WORKERS} workers ${ATOMICS_WORKERS * ATOMICS_PUMPS} pumps\n`,
+    stderr: expect.any(String),
+    signal: null,
+    exitCode: 0,
+  });
+}, 20_000);
 
 it.concurrent.skipIf(!isDebug)(
   "timer heap stays consistent while GC re-arms the RunLoop timer",

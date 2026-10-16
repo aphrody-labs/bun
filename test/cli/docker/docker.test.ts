@@ -9,13 +9,10 @@ function dockerFixture() {
     fetch(request) {
       const url = new URL(request.url);
       requests.push(`${request.method} ${url.pathname}${url.search}`);
-      if (url.pathname === "/version")
-        return Response.json({ ApiVersion: "1.99", MinAPIVersion: "1.24" });
-      if (url.pathname === "/v1.51/containers/json")
-        return Response.json([{ Id: id, Names: ["/example"] }]);
+      if (url.pathname === "/version") return Response.json({ ApiVersion: "1.99", MinAPIVersion: "1.24" });
+      if (url.pathname === "/v1.51/containers/json") return Response.json([{ Id: id, Names: ["/example"] }]);
       if (url.pathname === "/v1.51/containers/example/json") return Response.json({ Id: id });
-      if (url.pathname === `/v1.51/containers/${id}/start`)
-        return new Response(null, { status: 204 });
+      if (url.pathname === `/v1.51/containers/${id}/start`) return new Response(null, { status: 204 });
       return new Response(null, { status: 404 });
     },
   });
@@ -76,7 +73,7 @@ test("native Docker resolves mutation plans without applying them", async () => 
 
 test.each([undefined, "", "0", "false", "no", "off"])(
   "native Docker blocks apply before daemon I/O with feature flag %s",
-  async (disabled) => {
+  async disabled => {
     const fixture = dockerFixture();
     try {
       const blocked = await fixture.run(["start", "example", "--apply"], disabled);

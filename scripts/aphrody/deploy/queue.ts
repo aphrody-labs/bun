@@ -107,7 +107,11 @@ export function makeDeps(
         // Ignore stale inherited Cargo wrappers: a missing absolute wrapper makes Cargo fail before the build starts.
         // An explicit, existing wrapper remains authoritative; otherwise prefer the discoverable sccache binary.
         const configuredWrapper = env.RUSTC_WRAPPER ?? env.CARGO_BUILD_RUSTC_WRAPPER;
-        if (configuredWrapper && (configuredWrapper.includes("\\") || configuredWrapper.includes("/")) && !existsSync(configuredWrapper)) {
+        if (
+          configuredWrapper &&
+          (configuredWrapper.includes("\\") || configuredWrapper.includes("/")) &&
+          !existsSync(configuredWrapper)
+        ) {
           delete env.RUSTC_WRAPPER;
           delete env.CARGO_BUILD_RUSTC_WRAPPER;
         }

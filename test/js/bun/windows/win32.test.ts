@@ -47,11 +47,7 @@ console.log(JSON.stringify(views.map(view => {
     stdout: "pipe",
     stderr: "pipe",
   });
-  const [stdout, stderr, code] = await Promise.all([
-    child.stdout.text(),
-    child.stderr.text(),
-    child.exited,
-  ]);
+  const [stdout, stderr, code] = await Promise.all([child.stdout.text(), child.stderr.text(), child.exited]);
   expect(JSON.parse(stdout)).toEqual([true, true, true]);
   expect(stderr).toBe("");
   expect(code).toBe(0);
@@ -88,11 +84,7 @@ describe.skipIf(!isWindows)("windows.win32", () => {
     const entry = win32.struct("PROCESSENTRY32W");
     expect(entry.dwSize).toBe(568);
     let self: string | undefined;
-    for (
-      let ok = kernel32.Process32FirstW(snapshot, entry);
-      ok;
-      ok = kernel32.Process32NextW(snapshot, entry)
-    )
+    for (let ok = kernel32.Process32FirstW(snapshot, entry); ok; ok = kernel32.Process32NextW(snapshot, entry))
       if (entry.th32ProcessID === process.pid) self = entry.szExeFile;
     expect(kernel32.CloseHandle(snapshot)).toBe(1);
     expect(self!.toLowerCase()).toBe(process.execPath.split("\\").pop()!.toLowerCase());
@@ -159,9 +151,7 @@ describe.skipIf(!isWindows)("windows.win32", () => {
     expect(queryInterface(delegate, win32.guid(iid), out)).toBe(0);
     expect(Number(out[0])).toBe(delegate);
     expect(win32.com.release(delegate)).toBe(1);
-    expect(queryInterface(delegate, win32.guid("94ea2b94-e9cc-49e0-c0ff-ee64ca8f5b90"), out)).toBe(
-      0,
-    );
+    expect(queryInterface(delegate, win32.guid("94ea2b94-e9cc-49e0-c0ff-ee64ca8f5b90"), out)).toBe(0);
     expect(win32.com.release(delegate)).toBe(1);
 
     // A native thread whose start routine is Invoke(this = delegate).

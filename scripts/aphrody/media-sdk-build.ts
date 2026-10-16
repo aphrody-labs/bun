@@ -521,7 +521,13 @@ async function cargoNotices(input: MediaBuildInput, plan: ReturnType<typeof medi
   };
   if (!Array.isArray(metadata.packages) || metadata.packages.length > 2048)
     throw new Error("Native media Cargo license inventory exceeded its bound");
-  const packages = [],
+  const packages: Array<{
+      name: string;
+      version: string;
+      license: string | null;
+      source: string;
+      notices: Record<string, string>;
+    }> = [],
     files: Array<{ source: string; member: string; sha256: string }> = [];
   for (const pkg of metadata.packages) {
     if (

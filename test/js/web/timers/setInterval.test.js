@@ -126,10 +126,6 @@ it.concurrent(
 // ✓ setInterval doesn't leak memory [80188.00ms]
 // TODO: investigate this discrepancy further
 
-it.concurrent(
-  "setInterval doesn't run when cancelled after being scheduled",
-  async () => {
-    expect(await bunRun([`run`, join(import.meta.dir, "setInterval-cancel-fixture.js")])).toSpawn();
-  },
-  30_000,
-);
+it.concurrent("setInterval doesn't run when cancelled after being scheduled", async () => {
+  expect(await bunRun([`run`, join(import.meta.dir, "setInterval-cancel-fixture.js")])).toSpawn();
+}, 30_000);

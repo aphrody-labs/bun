@@ -52,25 +52,17 @@ export async function disposeExternalServices(): Promise<void> {
 
 // ---
 
-export function formatFile(
-  options: FormatFileParam["options"],
-  code: string,
-): Promise<FormatFileResult> {
+export function formatFile(options: FormatFileParam["options"], code: string): Promise<FormatFileResult> {
   return toFormatFileResult(
-    getPool().then((pool) =>
-      pool.run({ options, code } satisfies FormatFileParam, { name: "formatFile" }),
-    ),
+    getPool().then(pool => pool.run({ options, code } satisfies FormatFileParam, { name: "formatFile" })),
   );
 }
 
 // ---
 
-export function formatEmbeddedCode(
-  options: FormatEmbeddedCodeParam["options"],
-  code: string,
-): Promise<string | null> {
+export function formatEmbeddedCode(options: FormatEmbeddedCodeParam["options"], code: string): Promise<string | null> {
   return toNullable(
-    getPool().then((pool) =>
+    getPool().then(pool =>
       pool.run({ options, code } satisfies FormatEmbeddedCodeParam, {
         name: "formatEmbeddedCode",
       }),
@@ -78,12 +70,9 @@ export function formatEmbeddedCode(
   );
 }
 
-export function formatEmbeddedDoc(
-  options: FormatEmbeddedDocParam["options"],
-  code: string,
-): Promise<string | null> {
+export function formatEmbeddedDoc(options: FormatEmbeddedDocParam["options"], code: string): Promise<string | null> {
   return toNullable(
-    getPool().then((pool) =>
+    getPool().then(pool =>
       pool.run({ options, code } satisfies FormatEmbeddedDocParam, {
         name: "formatEmbeddedDoc",
       }),
@@ -96,7 +85,7 @@ export function sortTailwindClasses(
   classes: string[],
 ): Promise<string[] | null> {
   return toNullable(
-    getPool().then((pool) =>
+    getPool().then(pool =>
       pool.run({ classes, options } satisfies SortTailwindClassesArgs, {
         name: "sortTailwindClasses",
       }),

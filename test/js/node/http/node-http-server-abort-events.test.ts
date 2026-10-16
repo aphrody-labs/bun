@@ -1430,11 +1430,8 @@ describe("req.socket reports how the client closed the connection", () => {
   }
 
   for (const reads of [1, 2] as const) {
-    test.concurrent(
-      `https: FIN after the listener ended the socket is no parse error, request head in ${reads} read(s)`,
-      async () => {
-        expect(await finAfterTheListenerEndedTheSocket(reads)).toEqual({ response: "ok", clientErrors: [] });
-      },
-    );
+    test.concurrent(`https: FIN after the listener ended the socket is no parse error, request head in ${reads} read(s)`, async () => {
+      expect(await finAfterTheListenerEndedTheSocket(reads)).toEqual({ response: "ok", clientErrors: [] });
+    });
   }
 });

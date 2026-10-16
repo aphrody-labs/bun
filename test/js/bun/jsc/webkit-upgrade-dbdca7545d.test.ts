@@ -12,9 +12,7 @@ describe.concurrent("WebKit dbdca7545d upgrade", () => {
     // The arguments are evaluated before the call throws: the chain ended at the closing parenthesis.
     expect(log).toEqual(["arg"]);
     // Without the parentheses the call is still part of the chain.
-    expect(
-      new Function("a", "arg", "return a?.b(arg());")(undefined, () => log.push("arg")),
-    ).toBeUndefined();
+    expect(new Function("a", "arg", "return a?.b(arg());")(undefined, () => log.push("arg"))).toBeUndefined();
     expect(log).toEqual(["arg"]);
   });
 
@@ -35,19 +33,14 @@ describe.concurrent("WebKit dbdca7545d upgrade", () => {
         return this;
       }
     }
-    const Derived = new Function(
-      "Base",
-      "return class extends Base { run() { return super.tag`x`; } };",
-    )(Base);
+    const Derived = new Function("Base", "return class extends Base { run() { return super.tag`x`; } };")(Base);
     const instance = new Derived();
     expect(instance.run()).toBe(instance);
   });
 
   test("a catch parameter named `await` is a SyntaxError where `await` is not an identifier (edb17fbf37d)", () => {
     expect(() => (0, eval)("(async function () { try {} catch (await) {} })")).toThrow(SyntaxError);
-    expect(() => (0, eval)("(async function () { try {} catch (aw\\u0061it) {} })")).toThrow(
-      SyntaxError,
-    );
+    expect(() => (0, eval)("(async function () { try {} catch (aw\\u0061it) {} })")).toThrow(SyntaxError);
     // In a plain function `await` is an ordinary identifier.
     expect(new Function("try { throw 1; } catch (await) { return await; }")()).toBe(1);
   });
@@ -64,12 +57,8 @@ describe.concurrent("WebKit dbdca7545d upgrade", () => {
   // Function constructor then throws that error with no exception check in between. eval and vm.Script check, which is
   // why the test above uses an indirect eval. The assertions below hold on a build without the validation.
   test.todo("the Function constructor throws that SyntaxError too", () => {
-    expect(() => new Function("return async function () { try {} catch (await) {} };")).toThrow(
-      SyntaxError,
-    );
-    expect(
-      () => new Function("return async function () { try {} catch (aw\\u0061it) {} };"),
-    ).toThrow(SyntaxError);
+    expect(() => new Function("return async function () { try {} catch (await) {} };")).toThrow(SyntaxError);
+    expect(() => new Function("return async function () { try {} catch (aw\\u0061it) {} };")).toThrow(SyntaxError);
   });
 
   test("`await` is an identifier in a non-async function nested in an async function's parameters (09c4cfc7d73)", async () => {
@@ -92,10 +81,8 @@ describe.concurrent("WebKit dbdca7545d upgrade", () => {
   });
 
   test("Intl.DurationFormat keeps the minus sign of a fraction between -1 and 0 (501d1f661f9)", () => {
-    const format = (
-      options: Intl.DurationFormatOptions,
-      duration: Parameters<Intl.DurationFormat["format"]>[0],
-    ) => new Intl.DurationFormat("en", options).format(duration);
+    const format = (options: Intl.DurationFormatOptions, duration: Parameters<Intl.DurationFormat["format"]>[0]) =>
+      new Intl.DurationFormat("en", options).format(duration);
     expect(format({ seconds: "numeric" }, { milliseconds: -500 })).toBe("-0.5");
     expect(format({ seconds: "2-digit" }, { milliseconds: -500 })).toBe("-00.5");
     expect(format({ seconds: "numeric" }, { nanoseconds: -1 })).toBe("-0.000000001");
@@ -106,9 +93,7 @@ describe.concurrent("WebKit dbdca7545d upgrade", () => {
     const segments = new Intl.Segmenter("en", { granularity: "grapheme" }).segment(input);
     const iterated = [...segments];
     for (let index = 0; index < input.length; index++) {
-      const expected = iterated.find(
-        (s) => index >= s.index && index < s.index + s.segment.length,
-      )!;
+      const expected = iterated.find(s => index >= s.index && index < s.index + s.segment.length)!;
       const hit = segments.containing(index)!;
       expect({ segment: hit.segment, index: hit.index }).toEqual({
         segment: expected.segment,

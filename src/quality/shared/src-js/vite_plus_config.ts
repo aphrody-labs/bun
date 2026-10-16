@@ -18,17 +18,11 @@ let vitePlusCache: Promise<typeof import("vite-plus")> | null = null;
  * @returns The field as an object, or `null` when the field is missing (signals "skip")
  * @throws When the field exists but is not a plain object
  */
-export async function loadViteConfigField(
-  path: string,
-  fieldName: "lint" | "fmt",
-): Promise<object | null> {
+export async function loadViteConfigField(path: string, fieldName: "lint" | "fmt"): Promise<object | null> {
   vitePlusCache ??= import("vite-plus");
   const { resolveConfig } = await vitePlusCache;
 
-  const config = (await resolveConfig({ configFile: path }, "build")) as unknown as Record<
-    string,
-    unknown
-  >;
+  const config = (await resolveConfig({ configFile: path }, "build")) as unknown as Record<string, unknown>;
 
   // Signal "skip" when the field is missing
   if (!(fieldName in config)) return null;

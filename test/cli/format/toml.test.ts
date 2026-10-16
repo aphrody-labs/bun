@@ -28,16 +28,13 @@ test.concurrent("printWidth, useTabs, trailingComma and endOfLine count", async 
   expect(result.exitCode).toBe(0);
 });
 
-test.concurrent(
-  "a file with \\r\\n is read as one with \\n, but a string of several lines stays as it is written",
-  async () => {
-    const text = 'a = 1\r\n\r\n\r\n\r\n\r\nb   = [\r\n 1, # c\r\n 2\r\n]\r\ns = """\r\nx\r\n"""\r\n';
-    const lf = await format({ "a.toml": text }, {});
-    expect(lf.files["a.toml"]).toBe('a = 1\n\n\nb = [\n  1, # c\n  2,\n]\ns = """\r\nx\r\n"""\n');
-    const crlf = await format({ "a.toml": text }, { endOfLine: "crlf" });
-    expect(crlf.files["a.toml"]).toBe('a = 1\r\n\r\n\r\nb = [\r\n  1, # c\r\n  2,\r\n]\r\ns = """\r\nx\r\n"""\r\n');
-  },
-);
+test.concurrent("a file with \\r\\n is read as one with \\n, but a string of several lines stays as it is written", async () => {
+  const text = 'a = 1\r\n\r\n\r\n\r\n\r\nb   = [\r\n 1, # c\r\n 2\r\n]\r\ns = """\r\nx\r\n"""\r\n';
+  const lf = await format({ "a.toml": text }, {});
+  expect(lf.files["a.toml"]).toBe('a = 1\n\n\nb = [\n  1, # c\n  2,\n]\ns = """\r\nx\r\n"""\n');
+  const crlf = await format({ "a.toml": text }, { endOfLine: "crlf" });
+  expect(crlf.files["a.toml"]).toBe('a = 1\r\n\r\n\r\nb = [\r\n  1, # c\r\n  2,\r\n]\r\ns = """\r\nx\r\n"""\r\n');
+});
 
 test.concurrent("the names that oxfmt takes for TOML, and the lock files that it never touches", async () => {
   const names = ["a.toml", "b.toml.example", "Pipfile", "Cargo.toml.orig"];

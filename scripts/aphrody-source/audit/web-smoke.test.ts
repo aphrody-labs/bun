@@ -12,11 +12,7 @@ describe("web smoke pure logic", () => {
   });
 
   test("binary signatures are recognised from base64", () => {
-    expect(
-      isPngBase64(
-        Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1]).toString("base64"),
-      ),
-    ).toBe(true);
+    expect(isPngBase64(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 1]).toString("base64"))).toBe(true);
     expect(isPngBase64(Buffer.from("not a png").toString("base64"))).toBe(false);
     expect(isPdfBase64(Buffer.from("%PDF-1.7").toString("base64"))).toBe(true);
     expect(isPdfBase64("")).toBe(false);

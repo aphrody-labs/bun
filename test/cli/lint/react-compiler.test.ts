@@ -449,180 +449,163 @@ describe.concurrent("bun lint: all labels, the help and the note of a diagnostic
   });
 });
 
-describe.concurrent(
-  `bun lint: the rules of the React Compiler report what eslint-plugin-react-hooks ${expected.eslint.plugin} reports`,
-  () => {
-    /** What ESLint's `-f json` has for each file that has messages. */
-    async function messages(files: Files) {
-      const { raw, stderr, exitCode, directories } = await lint({ "eslint.config.js": eslintConfig, ...files }, [
-        "-f",
-        "json",
-      ]);
-      if (!raw.startsWith("[")) throw new Error(`No report (exit ${exitCode}): ${stderr}`);
-      return { files: byEslintFile(JSON.parse(raw), directories), exitCode };
-    }
-    const linted = (files: Files) =>
-      Object.fromEntries(
-        Object.entries(files).filter(
-          ([name]) => !expected.eslint.without.includes(name) && !name.includes("node_modules/"),
-        ),
-      );
-
-    test(
-      "for oxlint's test cases: the rule, the place, the first line",
-      async () => {
-        const { files, exitCode } = await messages(linted(expected.cases));
-        expect(briefly(files)).toEqual(expected.eslint.cases);
-        expect(exitCode).toBe(1);
-      },
-      slow,
+describe.concurrent(`bun lint: the rules of the React Compiler report what eslint-plugin-react-hooks ${expected.eslint.plugin} reports`, () => {
+  /** What ESLint's `-f json` has for each file that has messages. */
+  async function messages(files: Files) {
+    const { raw, stderr, exitCode, directories } = await lint({ "eslint.config.js": eslintConfig, ...files }, [
+      "-f",
+      "json",
+    ]);
+    if (!raw.startsWith("[")) throw new Error(`No report (exit ${exitCode}): ${stderr}`);
+    return { files: byEslintFile(JSON.parse(raw), directories), exitCode };
+  }
+  const linted = (files: Files) =>
+    Object.fromEntries(
+      Object.entries(files).filter(
+        ([name]) => !expected.eslint.without.includes(name) && !name.includes("node_modules/"),
+      ),
     );
 
-    test(
-      "for fixtures of the compiler: the rule, the place, the first line",
-      async () => {
-        const { files, exitCode } = await messages(linted(expected.fixtures));
-        expect(briefly(files)).toEqual(expected.eslint.fixtures);
-        expect(exitCode).toBe(1);
-      },
-      slow,
-    );
-
-    // What the plugin reports. The report is at the first.
-    test("dependencies that are missing are in the order of localeCompare", async () => {
-      const { files, exitCode } = await messages(unlisted);
-      const found = Object.fromEntries(
-        Object.entries(files).map(([name, { messages }]) => [
-          name,
-          messages
-            .filter(it => it.ruleId === "react-hooks/memo-dependencies")
-            .map(it => [`${it.line}:${it.column}-${it.endLine}:${it.endColumn}`, ...missingIn(it.message)]),
-        ]),
-      );
-      expect(found).toEqual({
-        "case.jsx": [["4:37-4:40", "bar", "Foo"]],
-        "names.jsx": [["4:73-4:75", "_a", "$a", "a", "A", "a1", "a10", "a9", "b", "B", "e", "é", "f", "z"]],
-        "number.jsx": [["4:37-4:38", "x"]],
-        "paths.jsx": [
-          [
-            "4:63-4:67",
-            "x._c",
-            "x.$d",
-            "x.a",
-            "x.A",
-            "x.a1",
-            "x.a10",
-            "x.a9",
-            "x.b",
-            "x.B",
-            "x.e",
-            "x.é",
-            "x.f",
-            "x.z",
-          ],
-        ],
-        "some.jsx": [["4:44-4:49", "alpha", "Zed"]],
-      });
+  test(
+    "for oxlint's test cases: the rule, the place, the first line",
+    async () => {
+      const { files, exitCode } = await messages(linted(expected.cases));
+      expect(briefly(files)).toEqual(expected.eslint.cases);
       expect(exitCode).toBe(1);
-    });
+    },
+    slow,
+  );
 
-    // The value is one of two, so it has the reasons of both, and so has what is read from it.
-    test("of two reasons for which a value is frozen the message has the one that the compiler prefers, whichever came first", async () => {
-      const component = (first: string, second: string) => `function Component(props) {
+  test(
+    "for fixtures of the compiler: the rule, the place, the first line",
+    async () => {
+      const { files, exitCode } = await messages(linted(expected.fixtures));
+      expect(briefly(files)).toEqual(expected.eslint.fixtures);
+      expect(exitCode).toBe(1);
+    },
+    slow,
+  );
+
+  // What the plugin reports. The report is at the first.
+  test("dependencies that are missing are in the order of localeCompare", async () => {
+    const { files, exitCode } = await messages(unlisted);
+    const found = Object.fromEntries(
+      Object.entries(files).map(([name, { messages }]) => [
+        name,
+        messages
+          .filter(it => it.ruleId === "react-hooks/memo-dependencies")
+          .map(it => [`${it.line}:${it.column}-${it.endLine}:${it.endColumn}`, ...missingIn(it.message)]),
+      ]),
+    );
+    expect(found).toEqual({
+      "case.jsx": [["4:37-4:40", "bar", "Foo"]],
+      "names.jsx": [["4:73-4:75", "_a", "$a", "a", "A", "a1", "a10", "a9", "b", "B", "e", "é", "f", "z"]],
+      "number.jsx": [["4:37-4:38", "x"]],
+      "paths.jsx": [
+        ["4:63-4:67", "x._c", "x.$d", "x.a", "x.A", "x.a1", "x.a10", "x.a9", "x.b", "x.B", "x.e", "x.é", "x.f", "x.z"],
+      ],
+      "some.jsx": [["4:44-4:49", "alpha", "Zed"]],
+    });
+    expect(exitCode).toBe(1);
+  });
+
+  // The value is one of two, so it has the reasons of both, and so has what is read from it.
+  test("of two reasons for which a value is frozen the message has the one that the compiler prefers, whichever came first", async () => {
+    const component = (first: string, second: string) => `function Component(props) {
   const context = useContext(Context);
   const value = props.flag ? ${first} : ${second};
   value.inner.x = 1;
   return <div />;
 }
 `;
-      const { files, exitCode } = await messages({
-        "props-first.jsx": component("props.a", "context"),
-        "context-first.jsx": component("context", "props.a"),
-      });
-      const isAboutContext = (name: string) =>
-        files[name].messages
-          .filter(it => it.ruleId === "react-hooks/immutability")
-          .map(it => it.message.includes("Modifying a value returned from 'useContext()' is not allowed"));
-      expect({
-        propsFirst: isAboutContext("props-first.jsx"),
-        contextFirst: isAboutContext("context-first.jsx"),
-      }).toEqual({
-        propsFirst: [true],
-        contextFirst: [true],
-      });
-      expect(exitCode).toBe(1);
+    const { files, exitCode } = await messages({
+      "props-first.jsx": component("props.a", "context"),
+      "context-first.jsx": component("context", "props.a"),
     });
+    const isAboutContext = (name: string) =>
+      files[name].messages
+        .filter(it => it.ruleId === "react-hooks/immutability")
+        .map(it => it.message.includes("Modifying a value returned from 'useContext()' is not allowed"));
+    expect({
+      propsFirst: isAboutContext("props-first.jsx"),
+      contextFirst: isAboutContext("context-first.jsx"),
+    }).toEqual({
+      propsFirst: [true],
+      contextFirst: [true],
+    });
+    expect(exitCode).toBe(1);
+  });
 
-    test("the whole message, suggestions, comments, and files that the plugin does not compile", async () => {
-      const { files, exitCode } = await messages(eslintSmall);
-      expect(files).toEqual(expected.eslint.small);
-      // Nothing for `$FlowFixMe[react-rule-hook]` and `[react-rule-unsafe-ref]`, for a file with a decorator, and for a component
-      // without a name.
-      expect(briefly(files)).toEqual({
-        "casts.tsx": [
-          "react-hooks/static-components 7:8-7:13 Error: Cannot create components during render",
-          "react-hooks/immutability 13:4-13:16 Error: This value cannot be modified",
-          "react-hooks/refs 19:22-19:40 Error: Cannot access refs during render",
-          "react-hooks/refs 20:19-20:30 Error: Cannot access refs during render",
-          "react-hooks/memo-dependencies 25:39-25:46 Error: Found missing memoization dependencies",
-          "react-hooks/use-memo 25:50-25:66 Error: Expected the dependency list to be an array of simple expressions (e.g. `x`, `x.y.z`, `x?.y?.z`)",
-          "react-hooks/immutability 30:4-30:33 Error: This value cannot be modified",
-          "react-hooks/immutability 35:3-35:14 Error: This value cannot be modified",
-        ],
-        "defaults.tsx": [
-          "7:37-7:63",
-          "7:48-7:63",
-          "8:13-8:21",
-          "12:34-12:60",
-          "12:45-12:60",
-          "13:14-13:22",
-          "20:30-20:56",
-          "20:41-20:56",
-          "21:10-21:18",
-          "25:11-25:37",
-          "25:22-25:37",
-          "26:14-26:22",
-        ].map(
-          place =>
-            `react-hooks/hooks ${place} Error: Hooks may not be referenced as normal values, they must be called. See https://react.dev/reference/rules/react-calls-components-and-hooks#never-pass-around-hooks-as-regular-values`,
-        ),
-        "defaults-with-jsx.jsx": [
-          ["todo 1:28-1:57 Todo", "ObjectExpression"],
-          ["todo 5:29-5:42 Todo", "ArrowFunctionExpression"],
-          ["static-components 6:11-6:16 Error: Cannot create components during render"],
-          ["todo 9:28-9:35 Todo", "JSXElement"],
-          ["todo 17:28-17:37 Todo", "ArrayExpression"],
-          ["todo 21:28-21:34 Todo", "TaggedTemplateExpression"],
-        ].map(([start, kind]) =>
-          kind === undefined
-            ? `react-hooks/${start}`
-            : `react-hooks/${start}: (BuildHIR::node.lowerReorderableExpression) Expression type \`${kind}\` cannot be safely reordered`,
-        ),
-        // Two rules at one place: in the order of the configuration, whatever their ends.
-        "react-by-its-name.jsx": [
-          "react-hooks/memo-dependencies 5:47-5:54 Error: Found missing memoization dependencies",
-          "react-hooks/use-memo 5:47-5:56 Error: Expected the dependency list to be an array of simple expressions (e.g. `x`, `x.y.z`, `x?.y?.z`)",
-        ],
-        "fbt.jsx": [
-          "react-hooks/todo 2:3-2:13 Todo: (BuildHIR::lowerStatement) Handle var kinds in VariableDeclaration",
-          "react-hooks/todo 5:8-5:18 Todo: Support duplicate fbt tags",
-          "react-hooks/todo 25:8-25:18 Todo: Support duplicate fbt tags",
-        ],
-        "disabled.jsx": [],
-        // All at the first.
-        "writes.jsx": Array(3).fill("react-hooks/immutability 5:3-5:4 Error: This value cannot be modified"),
-        "flow-other.jsx": ["react-hooks/refs 4:17-4:28 Error: Cannot access refs during render"],
-        "javascript.jsx": ["react-hooks/memo-dependencies 2:40-2:41 Error: Found extra memoization dependencies"],
-        "long.jsx": [
-          "react-hooks/todo 3:3-15:4 Todo: (BuildHIR::lowerStatement) Handle TryStatement without a catch clause",
-        ],
-        "typescript.tsx": ["react-hooks/memo-dependencies 2:40-2:41 Error: Found extra memoization dependencies"],
-      });
-      expect(files["disabled.jsx"].suppressed.map(it => it.ruleId)).toEqual(["react-hooks/refs"]);
-      expect(files["typescript.tsx"].messages[0].suggestions).toEqual([
-        { desc: "Update dependencies", range: [92, 98], text: "[a]" },
-      ]);
-      expect(files["typescript.tsx"].messages[0].message).toMatchInlineSnapshot(`
+  test("the whole message, suggestions, comments, and files that the plugin does not compile", async () => {
+    const { files, exitCode } = await messages(eslintSmall);
+    expect(files as unknown).toEqual(expected.eslint.small);
+    // Nothing for `$FlowFixMe[react-rule-hook]` and `[react-rule-unsafe-ref]`, for a file with a decorator, and for a component
+    // without a name.
+    expect(briefly(files)).toEqual({
+      "casts.tsx": [
+        "react-hooks/static-components 7:8-7:13 Error: Cannot create components during render",
+        "react-hooks/immutability 13:4-13:16 Error: This value cannot be modified",
+        "react-hooks/refs 19:22-19:40 Error: Cannot access refs during render",
+        "react-hooks/refs 20:19-20:30 Error: Cannot access refs during render",
+        "react-hooks/memo-dependencies 25:39-25:46 Error: Found missing memoization dependencies",
+        "react-hooks/use-memo 25:50-25:66 Error: Expected the dependency list to be an array of simple expressions (e.g. `x`, `x.y.z`, `x?.y?.z`)",
+        "react-hooks/immutability 30:4-30:33 Error: This value cannot be modified",
+        "react-hooks/immutability 35:3-35:14 Error: This value cannot be modified",
+      ],
+      "defaults.tsx": [
+        "7:37-7:63",
+        "7:48-7:63",
+        "8:13-8:21",
+        "12:34-12:60",
+        "12:45-12:60",
+        "13:14-13:22",
+        "20:30-20:56",
+        "20:41-20:56",
+        "21:10-21:18",
+        "25:11-25:37",
+        "25:22-25:37",
+        "26:14-26:22",
+      ].map(
+        place =>
+          `react-hooks/hooks ${place} Error: Hooks may not be referenced as normal values, they must be called. See https://react.dev/reference/rules/react-calls-components-and-hooks#never-pass-around-hooks-as-regular-values`,
+      ),
+      "defaults-with-jsx.jsx": [
+        ["todo 1:28-1:57 Todo", "ObjectExpression"],
+        ["todo 5:29-5:42 Todo", "ArrowFunctionExpression"],
+        ["static-components 6:11-6:16 Error: Cannot create components during render"],
+        ["todo 9:28-9:35 Todo", "JSXElement"],
+        ["todo 17:28-17:37 Todo", "ArrayExpression"],
+        ["todo 21:28-21:34 Todo", "TaggedTemplateExpression"],
+      ].map(([start, kind]) =>
+        kind === undefined
+          ? `react-hooks/${start}`
+          : `react-hooks/${start}: (BuildHIR::node.lowerReorderableExpression) Expression type \`${kind}\` cannot be safely reordered`,
+      ),
+      // Two rules at one place: in the order of the configuration, whatever their ends.
+      "react-by-its-name.jsx": [
+        "react-hooks/memo-dependencies 5:47-5:54 Error: Found missing memoization dependencies",
+        "react-hooks/use-memo 5:47-5:56 Error: Expected the dependency list to be an array of simple expressions (e.g. `x`, `x.y.z`, `x?.y?.z`)",
+      ],
+      "fbt.jsx": [
+        "react-hooks/todo 2:3-2:13 Todo: (BuildHIR::lowerStatement) Handle var kinds in VariableDeclaration",
+        "react-hooks/todo 5:8-5:18 Todo: Support duplicate fbt tags",
+        "react-hooks/todo 25:8-25:18 Todo: Support duplicate fbt tags",
+      ],
+      "disabled.jsx": [],
+      // All at the first.
+      "writes.jsx": Array(3).fill("react-hooks/immutability 5:3-5:4 Error: This value cannot be modified"),
+      "flow-other.jsx": ["react-hooks/refs 4:17-4:28 Error: Cannot access refs during render"],
+      "javascript.jsx": ["react-hooks/memo-dependencies 2:40-2:41 Error: Found extra memoization dependencies"],
+      "long.jsx": [
+        "react-hooks/todo 3:3-15:4 Todo: (BuildHIR::lowerStatement) Handle TryStatement without a catch clause",
+      ],
+      "typescript.tsx": ["react-hooks/memo-dependencies 2:40-2:41 Error: Found extra memoization dependencies"],
+    });
+    expect(files["disabled.jsx"].suppressed.map(it => it.ruleId)).toEqual(["react-hooks/refs"]);
+    expect(files["typescript.tsx"].messages[0].suggestions).toEqual([
+      { desc: "Update dependencies", range: [92, 98], text: "[a]" },
+    ]);
+    expect(files["typescript.tsx"].messages[0].message).toMatchInlineSnapshot(`
         "Error: Found extra memoization dependencies
 
         Extra dependencies can cause a value to update more often than it should, resulting in performance problems such as excessive renders or effects firing too often.
@@ -637,8 +620,8 @@ describe.concurrent(
 
         Inferred dependencies: \`[a]\`"
       `);
-      expect(files["javascript.jsx"].messages[0].suggestions).toEqual([]);
-      expect(files["javascript.jsx"].messages[0].message).toMatchInlineSnapshot(`
+    expect(files["javascript.jsx"].messages[0].suggestions).toEqual([]);
+    expect(files["javascript.jsx"].messages[0].message).toMatchInlineSnapshot(`
         "Error: Found extra memoization dependencies
 
         Extra dependencies can cause a value to update more often than it should, resulting in performance problems such as excessive renders or effects firing too often.
@@ -650,30 +633,29 @@ describe.concurrent(
           4 | }
           5 |"
       `);
-      // The middle of a place of more than ten lines is left out. A diagnostic of the older kind ends in two line breaks.
-      expect(files["long.jsx"].messages[0].message.split("\n")).toEqual([
-        "Todo: (BuildHIR::lowerStatement) Handle TryStatement without a catch clause",
-        "",
-        "   1 | function Component(props) {",
-        "   2 |   let value = 0;",
-        ">  3 |   try {",
-        "     |   ^^^^^",
-        ">  4 |     value += props.a;",
-        "     | ^^^^^^^^^^^^^^^^^^^^^",
-        ">  5 |     value += props.b;",
-        "     …",
-        "     | ^^^^^^^^^^^^^^^^^^^^^",
-        "> 14 |     props.done();",
-        "     | ^^^^^^^^^^^^^^^^^^^^^",
-        "> 15 |   }",
-        "     | ^^^^ (BuildHIR::lowerStatement) Handle TryStatement without a catch clause",
-        "  16 |   return <div>{value}</div>;",
-        "  17 | }",
-        "  18 |",
-        "",
-        "",
-      ]);
-      expect(exitCode).toBe(1);
-    });
-  },
-);
+    // The middle of a place of more than ten lines is left out. A diagnostic of the older kind ends in two line breaks.
+    expect(files["long.jsx"].messages[0].message.split("\n")).toEqual([
+      "Todo: (BuildHIR::lowerStatement) Handle TryStatement without a catch clause",
+      "",
+      "   1 | function Component(props) {",
+      "   2 |   let value = 0;",
+      ">  3 |   try {",
+      "     |   ^^^^^",
+      ">  4 |     value += props.a;",
+      "     | ^^^^^^^^^^^^^^^^^^^^^",
+      ">  5 |     value += props.b;",
+      "     …",
+      "     | ^^^^^^^^^^^^^^^^^^^^^",
+      "> 14 |     props.done();",
+      "     | ^^^^^^^^^^^^^^^^^^^^^",
+      "> 15 |   }",
+      "     | ^^^^ (BuildHIR::lowerStatement) Handle TryStatement without a catch clause",
+      "  16 |   return <div>{value}</div>;",
+      "  17 | }",
+      "  18 |",
+      "",
+      "",
+    ]);
+    expect(exitCode).toBe(1);
+  });
+});

@@ -149,49 +149,57 @@ describe("--max-old-space-size", () => {
     expect({ stdout, stderr, exitCode }).toEqual({ stdout: `${48 * 1024 * 1024}\n`, stderr: "", exitCode: 0 });
   });
 
-  test.serialIf(true)("ends the process like node's fatal out-of-memory error", async () => {
-    await using proc = Bun.spawn({
-      cmd: [
-        bunExe(),
-        "--max-old-space-size=32",
-        "-e",
-        `const keep = []; for (let i = 0; ; i++) keep.push({ i, s: "x" + i });`,
-      ],
-      env: bunEnv,
-      stdout: "pipe",
-      stderr: "pipe",
-      timeout: 25_000,
-    });
-    const [stderr, exitCode] = await Promise.all([proc.stderr.text(), proc.exited]);
-    expect(stderr).toContain("FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory");
-    expect(exitCode).toBe(134);
-  }, 30_000);
+  test.serialIf(true)(
+    "ends the process like node's fatal out-of-memory error",
+    async () => {
+      await using proc = Bun.spawn({
+        cmd: [
+          bunExe(),
+          "--max-old-space-size=32",
+          "-e",
+          `const keep = []; for (let i = 0; ; i++) keep.push({ i, s: "x" + i });`,
+        ],
+        env: bunEnv,
+        stdout: "pipe",
+        stderr: "pipe",
+        timeout: 25_000,
+      });
+      const [stderr, exitCode] = await Promise.all([proc.stderr.text(), proc.exited]);
+      expect(stderr).toContain("FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory");
+      expect(exitCode).toBe(134);
+    },
+    30_000,
+  );
 
-  test.serialIf(true)("a pending near-heap snapshot cannot defer fatal OOM indefinitely", async () => {
-    using dir = tempDir("v8-near-heap-limit-no-yield", {});
-    await using proc = Bun.spawn({
-      cmd: [
-        bunExe(),
-        "--max-old-space-size=8",
-        "-e",
-        `require("node:v8").setHeapSnapshotNearHeapLimit(1);
+  test.serialIf(true)(
+    "a pending near-heap snapshot cannot defer fatal OOM indefinitely",
+    async () => {
+      using dir = tempDir("v8-near-heap-limit-no-yield", {});
+      await using proc = Bun.spawn({
+        cmd: [
+          bunExe(),
+          "--max-old-space-size=8",
+          "-e",
+          `require("node:v8").setHeapSnapshotNearHeapLimit(1);
          const keep = [];
          for (let i = 0; ; i++) {
            keep.push({ i, s: "x" + i });
            if (i % 10000 === 0) Bun.gc(true);
          }`,
-      ],
-      env: bunEnv,
-      cwd: String(dir),
-      stdout: "pipe",
-      stderr: "pipe",
-      timeout: 20_000,
-    });
-    const [stderr, exitCode] = await Promise.all([proc.stderr.text(), proc.exited]);
-    expect(stderr).toContain("FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory");
-    expect(exitCode).toBe(134);
-    expect((await Array.fromAsync(new Bun.Glob("*.heapsnapshot").scan(String(dir)))).length).toBe(0);
-  }, 30_000);
+        ],
+        env: bunEnv,
+        cwd: String(dir),
+        stdout: "pipe",
+        stderr: "pipe",
+        timeout: 20_000,
+      });
+      const [stderr, exitCode] = await Promise.all([proc.stderr.text(), proc.exited]);
+      expect(stderr).toContain("FATAL ERROR: Reached heap limit Allocation failed - JavaScript heap out of memory");
+      expect(exitCode).toBe(134);
+      expect((await Array.fromAsync(new Bun.Glob("*.heapsnapshot").scan(String(dir)))).length).toBe(0);
+    },
+    30_000,
+  );
 
   test("rejects a value that is not a number of MiB", async () => {
     await using proc = Bun.spawn({

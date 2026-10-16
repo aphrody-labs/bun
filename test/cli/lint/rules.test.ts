@@ -69,21 +69,18 @@ describe.concurrent("rules that can use types but don't need them get them when 
   });
 });
 
-test.concurrent(
-  "without types, consistent-type-imports skips files with decorators, because it can't tell if they emit metadata",
-  async () => {
-    const files = {
-      "bunfig.toml": `[lint.rules]\n"@typescript-eslint/consistent-type-imports" = "error"\n`,
-      "database.ts": "export class Database {}\n",
-      "a.ts": `import { Database } from "./database";\n@Injectable()\nexport class Users {\n  constructor(private database: Database) {}\n}\n`,
-      "b.ts": `import { Database } from "./database";\nexport class Users {\n  constructor(private database: Database) {}\n}\n`,
-    };
-    expect(await lint(files, "@typescript-eslint/consistent", ["a.ts"])).toEqual([]);
-    expect(await lint(files, "@typescript-eslint/consistent", ["b.ts"])).toEqual([
-      "1:1 @typescript-eslint/consistent-type-imports All imports in the declaration are only used as types. Use `import type`.",
-    ]);
-  },
-);
+test.concurrent("without types, consistent-type-imports skips files with decorators, because it can't tell if they emit metadata", async () => {
+  const files = {
+    "bunfig.toml": `[lint.rules]\n"@typescript-eslint/consistent-type-imports" = "error"\n`,
+    "database.ts": "export class Database {}\n",
+    "a.ts": `import { Database } from "./database";\n@Injectable()\nexport class Users {\n  constructor(private database: Database) {}\n}\n`,
+    "b.ts": `import { Database } from "./database";\nexport class Users {\n  constructor(private database: Database) {}\n}\n`,
+  };
+  expect(await lint(files, "@typescript-eslint/consistent", ["a.ts"])).toEqual([]);
+  expect(await lint(files, "@typescript-eslint/consistent", ["b.ts"])).toEqual([
+    "1:1 @typescript-eslint/consistent-type-imports All imports in the declaration are only used as types. Use `import type`.",
+  ]);
+});
 
 test.concurrent("`>` and `}` in JSX text are parse errors, worded like espree's", async () => {
   const config = `export default [{ files: ["*.jsx"], languageOptions: { parserOptions: { ecmaFeatures: { jsx: true } } } }];\n`;
@@ -104,22 +101,19 @@ test.concurrent("`>` and `}` in JSX text are parse errors, worded like espree's"
   expect(exitCode).toBe(1);
 });
 
-test.concurrent(
-  "react/jsx-props-no-spread-multi has a fix without a config file, where it doesn't have to match eslint-plugin-react",
-  async () => {
-    const code = `export const a = props => <button {...props} type="submit" {...props} {...props} />;\n`;
-    using dir = tempDir("bun-lint-rules", {
-      "bunfig.toml": `[lint.rules]\n"react/jsx-props-no-spread-multi" = "error"\n`,
-      "a.jsx": code,
-    });
-    await using proc = spawn({ cmd: [bunExe(), "lint", "--fix", "a.jsx"], env, cwd: String(dir), stderr: "pipe" });
-    const [, , exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
-    expect(await Bun.file(`${dir}/a.jsx`).text()).toBe(
-      `export const a = props => <button  type="submit"  {...props} />;\n`,
-    );
-    expect(exitCode).toBe(0);
-  },
-);
+test.concurrent("react/jsx-props-no-spread-multi has a fix without a config file, where it doesn't have to match eslint-plugin-react", async () => {
+  const code = `export const a = props => <button {...props} type="submit" {...props} {...props} />;\n`;
+  using dir = tempDir("bun-lint-rules", {
+    "bunfig.toml": `[lint.rules]\n"react/jsx-props-no-spread-multi" = "error"\n`,
+    "a.jsx": code,
+  });
+  await using proc = spawn({ cmd: [bunExe(), "lint", "--fix", "a.jsx"], env, cwd: String(dir), stderr: "pipe" });
+  const [, , exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  expect(await Bun.file(`${dir}/a.jsx`).text()).toBe(
+    `export const a = props => <button  type="submit"  {...props} />;\n`,
+  );
+  expect(exitCode).toBe(0);
+});
 
 describe.concurrent("React Compiler rules only match eslint-plugin-react-hooks with an ESLint config", () => {
   const effect = `import { useEffect } from "react";\nexport function Room({ roomId }) {\n  useEffect(() => {\n    connect(roomId);\n  }, []);\n  return <i />;\n}\n`;

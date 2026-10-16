@@ -6,9 +6,7 @@ import { builtinModules, createRequire, isBuiltin } from "node:module";
 test("Chrome and Chromium share their builtin implementation", () => {
   expect(chrome).toBe(chromium);
   for (const key of Object.keys(chromiumExports)) {
-    expect(chromeExports[key as keyof typeof chromeExports]).toBe(
-      chromiumExports[key as keyof typeof chromiumExports],
-    );
+    expect(chromeExports[key as keyof typeof chromeExports]).toBe(chromiumExports[key as keyof typeof chromiumExports]);
   }
   expect(Object.keys(chromeExports).sort()).toEqual(Object.keys(chromiumExports).sort());
 });

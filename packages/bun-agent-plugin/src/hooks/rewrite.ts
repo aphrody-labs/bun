@@ -250,7 +250,7 @@ const QUALITY_TOOLS: Record<string, string> = {
 };
 
 function qualityCommand(value: string): string | undefined {
-  const executable = value.startsWith("@") ? value : value.split(/[\\/]/).at(-1) ?? value;
+  const executable = value.startsWith("@") ? value : (value.split(/[\\/]/).at(-1) ?? value);
   const name = commandName(executable);
   const version = name.lastIndexOf("@");
   return QUALITY_TOOLS[version > 0 ? name.slice(0, version) : name];

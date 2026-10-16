@@ -1,17 +1,7 @@
-import {
-  getBufferOffset,
-  rawTransferSupported as rawTransferSupportedBinding,
-  parseRawSync,
-} from "../bindings.js";
+import { getBufferOffset, rawTransferSupported as rawTransferSupportedBinding, parseRawSync } from "../bindings.js";
 import { debugAssert, debugAssertIsNonNull } from "../utils/asserts.ts";
 import { buffers } from "../plugins/lint.ts";
-import {
-  BLOCK_SIZE,
-  BLOCK_ALIGN,
-  BUFFER_SIZE,
-  DATA_POINTER_POS_32,
-  ACTIVE_SIZE,
-} from "../generated/constants.ts";
+import { BLOCK_SIZE, BLOCK_ALIGN, BUFFER_SIZE, DATA_POINTER_POS_32, ACTIVE_SIZE } from "../generated/constants.ts";
 
 import type { BufferWithArrays } from "../plugins/types.ts";
 import type { ParserOptions as ParseOptions } from "../bindings.js";
@@ -45,8 +35,8 @@ let rawTransferIsSupported: boolean | null = null;
 export function parse(path: string, sourceText: string, options?: ParseOptions) {
   if (!rawTransferSupported()) {
     throw new Error(
-      "`RuleTester` is not supported on 32-bit or big-endian systems, versions of NodeJS prior to v22.0.0, "
-        + "versions of Deno prior to v2.0.0, or other runtimes",
+      "`RuleTester` is not supported on 32-bit or big-endian systems, versions of NodeJS prior to v22.0.0, " +
+        "versions of Deno prior to v2.0.0, or other runtimes",
     );
   }
 
@@ -65,11 +55,7 @@ export function parse(path: string, sourceText: string, options?: ParseOptions) 
   if (maxSourceByteLen > ONE_GIB) throw new Error("Source text is too long");
   const sourceStartPos = ACTIVE_SIZE - maxSourceByteLen;
 
-  const sourceBuffer = new Uint8Array(
-    buffer.buffer,
-    buffer.byteOffset + sourceStartPos,
-    maxSourceByteLen,
-  );
+  const sourceBuffer = new Uint8Array(buffer.buffer, buffer.byteOffset + sourceStartPos, maxSourceByteLen);
   const { read, written: sourceByteLen } = textEncoder.encodeInto(sourceText, sourceBuffer);
   if (read !== sourceText.length) throw new Error("Failed to write source text into buffer");
   debugAssert(sourceByteLen <= maxSourceByteLen);

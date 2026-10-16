@@ -4105,16 +4105,14 @@ it("http2 client keeps parsing a socket chunk whose ArrayBuffer is transferred b
   expect(exitCode).toBe(0);
 });
 
-describe.concurrent(
-  "http2 DATA payload survives its ArrayBuffer being detached/resized by transport JS mid-send",
-  () => {
-    // When the transport under an Http2Session is user JS (a createConnection Duplex, or a
-    // TLSSocket upgraded from a JS Duplex), that JS runs synchronously while the native side is
-    // still sending a stream.write() payload it borrowed from the caller's ArrayBuffer, and can
-    // transfer() or resize(0) that buffer. Whatever then reaches the peer must still be the
-    // caller's bytes, not recycled heap, and nothing may crash. Each case runs in a subprocess
-    // so a crash surfaces as a failed assertion; the oracle is the DATA bytes on the wire.
-    const prelude = /* js */ `
+describe.concurrent("http2 DATA payload survives its ArrayBuffer being detached/resized by transport JS mid-send", () => {
+  // When the transport under an Http2Session is user JS (a createConnection Duplex, or a
+  // TLSSocket upgraded from a JS Duplex), that JS runs synchronously while the native side is
+  // still sending a stream.write() payload it borrowed from the caller's ArrayBuffer, and can
+  // transfer() or resize(0) that buffer. Whatever then reaches the peer must still be the
+  // caller's bytes, not recycled heap, and nothing may crash. Each case runs in a subprocess
+  // so a crash surfaces as a failed assertion; the oracle is the DATA bytes on the wire.
+  const prelude = /* js */ `
     const http2 = require("node:http2");
     const { Duplex } = require("node:stream");
     const die = where => e => { console.error(where, e); process.exit(1); };
@@ -4196,23 +4194,23 @@ describe.concurrent(
     }
   `;
 
-    async function run(body, env = bunEnv) {
-      await using proc = Bun.spawn({
-        cmd: [bunExe(), "-e", prelude + body],
-        env,
-        stdout: "pipe",
-        stderr: "pipe",
-      });
-      const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
-      expect(stderr).toBe("");
-      expect(exitCode).toBe(0);
-      return JSON.parse(stdout.trim());
-    }
+  async function run(body, env = bunEnv) {
+    await using proc = Bun.spawn({
+      cmd: [bunExe(), "-e", prelude + body],
+      env,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    expect(stderr).toBe("");
+    expect(exitCode).toBe(0);
+    return JSON.parse(stdout.trim());
+  }
 
-    // A single-frame write (<= 16374 bytes) corked behind HEADERS straddles the 16 KiB cork;
-    // the mid-write cork flush is what runs the Duplex.
-    it.each(["transfer", "resize0"])("single DATA frame straddling the cork flush (%s)", async mode => {
-      const result = await run(/* js */ `
+  // A single-frame write (<= 16374 bytes) corked behind HEADERS straddles the 16 KiB cork;
+  // the mid-write cork flush is what runs the Duplex.
+  it.each(["transfer", "resize0"])("single DATA frame straddling the cork flush (%s)", async mode => {
+    const result = await run(/* js */ `
       const holder = { src: payload(16374, ${mode === "resize0"}) };
       const snap = Buffer.from(holder.src);
       let armed = false, fired = 0;
@@ -4229,15 +4227,15 @@ describe.concurrent(
       console.log(JSON.stringify({ fired: fired > 0, foreign: foreign(duplex.data(), snap) }));
       process.exit(0);
     `);
-      expect(result).toEqual({ fired: true, foreign: 0 });
-    });
+    expect(result).toEqual({ fired: true, foreign: 0 });
+  });
 
-    // HEADERS sized so the cork sits within 8 bytes of full: the 9-byte DATA frame header is
-    // what straddles, so the Duplex runs before the payload itself is written at all. The
-    // header value uses a character HPACK will not huffman-encode, so the block length tracks
-    // N byte for byte; the sweep keeps the case on target if the fixed overhead ever shifts.
-    it("DATA frame header straddling the cork flush", async () => {
-      const result = await run(/* js */ `
+  // HEADERS sized so the cork sits within 8 bytes of full: the 9-byte DATA frame header is
+  // what straddles, so the Duplex runs before the payload itself is written at all. The
+  // header value uses a character HPACK will not huffman-encode, so the block length tracks
+  // N byte for byte; the sweep keeps the case on target if the fixed overhead ever shifts.
+  it("DATA frame header straddling the cork flush", async () => {
+    const result = await run(/* js */ `
       const results = [];
       for (let n = 16344; n <= 16352; n++) {
         const holder = { src: payload(8000, false) };
@@ -4263,13 +4261,13 @@ describe.concurrent(
       }));
       process.exit(0);
     `);
-      expect(result).toEqual({ hitWindow: true, allFired: true, foreign: 0 });
-    });
+    expect(result).toEqual({ hitWindow: true, allFired: true, foreign: 0 });
+  });
 
-    // A write larger than the peer's window: the in-window part is batched and flushed (running
-    // the Duplex) and only then is the remainder queued until WINDOW_UPDATE arrives.
-    it("flow-control-limited tail queued after a flush", async () => {
-      const result = await run(/* js */ `
+  // A write larger than the peer's window: the in-window part is batched and flushed (running
+  // the Duplex) and only then is the remainder queued until WINDOW_UPDATE arrives.
+  it("flow-control-limited tail queued after a flush", async () => {
+    const result = await run(/* js */ `
       const SZ = 65535 + 32768;
       const holder = { src: payload(SZ, false) };
       const snap = Buffer.from(holder.src);
@@ -4290,13 +4288,13 @@ describe.concurrent(
       console.log(JSON.stringify({ fired: fired > 0, foreign: foreign(duplex.data(), snap) }));
       process.exit(0);
     `);
-      expect(result).toEqual({ fired: true, foreign: 0 });
-    });
+    expect(result).toEqual({ fired: true, foreign: 0 });
+  });
 
-    // Two sessions share the thread's cork slot. B's write first flushes A's corked HEADERS
-    // through A's Duplex, and it is A's transport JS that detaches B's payload.
-    it("another session's transport JS running on cork handover", async () => {
-      const result = await run(/* js */ `
+  // Two sessions share the thread's cork slot. B's write first flushes A's corked HEADERS
+  // through A's Duplex, and it is A's transport JS that detaches B's payload.
+  it("another session's transport JS running on cork handover", async () => {
+    const result = await run(/* js */ `
       const holder = { src: payload(8000, false) };
       const snap = Buffer.from(holder.src);
       let armed = false, fired = 0;
@@ -4315,16 +4313,16 @@ describe.concurrent(
       console.log(JSON.stringify({ fired: fired > 0, foreign: foreign(duplexB.data(), snap) }));
       process.exit(0);
     `);
-      expect(result).toEqual({ fired: true, foreign: 0 });
-    });
+    expect(result).toEqual({ fired: true, foreign: 0 });
+  });
 
-    // Same handover, but B is a native TCP connection to a local h2c server: B's own writes
-    // never run JS, so the only JS that can touch B's payload mid-send is A's Duplex being
-    // flushed when B takes the cork slot. Oracle: the request body the server receives.
-    it.each(["transfer", "resize0"])(
-      "another session's transport JS running on cork handover, native writer (%s)",
-      async mode => {
-        const result = await run(/* js */ `
+  // Same handover, but B is a native TCP connection to a local h2c server: B's own writes
+  // never run JS, so the only JS that can touch B's payload mid-send is A's Duplex being
+  // flushed when B takes the cork slot. Oracle: the request body the server receives.
+  it.each(["transfer", "resize0"])(
+    "another session's transport JS running on cork handover, native writer (%s)",
+    async mode => {
+      const result = await run(/* js */ `
       const server = http2.createServer();
       server.on("error", die("server error"));
       const streamOpened = Promise.withResolvers();
@@ -4363,16 +4361,16 @@ describe.concurrent(
       console.log(JSON.stringify({ native: !!sessionB.socket._handle, firedDuringWrite, foreign: foreign(got, snap) }));
       process.exit(0);
     `);
-        expect(result).toEqual({ native: true, firedDuringWrite: true, foreign: 0 });
-      },
-    );
+      expect(result).toEqual({ native: true, firedDuringWrite: true, foreign: 0 });
+    },
+  );
 
-    // The session's socket is a native TLSSocket, but one upgraded from a JS Duplex
-    // (tls.connect({ socket })), so every TLS record is written through that Duplex's JS.
-    // Oracle: the request body a real secure server receives.
-    it.each(["straddle", "tail"])("TLSSocket over a JS Duplex against a real server (%s)", async face => {
-      const result = await run(
-        /* js */ `
+  // The session's socket is a native TLSSocket, but one upgraded from a JS Duplex
+  // (tls.connect({ socket })), so every TLS record is written through that Duplex's JS.
+  // Oracle: the request body a real secure server receives.
+  it.each(["straddle", "tail"])("TLSSocket over a JS Duplex against a real server (%s)", async face => {
+    const result = await run(
+      /* js */ `
       const net = require("node:net");
       const tls = require("node:tls");
       const SZ = ${face === "tail" ? 65535 + 32768 : 16374};
@@ -4422,12 +4420,11 @@ describe.concurrent(
       console.log(JSON.stringify({ native: !!socket._handle, fired: fired > 0, foreign: foreign(got, snap) }));
       process.exit(0);
     `,
-        { ...bunEnv, TLS_CERT_JSON: JSON.stringify(TLS_CERT) },
-      );
-      expect(result).toEqual({ native: true, fired: true, foreign: 0 });
-    });
-  },
-);
+      { ...bunEnv, TLS_CERT_JSON: JSON.stringify(TLS_CERT) },
+    );
+    expect(result).toEqual({ native: true, fired: true, foreign: 0 });
+  });
+});
 
 it("http2 server splits an oversized PUSH_PROMISE header block into CONTINUATION frames", async () => {
   // RFC 9113 6.6/6.10: a PUSH_PROMISE whose header block exceeds the peer's max frame size

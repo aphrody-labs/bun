@@ -1160,13 +1160,11 @@ it.concurrent("build.module() of a module whose import() is still loading its de
   });
 });
 
-it.concurrent(
-  "import() after delete require.cache of a module that onResolve redirected a resolved path to",
-  async () => {
-    using dir = tempDir("plugin-onresolve-removed", {
-      "a.mjs": `export const from = "a.mjs";`,
-      "b.mjs": `export const from = "b.mjs, evaluation " + (globalThis.evaluations = (globalThis.evaluations ?? 0) + 1);`,
-      "entry.ts": `
+it.concurrent("import() after delete require.cache of a module that onResolve redirected a resolved path to", async () => {
+  using dir = tempDir("plugin-onresolve-removed", {
+    "a.mjs": `export const from = "a.mjs";`,
+    "b.mjs": `export const from = "b.mjs, evaluation " + (globalThis.evaluations = (globalThis.evaluations ?? 0) + 1);`,
+    "entry.ts": `
       import { join } from "node:path";
       Bun.plugin({
         name: "redirect a path that is already resolved",
@@ -1180,22 +1178,21 @@ it.concurrent(
       console.log("deleted:", delete require.cache[join(import.meta.dir, "b.mjs")]);
       console.log("again:", (await import(a)).from);
     `,
-    });
-    await using proc = Bun.spawn({
-      cmd: [bunExe(), "entry.ts"],
-      cwd: String(dir),
-      env: bunEnv,
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
-    expect({ stdout, stderr, exitCode }).toEqual({
-      stdout: "first: b.mjs, evaluation 1\ndeleted: true\nagain: b.mjs, evaluation 2\n",
-      stderr: "",
-      exitCode: 0,
-    });
-  },
-);
+  });
+  await using proc = Bun.spawn({
+    cmd: [bunExe(), "entry.ts"],
+    cwd: String(dir),
+    env: bunEnv,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  expect({ stdout, stderr, exitCode }).toEqual({
+    stdout: "first: b.mjs, evaluation 1\ndeleted: true\nagain: b.mjs, evaluation 2\n",
+    stderr: "",
+    exitCode: 0,
+  });
+});
 
 // As in the example of onResolve in the documentation, which answers "./public/images/...".
 describe.concurrent("what onResolve answers without a namespace", () => {

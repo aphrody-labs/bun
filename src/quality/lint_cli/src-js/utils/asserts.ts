@@ -119,10 +119,7 @@ export function debugAssertIsFunction(fn: unknown): asserts fn is Function {
  * @param message - Message to include in error if condition is `false`,
  *   or a function which returns the message to include in error if condition is `false` (optional).
  */
-export function debugAssert(
-  condition: boolean,
-  message?: string | (() => string),
-): asserts condition {
+export function debugAssert(condition: boolean, message?: string | (() => string)): asserts condition {
   if (!DEBUG) return;
 
   if (!condition) {

@@ -6,8 +6,10 @@ const {
   read,
   suffix,
   toArrayBuffer,
-}: Pick<typeof import("bun:ffi"), "CString" | "dlopen" | "ptr" | "read" | "suffix" | "toArrayBuffer"> =
-  require("bun:ffi");
+}: Pick<
+  typeof import("bun:ffi"),
+  "CString" | "dlopen" | "ptr" | "read" | "suffix" | "toArrayBuffer"
+> = require("bun:ffi");
 const {
   FFIType,
 }: {
@@ -300,13 +302,7 @@ class Python implements Disposable {
       return new ArrayBuffer(0);
     }
     try {
-      return toArrayBuffer(
-        address,
-        0,
-        Number(length),
-        lease,
-        this.#symbols.bun_py_buffer_deallocator.ptr,
-      );
+      return toArrayBuffer(address, 0, Number(length), lease, this.#symbols.bun_py_buffer_deallocator.ptr);
     } catch (error) {
       this.#symbols.bun_py_buffer_release(lease);
       throw error;

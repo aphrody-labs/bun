@@ -21,5 +21,8 @@ if (revision !== CURL_COMMIT || tagCommit !== CURL_COMMIT)
   throw new Error(`Curl source revision mismatch: ${revision}`);
 if (await git(["-C", source, "status", "--porcelain", "--untracked-files=no"]))
   throw new Error("Curl source has local modifications; preserve them and resolve the source receipt explicitly");
-await Bun.write(resolve(source, ".bun-source.json"), JSON.stringify({ schema: 1, repository: "curl/curl", revision, version: "8.22.0" }, null, 2) + "\n");
+await Bun.write(
+  resolve(source, ".bun-source.json"),
+  JSON.stringify({ schema: 1, repository: "curl/curl", revision, version: "8.22.0" }, null, 2) + "\n",
+);
 console.log(`Curl source verified: ${revision}`);

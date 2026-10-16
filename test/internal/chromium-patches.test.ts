@@ -45,7 +45,14 @@ test("refresh, check, apply and reset round-trip a downstream on its base", () =
   writeFileSync(join(source, "chrome/owned/BUILD.gn"), 'group("owned") {}\n');
   const fork = commit(source, "fork");
 
-  const options = { ...parsePatchArguments(["refresh"]), source, patches, cef: join(String(dir), "cef"), base, to: fork };
+  const options = {
+    ...parsePatchArguments(["refresh"]),
+    source,
+    patches,
+    cef: join(String(dir), "cef"),
+    base,
+    to: fork,
+  };
   expect(refresh(options)).toEqual({ patches: 2, removed: 0, overlay: ["chrome/owned"] });
   expect(readFileSync(join(patches, "base-a.cc.patch"), "utf8")).toContain("+int a = 2;");
   const overlay = readOverlay(patches)!;

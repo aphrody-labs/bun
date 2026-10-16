@@ -68,14 +68,7 @@ export function printImportDeclaration(node: ESTree.ImportDeclaration, state: St
         }
 
         printSpaceBeforeIdentifier(state);
-        writeWithMap(
-          state,
-          specifier.local.name,
-          CAT_IDENT,
-          specifier.start,
-          specifier.end,
-          specifier,
-        );
+        writeWithMap(state, specifier.local.name, CAT_IDENT, specifier.start, specifier.end, specifier);
 
         if (i === length - 1) write(state, " ", CAT_OTHER);
 
@@ -91,13 +84,7 @@ export function printImportDeclaration(node: ESTree.ImportDeclaration, state: St
         }
 
         write(state, "* as ", CAT_OTHER);
-        writeWithMapNamed(
-          state,
-          specifier.local.name,
-          specifier.local.start,
-          specifier.local.end,
-          specifier.local,
-        );
+        writeWithMapNamed(state, specifier.local.name, specifier.local.start, specifier.local.end, specifier.local);
         write(state, " ", CAT_OTHER);
         break;
       default: {
@@ -142,10 +129,7 @@ export function printImportDeclaration(node: ESTree.ImportDeclaration, state: St
  * An empty clause is written where the AST says the source had one, since `with {}`
  * and no clause are different programs.
  */
-function printImportAttributes(
-  attributes: ESTree.ImportAttribute[] | null | undefined,
-  state: State,
-): void {
+function printImportAttributes(attributes: ESTree.ImportAttribute[] | null | undefined, state: State): void {
   if (attributes == null) return;
 
   const { length } = attributes;
@@ -169,13 +153,7 @@ function printImportAttributes(
 
     write(state, ": ", CAT_OTHER);
 
-    printString(
-      state,
-      attribute.value.value,
-      attribute.value.start,
-      attribute.value.end,
-      attribute.value,
-    );
+    printString(state, attribute.value.value, attribute.value.start, attribute.value.end, attribute.value);
   }
 
   write(state, " }", CAT_OTHER);
@@ -271,9 +249,7 @@ export function printExportNamedDeclaration(node: ExportNamedDeclarationNode, st
       }
       const localName = moduleExportName(specifier.local, state);
       const exportedName =
-        specifier.exported.type === "Identifier"
-          ? specifier.exported.name
-          : specifier.exported.value;
+        specifier.exported.type === "Identifier" ? specifier.exported.name : specifier.exported.value;
       if (localName !== exportedName) {
         write(state, " as ", CAT_OTHER);
         moduleExportName(specifier.exported, state);
@@ -325,10 +301,7 @@ export function printExportAllDeclaration(node: ESTree.ExportAllDeclaration, sta
  * The output position is recorded before the value is printed, so that a function or class expression
  * starting there knows to parenthesize itself.
  */
-export function printExportDefaultDeclaration(
-  node: ESTree.ExportDefaultDeclaration,
-  state: State,
-): void {
+export function printExportDefaultDeclaration(node: ESTree.ExportDefaultDeclaration, state: State): void {
   printIndent(state);
 
   writeWithMap(state, "export default ", CAT_OTHER, node.start, node.end, node);

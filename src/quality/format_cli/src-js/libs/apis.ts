@@ -137,10 +137,7 @@ export type FormatEmbeddedCodeParam = {
  *
  * @returns Formatted code snippet
  */
-export async function formatEmbeddedCode({
-  code,
-  options,
-}: FormatEmbeddedCodeParam): Promise<string> {
+export async function formatEmbeddedCode({ code, options }: FormatEmbeddedCodeParam): Promise<string> {
   const prettier = CACHES.prettier ?? (await loadPrettier());
 
   // Enable Tailwind CSS plugin for embedded code (e.g., html`...` in JS) if needed
@@ -166,10 +163,7 @@ export type FormatEmbeddedDocParam = {
  *
  * @returns `Doc` JSON string
  */
-export async function formatEmbeddedDoc({
-  code,
-  options,
-}: FormatEmbeddedDocParam): Promise<string> {
+export async function formatEmbeddedDoc({ code, options }: FormatEmbeddedDocParam): Promise<string> {
   const prettier = CACHES.prettier ?? (await loadPrettier());
 
   // NOTE: Plugins order matters here, same as `formatFile()`
@@ -222,10 +216,7 @@ export async function formatEmbeddedDoc({
  * Option mapping (sortTailwindcss.xxx → tailwindXxx) is also done in Rust side.
  */
 async function setupTailwindPlugin(options: Options): Promise<void> {
-  CACHES.tailwindPlugin ??= await loadCached(
-    "tailwindPlugin",
-    () => import("prettier-plugin-tailwindcss"),
-  );
+  CACHES.tailwindPlugin ??= await loadCached("tailwindPlugin", () => import("prettier-plugin-tailwindcss"));
   options.plugins ??= [];
   options.plugins.push(CACHES.tailwindPlugin as Plugin);
 }
@@ -248,14 +239,8 @@ export interface SortTailwindClassesArgs {
  * @param args - Object containing classes and options (filepath is in options.filepath)
  * @returns Array of sorted class strings (same order/length as input)
  */
-export async function sortTailwindClasses({
-  classes,
-  options,
-}: SortTailwindClassesArgs): Promise<string[]> {
-  CACHES.tailwindSorter ??= await loadCached(
-    "tailwindSorter",
-    () => import("prettier-plugin-tailwindcss/sorter"),
-  );
+export async function sortTailwindClasses({ classes, options }: SortTailwindClassesArgs): Promise<string[]> {
+  CACHES.tailwindSorter ??= await loadCached("tailwindSorter", () => import("prettier-plugin-tailwindcss/sorter"));
   const { createSorter } = CACHES.tailwindSorter;
 
   const sorter = await createSorter({

@@ -291,10 +291,8 @@ describe.skipIf(!isASAN)("VM teardown with commands owed to a RedisClient leaks 
 // then read the freed allocation. Repro: server answers HELLO then stops
 // replying, so the connection/idle-timeout and reconnect timers churn against
 // each other under subscribe/close/connect re-entry.
-test.concurrent(
-  "RedisClient survives connection-timeout + reconnect churn against an under-replying server",
-  async () => {
-    const src = `
+test.concurrent("RedisClient survives connection-timeout + reconnect churn against an under-replying server", async () => {
+  const src = `
     const CRLF = "\\r\\n";
     const blk = s => "$" + s.length + CRLF + s + CRLF;
     const HELLO = "%1" + CRLF + blk("proto") + ":3" + CRLF;
@@ -348,20 +346,19 @@ test.concurrent(
     process.exit(0);
   `;
 
-    await using proc = Bun.spawn({
-      cmd: [bunExe(), "-e", src],
-      env: bunEnv,
-      stdout: "pipe",
-      stderr: "inherit",
-    });
+  await using proc = Bun.spawn({
+    cmd: [bunExe(), "-e", src],
+    env: bunEnv,
+    stdout: "pipe",
+    stderr: "inherit",
+  });
 
-    const [stdout, exitCode] = await Promise.all([proc.stdout.text(), proc.exited]);
+  const [stdout, exitCode] = await Promise.all([proc.stdout.text(), proc.exited]);
 
-    expect(stdout.trim()).toBe("OK");
-    expect(proc.signalCode).toBeNull();
-    expect(exitCode).toBe(0);
-  },
-);
+  expect(stdout.trim()).toBe("OK");
+  expect(proc.signalCode).toBeNull();
+  expect(exitCode).toBe(0);
+});
 
 // Fuzzer found the same over-release reachable from subscribe() when the
 // socket dies mid-call: upsert_receive_handler's exit guard re-enters
@@ -624,11 +621,9 @@ test.concurrent("rejects a RESP simple-string reply whose line terminator never 
   }
 });
 
-test.concurrent(
-  "RedisClient read buffer stays bounded when every socket read ends with a partial reply",
-  async () => {
-    const ROUNDS = isASAN ? 900 : 1200;
-    const src = `
+test.concurrent("RedisClient read buffer stays bounded when every socket read ends with a partial reply", async () => {
+  const ROUNDS = isASAN ? 900 : 1200;
+  const src = `
     const B = 131072;
     const K = 64;
     const WINDOW = 16;
@@ -706,29 +701,27 @@ test.concurrent(
     process.exit(0);
   `;
 
-    await using proc = Bun.spawn({
-      cmd: [bunExe(), "-e", src],
-      env: {
-        ...bunEnv,
-        ASAN_OPTIONS: [bunEnv.ASAN_OPTIONS, "quarantine_size_mb=0"].filter(Boolean).join(":"),
-      },
-      stdout: "pipe",
-      stderr: "inherit",
-    });
+  await using proc = Bun.spawn({
+    cmd: [bunExe(), "-e", src],
+    env: {
+      ...bunEnv,
+      ASAN_OPTIONS: [bunEnv.ASAN_OPTIONS, "quarantine_size_mb=0"].filter(Boolean).join(":"),
+    },
+    stdout: "pipe",
+    stderr: "inherit",
+  });
 
-    const [stdout, exitCode] = await Promise.all([proc.stdout.text(), proc.exited]);
+  const [stdout, exitCode] = await Promise.all([proc.stdout.text(), proc.exited]);
 
-    const { growthMB, trafficMB } = JSON.parse(stdout.trim());
-    expect(trafficMB).toBeGreaterThan(70);
-    // ASAN's allocator keeps freed pages resident, so the child's RSS tracks
-    // peak allocation there rather than retention; the tight ratio is
-    // enforced on non-sanitized lanes.
-    expect(growthMB).toBeLessThan(trafficMB * (isASAN ? 1.5 : 0.85));
-    expect(proc.signalCode).toBeNull();
-    expect(exitCode).toBe(0);
-  },
-  180_000,
-);
+  const { growthMB, trafficMB } = JSON.parse(stdout.trim());
+  expect(trafficMB).toBeGreaterThan(70);
+  // ASAN's allocator keeps freed pages resident, so the child's RSS tracks
+  // peak allocation there rather than retention; the tight ratio is
+  // enforced on non-sanitized lanes.
+  expect(growthMB).toBeLessThan(trafficMB * (isASAN ? 1.5 : 0.85));
+  expect(proc.signalCode).toBeNull();
+  expect(exitCode).toBe(0);
+}, 180_000);
 
 // Buffer-mode replies (`getBuffer` and friends) adopt the RESP parser's
 // payload allocation as the Buffer backing store instead of copying it. The

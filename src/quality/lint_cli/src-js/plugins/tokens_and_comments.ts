@@ -149,8 +149,7 @@ export function initTokensAndCommentsBuffer(): void {
   // Write a sentinel `MERGED_TYPE_TOKEN` entry immediately after the last valid entry.
   // This allows `getCommentsAfter`'s forward walk to terminate without an explicit bounds check
   // against `tokensAndCommentsLen` on every iteration - the sentinel acts as a natural stop.
-  tokensAndCommentsInt32[(tokensAndCommentsLen << MERGED_SIZE32_SHIFT) + MERGED_TYPE_OFFSET32] =
-    MERGED_TYPE_TOKEN;
+  tokensAndCommentsInt32[(tokensAndCommentsLen << MERGED_SIZE32_SHIFT) + MERGED_TYPE_OFFSET32] = MERGED_TYPE_TOKEN;
 
   debugCheckMergedOrder();
 }
@@ -187,13 +186,7 @@ function mergeTokensAndComments(tokensInt32: Int32Array, commentsInt32: Int32Arr
       writeMergedEntry(MERGED_TYPE_TOKEN, mergedPos32, tokenIndex, tokenStart);
       mergedPos32 += MERGED_SIZE32;
       if (++tokenIndex === tokensLen) {
-        fillMergedEntries(
-          MERGED_TYPE_COMMENT,
-          commentsInt32,
-          mergedPos32,
-          commentIndex,
-          commentsLen,
-        );
+        fillMergedEntries(MERGED_TYPE_COMMENT, commentsInt32, mergedPos32, commentIndex, commentsLen);
         return;
       }
       tokenStart = tokensInt32[tokenIndex << MERGED_SIZE32_SHIFT];
@@ -224,9 +217,7 @@ function debugCheckMergedOrder(): void {
   for (let i = 0; i < tokensAndCommentsLen; i++) {
     const start = tokensAndCommentsInt32![i << MERGED_SIZE32_SHIFT];
     if (start <= lastStart) {
-      throw new Error(
-        `Merged tokens/comments not in order: entry ${i} start ${start} <= previous start ${lastStart}`,
-      );
+      throw new Error(`Merged tokens/comments not in order: entry ${i} start ${start} <= previous start ${lastStart}`);
     }
     lastStart = start;
   }
@@ -235,12 +226,7 @@ function debugCheckMergedOrder(): void {
 /**
  * Write a single entry to the merged buffer.
  */
-function writeMergedEntry(
-  type: MergedType,
-  mergedPos32: number,
-  originalIndex: number,
-  start: number,
-): void {
+function writeMergedEntry(type: MergedType, mergedPos32: number, originalIndex: number, start: number): void {
   tokensAndCommentsInt32![mergedPos32] = start;
   tokensAndCommentsInt32![mergedPos32 + MERGED_ORIGINAL_INDEX_OFFSET32] = originalIndex;
   tokensAndCommentsInt32![mergedPos32 + MERGED_TYPE_OFFSET32] = type;

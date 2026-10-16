@@ -70,17 +70,13 @@ function shouldRunInclude(changedFiles, packages, paths) {
 
   // Dependency or toolchain updates can change any crate's behavior
   // (e.g. num-bigint 0.5 changed parser allocation counts) — always run.
-  if (
-    changedFiles.some(
-      (file) => file === "Cargo.lock" || file === "rust-toolchain.toml" || file === "Cargo.toml",
-    )
-  ) {
+  if (changedFiles.some(file => file === "Cargo.lock" || file === "rust-toolchain.toml" || file === "Cargo.toml")) {
     console.error("Cargo.lock or rust-toolchain.toml changed - will run");
     return true;
   }
 
   // If no changed files are in crates/, cargo tree check cannot match — skip it
-  if (!changedFiles.some((file) => file.startsWith("crates/"))) {
+  if (!changedFiles.some(file => file.startsWith("crates/"))) {
     console.error("No files changed in crates/ - will skip");
     return false;
   }
@@ -133,10 +129,10 @@ function shouldRunExclude(changedFiles, excludeCrates, paths) {
     }
   }
 
-  const excludePaths = excludeCrates.map((c) => `crates/${c}/`);
+  const excludePaths = excludeCrates.map(c => `crates/${c}/`);
 
   // Skip only if EVERY changed file is inside an excluded crate directory
-  const allExcluded = changedFiles.every((file) => excludePaths.some((ep) => file.startsWith(ep)));
+  const allExcluded = changedFiles.every(file => excludePaths.some(ep => file.startsWith(ep)));
 
   if (allExcluded) {
     console.error(

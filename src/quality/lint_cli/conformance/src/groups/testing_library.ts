@@ -30,20 +30,20 @@ const group: TestGroup = {
   shouldSkipTest(ruleName: string, test: TestCase, code: string, err: Error): boolean {
     // Test case defines an option as `undefined`. We can't support that as `undefined` is not JSON-serializable.
     if (
-      ruleName === "no-debugging-utils"
-      && code.trim().replace(/\n\s+/g, "\n")
-        === "import { screen } from '@testing-library/dom'\nscreen.logTestingPlaygroundURL()"
-      && err.message.startsWith("Should have no errors but had 1:")
+      ruleName === "no-debugging-utils" &&
+      code.trim().replace(/\n\s+/g, "\n") ===
+        "import { screen } from '@testing-library/dom'\nscreen.logTestingPlaygroundURL()" &&
+      err.message.startsWith("Should have no errors but had 1:")
     ) {
       const { options } = test;
       if (options != null && options.length === 1) {
         const firstOption = options[0];
         if (
-          typeof firstOption === "object"
-          && firstOption !== null
-          && !Array.isArray(firstOption)
-          && Object.hasOwn(firstOption, "utilsToCheckFor")
-          && firstOption.utilsToCheckFor === undefined
+          typeof firstOption === "object" &&
+          firstOption !== null &&
+          !Array.isArray(firstOption) &&
+          Object.hasOwn(firstOption, "utilsToCheckFor") &&
+          firstOption.utilsToCheckFor === undefined
         ) {
           return true;
         }
@@ -89,7 +89,7 @@ function createRuleTesterModule(tsEslintParser: TSEslintParser): { RuleTester: t
       const languageOptions = this.#languageOptions;
 
       tests = {
-        valid: tests.valid.map((test) => {
+        valid: tests.valid.map(test => {
           if (typeof test === "string") test = { code: test };
 
           // Some valid test cases have `errors: []` property, which is illegal. Remove it.
@@ -99,7 +99,7 @@ function createRuleTesterModule(tsEslintParser: TSEslintParser): { RuleTester: t
           // Alter file extension for JSX files
           return patchTestCase(test, languageOptions);
         }),
-        invalid: tests.invalid.map((test) => {
+        invalid: tests.invalid.map(test => {
           // TS-ESlint `RuleTester` accepts `output` as an array of strings,
           // where first string is the output after 1 round of fixes
           const output = test.output as string | string[] | null | undefined;

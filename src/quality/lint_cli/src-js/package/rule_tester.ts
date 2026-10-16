@@ -48,8 +48,7 @@ function defaultDescribe<T, R>(this: T, text: string, method: (this: T) => R): R
 const globalObj = globalThis as { describe?: DescribeFn; it?: ItFn };
 
 // `describe` function. Can be overwritten via `RuleTester.describe` setter.
-let describe: DescribeFn =
-  typeof globalObj.describe === "function" ? globalObj.describe : defaultDescribe;
+let describe: DescribeFn = typeof globalObj.describe === "function" ? globalObj.describe : defaultDescribe;
 
 /**
  * Default `it` function, if `it` doesn't exist as a global.
@@ -73,8 +72,7 @@ function defaultIt<T, R>(this: T, text: string, method: (this: T) => R): R {
 let it: ItFn = typeof globalObj.it === "function" ? globalObj.it : defaultIt;
 
 // `it.only` function. Can be overwritten via `RuleTester.it` or `RuleTester.itOnly` setters.
-let itOnly: ItFn | null =
-  it !== defaultIt && typeof it.only === "function" ? it.only.bind(it) : null;
+let itOnly: ItFn | null = it !== defaultIt && typeof it.only === "function" ? it.only.bind(it) : null;
 
 /**
  * Get `it` function.
@@ -94,8 +92,8 @@ function getIt(only?: boolean): ItFn {
 function getItOnly(): ItFn {
   if (itOnly === null) {
     throw new Error(
-      "To use `only`, use `RuleTester` with a test framework that provides `it.only()` like Mocha, "
-        + "or provide a custom `it.only` function by assigning it to `RuleTester.itOnly`",
+      "To use `only`, use `RuleTester` with a test framework that provides `it.only()` like Mocha, " +
+        "or provide a custom `it.only` function by assigning it to `RuleTester.itOnly`",
     );
   }
   return itOnly;
@@ -189,16 +187,7 @@ type SourceType = "script" | "module" | "commonjs" | "unambiguous";
  *
  * Note: `null` only supported in ESLint compatibility mode.
  */
-type GlobalValue =
-  | boolean
-  | "true"
-  | "writable"
-  | "writeable"
-  | "false"
-  | "readonly"
-  | "readable"
-  | "off"
-  | null;
+type GlobalValue = boolean | "true" | "writable" | "writeable" | "false" | "readonly" | "readable" | "off" | null;
 
 /**
  * Globals object.
@@ -559,12 +548,7 @@ if (CONFORMANCE) {
  * @param seenTestCases - Set of serialized test cases to check for duplicates
  * @throws {AssertionError} If the test case fails
  */
-function runValidTestCase(
-  test: ValidTestCase,
-  plugin: Plugin,
-  config: Config,
-  seenTestCases: Set<string>,
-): void {
+function runValidTestCase(test: ValidTestCase, plugin: Plugin, config: Config, seenTestCases: Set<string>): void {
   try {
     runBeforeHook(test);
     assertValidTestCaseIsWellFormed(test, seenTestCases);
@@ -596,12 +580,7 @@ function assertValidTestCasePasses(test: ValidTestCase, plugin: Plugin, config: 
  * @param seenTestCases - Set of serialized test cases to check for duplicates
  * @throws {AssertionError} If the test case fails
  */
-function runInvalidTestCase(
-  test: InvalidTestCase,
-  plugin: Plugin,
-  config: Config,
-  seenTestCases: Set<string>,
-): void {
+function runInvalidTestCase(test: InvalidTestCase, plugin: Plugin, config: Config, seenTestCases: Set<string>): void {
   const ruleName = Object.keys(plugin.rules)[0];
   try {
     runBeforeHook(test);
@@ -650,8 +629,8 @@ function assertInvalidTestCasePasses(test: InvalidTestCase, plugin: Plugin, conf
         assertMessageMatches(diagnostic.message, error);
         assert(
           diagnostic.suggestions === null,
-          `Error at index ${errorIndex} has suggestions. Please convert the test error into an object `
-            + "and specify `suggestions` property on it to test suggestions",
+          `Error at index ${errorIndex} has suggestions. Please convert the test error into an object ` +
+            "and specify `suggestions` property on it to test suggestions",
         );
       } else {
         // `error` is an error object
@@ -678,8 +657,7 @@ function assertInvalidTestCasePasses(test: InvalidTestCase, plugin: Plugin, conf
 
   // Re-lint and re-fix for additional passes if `recursive` option used
   const { recursive } = test;
-  const extraPassCount =
-    typeof recursive === "number" ? recursive : recursive === true ? RECURSIVE_TRUE_PASSES : 0;
+  const extraPassCount = typeof recursive === "number" ? recursive : recursive === true ? RECURSIVE_TRUE_PASSES : 0;
 
   if (extraPassCount > 0 && fixedCode !== code) {
     for (let pass = 0; pass < extraPassCount; pass++) {
@@ -743,29 +721,16 @@ function assertInvalidTestCaseMessageIsCorrect(
 ): void {
   // Check `message` property
   if (Object.hasOwn(error, "message")) {
-    assert(
-      !Object.hasOwn(error, "messageId"),
-      "Error should not specify both `message` and a `messageId`",
-    );
+    assert(!Object.hasOwn(error, "messageId"), "Error should not specify both `message` and a `messageId`");
     assert(!Object.hasOwn(error, "data"), "Error should not specify both `data` and `message`");
     assertMessageMatches(diagnostic.message, error.message!);
     return;
   }
 
-  assert(
-    Object.hasOwn(error, "messageId"),
-    "Test error must specify either a `messageId` or `message`",
-  );
+  assert(Object.hasOwn(error, "messageId"), "Test error must specify either a `messageId` or `message`");
 
   // Check `messageId` property
-  assertMessageIdIsCorrect(
-    diagnostic.messageId,
-    diagnostic.message,
-    error.messageId!,
-    error.data,
-    messages,
-    "",
-  );
+  assertMessageIdIsCorrect(diagnostic.messageId, diagnostic.message, error.messageId!, error.data, messages, "");
 }
 
 /**
@@ -788,14 +753,11 @@ function assertMessageIdIsCorrect(
   messages: Record<string, string> | null,
   prefix: string,
 ): void {
-  assert(
-    messages !== null,
-    `${prefix}Cannot use 'messageId' if rule under test doesn't define 'meta.messages'`,
-  );
+  assert(messages !== null, `${prefix}Cannot use 'messageId' if rule under test doesn't define 'meta.messages'`);
 
   if (!Object.hasOwn(messages, messageId)) {
     const legalMessageIds = `[${Object.keys(messages)
-      .map((key) => `'${key}'`)
+      .map(key => `'${key}'`)
       .join(", ")}]`;
     assert.fail(`${prefix}Invalid messageId '${messageId}'. Expected one of ${legalMessageIds}.`);
   }
@@ -808,19 +770,15 @@ function assertMessageIdIsCorrect(
 
   // Check if message contains placeholders for which no data was provided
   const ruleMessage = messages[messageId];
-  const unsubstitutedPlaceholders = getUnsubstitutedMessagePlaceholders(
-    reportedMessage,
-    ruleMessage,
-    data,
-  );
+  const unsubstitutedPlaceholders = getUnsubstitutedMessagePlaceholders(reportedMessage, ruleMessage, data);
   if (unsubstitutedPlaceholders.length !== 0) {
     assert.fail(
-      `${prefix}The reported message has `
-        + (unsubstitutedPlaceholders.length > 1
-          ? `unsubstituted placeholders: ${unsubstitutedPlaceholders.map((name) => `'${name}'`).join(", ")}`
-          : `an unsubstituted placeholder '${unsubstitutedPlaceholders[0]}'`)
-        + `. Please provide the missing ${unsubstitutedPlaceholders.length > 1 ? "values" : "value"} `
-        + "via the `data` property.",
+      `${prefix}The reported message has ` +
+        (unsubstitutedPlaceholders.length > 1
+          ? `unsubstituted placeholders: ${unsubstitutedPlaceholders.map(name => `'${name}'`).join(", ")}`
+          : `an unsubstituted placeholder '${unsubstitutedPlaceholders[0]}'`) +
+        `. Please provide the missing ${unsubstitutedPlaceholders.length > 1 ? "values" : "value"} ` +
+        "via the `data` property.",
     );
   }
 
@@ -843,11 +801,7 @@ function assertMessageIdIsCorrect(
  * @param config - Config for this test case
  * @throws {AssertionError} If diagnostic's location does not match expected location
  */
-function assertInvalidTestCaseLocationIsCorrect(
-  diagnostic: Diagnostic,
-  error: Error,
-  test: TestCase,
-) {
+function assertInvalidTestCaseLocationIsCorrect(diagnostic: Diagnostic, error: Error, test: TestCase) {
   interface Location {
     line?: number;
     column?: number;
@@ -878,9 +832,7 @@ function assertInvalidTestCaseLocationIsCorrect(
   //
   // In ESLint compat mode, deal with this incompatibility.
   const canVoidEndLocation =
-    test.eslintCompat === true
-    && diagnostic.endLine === diagnostic.line
-    && diagnostic.endColumn === diagnostic.column;
+    test.eslintCompat === true && diagnostic.endLine === diagnostic.line && diagnostic.endColumn === diagnostic.column;
 
   if (Object.hasOwn(error, "endLine")) {
     if (error.endLine === undefined && canVoidEndLocation) {
@@ -929,8 +881,8 @@ function assertSuggestionsAreCorrect(
   assert.strictEqual(
     actualSuggestions.length,
     expectedSuggestions.length,
-    `Error should have ${expectedSuggestions.length} suggestion${expectedSuggestions.length > 1 ? "s" : ""}. `
-      + `Instead found ${actualSuggestions.length} suggestion${actualSuggestions.length > 1 ? "s" : ""}.`,
+    `Error should have ${expectedSuggestions.length} suggestion${expectedSuggestions.length > 1 ? "s" : ""}. ` +
+      `Instead found ${actualSuggestions.length} suggestion${actualSuggestions.length > 1 ? "s" : ""}.`,
   );
 
   for (let i = 0; i < expectedSuggestions.length; i++) {
@@ -976,14 +928,8 @@ function assertSuggestionMessageIsCorrect(
   prefix: string,
 ): void {
   if (Object.hasOwn(expected, "desc")) {
-    assert(
-      !Object.hasOwn(expected, "messageId"),
-      `${prefix}: Test should not specify both \`desc\` and \`messageId\``,
-    );
-    assert(
-      !Object.hasOwn(expected, "data"),
-      `${prefix}: Test should not specify both \`desc\` and \`data\``,
-    );
+    assert(!Object.hasOwn(expected, "messageId"), `${prefix}: Test should not specify both \`desc\` and \`messageId\``);
+    assert(!Object.hasOwn(expected, "data"), `${prefix}: Test should not specify both \`desc\` and \`data\``);
     assert.strictEqual(
       actual.message,
       expected.desc,
@@ -1056,11 +1002,7 @@ function assertMessageMatches(message: string, matcher: string | RegExp) {
  * @param data - Data from the test case's error object
  * @returns Missing placeholder names
  */
-function getUnsubstitutedMessagePlaceholders(
-  message: string,
-  raw: string,
-  data?: DiagnosticData,
-): string[] {
+function getUnsubstitutedMessagePlaceholders(message: string, raw: string, data?: DiagnosticData): string[] {
   const unsubstituted = getMessagePlaceholders(message);
   if (unsubstituted.length === 0) return [];
 
@@ -1068,7 +1010,7 @@ function getUnsubstitutedMessagePlaceholders(
   // which were not provided in the data matcher or added with a data property
   const known = getMessagePlaceholders(raw);
   const provided = data === undefined ? [] : Object.keys(data);
-  return unsubstituted.filter((name) => known.includes(name) && !provided.includes(name));
+  return unsubstituted.filter(name => known.includes(name) && !provided.includes(name));
 }
 
 /**
@@ -1116,10 +1058,7 @@ function addConfigPropsFrom(config: Config, merged: Config): void {
  * @param config - Config from `RuleTester` instance / shared config
  * @returns Merged config
  */
-function mergeConfigIntoTestCase<T extends ValidTestCase | InvalidTestCase>(
-  test: T,
-  config: Config,
-): T {
+function mergeConfigIntoTestCase<T extends ValidTestCase | InvalidTestCase>(test: T, config: Config): T {
   // `config` has already been cleansed of properties which are exclusive to `TestCase`,
   // so no danger here of `config` having a property called e.g. `errors` which would affect the test case
   const merged = {
@@ -1151,10 +1090,7 @@ function mergeLanguageOptions(
   return {
     ...baseLanguageOptions,
     ...localLanguageOptions,
-    parserOptions: mergeParserOptions(
-      localLanguageOptions.parserOptions,
-      baseLanguageOptions.parserOptions,
-    ),
+    parserOptions: mergeParserOptions(localLanguageOptions.parserOptions, baseLanguageOptions.parserOptions),
     globals: mergeGlobals(localLanguageOptions.globals, baseLanguageOptions.globals),
   };
 }
@@ -1175,10 +1111,7 @@ function mergeParserOptions(
   return {
     ...baseParserOptions,
     ...localParserOptions,
-    ecmaFeatures: mergeEcmaFeatures(
-      localParserOptions.ecmaFeatures,
-      baseParserOptions.ecmaFeatures,
-    ),
+    ecmaFeatures: mergeEcmaFeatures(localParserOptions.ecmaFeatures, baseParserOptions.ecmaFeatures),
   };
 }
 
@@ -1203,10 +1136,7 @@ function mergeEcmaFeatures(
  * @param baseGlobals - Globals from base config
  * @returns Merged globals
  */
-function mergeGlobals(
-  localGlobals?: Globals | null,
-  baseGlobals?: Globals | null,
-): Globals | undefined {
+function mergeGlobals(localGlobals?: Globals | null, baseGlobals?: Globals | null): Globals | undefined {
   if (localGlobals == null) return baseGlobals ?? undefined;
   if (baseGlobals == null) return localGlobals;
   return { ...baseGlobals, ...localGlobals };
@@ -1271,7 +1201,7 @@ function lint(test: TestCase, plugin: Plugin): Diagnostic[] {
     // Return diagnostics
     const ruleId = `${plugin.meta!.name!}/${Object.keys(plugin.rules)[0]}`;
 
-    return diagnostics.map((diagnostic) => {
+    return diagnostics.map(diagnostic => {
       let line, column, endLine, endColumn;
 
       // Convert start/end offsets to line/column.
@@ -1337,8 +1267,8 @@ function getParseOptions(test: TestCase): ParseOptions {
     // `unambiguous` is disallowed in ESLint compatibility mode
     if (test.eslintCompat === true && sourceType === "unambiguous") {
       throw new Error(
-        "'unambiguous' source type is not supported in ESLint compatibility mode.\n"
-          + "Disable ESLint compatibility mode by setting `eslintCompat` to `false` in the config / test case.",
+        "'unambiguous' source type is not supported in ESLint compatibility mode.\n" +
+          "Disable ESLint compatibility mode by setting `eslintCompat` to `false` in the config / test case.",
       );
     }
 
@@ -1416,9 +1346,7 @@ function getGlobalsJson(test: TestCase): string {
         }
 
       default:
-        throw new Error(
-          `'${value}' is not a valid configuration for a global (use 'readonly', 'writable', or 'off')`,
-        );
+        throw new Error(`'${value}' is not a valid configuration for a global (use 'readonly', 'writable', or 'off')`);
     }
 
     globals[key] = value;
@@ -1488,9 +1416,7 @@ function setupOptions(test: TestCase, cwd: string): number {
       workspaceUri: null,
     });
   } catch (err) {
-    throw new Error(
-      `Failed to serialize options: ${err as (typeof globalThis)["Error"]["prototype"]}`,
-    );
+    throw new Error(`Failed to serialize options: ${err as (typeof globalThis)["Error"]["prototype"]}`);
   }
   setOptions(allOptionsJson);
 
@@ -1530,8 +1456,7 @@ function setEcmaVersionAndFeatures(test: TestCase) {
   const ecmaFeatures = languageOptions?.parserOptions?.ecmaFeatures;
   ecmaFeaturesOverride.globalReturn = ecmaFeatures?.globalReturn ?? null;
   // Strict mode does not exist in ES3
-  ecmaFeaturesOverride.impliedStrict =
-    ecmaVersion === 3 ? false : (ecmaFeatures?.impliedStrict ?? null);
+  ecmaFeaturesOverride.impliedStrict = ecmaVersion === 3 ? false : (ecmaFeatures?.impliedStrict ?? null);
 }
 
 // Regex to match other control characters (except tab, newline, carriage return)
@@ -1549,10 +1474,7 @@ function getTestName(test: TestCase): string {
 
   if (typeof name !== "string") return "";
 
-  return name.replace(
-    CONTROL_CHAR_REGEX,
-    (c) => `\\u${c.codePointAt(0)!.toString(16).padStart(4, "0")}`,
-  );
+  return name.replace(CONTROL_CHAR_REGEX, c => `\\u${c.codePointAt(0)!.toString(16).padStart(4, "0")}`);
 }
 
 /**
@@ -1585,16 +1507,8 @@ function runAfterHook(test: TestCase): void {
  * @throws {Error} - If the property is not a function
  * @throws {*} - Value thrown by the hook function
  */
-function runHook<T extends TestCase>(
-  test: T,
-  hook: ((this: T) => void) | undefined,
-  name: string,
-): void {
-  assert.strictEqual(
-    typeof hook,
-    "function",
-    `Optional test case property \`${name}\` must be a function`,
-  );
+function runHook<T extends TestCase>(test: T, hook: ((this: T) => void) | undefined, name: string): void {
+  assert.strictEqual(typeof hook, "function", `Optional test case property \`${name}\` must be a function`);
   hook!.call(test);
 }
 
@@ -1611,14 +1525,8 @@ function assertValidTestCaseIsWellFormed(test: ValidTestCase, seenTestCases: Set
   assertTestCaseCommonPropertiesAreWellFormed(test);
 
   // Must not have properties of invalid test cases
-  assert(
-    !("errors" in test) || test.errors === undefined,
-    "Valid test case must not have `errors` property",
-  );
-  assert(
-    !("output" in test) || test.output === undefined,
-    "Valid test case must not have `output` property",
-  );
+  assert(!("errors" in test) || test.errors === undefined, "Valid test case must not have `errors` property");
+  assert(!("output" in test) || test.output === undefined, "Valid test case must not have `output` property");
 
   assertNotDuplicateTestCase(test, seenTestCases);
 }
@@ -1633,11 +1541,7 @@ function assertValidTestCaseIsWellFormed(test: ValidTestCase, seenTestCases: Set
  * @param ruleName - Name of the rule being tested
  * @throws {AssertionError} If the test case is not valid
  */
-function assertInvalidTestCaseIsWellFormed(
-  test: InvalidTestCase,
-  seenTestCases: Set<string>,
-  ruleName: string,
-): void {
+function assertInvalidTestCaseIsWellFormed(test: InvalidTestCase, seenTestCases: Set<string>, ruleName: string): void {
   assertTestCaseCommonPropertiesAreWellFormed(test);
 
   // `errors` must be a number greater than 0, or a non-empty array
@@ -1649,14 +1553,11 @@ function assertInvalidTestCaseIsWellFormed(
     // (e.g. `eslint-plugin-stylistic`'s test cases). Conformance tester sets `errors` to `"__unknown__"`
     // in those cases. So don't error here.
   } else {
-    assert(
-      errors !== undefined,
-      `Did not specify errors for an invalid test of rule \`${ruleName}\``,
-    );
+    assert(errors !== undefined, `Did not specify errors for an invalid test of rule \`${ruleName}\``);
     assert(
       Array.isArray(errors),
-      `Invalid 'errors' property for invalid test of rule \`${ruleName}\`:`
-        + `expected a number or an array but got ${errors === null ? "null" : typeof errors}`,
+      `Invalid 'errors' property for invalid test of rule \`${ruleName}\`:` +
+        `expected a number or an array but got ${errors === null ? "null" : typeof errors}`,
     );
     assert(errors.length !== 0, "Invalid cases must have at least one error");
   }
@@ -1665,8 +1566,8 @@ function assertInvalidTestCaseIsWellFormed(
   if (Object.hasOwn(test, "output")) {
     assert(
       test.output === null || typeof test.output === "string",
-      "Test property `output`, if specified, must be a string or null. "
-        + "If no autofix is expected, then omit the `output` property or set it to null.",
+      "Test property `output`, if specified, must be a string or null. " +
+        "If no autofix is expected, then omit the `output` property or set it to null.",
     );
   }
 
@@ -1689,10 +1590,7 @@ function assertTestCaseCommonPropertiesAreWellFormed(test: TestCase): void {
     assert(typeof test.only === "boolean", "Optional test case property `only` must be a boolean");
   }
   if (Object.hasOwn(test, "filename")) {
-    assert(
-      typeof test.filename === "string",
-      "Optional test case property `filename` must be a string",
-    );
+    assert(typeof test.filename === "string", "Optional test case property `filename` must be a string");
   }
   if (Object.hasOwn(test, "options")) {
     assert(Array.isArray(test.options), "Optional test case property `options` must be an array");
@@ -1764,11 +1662,11 @@ function isSerializable(value: unknown, seenObjects: Set<object> = new Set()): b
  */
 function isSerializablePrimitiveOrPlainObject(value: unknown): boolean {
   return (
-    value === null
-    || typeof value === "string"
-    || typeof value === "boolean"
-    || typeof value === "number"
-    || (typeof value === "object" && (value.constructor === Object || Array.isArray(value)))
+    value === null ||
+    typeof value === "string" ||
+    typeof value === "boolean" ||
+    typeof value === "number" ||
+    (typeof value === "object" && (value.constructor === Object || Array.isArray(value)))
   );
 }
 

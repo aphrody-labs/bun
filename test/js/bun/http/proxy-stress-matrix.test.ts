@@ -229,25 +229,22 @@ const STREAM_MATRIX = cartesian({
 
 describe("streamed response via reader", () => {
   for (const { proxyTls, originTls, framing } of STREAM_MATRIX) {
-    test.concurrent(
-      `${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin ${framing} via getReader()`,
-      async () => {
-        const payload = makeBody(128 * 1024, "S");
-        await using origin = await createAdversarialOrigin({ tls: originTls, body: payload, framing });
-        const proxy = sharedProxy(proxyTls);
+    test.concurrent(`${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin ${framing} via getReader()`, async () => {
+      const payload = makeBody(128 * 1024, "S");
+      await using origin = await createAdversarialOrigin({ tls: originTls, body: payload, framing });
+      const proxy = sharedProxy(proxyTls);
 
-        const res = await fetch(origin.url, { proxy: proxy.url, keepalive: false, tls: laxTls });
-        expect(res.status).toBe(200);
-        const reader = res.body!.getReader();
-        let got = 0;
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          got += value!.length;
-        }
-        expect(got).toBe(payload.length);
-      },
-    );
+      const res = await fetch(origin.url, { proxy: proxy.url, keepalive: false, tls: laxTls });
+      expect(res.status).toBe(200);
+      const reader = res.body!.getReader();
+      let got = 0;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        got += value!.length;
+      }
+      expect(got).toBe(payload.length);
+    });
   }
 });
 
@@ -329,32 +326,29 @@ describe("CONNECT reply with ignored headers", () => {
 
 describe("hop-by-hop headers", () => {
   for (const originTls of [false, true] as const) {
-    test.concurrent(
-      `Proxy-Authorization and Proxy-Connection do not reach ${originTls ? "https" : "http"} origin`,
-      async () => {
-        await using origin = await createAdversarialOrigin({ tls: originTls, body: "ok" });
-        await using proxy = await createAdversarialProxy({ auth: { user: "u", pass: "p" } });
+    test.concurrent(`Proxy-Authorization and Proxy-Connection do not reach ${originTls ? "https" : "http"} origin`, async () => {
+      await using origin = await createAdversarialOrigin({ tls: originTls, body: "ok" });
+      await using proxy = await createAdversarialProxy({ auth: { user: "u", pass: "p" } });
 
-        const res = await fetch(origin.url, {
-          proxy: `http://u:p@127.0.0.1:${proxy.port}`,
-          keepalive: false,
-          tls: laxTls,
-          headers: { "X-Reaches-Origin": "yes" },
-        });
-        expect(await res.text()).toBe("ok");
-        expect(res.status).toBe(200);
+      const res = await fetch(origin.url, {
+        proxy: `http://u:p@127.0.0.1:${proxy.port}`,
+        keepalive: false,
+        tls: laxTls,
+        headers: { "X-Reaches-Origin": "yes" },
+      });
+      expect(await res.text()).toBe("ok");
+      expect(res.status).toBe(200);
 
-        // Proxy saw the auth header.
-        expect(proxy.connections[0].headers["proxy-authorization"]).toStartWith("Basic ");
+      // Proxy saw the auth header.
+      expect(proxy.connections[0].headers["proxy-authorization"]).toStartWith("Basic ");
 
-        // Origin did not.
-        const originHeaders = origin.requests[0].headers;
-        expect(originHeaders["proxy-authorization"]).toBeUndefined();
-        expect(originHeaders["proxy-connection"]).toBeUndefined();
-        // But the user header passed through.
-        expect(originHeaders["x-reaches-origin"]).toBe("yes");
-      },
-    );
+      // Origin did not.
+      const originHeaders = origin.requests[0].headers;
+      expect(originHeaders["proxy-authorization"]).toBeUndefined();
+      expect(originHeaders["proxy-connection"]).toBeUndefined();
+      // But the user header passed through.
+      expect(originHeaders["x-reaches-origin"]).toBe("yes");
+    });
   }
 });
 
@@ -366,27 +360,24 @@ describe("method matrix", () => {
   const METHODS = ["HEAD", "DELETE", "PUT", "PATCH", "OPTIONS"] as const;
   for (const { proxyTls, originTls } of cartesian({ proxyTls: [false, true], originTls: [false, true] } as const)) {
     for (const method of METHODS) {
-      test.concurrent(
-        `${method} via ${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin`,
-        async () => {
-          await using origin = await createAdversarialOrigin({ tls: originTls, body: "m" });
-          const proxy = sharedProxy(proxyTls);
+      test.concurrent(`${method} via ${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin`, async () => {
+        await using origin = await createAdversarialOrigin({ tls: originTls, body: "m" });
+        const proxy = sharedProxy(proxyTls);
 
-          const res = await fetch(origin.url, {
-            method,
-            body: method === "PUT" || method === "PATCH" ? "body" : undefined,
-            proxy: proxy.url,
-            keepalive: false,
-            tls: laxTls,
-          });
-          expect(res.status).toBe(200);
-          // HEAD has no body.
-          if (method !== "HEAD") {
-            expect(await res.text()).toBe("m");
-          }
-          expect(origin.requests[0].method).toBe(method);
-        },
-      );
+        const res = await fetch(origin.url, {
+          method,
+          body: method === "PUT" || method === "PATCH" ? "body" : undefined,
+          proxy: proxy.url,
+          keepalive: false,
+          tls: laxTls,
+        });
+        expect(res.status).toBe(200);
+        // HEAD has no body.
+        if (method !== "HEAD") {
+          expect(await res.text()).toBe("m");
+        }
+        expect(origin.requests[0].method).toBe(method);
+      });
     }
   }
 });

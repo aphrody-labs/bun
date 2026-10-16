@@ -103,8 +103,7 @@ export function getTokens<Options extends CountOptions | number | FilterFn | nul
 
   // Number of following tokens to additionally return
   afterCount =
-    (typeof countOptions === "number" || typeof countOptions === "undefined")
-    && typeof afterCount === "number"
+    (typeof countOptions === "number" || typeof countOptions === "undefined") && typeof afterCount === "number"
       ? afterCount
       : 0;
 
@@ -308,11 +307,7 @@ export function getFirstTokens<Options extends CountOptions | number | FilterFn 
     if (typeof count !== "number") {
       return collectEntries(sliceStart, sliceEnd, includeComments) as Result;
     }
-    return collectEntries(
-      sliceStart,
-      Math.min(sliceStart + count, sliceEnd),
-      includeComments,
-    ) as Result;
+    return collectEntries(sliceStart, Math.min(sliceStart + count, sliceEnd), includeComments) as Result;
   }
 
   const firstTokens: TokenOrComment[] = [];
@@ -470,11 +465,7 @@ export function getLastTokens<Options extends CountOptions | number | FilterFn |
     if (typeof count !== "number") {
       return collectEntries(sliceStart, sliceEnd, includeComments) as Result;
     }
-    return collectEntries(
-      Math.max(sliceStart, sliceEnd - count),
-      sliceEnd,
-      includeComments,
-    ) as Result;
+    return collectEntries(Math.max(sliceStart, sliceEnd - count), sliceEnd, includeComments) as Result;
   }
 
   const lastTokens: TokenOrComment[] = [];
@@ -579,10 +570,7 @@ export function getTokenBefore<Options extends SkipOptions | number | FilterFn |
  * @param skip - Number of tokens to skip.
  * @returns `TokenOrComment | null`.
  */
-export function getTokenOrCommentBefore(
-  nodeOrToken: NodeOrToken,
-  skip?: number,
-): TokenOrComment | null {
+export function getTokenOrCommentBefore(nodeOrToken: NodeOrToken, skip?: number): TokenOrComment | null {
   // Equivalent to `return getTokenBefore(nodeOrToken, { includeComments: true, skip });`,
   // but reuse a global object to avoid creating a new object on each call
   INCLUDE_COMMENTS_SKIP_OPTIONS.skip = skip;
@@ -597,9 +585,10 @@ export function getTokenOrCommentBefore(
  *   If is a function, equivalent to `{ filter: fn }`.
  * @returns Array of `Token`s, or array of `Token | Comment`s if `includeComments` is `true`.
  */
-export function getTokensBefore<
-  Options extends CountOptions | number | FilterFn | null | undefined,
->(nodeOrToken: NodeOrToken, countOptions?: Options): TokenResult<Options>[] {
+export function getTokensBefore<Options extends CountOptions | number | FilterFn | null | undefined>(
+  nodeOrToken: NodeOrToken,
+  countOptions?: Options,
+): TokenResult<Options>[] {
   // TypeScript cannot verify conditional return types within the function body,
   // so we use `Result` alias + casts on return statements
   type Result = TokenResult<Options>[];
@@ -747,10 +736,7 @@ export function getTokenAfter<Options extends SkipOptions | number | FilterFn | 
  * @param skip - Number of tokens to skip.
  * @returns `TokenOrComment | null`.
  */
-export function getTokenOrCommentAfter(
-  nodeOrToken: NodeOrToken,
-  skip?: number,
-): TokenOrComment | null {
+export function getTokenOrCommentAfter(nodeOrToken: NodeOrToken, skip?: number): TokenOrComment | null {
   // Equivalent to `return getTokenAfter(nodeOrToken, { includeComments: true, skip });`,
   // but reuse a global object to avoid creating a new object on each call
   INCLUDE_COMMENTS_SKIP_OPTIONS.skip = skip;
@@ -844,15 +830,16 @@ export function getTokensAfter<Options extends CountOptions | number | FilterFn 
  * @param padding - Number of extra tokens on either side of center.
  * @returns Array of `Token`s, or array of `Token | Comment`s if `includeComments` is `true`.
  */
-export function getTokensBetween<
-  Options extends CountOptions | number | FilterFn | null | undefined,
->(left: NodeOrToken, right: NodeOrToken, countOptions?: Options): TokenResult<Options>[] {
+export function getTokensBetween<Options extends CountOptions | number | FilterFn | null | undefined>(
+  left: NodeOrToken,
+  right: NodeOrToken,
+  countOptions?: Options,
+): TokenResult<Options>[] {
   // TypeScript cannot verify conditional return types within the function body,
   // so we use `Result` alias + casts on return statements
   type Result = TokenResult<Options>[];
 
-  const count =
-    typeof countOptions === "object" && countOptions !== null ? countOptions.count : null;
+  const count = typeof countOptions === "object" && countOptions !== null ? countOptions.count : null;
 
   const padding = typeof countOptions === "number" ? countOptions : 0;
 
@@ -897,11 +884,7 @@ export function getTokensBetween<
     if (typeof count !== "number") {
       return collectEntries(sliceStart, sliceEnd, includeComments) as Result;
     }
-    return collectEntries(
-      sliceStart,
-      Math.min(sliceStart + count, sliceEnd),
-      includeComments,
-    ) as Result;
+    return collectEntries(sliceStart, Math.min(sliceStart + count, sliceEnd), includeComments) as Result;
   }
 
   const tokensBetween: TokenOrComment[] = [];
@@ -928,9 +911,11 @@ export function getTokensBetween<
  *   If is a function, equivalent to `{ filter: fn }`.
  * @returns `Token` (or `Token | Comment` if `includeComments` is `true`), or `null` if none found.
  */
-export function getFirstTokenBetween<
-  Options extends SkipOptions | number | FilterFn | null | undefined,
->(left: NodeOrToken, right: NodeOrToken, skipOptions?: Options): TokenResult<Options> | null {
+export function getFirstTokenBetween<Options extends SkipOptions | number | FilterFn | null | undefined>(
+  left: NodeOrToken,
+  right: NodeOrToken,
+  skipOptions?: Options,
+): TokenResult<Options> | null {
   // TypeScript cannot verify conditional return types within the function body,
   // so we use `Result` alias + casts on return statements
   type Result = TokenResult<Options> | null;
@@ -1010,9 +995,11 @@ export function getFirstTokenBetween<
  *   If is a function, equivalent to `{ filter: fn }`.
  * @returns Array of `Token`s, or array of `Token | Comment`s if `includeComments` is `true`.
  */
-export function getFirstTokensBetween<
-  Options extends CountOptions | number | FilterFn | null | undefined,
->(left: NodeOrToken, right: NodeOrToken, countOptions?: Options): TokenResult<Options>[] {
+export function getFirstTokensBetween<Options extends CountOptions | number | FilterFn | null | undefined>(
+  left: NodeOrToken,
+  right: NodeOrToken,
+  countOptions?: Options,
+): TokenResult<Options>[] {
   // TypeScript cannot verify conditional return types within the function body,
   // so we use `Result` alias + casts on return statements
   type Result = TokenResult<Options>[];
@@ -1061,11 +1048,7 @@ export function getFirstTokensBetween<
     if (typeof count !== "number") {
       return collectEntries(sliceStart, sliceEnd, includeComments) as Result;
     }
-    return collectEntries(
-      sliceStart,
-      Math.min(sliceStart + count, sliceEnd),
-      includeComments,
-    ) as Result;
+    return collectEntries(sliceStart, Math.min(sliceStart + count, sliceEnd), includeComments) as Result;
   }
 
   const firstTokens: TokenOrComment[] = [];
@@ -1092,9 +1075,11 @@ export function getFirstTokensBetween<
  *   If is a function, equivalent to `{ filter: fn }`.
  * @returns `Token` (or `Token | Comment` if `includeComments` is `true`), or `null` if none found.
  */
-export function getLastTokenBetween<
-  Options extends SkipOptions | number | FilterFn | null | undefined,
->(left: NodeOrToken, right: NodeOrToken, skipOptions?: Options): TokenResult<Options> | null {
+export function getLastTokenBetween<Options extends SkipOptions | number | FilterFn | null | undefined>(
+  left: NodeOrToken,
+  right: NodeOrToken,
+  skipOptions?: Options,
+): TokenResult<Options> | null {
   // TypeScript cannot verify conditional return types within the function body,
   // so we use `Result` alias + casts on return statements
   type Result = TokenResult<Options> | null;
@@ -1176,9 +1161,11 @@ export function getLastTokenBetween<
  *   If is a function, equivalent to `{ filter: fn }`.
  * @returns Array of `Token`s, or array of `Token | Comment`s if `includeComments` is `true`.
  */
-export function getLastTokensBetween<
-  Options extends CountOptions | number | FilterFn | null | undefined,
->(left: NodeOrToken, right: NodeOrToken, countOptions?: Options): TokenResult<Options>[] {
+export function getLastTokensBetween<Options extends CountOptions | number | FilterFn | null | undefined>(
+  left: NodeOrToken,
+  right: NodeOrToken,
+  countOptions?: Options,
+): TokenResult<Options>[] {
   // TypeScript cannot verify conditional return types within the function body,
   // so we use `Result` alias + casts on return statements
   type Result = TokenResult<Options>[];
@@ -1228,11 +1215,7 @@ export function getLastTokensBetween<
     if (typeof count !== "number") {
       return collectEntries(sliceStart, sliceEnd, includeComments) as Result;
     }
-    return collectEntries(
-      Math.max(sliceStart, sliceEnd - count),
-      sliceEnd,
-      includeComments,
-    ) as Result;
+    return collectEntries(Math.max(sliceStart, sliceEnd - count), sliceEnd, includeComments) as Result;
   }
 
   const tokensBetween: TokenOrComment[] = [];
@@ -1266,10 +1249,10 @@ export function getTokenByRangeStart<Options extends RangeOptions | null | undef
   type Result = TokenResult<Options> | null;
 
   const includeComments =
-    typeof rangeOptions === "object"
-    && rangeOptions !== null
-    && "includeComments" in rangeOptions
-    && !!rangeOptions.includeComments;
+    typeof rangeOptions === "object" &&
+    rangeOptions !== null &&
+    "includeComments" in rangeOptions &&
+    !!rangeOptions.includeComments;
 
   let int32: Int32Array, len: number;
   if (includeComments === false) {
@@ -1421,10 +1404,8 @@ export function isSpaceBetweenTokens(first: NodeOrToken, second: NodeOrToken): b
     // Deserialize to check type/value for JSXText whitespace detection
     const token = getTokenOrComment(index);
     if (
-      tokenStart !== lastTokenEnd
-      || (tokenStart < rangeEnd
-        && token.type === "JSXText"
-        && JSX_WHITESPACE_REGEXP.test(token.value))
+      tokenStart !== lastTokenEnd ||
+      (tokenStart < rangeEnd && token.type === "JSXText" && JSX_WHITESPACE_REGEXP.test(token.value))
     ) {
       return true;
     }
@@ -1440,15 +1421,8 @@ export function isSpaceBetweenTokens(first: NodeOrToken, second: NodeOrToken): b
  * @param options - Options object, number, function, or nullish
  * @returns `true` if `options` has `includeComments: true`
  */
-function getIncludeComments(
-  options: SkipOptions | CountOptions | number | FilterFn | null | undefined,
-): boolean {
-  return (
-    typeof options === "object"
-    && options !== null
-    && "includeComments" in options
-    && !!options.includeComments
-  );
+function getIncludeComments(options: SkipOptions | CountOptions | number | FilterFn | null | undefined): boolean {
+  return typeof options === "object" && options !== null && "includeComments" in options && !!options.includeComments;
 }
 
 /**
@@ -1498,11 +1472,7 @@ function entryEnd(index: number, includeComments: boolean): number {
  * @param includeComments - Whether to use the merged tokens-and-comments buffer
  * @returns Array of tokens (and optionally comments)
  */
-function collectEntries(
-  startIndex: number,
-  endIndex: number,
-  includeComments: boolean,
-): TokenOrComment[] {
+function collectEntries(startIndex: number, endIndex: number, includeComments: boolean): TokenOrComment[] {
   if (includeComments === false) {
     // Batch-deserialize tokens in range, then slice from `cachedTokens` array
     for (let i = startIndex; i < endIndex; i++) {
@@ -1542,12 +1512,7 @@ function collectEntries(
  * @param length - Total number of entries in the buffer
  * @returns Index of first entry with `start >= offset`
  */
-export function firstTokenAtOrAfter(
-  int32: Int32Array,
-  offset: number,
-  startIndex: number,
-  length: number,
-): number {
+export function firstTokenAtOrAfter(int32: Int32Array, offset: number, startIndex: number, length: number): number {
   for (let endIndex = length; startIndex < endIndex;) {
     const mid = (startIndex + endIndex) >> 1;
     if (int32[mid << 2] < offset) {

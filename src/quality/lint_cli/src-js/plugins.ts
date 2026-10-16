@@ -39,12 +39,7 @@ export type {
   StringToken,
   TemplateToken,
 } from "./plugins/tokens.ts";
-export type {
-  CountOptions,
-  FilterFn,
-  RangeOptions,
-  SkipOptions,
-} from "./plugins/tokens_methods.ts";
+export type { CountOptions, FilterFn, RangeOptions, SkipOptions } from "./plugins/tokens_methods.ts";
 export type {
   RuleMeta,
   RuleDocs,

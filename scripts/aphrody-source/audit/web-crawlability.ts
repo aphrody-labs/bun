@@ -41,9 +41,7 @@ export async function parseHtml(html: string): Promise<HtmlNode> {
       element(el) {
         const node: HtmlNode = {
           tag: el.tagName.toLowerCase(),
-          attrs: Object.fromEntries(
-            [...el.attributes].map(([name, value]) => [name.toLowerCase(), value]),
-          ),
+          attrs: Object.fromEntries([...el.attributes].map(([name, value]) => [name.toLowerCase(), value])),
           children: [],
           parent: current,
         };
@@ -80,12 +78,8 @@ export function decodeEntities(text: string): string {
   return text.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (whole, body: string) => {
     if (body[0] === "#") {
       const code =
-        body[1] === "x" || body[1] === "X"
-          ? Number.parseInt(body.slice(2), 16)
-          : Number.parseInt(body.slice(1), 10);
-      return Number.isFinite(code) && code > 0 && code <= 0x10ffff
-        ? String.fromCodePoint(code)
-        : whole;
+        body[1] === "x" || body[1] === "X" ? Number.parseInt(body.slice(2), 16) : Number.parseInt(body.slice(1), 10);
+      return Number.isFinite(code) && code > 0 && code <= 0x10ffff ? String.fromCodePoint(code) : whole;
     }
     return ENTITIES[body.toLowerCase()] ?? whole;
   });
@@ -155,10 +149,7 @@ export function visibleText(node: HtmlNode): string {
   const visit = (parent: HtmlNode) => {
     for (const child of parent.children) {
       if (typeof child === "string") parts.push(decodeEntities(child));
-      else if (
-        !hiddenSelf(child) &&
-        !(parent.tag === "svg" && (child.tag === "title" || child.tag === "desc"))
-      ) {
+      else if (!hiddenSelf(child) && !(parent.tag === "svg" && (child.tag === "title" || child.tag === "desc"))) {
         parts.push(" ");
         visit(child);
         parts.push(" ");
@@ -171,9 +162,7 @@ export function visibleText(node: HtmlNode): string {
 
 /** Raw text of a subtree regardless of visibility (title, script payloads). */
 export function rawText(node: HtmlNode): string {
-  return node.children
-    .map((child) => (typeof child === "string" ? child : rawText(child)))
-    .join("");
+  return node.children.map(child => (typeof child === "string" ? child : rawText(child))).join("");
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -317,9 +306,9 @@ export function accessibleName(node: HtmlNode, index: DocIndex): string {
   if (labelledBy) {
     const text = labelledBy
       .split(/\s+/)
-      .map((id) => index.byId.get(id))
+      .map(id => index.byId.get(id))
       .filter((target): target is HtmlNode => target !== undefined)
-      .map((target) => contentName(target) || decodeEntities(rawText(target)).trim())
+      .map(target => contentName(target) || decodeEntities(rawText(target)).trim())
       .join(" ")
       .trim();
     if (text) return text;
@@ -329,17 +318,14 @@ export function accessibleName(node: HtmlNode, index: DocIndex): string {
 
   const type = node.attrs.type?.toLowerCase() ?? "text";
   if (node.tag === "img") return node.attrs.alt?.trim() ?? "";
-  if (node.tag === "input" && type === "image")
-    return node.attrs.alt?.trim() || node.attrs.value?.trim() || "";
+  if (node.tag === "input" && type === "image") return node.attrs.alt?.trim() || node.attrs.value?.trim() || "";
   if (node.tag === "input" && BUTTON_INPUTS.has(type))
-    return (
-      node.attrs.value?.trim() || (type === "submit" ? "Submit" : type === "reset" ? "Reset" : "")
-    );
+    return node.attrs.value?.trim() || (type === "submit" ? "Submit" : type === "reset" ? "Reset" : "");
   if (["input", "select", "textarea", "progress", "meter", "output", "button"].includes(node.tag)) {
     const labels = [...(node.attrs.id ? (index.labelsFor.get(node.attrs.id) ?? []) : [])];
     for (const ancestor of ancestors(node)) if (ancestor.tag === "label") labels.push(ancestor);
     const text = labels
-      .map((target) => contentName(target))
+      .map(target => contentName(target))
       .join(" ")
       .trim();
     if (text) return text;
@@ -384,9 +370,7 @@ export function landmarkOf(node: HtmlNode, index: DocIndex): LandmarkName | unde
   const named = () => accessibleName(node, index) !== "";
   if (explicit) {
     if (explicit === "region" || explicit === "form") return named() ? explicit : undefined;
-    return (LANDMARKS as readonly string[]).includes(explicit)
-      ? (explicit as LandmarkName)
-      : undefined;
+    return (LANDMARKS as readonly string[]).includes(explicit) ? (explicit as LandmarkName) : undefined;
   }
   switch (node.tag) {
     case "main":
@@ -398,9 +382,9 @@ export function landmarkOf(node: HtmlNode, index: DocIndex): LandmarkName | unde
     case "search":
       return "search";
     case "header":
-      return ancestors(node).some((a) => SECTIONING.has(a.tag)) ? undefined : "banner";
+      return ancestors(node).some(a => SECTIONING.has(a.tag)) ? undefined : "banner";
     case "footer":
-      return ancestors(node).some((a) => SECTIONING.has(a.tag)) ? undefined : "contentinfo";
+      return ancestors(node).some(a => SECTIONING.has(a.tag)) ? undefined : "contentinfo";
     case "section":
       return named() ? "region" : undefined;
     case "form":
@@ -455,12 +439,7 @@ const SVG_MATH_RESERVED = new Set([
   "missing-glyph",
 ]);
 /** Decorative infrastructure elements whose content lives in the shadow tree by design. */
-const DECORATIVE_CUSTOM_ELEMENTS = new Set([
-  "md-ripple",
-  "md-focus-ring",
-  "md-elevation",
-  "md-divider",
-]);
+const DECORATIVE_CUSTOM_ELEMENTS = new Set(["md-ripple", "md-focus-ring", "md-elevation", "md-divider"]);
 const ID_REF_ATTRS = [
   "aria-labelledby",
   "aria-describedby",
@@ -492,49 +471,38 @@ function resolveHref(href: string, base: string): URL | undefined {
 export function analyzeDocument(root: HtmlNode, pageUrl = "http://page.invalid/"): HtmlMetrics {
   const all = descendants(root);
   const index = indexDocument(root);
-  const html = all.find((node) => node.tag === "html");
-  const head = all.find((node) => node.tag === "head");
-  const body = all.find((node) => node.tag === "body") ?? root;
+  const html = all.find(node => node.tag === "html");
+  const head = all.find(node => node.tag === "head");
+  const body = all.find(node => node.tag === "body") ?? root;
   const bodyElements = descendants(body);
-  const visible = bodyElements.filter((node) => !isHidden(node));
+  const visible = bodyElements.filter(node => !isHidden(node));
   const origin = new URL(pageUrl).origin;
 
   // Head metadata.
-  const headElements = head
-    ? descendants(head)
-    : all.filter((node) => ["title", "meta", "link"].includes(node.tag));
-  const titleNode = headElements.find((node) => node.tag === "title");
+  const headElements = head ? descendants(head) : all.filter(node => ["title", "meta", "link"].includes(node.tag));
+  const titleNode = headElements.find(node => node.tag === "title");
   const title = titleNode ? decodeEntities(rawText(titleNode)).trim() : "";
   const meta = (name: string) =>
-    headElements
-      .find((node) => node.tag === "meta" && node.attrs.name?.toLowerCase() === name)
-      ?.attrs.content?.trim();
+    headElements.find(node => node.tag === "meta" && node.attrs.name?.toLowerCase() === name)?.attrs.content?.trim();
   const canonicalNode = headElements.find(
-    (node) =>
-      node.tag === "link" && node.attrs.rel?.toLowerCase().split(/\s+/).includes("canonical"),
+    node => node.tag === "link" && node.attrs.rel?.toLowerCase().split(/\s+/).includes("canonical"),
   );
 
   // Landmarks.
-  const landmarks = Object.fromEntries(LANDMARKS.map((name) => [name, 0])) as Record<
-    LandmarkName,
-    number
-  >;
+  const landmarks = Object.fromEntries(LANDMARKS.map(name => [name, 0])) as Record<LandmarkName, number>;
   let unnamedNavigations = 0;
   let unnamedSections = 0;
-  const navs = visible.filter((node) => landmarkOf(node, index) === "navigation");
+  const navs = visible.filter(node => landmarkOf(node, index) === "navigation");
   for (const node of visible) {
     const landmark = landmarkOf(node, index);
     if (landmark) landmarks[landmark] += 1;
     else if (node.tag === "section") unnamedSections += 1;
   }
-  if (navs.length > 1)
-    unnamedNavigations = navs.filter((node) => accessibleName(node, index) === "").length;
+  if (navs.length > 1) unnamedNavigations = navs.filter(node => accessibleName(node, index) === "").length;
 
   // Headings.
-  const headingNodes = visible.filter(
-    (node) => /^h[1-6]$/.test(node.tag) || explicitRole(node) === "heading",
-  );
-  const levels = headingNodes.map((node) =>
+  const headingNodes = visible.filter(node => /^h[1-6]$/.test(node.tag) || explicitRole(node) === "heading");
+  const levels = headingNodes.map(node =>
     /^h[1-6]$/.test(node.tag) ? Number(node.tag[1]) : Number(node.attrs["aria-level"]) || 2,
   );
   let skips = 0;
@@ -542,40 +510,32 @@ export function analyzeDocument(root: HtmlNode, pageUrl = "http://page.invalid/"
     if (level > (i === 0 ? 0 : levels[i - 1]!) + 1) skips += 1;
   });
   const emptyHeadings = headingNodes.filter(
-    (node) => accessibleName(node, index) === "" && visibleText(node) === "",
+    node => accessibleName(node, index) === "" && visibleText(node) === "",
   ).length;
 
   // Images and non-text media.
-  const imgs = visible.filter((node) => node.tag === "img");
-  const missingAlt = imgs.filter((node) => node.attrs.alt === undefined).length;
-  const decorative = imgs.filter((node) => node.attrs.alt?.trim() === "").length;
-  const insideWidget = (node: HtmlNode) =>
-    ancestors(node).some((a) => widgetRole(a) !== undefined && !hiddenSelf(a));
+  const imgs = visible.filter(node => node.tag === "img");
+  const missingAlt = imgs.filter(node => node.attrs.alt === undefined).length;
+  const decorative = imgs.filter(node => node.attrs.alt?.trim() === "").length;
+  const insideWidget = (node: HtmlNode) => ancestors(node).some(a => widgetRole(a) !== undefined && !hiddenSelf(a));
   const canvas = visible.filter(
-    (node) =>
-      node.tag === "canvas" && accessibleName(node, index) === "" && visibleText(node) === "",
+    node => node.tag === "canvas" && accessibleName(node, index) === "" && visibleText(node) === "",
   ).length;
   const svg = visible.filter(
-    (node) =>
+    node =>
       node.tag === "svg" &&
-      !ancestors(node).some((a) => a.tag === "svg") &&
+      !ancestors(node).some(a => a.tag === "svg") &&
       !insideWidget(node) &&
       !["presentation", "none"].includes(explicitRole(node) ?? "") &&
       accessibleName(node, index) === "" &&
-      !node.children.some(
-        (c) => isElement(c) && c.tag === "title" && visibleTextOfTitle(c) !== "",
-      ) &&
+      !node.children.some(c => isElement(c) && c.tag === "title" && visibleTextOfTitle(c) !== "") &&
       visibleText(node) === "",
   ).length;
-  const roleImg = visible.filter(
-    (node) => explicitRole(node) === "img" && accessibleName(node, index) === "",
-  ).length;
-  const iframe = visible.filter(
-    (node) => node.tag === "iframe" && accessibleName(node, index) === "",
-  ).length;
+  const roleImg = visible.filter(node => explicitRole(node) === "img" && accessibleName(node, index) === "").length;
+  const iframe = visible.filter(node => node.tag === "iframe" && accessibleName(node, index) === "").length;
 
   // Links.
-  const anchors = visible.filter((node) => node.tag === "a");
+  const anchors = visible.filter(node => node.tag === "a");
   const hrefs: string[] = [];
   let internal = 0;
   let external = 0;
@@ -584,11 +544,7 @@ export function analyzeDocument(root: HtmlNode, pageUrl = "http://page.invalid/"
   for (const node of visible) {
     const href = node.attrs.href?.trim();
     const realHref =
-      node.tag === "a" &&
-      href !== undefined &&
-      href !== "" &&
-      href !== "#" &&
-      !/^(javascript|data):/i.test(href);
+      node.tag === "a" && href !== undefined && href !== "" && href !== "#" && !/^(javascript|data):/i.test(href);
     if (node.tag === "a") {
       if (realHref) {
         withHref += 1;
@@ -622,8 +578,7 @@ export function analyzeDocument(root: HtmlNode, pageUrl = "http://page.invalid/"
     if (!role) continue;
     const named = accessibleName(node, index) !== "";
     const nativeControl =
-      ["input", "select", "textarea"].includes(node.tag) &&
-      !BUTTON_INPUTS.has(node.attrs.type?.toLowerCase() ?? "");
+      ["input", "select", "textarea"].includes(node.tag) && !BUTTON_INPUTS.has(node.attrs.type?.toLowerCase() ?? "");
     if (nativeControl || FORM_CONTROL_ROLES.has(role)) {
       controlsTotal += 1;
       if (!named) {
@@ -642,15 +597,13 @@ export function analyzeDocument(root: HtmlNode, pageUrl = "http://page.invalid/"
 
   // Ids.
   const idCounts = new Map<string, number>();
-  for (const node of all)
-    if (node.attrs.id) idCounts.set(node.attrs.id, (idCounts.get(node.attrs.id) ?? 0) + 1);
+  for (const node of all) if (node.attrs.id) idCounts.set(node.attrs.id, (idCounts.get(node.attrs.id) ?? 0) + 1);
   const brokenRefs = new Set<string>();
   for (const node of bodyElements) {
     for (const name of ID_REF_ATTRS) {
       const value = node.attrs[name];
       if (!value) continue;
-      for (const id of value.split(/\s+/))
-        if (id && !idCounts.has(id)) brokenRefs.add(`${name}=${id}`);
+      for (const id of value.split(/\s+/)) if (id && !idCounts.has(id)) brokenRefs.add(`${name}=${id}`);
     }
   }
 
@@ -668,29 +621,27 @@ export function analyzeDocument(root: HtmlNode, pageUrl = "http://page.invalid/"
   }
 
   // Custom elements.
-  const customs = visible.filter(
-    (node) => node.tag.includes("-") && !SVG_MATH_RESERVED.has(node.tag),
-  );
+  const customs = visible.filter(node => node.tag.includes("-") && !SVG_MATH_RESERVED.has(node.tag));
   const isShadowTemplate = (child: HtmlNode | string) =>
     isElement(child) &&
     child.tag === "template" &&
     (child.attrs.shadowrootmode !== undefined || child.attrs.shadowroot !== undefined);
   const emptyCustom = customs.filter(
-    (node) =>
+    node =>
       !DECORATIVE_CUSTOM_ELEMENTS.has(node.tag) &&
       node.attrs["aria-hidden"] !== "true" &&
       !["presentation", "none"].includes(explicitRole(node) ?? "") &&
       !node.children.some(isShadowTemplate) &&
       visibleText(node) === "" &&
-      !descendants(node).some((child) =>
+      !descendants(node).some(child =>
         ["img", "svg", "canvas", "video", "audio", "picture", "input"].includes(child.tag),
       ),
   );
-  const declarativeShadow = customs.filter((node) => node.children.some(isShadowTemplate)).length;
+  const declarativeShadow = customs.filter(node => node.children.some(isShadowTemplate)).length;
 
   // JSON-LD.
   const jsonLdScripts = all.filter(
-    (node) => node.tag === "script" && node.attrs.type?.toLowerCase() === "application/ld+json",
+    node => node.tag === "script" && node.attrs.type?.toLowerCase() === "application/ld+json",
   );
   const types = new Set<string>();
   const jsonErrors: string[] = [];
@@ -701,7 +652,7 @@ export function analyzeDocument(root: HtmlNode, pageUrl = "http://page.invalid/"
     if (Array.isArray(record["@graph"])) return collectTypes(record["@graph"]);
     const type = record["@type"];
     if (typeof type === "string") types.add(type);
-    else if (Array.isArray(type) && type.every((t) => typeof t === "string") && type.length > 0)
+    else if (Array.isArray(type) && type.every(t => typeof t === "string") && type.length > 0)
       for (const t of type) types.add(t as string);
     else return false;
     return true;
@@ -709,12 +660,12 @@ export function analyzeDocument(root: HtmlNode, pageUrl = "http://page.invalid/"
   for (const script of jsonLdScripts) {
     try {
       const data = JSON.parse(rawText(script)) as unknown;
-      const context = (Array.isArray(data) ? data : [data]).every((item) => {
+      const context = (Array.isArray(data) ? data : [data]).every(item => {
         const ctx = (item as Record<string, unknown> | null)?.["@context"];
         return typeof ctx === "string"
           ? /schema\.org/.test(ctx)
           : Array.isArray(ctx)
-            ? ctx.some((c) => typeof c === "string" && /schema\.org/.test(c))
+            ? ctx.some(c => typeof c === "string" && /schema\.org/.test(c))
             : ctx !== undefined && typeof ctx === "object";
       });
       if (!context) jsonErrors.push("missing schema.org @context");
@@ -727,15 +678,12 @@ export function analyzeDocument(root: HtmlNode, pageUrl = "http://page.invalid/"
   // Text.
   const bodyText = visibleText(body);
   const hiddenRoots = bodyElements.filter(
-    (node) =>
+    node =>
       node.attrs["aria-hidden"] === "true" &&
-      !ancestors(node).some((a) => a.attrs["aria-hidden"] === "true") &&
+      !ancestors(node).some(a => a.attrs["aria-hidden"] === "true") &&
       !isHidden(node.parent ?? root),
   );
-  const ariaHiddenWords = hiddenRoots.reduce(
-    (sum, node) => sum + countWords(visibleTextIgnoringAria(node)),
-    0,
-  );
+  const ariaHiddenWords = hiddenRoots.reduce((sum, node) => sum + countWords(visibleTextIgnoringAria(node)), 0);
 
   return {
     lang: html?.attrs.lang?.trim() || null,
@@ -744,16 +692,15 @@ export function analyzeDocument(root: HtmlNode, pageUrl = "http://page.invalid/"
     canonical: canonicalNode?.attrs.href?.trim() || null,
     viewport: Boolean(meta("viewport")),
     charset: headElements.some(
-      (node) =>
+      node =>
         node.tag === "meta" &&
-        (node.attrs.charset !== undefined ||
-          node.attrs["http-equiv"]?.toLowerCase() === "content-type"),
+        (node.attrs.charset !== undefined || node.attrs["http-equiv"]?.toLowerCase() === "content-type"),
     ),
     landmarks,
     unnamedNavigations,
     unnamedSections,
     headings: {
-      h1: levels.filter((level) => level === 1).length,
+      h1: levels.filter(level => level === 1).length,
       levels,
       skips,
       empty: emptyHeadings,
@@ -857,15 +804,13 @@ export interface CrawlMetrics {
   metadataMismatch: string[];
 }
 
-const same = (a: string | null | undefined, b: string | null | undefined) =>
-  (a ?? "").trim() === (b ?? "").trim();
+const same = (a: string | null | undefined, b: string | null | undefined) => (a ?? "").trim() === (b ?? "").trim();
 
 export function crawlMetrics(page: CrawlPage, html: HtmlMetrics, pageUrl: string): CrawlMetrics {
   const mismatch: string[] = [];
   // `title` is not compared: the crawler reports the extracted title (the first heading when there is one).
   if (page.lang !== undefined && !same(page.lang, html.lang)) mismatch.push("lang");
-  if (page.description !== undefined && !same(page.description, html.description))
-    mismatch.push("description");
+  if (page.description !== undefined && !same(page.description, html.description)) mismatch.push("description");
   if (page.canonical !== undefined && page.canonical !== null && html.canonical) {
     const a = resolveHref(page.canonical, pageUrl)?.href;
     const b = resolveHref(html.canonical, pageUrl)?.href;
@@ -878,8 +823,7 @@ export function crawlMetrics(page: CrawlPage, html: HtmlMetrics, pageUrl: string
     markdownChars: page.markdownChars,
     discoveredLinks: page.discoveredLinks,
     duplicate: page.duplicate === true,
-    textCoverage:
-      html.text.visibleWords > 0 ? round(page.wordCount / html.text.visibleWords, 3) : null,
+    textCoverage: html.text.visibleWords > 0 ? round(page.wordCount / html.text.visibleWords, 3) : null,
     metadataMismatch: mismatch,
   };
 }
@@ -892,7 +836,7 @@ export function reachablePaths(
   origin: string,
   start = "/",
 ): Set<string> {
-  const outgoing = new Map(pages.map((page) => [page.path, page.hrefs]));
+  const outgoing = new Map(pages.map(page => [page.path, page.hrefs]));
   const seen = new Set<string>();
   const queue = [start];
   while (queue.length > 0) {
@@ -911,15 +855,7 @@ export function reachablePaths(
 // Report, baseline and verdict
 // ---------------------------------------------------------------------------------------------
 
-export type PageKind =
-  | "landing"
-  | "primitives"
-  | "forms"
-  | "explorer"
-  | "reader"
-  | "data"
-  | "lit"
-  | "generic";
+export type PageKind = "landing" | "primitives" | "forms" | "explorer" | "reader" | "data" | "lit" | "generic";
 
 export interface PageReport {
   path: string;
@@ -986,61 +922,58 @@ export function aggregate(
   unreachable: readonly string[] = [],
   crawled = false,
 ): Aggregate {
-  const sum = (pick: (page: PageReport) => number) =>
-    pages.reduce((total, page) => total + pick(page), 0);
+  const sum = (pick: (page: PageReport) => number) => pages.reduce((total, page) => total + pick(page), 0);
   const count = (test: (page: PageReport) => boolean) => pages.filter(test).length;
   const coverage = pages
-    .map((page) => page.crawl?.textCoverage)
+    .map(page => page.crawl?.textCoverage)
     .filter((value): value is number => typeof value === "number");
   return {
     pages: pages.length,
     gaps: {
-      imagesMissingAlt: sum((p) => p.html.images.missingAlt),
-      unnamedInteractive: sum((p) => p.html.interactive.unnamed),
-      unlabeledFormControls: sum((p) => p.html.formControls.unlabeled),
-      duplicateIds: sum((p) => p.html.ids.duplicates.length),
-      brokenIdRefs: sum((p) => p.html.ids.brokenRefs.length),
-      clickOnlyLinks: sum((p) => p.html.links.clickOnly),
-      emptyCustomElements: sum((p) => p.html.customElements.empty.length),
-      mediaWithoutAlt: sum((p) => p.html.mediaWithoutAlt.total),
-      invalidJsonLd: sum((p) => p.html.jsonLd.invalid),
-      headingSkips: sum((p) => p.html.headings.skips),
-      emptyHeadings: sum((p) => p.html.headings.empty),
-      pagesWithoutSingleH1: count((p) => p.html.headings.h1 !== 1),
-      pagesWithoutSingleMain: count((p) => p.html.landmarks.main !== 1),
-      unnamedNavigations: sum((p) => p.html.unnamedNavigations),
-      pagesWithoutLang: count((p) => !p.html.lang),
-      pagesWithoutTitle: count((p) => !p.html.title),
-      pagesWithoutDescription: count((p) => !p.html.description),
-      pagesWithoutCanonical: count((p) => !p.html.canonical),
+      imagesMissingAlt: sum(p => p.html.images.missingAlt),
+      unnamedInteractive: sum(p => p.html.interactive.unnamed),
+      unlabeledFormControls: sum(p => p.html.formControls.unlabeled),
+      duplicateIds: sum(p => p.html.ids.duplicates.length),
+      brokenIdRefs: sum(p => p.html.ids.brokenRefs.length),
+      clickOnlyLinks: sum(p => p.html.links.clickOnly),
+      emptyCustomElements: sum(p => p.html.customElements.empty.length),
+      mediaWithoutAlt: sum(p => p.html.mediaWithoutAlt.total),
+      invalidJsonLd: sum(p => p.html.jsonLd.invalid),
+      headingSkips: sum(p => p.html.headings.skips),
+      emptyHeadings: sum(p => p.html.headings.empty),
+      pagesWithoutSingleH1: count(p => p.html.headings.h1 !== 1),
+      pagesWithoutSingleMain: count(p => p.html.landmarks.main !== 1),
+      unnamedNavigations: sum(p => p.html.unnamedNavigations),
+      pagesWithoutLang: count(p => !p.html.lang),
+      pagesWithoutTitle: count(p => !p.html.title),
+      pagesWithoutDescription: count(p => !p.html.description),
+      pagesWithoutCanonical: count(p => !p.html.canonical),
       unreachablePages: unreachable.length,
-      metadataMismatches: sum((p) => p.crawl?.metadataMismatch.length ?? 0),
+      metadataMismatches: sum(p => p.crawl?.metadataMismatch.length ?? 0),
     },
     totals: {
-      words: sum((p) => p.crawl?.wordCount ?? 0),
-      visibleWords: sum((p) => p.html.text.visibleWords),
-      anchors: sum((p) => p.html.links.withHref),
-      internalLinks: sum((p) => p.html.links.internal),
-      testIds: sum((p) => p.html.hooks.testIds),
-      components: sum((p) => p.html.hooks.components),
-      jsonLdBlocks: sum((p) => p.html.jsonLd.blocks),
-      markdownChars: sum((p) => p.crawl?.markdownChars ?? 0),
-      ariaHiddenWords: sum((p) => p.html.text.ariaHiddenWords),
-      images: sum((p) => p.html.images.total),
-      interactive: sum((p) => p.html.interactive.total),
-      formControls: sum((p) => p.html.formControls.total),
+      words: sum(p => p.crawl?.wordCount ?? 0),
+      visibleWords: sum(p => p.html.text.visibleWords),
+      anchors: sum(p => p.html.links.withHref),
+      internalLinks: sum(p => p.html.links.internal),
+      testIds: sum(p => p.html.hooks.testIds),
+      components: sum(p => p.html.hooks.components),
+      jsonLdBlocks: sum(p => p.html.jsonLd.blocks),
+      markdownChars: sum(p => p.crawl?.markdownChars ?? 0),
+      ariaHiddenWords: sum(p => p.html.text.ariaHiddenWords),
+      images: sum(p => p.html.images.total),
+      interactive: sum(p => p.html.interactive.total),
+      formControls: sum(p => p.html.formControls.total),
     },
     crawl: crawled
       ? {
-          crawledPages: pages.filter((p) => p.crawl !== null).length,
+          crawledPages: pages.filter(p => p.crawl !== null).length,
           minTextCoverage: coverage.length ? Math.min(...coverage) : null,
-          meanTextCoverage: coverage.length
-            ? round(coverage.reduce((a, b) => a + b, 0) / coverage.length, 3)
-            : null,
+          meanTextCoverage: coverage.length ? round(coverage.reduce((a, b) => a + b, 0) / coverage.length, 3) : null,
           unreachable: [...unreachable],
         }
       : null,
-    componentNames: [...new Set(pages.flatMap((p) => p.html.hooks.componentNames))].toSorted(),
+    componentNames: [...new Set(pages.flatMap(p => p.html.hooks.componentNames))].toSorted(),
   };
 }
 
@@ -1086,20 +1019,16 @@ function offenders(pages: readonly PageReport[], metric: GapMetric): string {
   const per = (page: PageReport): number => aggregate([page], [], false).gaps[metric];
   return (
     pages
-      .filter((page) => per(page) > 0)
+      .filter(page => per(page) > 0)
       .toSorted((a, b) => per(b) - per(a))
       .slice(0, 5)
-      .map((page) => `${page.path} (${per(page)})`)
+      .map(page => `${page.path} (${per(page)})`)
       .join(", ") || "-"
   );
 }
 
 /** Compares a report with the baseline; every returned item is a regression. */
-export function evaluate(
-  pages: readonly PageReport[],
-  agg: Aggregate,
-  baseline: Baseline,
-): Violation[] {
+export function evaluate(pages: readonly PageReport[], agg: Aggregate, baseline: Baseline): Violation[] {
   const violations: Violation[] = [];
   const crawled = agg.crawl !== null;
   for (const metric of GAP_METRICS) {
@@ -1195,18 +1124,16 @@ export function evaluate(
 /** The strictest baseline the current report satisfies (the ratchet written by `--update-baseline`). */
 export function deriveBaseline(pages: readonly PageReport[], agg: Aggregate): Baseline {
   const kinds: Partial<Record<PageKind, KindRequirement>> = {};
-  for (const kind of new Set(pages.map((page) => page.kind))) {
-    const group = pages.filter((page) => page.kind === kind);
+  for (const kind of new Set(pages.map(page => page.kind))) {
+    const group = pages.filter(page => page.kind === kind);
     kinds[kind] = {
-      landmarks: LANDMARKS.filter((name) => group.every((page) => page.html.landmarks[name] >= 1)),
+      landmarks: LANDMARKS.filter(name => group.every(page => page.html.landmarks[name] >= 1)),
       // Slack of 20 % so a small fixture edit does not trip the gate; a lost hook family still does.
-      minTestIds: Math.floor(Math.min(...group.map((page) => page.html.hooks.testIds)) * 0.8),
-      minComponents: Math.floor(Math.min(...group.map((page) => page.html.hooks.components)) * 0.8),
-      jsonLd: group.every((page) => page.html.jsonLd.blocks >= 1 && page.html.jsonLd.invalid === 0),
-      minInternalLinks: Math.min(...group.map((page) => page.html.links.internal)),
-      minVisibleWords: Math.floor(
-        Math.min(...group.map((page) => page.html.text.visibleWords)) * 0.9,
-      ),
+      minTestIds: Math.floor(Math.min(...group.map(page => page.html.hooks.testIds)) * 0.8),
+      minComponents: Math.floor(Math.min(...group.map(page => page.html.hooks.components)) * 0.8),
+      jsonLd: group.every(page => page.html.jsonLd.blocks >= 1 && page.html.jsonLd.invalid === 0),
+      minInternalLinks: Math.min(...group.map(page => page.html.links.internal)),
+      minVisibleWords: Math.floor(Math.min(...group.map(page => page.html.text.visibleWords)) * 0.9),
     };
   }
   const coverage = agg.crawl?.minTextCoverage;
@@ -1243,7 +1170,7 @@ export async function buildPageReports(
   origin: string,
   crawl: readonly CrawlPage[] | null,
 ): Promise<PageReport[]> {
-  const byPath = new Map((crawl ?? []).map((page) => [new URL(page.url).pathname, page]));
+  const byPath = new Map((crawl ?? []).map(page => [new URL(page.url).pathname, page]));
   const reports: PageReport[] = [];
   for (const page of site) {
     const crawled = byPath.get(page.path);
@@ -1268,7 +1195,7 @@ function loadFixtureDir(dir: string): SitePage[] {
     kind: PageKind;
     file: string;
   }[];
-  return manifest.map((entry) => ({
+  return manifest.map(entry => ({
     path: entry.path,
     kind: entry.kind,
     html: readFileSync(join(dir, entry.file), "utf8"),
@@ -1277,7 +1204,7 @@ function loadFixtureDir(dir: string): SitePage[] {
 
 function saveFixtureDir(dir: string, site: readonly SitePage[]): void {
   mkdirSync(dir, { recursive: true });
-  const manifest = site.map((page) => ({
+  const manifest = site.map(page => ({
     path: page.path,
     kind: page.kind,
     file: `${page.path === "/" ? "index" : page.path.replace(/^\/|\/$/g, "").replaceAll("/", "__")}.html`,
@@ -1302,7 +1229,7 @@ function printSummary(report: CrawlabilityReport): void {
       h.customElements.empty.length +
       h.mediaWithoutAlt.total;
     console.log(
-      `${w(page.path, 24)}${w(page.kind, 11)}${w(h.text.visibleWords, 7)}${w(page.crawl?.textCoverage ?? "-", 7)}${w(h.links.internal, 6)}${w(h.headings.h1, 4)}${w(Object.values(h.landmarks).filter((n) => n > 0).length, 5)}${w(`${h.hooks.testIds}/${h.hooks.components}`, 7)}${gaps}`,
+      `${w(page.path, 24)}${w(page.kind, 11)}${w(h.text.visibleWords, 7)}${w(page.crawl?.textCoverage ?? "-", 7)}${w(h.links.internal, 6)}${w(h.headings.h1, 4)}${w(Object.values(h.landmarks).filter(n => n > 0).length, 5)}${w(`${h.hooks.testIds}/${h.hooks.components}`, 7)}${gaps}`,
     );
   }
   const a = report.aggregate;
@@ -1330,10 +1257,7 @@ if (import.meta.main) {
     await import("../../../packages/web/rust/packages/agent-browser/src/config.ts");
   const root = repositoryRoot();
   const config = loadWebConfig();
-  const baselinePath = resolve(
-    root,
-    value("--baseline") ?? "tools/config/web-crawlability.baseline.json",
-  );
+  const baselinePath = resolve(root, value("--baseline") ?? "tools/config/web-crawlability.baseline.json");
   const outPath = value("--out")
     ? resolve(root, value("--out")!)
     : resolve(expandHome(config.storage.crawlabilityReport));
@@ -1357,8 +1281,7 @@ if (import.meta.main) {
     }
 
     if (!flag("--no-crawl")) {
-      const { WebService } =
-        await import("../../../packages/web/rust/packages/agent-browser/src/service.ts");
+      const { WebService } = await import("../../../packages/web/rust/packages/agent-browser/src/service.ts");
       const service = new WebService({ config, binary: value("--bin") });
       if (!(await service.supports("crawl"))) {
         console.error(
@@ -1377,7 +1300,7 @@ if (import.meta.main) {
           port: 0,
           fetch(request) {
             const path = new URL(request.url).pathname;
-            const page = served.find((candidate) => candidate.path === path);
+            const page = served.find(candidate => candidate.path === path);
             if (page)
               return new Response(page.html, {
                 headers: { "content-type": "text/html; charset=utf-8" },
@@ -1408,7 +1331,7 @@ if (import.meta.main) {
       });
       crawlPages = report.pages as CrawlPage[];
       if (seed) {
-        site = crawlPages.map((page) => ({
+        site = crawlPages.map(page => ({
           path: new URL(page.url).pathname,
           kind: "generic" as const,
           html: page.html ?? "",
@@ -1419,18 +1342,16 @@ if (import.meta.main) {
       origin = "http://127.0.0.1";
       if (fixture) site = fixture.withOrigin(site, origin);
     }
-    expectedPaths = site.map((page) => page.path);
+    expectedPaths = site.map(page => page.path);
 
     const pages = await buildPageReports(site, origin, crawlPages);
     // Reachability by links only: from the crawler when it ran, from the parsed `<a href>` graph otherwise.
     const graphReach = reachablePaths(
-      pages.map((page) => ({ path: page.path, hrefs: page.html.links.hrefs })),
+      pages.map(page => ({ path: page.path, hrefs: page.html.links.hrefs })),
       origin,
     );
-    const reached = crawlPages
-      ? new Set(crawlPages.map((page) => new URL(page.url).pathname))
-      : graphReach;
-    const unreachable = mode === "seed" ? [] : expectedPaths.filter((path) => !reached.has(path));
+    const reached = crawlPages ? new Set(crawlPages.map(page => new URL(page.url).pathname)) : graphReach;
+    const unreachable = mode === "seed" ? [] : expectedPaths.filter(path => !reached.has(path));
     const agg = aggregate(pages, unreachable, crawlPages !== null);
 
     let baseline = loadBaseline(baselinePath);

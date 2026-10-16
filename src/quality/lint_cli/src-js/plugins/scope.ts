@@ -189,7 +189,7 @@ function addGlobals(): void {
   }
 
   // Resolve references from `through`
-  (globalScope as Writable<typeof globalScope>).through = globalScope.through.filter((ref) => {
+  (globalScope as Writable<typeof globalScope>).through = globalScope.through.filter(ref => {
     const { name } = ref.identifier;
     const variable = globalScope.set.get(name);
     if (!variable) return true; // Keep in `through` (truly undefined)

@@ -44,8 +44,8 @@ const generatedRulesDirPath = pathJoin(generatedDirPath, "rules");
 export default function generatePluginEslint(): void {
   // Get all ESLint rule names (exclude `index.js` which is the registry, not a rule)
   const ruleNames = readdirSync(eslintRulesDir)
-    .filter((filename) => filename.endsWith(".js") && filename !== "index.js")
-    .map((filename) => basename(filename, ".js"))
+    .filter(filename => filename.endsWith(".js") && filename !== "index.js")
+    .map(filename => basename(filename, ".js"))
     .sort();
 
   // oxlint-disable-next-line no-console
@@ -92,11 +92,11 @@ export default function generatePluginEslint(): void {
 
     // Validate that the rule only has expected top-level properties.
     // If ESLint adds new properties in a future version, we want to find out at build time.
-    const unexpectedKeys = Object.keys(rule).filter((key) => key !== "meta" && key !== "create");
+    const unexpectedKeys = Object.keys(rule).filter(key => key !== "meta" && key !== "create");
     if (unexpectedKeys.length > 0) {
       throw new Error(
-        `Unexpected properties on rule \`${ruleName}\`: ${unexpectedKeys.join(", ")}. `
-          + "Expected only `meta` and `create`.",
+        `Unexpected properties on rule \`${ruleName}\`: ${unexpectedKeys.join(", ")}. ` +
+          "Expected only `meta` and `create`.",
       );
     }
 
@@ -147,7 +147,7 @@ export default function generatePluginEslint(): void {
   // Generate the rule_names.ts file for use in tsdown config
   const ruleNamesCode = [
     "export default [",
-    ...ruleNames.map((name) => `  ${JSON.stringify(name)},`),
+    ...ruleNames.map(name => `  ${JSON.stringify(name)},`),
     "] as const;\n",
   ].join("\n");
 
@@ -163,8 +163,7 @@ export default function generatePluginEslint(): void {
 function assertNoFunctions(value: unknown, rulePath: string, path: string): void {
   if (typeof value === "function") {
     throw new Error(
-      `Unexpected function value in \`${path}\` of rule \`${rulePath}\`. `
-        + "Rule meta objects must be static data.",
+      `Unexpected function value in \`${path}\` of rule \`${rulePath}\`. ` + "Rule meta objects must be static data.",
     );
   }
   if (typeof value === "object" && value !== null) {

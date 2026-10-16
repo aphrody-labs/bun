@@ -2,15 +2,11 @@ import { expect, test } from "bun:test";
 import { bunRun } from "harness";
 import path from "path";
 
-test.concurrent(
-  "pathToFileURL doesn't leak memory",
-  async () => {
-    const { stdout, stderr, exitCode } = await bunRun(path.join(import.meta.dir, "pathToFileURL-leak-fixture.js"));
-    if (exitCode !== 0) console.error(stderr || stdout);
-    expect(exitCode).toBe(0);
-  },
-  300_000,
-);
+test.concurrent("pathToFileURL doesn't leak memory", async () => {
+  const { stdout, stderr, exitCode } = await bunRun(path.join(import.meta.dir, "pathToFileURL-leak-fixture.js"));
+  if (exitCode !== 0) console.error(stderr || stdout);
+  expect(exitCode).toBe(0);
+}, 300_000);
 
 test("pathToFileURL escapes special characters", () => {
   const cases = [

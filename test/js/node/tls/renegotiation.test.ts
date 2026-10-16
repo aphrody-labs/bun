@@ -1389,13 +1389,10 @@ it.concurrent.each(["ends", "closeCoalesced"] as const)(
   },
 );
 
-it.concurrent(
-  "a HelloRequest in the same read as the server's Finished does not hide the first handshake",
-  async () => {
-    expect(await nodeTlsEvents("TCP", quiet.staysOpenCoalesced, 2)).toEqual(twoHandshakes);
-    expect(await nodeTlsEvents("TCP", quiet.endsCoalesced)).toEqual([...twoHandshakes, "end", "close false"]);
-  },
-);
+it.concurrent("a HelloRequest in the same read as the server's Finished does not hide the first handshake", async () => {
+  expect(await nodeTlsEvents("TCP", quiet.staysOpenCoalesced, 2)).toEqual(twoHandshakes);
+  expect(await nodeTlsEvents("TCP", quiet.endsCoalesced)).toEqual([...twoHandshakes, "end", "close false"]);
+});
 
 it.concurrent("a write made in the middle of a renegotiation leaves when it ends, over a Duplex", async () => {
   const tcp = netConnect(quiet.staysOpen, "127.0.0.1");
@@ -1487,29 +1484,26 @@ it.concurrent.each([
   },
 );
 
-it.concurrent(
-  "WebSocket through a CONNECT proxy opens when the origin renegotiates before it answers 101",
-  async () => {
-    using proxy = await startRecordingProxy();
-    const events: string[] = [];
-    const closed = Promise.withResolvers<void>();
-    const ws = new WebSocket(`wss://localhost:${renegotiatingOrigin}/upgrade`, {
-      tls: { ca: tls.cert },
-      proxy: `http://127.0.0.1:${proxy.port}`,
-    });
-    ws.onopen = () => events.push("open");
-    ws.onmessage = event => events.push(`message: ${event.data}`);
-    ws.onclose = event => {
-      events.push(`close ${event.code}`);
-      closed.resolve();
-    };
-    await closed.promise;
-    expect({ events, requestLines: await requestLinesFor("/upgrade").promise }).toEqual({
-      events: ["open", "message: hi", "close 1000"],
-      requestLines: 1,
-    });
-  },
-);
+it.concurrent("WebSocket through a CONNECT proxy opens when the origin renegotiates before it answers 101", async () => {
+  using proxy = await startRecordingProxy();
+  const events: string[] = [];
+  const closed = Promise.withResolvers<void>();
+  const ws = new WebSocket(`wss://localhost:${renegotiatingOrigin}/upgrade`, {
+    tls: { ca: tls.cert },
+    proxy: `http://127.0.0.1:${proxy.port}`,
+  });
+  ws.onopen = () => events.push("open");
+  ws.onmessage = event => events.push(`message: ${event.data}`);
+  ws.onclose = event => {
+    events.push(`close ${event.code}`);
+    closed.resolve();
+  };
+  await closed.promise;
+  expect({ events, requestLines: await requestLinesFor("/upgrade").promise }).toEqual({
+    events: ["open", "message: hi", "close 1000"],
+    requestLines: 1,
+  });
+});
 
 async function* lines(stream: ReadableStream<Uint8Array>) {
   const reader = stream.getReader();

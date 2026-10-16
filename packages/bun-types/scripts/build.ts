@@ -12,7 +12,7 @@ const BUN_VERSION = (process.env.BUN_VERSION || Bun.version || process.versions.
 // of the package instead so that running the test never modifies the checkout.
 const outDir = process.argv[2] ? resolve(process.argv[2]) : join(import.meta.dir, "..");
 
-await Bun.write(join(outDir, "package.json"), JSON.stringify({ ...pkg, version: BUN_VERSION }, null, 2));
+await Bun.write(join(outDir, "package.json"), JSON.stringify({ ...pkg, version: BUN_VERSION }, null, 2) + "\n");
 
 // copy CLAUDE.md
 let claude = Bun.file(join(import.meta.dir, "../../../src/cli/init/rule.md"));

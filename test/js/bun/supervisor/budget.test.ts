@@ -10,7 +10,7 @@ describe("Budget", () => {
     expect([a.bytes, b.bytes]).toEqual([250, 750]);
     b.release();
     expect(a.bytes).toBe(1000);
-    expect(root.tree().children.map((c) => c.name)).toEqual(["a"]);
+    expect(root.tree().children.map(c => c.name)).toEqual(["a"]);
   });
 
   test("min is honored and max is redistributed", () => {
@@ -40,8 +40,8 @@ describe("Budget", () => {
     const root = Budget.root({ name: "root", bytes: 1000 });
     const a = root.child("a");
     const order: string[] = [];
-    root.onShrink((l) => void order.push(`root:${l}`));
-    a.onShrink(async (l) => {
+    root.onShrink(l => void order.push(`root:${l}`));
+    a.onShrink(async l => {
       await Promise.resolve();
       order.push(`a:${l}`);
     });
@@ -74,12 +74,8 @@ describe("Budget", () => {
 
   test("fromCgroup prefers memory.high, then memory.max * ratio", () => {
     const files = (o: Record<string, string>) => ({ name: "x", read: (f: string) => o[f] });
-    expect(
-      Budget.fromCgroup(files({ "memory.high": "5000\n", "memory.max": "9000\n" })).bytes,
-    ).toBe(5000);
-    expect(Budget.fromCgroup(files({ "memory.high": "max\n", "memory.max": "1000\n" })).bytes).toBe(
-      850,
-    );
+    expect(Budget.fromCgroup(files({ "memory.high": "5000\n", "memory.max": "9000\n" })).bytes).toBe(5000);
+    expect(Budget.fromCgroup(files({ "memory.high": "max\n", "memory.max": "1000\n" })).bytes).toBe(850);
     expect(Budget.fromCgroup({ ...files({ "memory.max": "1000\n" }), ratio: 0.5 }).bytes).toBe(500);
     expect(Budget.fromCgroup(files({})).bytes).toBeGreaterThan(0);
   });
@@ -96,7 +92,7 @@ describe("readCgroup", () => {
       "memory.pressure":
         "some avg10=1.50 avg60=0.75 avg300=0.10 total=1000\nfull avg10=0.25 avg60=0.00 avg300=0.00 total=10\n",
     };
-    const cg = readCgroup({ read: (f) => files[f] });
+    const cg = readCgroup({ read: f => files[f] });
     expect(cg.current).toBe(123);
     expect(cg.high).toBe(Infinity);
     expect(cg.max).toBe(456);

@@ -91,10 +91,7 @@ export function initLines(): void {
   // `lineStartIndices` starts as `[0]`, and is reset to length 1 in `resetLinesAndLocs`.
   // Debug check that `lines` and `lineStartIndices` are not already initialized.
   debugAssert(lines.length === 0, "`lines` should be empty at start of `initLines`");
-  debugAssert(
-    lineStartIndices.length === 1,
-    "`lineStartIndices` should have length 1 at start of `initLines`",
-  );
+  debugAssert(lineStartIndices.length === 1, "`lineStartIndices` should have length 1 at start of `initLines`");
 
   let lastOffset = 0,
     offset,
@@ -115,10 +112,7 @@ export function initLines(): void {
  */
 export function debugAssertLinesIsInitialized(): void {
   debugAssert(lines.length > 0, "`lines` should be initialized");
-  debugAssert(
-    lines.length === lineStartIndices.length,
-    "`lines` and `lineStartIndices` should be same length",
-  );
+  debugAssert(lines.length === lineStartIndices.length, "`lines` and `lineStartIndices` should be same length");
 }
 
 /**
@@ -194,12 +188,7 @@ export function getLineColumnFromOffset(offset: number): LineColumn {
 export function getOffsetFromLineColumn(loc: LineColumn): number {
   if (loc !== null && typeof loc === "object") {
     const { line, column } = loc;
-    if (
-      typeof line === "number"
-      && typeof column === "number"
-      && (line | 0) === line
-      && (column | 0) === column
-    ) {
+    if (typeof line === "number" && typeof column === "number" && (line | 0) === line && (column | 0) === column) {
       // Build `lines` and `lineStartIndices` tables if they haven't been already.
       // This also decodes `sourceText` if it wasn't already.
       if (lines.length === 0) initLines();
@@ -209,8 +198,8 @@ export function getOffsetFromLineColumn(loc: LineColumn): number {
       const linesCount = lineStartIndices.length;
       if (line <= 0 || line > linesCount) {
         throw new RangeError(
-          `Line number out of range (line ${line} requested). `
-            + `Line numbers should be 1-based, and less than or equal to number of lines in file (${linesCount}).`,
+          `Line number out of range (line ${line} requested). ` +
+            `Line numbers should be 1-based, and less than or equal to number of lines in file (${linesCount}).`,
         );
       }
       if (column < 0) throw new RangeError(`Invalid column number (column ${column} requested).`);
@@ -238,8 +227,8 @@ export function getOffsetFromLineColumn(loc: LineColumn): number {
       }
 
       throw new RangeError(
-        `Column number out of range (column ${column} requested, `
-          + `but the length of line ${line} is ${nextLineOffset - lineOffset}).`,
+        `Column number out of range (column ${column} requested, ` +
+          `but the length of line ${line} is ${nextLineOffset - lineOffset}).`,
       );
     }
   }

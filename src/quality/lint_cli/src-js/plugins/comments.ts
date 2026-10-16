@@ -222,10 +222,7 @@ export function deserializeComments(): void {
  * Exception: If the file has a hashbang, eagerly deserializes the first comment and sets its type to `Shebang`.
  */
 export function initCommentsBuffer(): void {
-  debugAssert(
-    commentsUint8 === null && commentsInt32 === null,
-    "Comments buffer already initialized",
-  );
+  debugAssert(commentsUint8 === null && commentsInt32 === null, "Comments buffer already initialized");
 
   debugAssertIsNonNull(buffer);
 
@@ -270,10 +267,7 @@ export function initCommentsBuffer(): void {
     const indexesLen = deserializedCommentIndexes.length;
     if (indexesLen < commentsLen) {
       deserializedCommentIndexes = new Int32Array(
-        Math.max(
-          commentsLen,
-          indexesLen === 0 ? DESERIALIZED_COMMENT_INDEXES_MIN_CAPACITY : indexesLen << 1,
-        ),
+        Math.max(commentsLen, indexesLen === 0 ? DESERIALIZED_COMMENT_INDEXES_MIN_CAPACITY : indexesLen << 1),
       );
     }
   }
@@ -403,17 +397,13 @@ function debugCheckDeserializedComments(): void {
   for (let i = 0; i < commentsLen; i++) {
     const flagPos = (i << COMMENT_SIZE_SHIFT) + DESERIALIZED_FLAG_OFFSET;
     if (commentsUint8![flagPos] !== FLAG_DESERIALIZED) {
-      throw new Error(
-        `Comment ${i} not marked as deserialized after \`deserializeComments()\` call`,
-      );
+      throw new Error(`Comment ${i} not marked as deserialized after \`deserializeComments()\` call`);
     }
 
     const { start, end } = cachedComments[i];
     if (end <= start) throw new Error(`Invalid deserialized comment range: ${start}-${end}`);
     if (start < lastEnd) {
-      throw new Error(
-        `Deserialized comments not in order: last end: ${lastEnd}, next start: ${start}`,
-      );
+      throw new Error(`Deserialized comments not in order: last end: ${lastEnd}, next start: ${start}`);
     }
     lastEnd = end;
   }
@@ -454,10 +444,7 @@ export function resetComments(): void {
 
     allCommentsDeserialized = false;
 
-    debugAssert(
-      deserializedCommentsLen === 0,
-      "Deserialized comments counter should have been reset to 0",
-    );
+    debugAssert(deserializedCommentsLen === 0, "Deserialized comments counter should have been reset to 0");
   }
 
   // Reset `#loc` on comments where `loc` has been accessed

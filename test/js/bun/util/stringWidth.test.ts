@@ -1353,10 +1353,8 @@ describe("ANSI escapes across SIMD chunk boundaries", () => {
           state = "gotEsc";
         // falls through
         case "gotEsc":
-          if (c === 0x1b)
-            break; // ESC restarts the sequence
-          else if (c === 0x18 || c === 0x1a || c === 0x9c)
-            state = "start"; // CAN/SUB/C1 ST abort to ground, byte consumed
+          if (c === 0x1b) break; // ESC restarts the sequence
+          else if (c === 0x18 || c === 0x1a || c === 0x9c) state = "start"; // CAN/SUB/C1 ST abort to ground, byte consumed
           else if (c === 0x5b /* [ */) state = "inCsi";
           else if (c === 0x5d /* ] */) state = "inOsc";
           else if (c === 0x50 /* P */ || c === 0x58 /* X */ || c === 0x5e /* ^ */ || c === 0x5f /* _ */)

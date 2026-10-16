@@ -24,8 +24,12 @@ async function attachWebView(view: Bun.WebView, engine: Engine): Promise<() => P
     const { requestId, request, resourceType } = event.data;
     let blocked = false;
     try {
-      blocked = engine.check(request.url, view.url || request.url, resourceTypes[resourceType] ?? "other", request.method)
-        .blocked;
+      blocked = engine.check(
+        request.url,
+        view.url || request.url,
+        resourceTypes[resourceType] ?? "other",
+        request.method,
+      ).blocked;
     } catch {}
     const reply = blocked
       ? view.cdp("Fetch.failRequest", { requestId, errorReason: "BlockedByClient" })

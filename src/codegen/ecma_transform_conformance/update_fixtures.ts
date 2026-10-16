@@ -33,11 +33,7 @@ const PACKAGES = [
   "babel-plugin-transform-explicit-resource-management",
 ];
 const FILTER_OUT_PRESETS = ["env"];
-const FILTER_OUT_PLUGINS = [
-  "transform-classes",
-  "transform-block-scoping",
-  "transform-destructuring",
-];
+const FILTER_OUT_PLUGINS = ["transform-classes", "transform-block-scoping", "transform-destructuring"];
 
 const CLASS_PLUGINS = [
   "transform-class-properties",
@@ -66,12 +62,8 @@ for (const packageName of PACKAGES) {
 /**
  * Update fixtures in directory, and its sub-directories.
  */
-async function updateDir(
-  dirPath: string,
-  options: Options,
-  hasChangedOptions: boolean,
-): Promise<void> {
-  if (IGNORED_FIXTURES.some((p) => dirPath.endsWith(p))) {
+async function updateDir(dirPath: string, options: Options, hasChangedOptions: boolean): Promise<void> {
+  if (IGNORED_FIXTURES.some(p => dirPath.endsWith(p))) {
     return;
   }
 
@@ -139,7 +131,7 @@ function updateOptions(options: Options): boolean {
   function filter(key: "presets" | "plugins", filterOut: string[]): void {
     const plugins = options[key];
     if (!plugins) return;
-    options[key] = plugins.filter((plugin) => {
+    options[key] = plugins.filter(plugin => {
       if (filterOut.includes(getName(plugin))) {
         hasChangedOptions = true;
         return false;
@@ -184,8 +176,8 @@ function migrateDeprecatedLooseOptions(options: Options): boolean {
         options.assumptions.setPublicClassFields ??= true;
         options.assumptions.constantSuper ??= true;
         if (
-          !Object.hasOwn(options.assumptions, "privateFieldsAsProperties")
-          && !Object.hasOwn(options.assumptions, "privateFieldsAsSymbols")
+          !Object.hasOwn(options.assumptions, "privateFieldsAsProperties") &&
+          !Object.hasOwn(options.assumptions, "privateFieldsAsSymbols")
         ) {
           options.assumptions.privateFieldsAsProperties = true;
         }
@@ -217,7 +209,7 @@ function ensureAllClassPluginsEnabled(options: Options): boolean {
 
   const already_enabled: string[] = [];
   let pluginOptions: Record<string, unknown> | undefined;
-  plugins.forEach((plugin) => {
+  plugins.forEach(plugin => {
     const pluginName = getName(plugin);
     if (CLASS_PLUGINS.includes(pluginName)) {
       if (Array.isArray(plugin) && plugin[1]) {
@@ -230,7 +222,7 @@ function ensureAllClassPluginsEnabled(options: Options): boolean {
   });
 
   if (already_enabled.length) {
-    CLASS_PLUGINS.forEach((pluginName) => {
+    CLASS_PLUGINS.forEach(pluginName => {
       if (!already_enabled.includes(pluginName)) {
         if (pluginOptions) {
           plugins.push([pluginName, pluginOptions]);
@@ -270,10 +262,10 @@ async function transform(inputPath: string, options: Options): Promise<string> {
   }
 
   if (options.presets) {
-    options.presets = options.presets.map((preset) => prefixName(preset, "preset"));
+    options.presets = options.presets.map(preset => prefixName(preset, "preset"));
   }
 
-  options.plugins = (options.plugins || []).map((plugin) => prefixName(plugin, "plugin"));
+  options.plugins = (options.plugins || []).map(plugin => prefixName(plugin, "plugin"));
 
   let addExternalHelpersPlugin = true;
   if (Object.hasOwn(options, "externalHelpers")) {
@@ -282,10 +274,7 @@ async function transform(inputPath: string, options: Options): Promise<string> {
   }
 
   if (addExternalHelpersPlugin) {
-    options.plugins.push([
-      "@babel/plugin-external-helpers",
-      { helperVersion: EXTERNAL_HELPERS_VERSION },
-    ]);
+    options.plugins.push(["@babel/plugin-external-helpers", { helperVersion: EXTERNAL_HELPERS_VERSION }]);
   }
 
   const result = await transformFileAsync(inputPath, options);

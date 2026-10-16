@@ -14,9 +14,7 @@ import {
 describe("Windows targeted version synchronization", () => {
   test("aligns the explicit private products without renaming or changing external dependencies", () => {
     for (const [path, name] of Object.entries(OWNED_PRIVATE_MANIFESTS)) {
-      const input =
-        JSON.stringify({ name, private: true, dependencies: { foreign: "^3.2.1" } }, null, 2) +
-        "\n";
+      const input = JSON.stringify({ name, private: true, dependencies: { foreign: "^3.2.1" } }, null, 2) + "\n";
       const changes = sourceChanges(() => input, "1.4.4", [path]);
       expect(JSON.parse(changes[0]!.after)).toEqual({
         name,
@@ -24,14 +22,12 @@ describe("Windows targeted version synchronization", () => {
         version: "1.4.4",
         dependencies: { foreign: "^3.2.1" },
       });
-      expect(() =>
-        sourceChanges(() => input.replace('"private": true', '"private": false'), "1.4.4", [path]),
-      ).toThrow("owner");
+      expect(() => sourceChanges(() => input.replace('"private": true', '"private": false'), "1.4.4", [path])).toThrow(
+        "owner",
+      );
     }
     expect(() =>
-      sourceChanges(() => '{"name":"bun-vscode","private":true}', "1.4.4", [
-        "packages/bun-vscode/package.json",
-      ]),
+      sourceChanges(() => '{"name":"bun-vscode","private":true}', "1.4.4", ["packages/bun-vscode/package.json"]),
     ).toThrow("owner");
   });
   test("refuses concurrent edits before applying any planned file", () => {
@@ -58,7 +54,7 @@ describe("Windows targeted version synchronization", () => {
       "packages/bun-agent-plugin/package.json":
         '{\n  "name": "bun-agent-plugin",\n  "version": "1.4.3",\n  "engines": {\n    "bun": ">=1.4.3"\n  }\n}\n',
     };
-    const changes = sourceChanges((path) => manifests[path]);
+    const changes = sourceChanges(path => manifests[path]);
     expect(changes).toHaveLength(2);
     expect(JSON.parse(changes[0].after)).toMatchObject({
       version: "1.4.4",
@@ -69,9 +65,7 @@ describe("Windows targeted version synchronization", () => {
       version: "1.4.4",
       engines: { bun: ">=1.4.4" },
     });
-    expect(sourceChanges((path) => changes.find((change) => change.path === path)!.after)).toEqual(
-      [],
-    );
+    expect(sourceChanges(path => changes.find(change => change.path === path)!.after)).toEqual([]);
   });
 
   test("rejects unstable versions and mismatched manifest owners", () => {
@@ -88,7 +82,7 @@ describe("Windows targeted version synchronization", () => {
       "packages/app/package.json":
         '{\n  "name": "@aphrody/app",\n  "private": true,\n  "dependencies": { "@aphrody/windows": "^71.0.30-preview", "external": "^3.2.1" },\n  "devDependencies": { "@aphrody/windows": "workspace:*" }\n}\n',
     };
-    const changes = sourceChanges((path) => inputs[path], "1.4.4", Object.keys(inputs));
+    const changes = sourceChanges(path => inputs[path], "1.4.4", Object.keys(inputs));
     expect(changes).toHaveLength(2);
     expect(JSON.parse(changes[0].after)).toMatchObject({
       version: "1.4.4",
@@ -100,31 +94,20 @@ describe("Windows targeted version synchronization", () => {
       dependencies: { "@aphrody/windows": "^1.4.4", external: "^3.2.1" },
       devDependencies: { "@aphrody/windows": "workspace:*" },
     });
-    expect(() => sourceChanges(() => "{}", "1.4.4", ["vendor/package.json"])).toThrow(
-      "outside owned",
-    );
-    expect(() => sourceChanges(() => "{}", "1.4.4", ["packages/../package.json"])).toThrow(
-      "outside owned",
-    );
+    expect(() => sourceChanges(() => "{}", "1.4.4", ["vendor/package.json"])).toThrow("outside owned");
+    expect(() => sourceChanges(() => "{}", "1.4.4", ["packages/../package.json"])).toThrow("outside owned");
   });
 
   test("requires complete release checksums before rewriting artifact pins", () => {
     expect(() => releaseChanges(() => "", "1.4.4", "bun-v1.4.3", "")).toThrow("tag");
     expect(() => releaseChanges(() => "", "1.4.4", "bun-v1.4.4", "")).toThrow("checksum");
-    const assets = [
-      "bun-linux-x64",
-      "bun-linux-x64-musl",
-      "bun-linux-x64-musl-baseline",
-      "bun-linux-aarch64-musl",
-    ];
-    const sums = assets
-      .map((asset, index) => `${String(index + 1).repeat(64)}  ${asset}.zip`)
-      .join("\n");
+    const assets = ["bun-linux-x64", "bun-linux-x64-musl", "bun-linux-x64-musl-baseline", "bun-linux-aarch64-musl"];
+    const sums = assets.map((asset, index) => `${String(index + 1).repeat(64)}  ${asset}.zip`).join("\n");
     const read = (path: string) =>
       path.endsWith("alpine/runtime.Dockerfile")
         ? `ARG BUN_RELEASE=aphrody-v1.4.3-aphrody.2\n${assets
             .slice(1)
-            .map((asset) => `asset=${asset} sum=${"0".repeat(64)} ;;`)
+            .map(asset => `asset=${asset} sum=${"0".repeat(64)} ;;`)
             .join("\n")}`
         : "image: ghcr.io/aphrody-labs/bun:1.4.3-aphrody.3\nARG BUN_RELEASE=aphrody-v1.4.3-aphrody.3";
     const changes = releaseChanges(read, "1.4.4", "bun-v1.4.4", sums);
@@ -168,7 +151,7 @@ describe("filterPath", () => {
   test("drops any directory that ships msys-2.0.dll or cygwin1.dll", () => {
     const { path, removed } = filterPath("C:\\tools\\rsync\\bin;C:\\bin", {
       sep: ";",
-      hasPosixRuntime: (dir) => dir === "C:\\tools\\rsync\\bin",
+      hasPosixRuntime: dir => dir === "C:\\tools\\rsync\\bin",
     });
     expect({ path, removed }).toEqual({ path: "C:\\bin", removed: ["C:\\tools\\rsync\\bin"] });
   });
@@ -183,21 +166,15 @@ describe("filterPath", () => {
   });
 
   test("does not mistake similarly named directories for the MSYS2 layer", () => {
-    const { path } = filterPath(
-      "C:\\gitbin;C:\\Projects\\msys64-notes\\bin;C:\\Program Files\\GitHub CLI",
-      {
-        sep: ";",
-        hasPosixRuntime: noRuntime,
-      },
-    );
+    const { path } = filterPath("C:\\gitbin;C:\\Projects\\msys64-notes\\bin;C:\\Program Files\\GitHub CLI", {
+      sep: ";",
+      hasPosixRuntime: noRuntime,
+    });
     expect(path).toBe("C:\\gitbin;C:\\Projects\\msys64-notes\\bin;C:\\Program Files\\GitHub CLI");
   });
 
   test("filteredEnv replaces every PATH spelling and drops MSYS2 shell markers", () => {
-    const env = filteredEnv(
-      { Path: "x", PATH: "y", MSYSTEM: "MINGW64", SHELL: "/usr/bin/bash", HOME: "h" },
-      "z",
-    );
+    const env = filteredEnv({ Path: "x", PATH: "y", MSYSTEM: "MINGW64", SHELL: "/usr/bin/bash", HOME: "h" }, "z");
     expect(env).toEqual({ PATH: "z", HOME: "h" });
   });
 });

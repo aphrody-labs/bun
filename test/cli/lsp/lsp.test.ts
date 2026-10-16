@@ -90,9 +90,10 @@ describe("bun lsp --stdio", () => {
       stdout: "pipe",
       stderr: "pipe",
     });
-    proc.stdin.end(
+    proc.stdin.write(
       `X-Padding: ${Buffer.alloc(8192, "x").toString()}\r\nContent-Length: ${Buffer.byteLength(body)}\r\n\r\n${body}`,
     );
+    proc.stdin.end();
     const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
     expect({ stdout, stderr, exitCode }).toEqual({ stdout: "", stderr: "", exitCode: 0 });
     expect(proc.signalCode).toBeNull();

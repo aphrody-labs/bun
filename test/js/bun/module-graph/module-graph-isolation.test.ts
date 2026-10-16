@@ -3441,27 +3441,24 @@ describe.concurrent("ModuleGraph isolation: what a disposed graph had open does 
   }
 });
 
-describe.concurrent(
-  "ModuleGraph isolation: what a graph was still opening when it was disposed does not keep the process running",
-  () => {
-    for (const kind of Object.keys(kinds)) {
-      test(kind, async () => {
-        const state = newState(kind + "-opening-exits");
-        expect(
-          await runsFixture(
-            "disposes-while-opening.mjs",
-            kind,
-            JSON.stringify(state),
-            JSON.stringify(kinds[kind].args?.(state) ?? []),
-          ),
-        ).toEqual({
-          stdout: "disposed",
-          exitCode: 0,
-        });
+describe.concurrent("ModuleGraph isolation: what a graph was still opening when it was disposed does not keep the process running", () => {
+  for (const kind of Object.keys(kinds)) {
+    test(kind, async () => {
+      const state = newState(kind + "-opening-exits");
+      expect(
+        await runsFixture(
+          "disposes-while-opening.mjs",
+          kind,
+          JSON.stringify(state),
+          JSON.stringify(kinds[kind].args?.(state) ?? []),
+        ),
+      ).toEqual({
+        stdout: "disposed",
+        exitCode: 0,
       });
-    }
-  },
-);
+    });
+  }
+});
 
 describe.concurrent("ModuleGraph isolation: what a disposed graph opens does not keep the process running", () => {
   for (const kind of Object.keys(kinds)) {
@@ -3781,15 +3778,12 @@ describe.concurrent("ModuleGraph isolation: a disposed graph leaves nothing behi
   // ECONNREFUSED; it leaves that socket open, so the process never reaches beforeExit and the test is killed at
   // its timeout. Open: whether the primary's listener for the worker is closed inside dispose() or a turn later,
   // and the probe should destroy its socket so a wrong answer fails with its value. (Not on Windows.)
-  test.todo(
-    "node:cluster: what a worker it forked tells the primary is heard as the graph, and nothing of it is left",
-    async () => {
-      expect(await runsFixture("cluster-of-a-disposed-graph.mjs")).toEqual({
-        stdout: `{"heard":{"online":"the graph","listening":"the graph"},"answered":"the worker","afterwards":"ECONNREFUSED"}`,
-        exitCode: 0,
-      });
-    },
-  );
+  test.todo("node:cluster: what a worker it forked tells the primary is heard as the graph, and nothing of it is left", async () => {
+    expect(await runsFixture("cluster-of-a-disposed-graph.mjs")).toEqual({
+      stdout: `{"heard":{"online":"the graph","listening":"the graph"},"answered":"the worker","afterwards":"ECONNREFUSED"}`,
+      exitCode: 0,
+    });
+  });
   // (What holds a descriptor inside a native object of its own. One script holds as a number, in a FileHandle or a
   // node:fs stream, is the script's to close: a graph cannot know every number its script has.)
   test("the files it held open are closed: a writer, bun:sqlite and node:sqlite databases", async () => {
@@ -4207,29 +4201,26 @@ const mayStillSettle = [
   ...(isWindows ? [] : ["Bun.file().writer(): write, end", "Bun.spawn stdin: write, end"]),
 ];
 
-describe.concurrent(
-  "ModuleGraph isolation: background work under way when its graph is disposed does not settle into it",
-  () => {
-    // Disposed from the handler of the first one to settle: the others are under way, or finished
-    // and queued behind it, whatever the speed of the build. (The same-turn dispose() of the test
-    // above never gets past the first step of work that takes several.)
-    for (const name of Object.keys(hostApp.background)) {
-      test(name, async () => {
-        using made = await newGraph();
-        const state = newState("race") as ReturnType<typeof newState> & { settledAtDispose?: number };
-        made.graph.run(() => made.app.race(name, 8, state, () => made.graph.dispose()));
-        await until(() => state.ticks > 0);
-        // The same work in the host, started afterwards, has all finished: the graph's had too.
-        const hostState = newState("race-host");
-        hostApp.race(name, 8, hostState, () => {});
-        await until(() => hostState.ticks === 8);
-        await hostTimerTurns();
-        const expected = mayStillSettle.includes(name) ? expect.any(Number) : state.settledAtDispose;
-        expect({ settled: state.ticks }).toEqual({ settled: expected });
-      });
-    }
-  },
-);
+describe.concurrent("ModuleGraph isolation: background work under way when its graph is disposed does not settle into it", () => {
+  // Disposed from the handler of the first one to settle: the others are under way, or finished
+  // and queued behind it, whatever the speed of the build. (The same-turn dispose() of the test
+  // above never gets past the first step of work that takes several.)
+  for (const name of Object.keys(hostApp.background)) {
+    test(name, async () => {
+      using made = await newGraph();
+      const state = newState("race") as ReturnType<typeof newState> & { settledAtDispose?: number };
+      made.graph.run(() => made.app.race(name, 8, state, () => made.graph.dispose()));
+      await until(() => state.ticks > 0);
+      // The same work in the host, started afterwards, has all finished: the graph's had too.
+      const hostState = newState("race-host");
+      hostApp.race(name, 8, hostState, () => {});
+      await until(() => hostState.ticks === 8);
+      await hostTimerTurns();
+      const expected = mayStillSettle.includes(name) ? expect.any(Number) : state.settledAtDispose;
+      expect({ settled: state.ticks }).toEqual({ settled: expected });
+    });
+  }
+});
 
 test("ModuleGraph isolation: a native fs.cp in flight does not settle into a disposed graph", async () => {
   const from = join(dir, "cp-source.bin");

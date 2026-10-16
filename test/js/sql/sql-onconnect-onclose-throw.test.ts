@@ -177,14 +177,11 @@ for (const [adapter, refusedCode] of [
   ["postgres", "ERR_POSTGRES_CONNECTION_REFUSED"],
   ["mysql", "ERR_MYSQL_CONNECTION_REFUSED"],
 ] as const) {
-  test.concurrent(
-    `${adapter}: a throwing onclose callback still rejects pending queries when the connection is refused`,
-    async () => {
-      const { stdout, exitCode } = await runFixture(refusedConnectionFixture(adapter));
-      expect(stdout).toBe(`onclose: ${refusedCode}\nuncaught: boom from onclose\nquery rejected: ${refusedCode}\n`);
-      expect(exitCode).toBe(0);
-    },
-  );
+  test.concurrent(`${adapter}: a throwing onclose callback still rejects pending queries when the connection is refused`, async () => {
+    const { stdout, exitCode } = await runFixture(refusedConnectionFixture(adapter));
+    expect(stdout).toBe(`onclose: ${refusedCode}\nuncaught: boom from onclose\nquery rejected: ${refusedCode}\n`);
+    expect(exitCode).toBe(0);
+  });
 }
 
 // When createConnection fails synchronously (here: a password function that
@@ -277,14 +274,11 @@ for (const [adapter, closedCode] of [
   ["postgres", "ERR_POSTGRES_CONNECTION_CLOSED"],
   ["mysql", "ERR_MYSQL_CONNECTION_CLOSED"],
 ] as const) {
-  test.concurrent(
-    `${adapter}: forced close() mid-handshake resolves and skips onclose for the never-connected slot`,
-    async () => {
-      const { stdout, exitCode } = await runFixture(forcedCloseFixture(adapter));
-      expect(stdout).toBe(`closed\nquery rejected: ${closedCode}\n`);
-      expect(exitCode).toBe(0);
-    },
-  );
+  test.concurrent(`${adapter}: forced close() mid-handshake resolves and skips onclose for the never-connected slot`, async () => {
+    const { stdout, exitCode } = await runFixture(forcedCloseFixture(adapter));
+    expect(stdout).toBe(`closed\nquery rejected: ${closedCode}\n`);
+    expect(exitCode).toBe(0);
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -374,19 +368,16 @@ for (const [adapter, scheme, refusedCode] of [
   ["postgres", "postgres://postgres@127.0.0.1:", "ERR_POSTGRES_CONNECTION_REFUSED"],
   ["mysql", "mysql://root@127.0.0.1:", "ERR_MYSQL_CONNECTION_REFUSED"],
 ] as const) {
-  test.concurrent(
-    `${adapter}: onclose for a refused connection observes the store the pool was created in`,
-    async () => {
-      const { sql, events } = poolCreatedIn("created-in", `${scheme}${await closedPort()}/db`);
-      let code: string | undefined;
-      try {
-        await als.run("caller", () => sql.connect());
-      } catch (err) {
-        code = (err as { code?: string }).code;
-      } finally {
-        await sql.close();
-      }
-      expect({ code, events }).toStrictEqual({ code: refusedCode, events: [["onclose", "created-in"]] });
-    },
-  );
+  test.concurrent(`${adapter}: onclose for a refused connection observes the store the pool was created in`, async () => {
+    const { sql, events } = poolCreatedIn("created-in", `${scheme}${await closedPort()}/db`);
+    let code: string | undefined;
+    try {
+      await als.run("caller", () => sql.connect());
+    } catch (err) {
+      code = (err as { code?: string }).code;
+    } finally {
+      await sql.close();
+    }
+    expect({ code, events }).toStrictEqual({ code: refusedCode, events: [["onclose", "created-in"]] });
+  });
 }

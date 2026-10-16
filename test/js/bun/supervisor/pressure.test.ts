@@ -1,10 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import {
-  Budget,
-  monitorPressure,
-  type CgroupStats,
-  type PressureLevel,
-} from "../../../../packages/bun-supervisor/src";
+import { Budget, monitorPressure, type CgroupStats, type PressureLevel } from "../../../../packages/bun-supervisor/src";
 
 function stats(current: number, psi = 0, events: Partial<CgroupStats["events"]> = {}): CgroupStats {
   return {
@@ -21,7 +16,7 @@ function stats(current: number, psi = 0, events: Partial<CgroupStats["events"]> 
 function setup(extra: Record<string, unknown> = {}) {
   const budget = Budget.root({ name: "r", bytes: 1000 });
   const calls: string[] = [];
-  budget.onShrink((l) => void calls.push(`shrink:${l}`));
+  budget.onShrink(l => void calls.push(`shrink:${l}`));
   budget.onIdle(() => void calls.push("idle"));
   let cur: CgroupStats = stats(100);
   let t = 0;

@@ -4,10 +4,7 @@ import unsupportedRules from "./unsupported-rules.json" with { type: "json" };
 import { typescriptTypeCheckRules } from "./eslint-rules.mjs";
 
 const readAllImplementedRuleNames = async () => {
-  const rulesFile = await readFile(
-    resolve("src/quality/linter/src/generated/rules_enum.rs"),
-    "utf8",
-  );
+  const rulesFile = await readFile(resolve("src/quality/linter/src/generated/rules_enum.rs"), "utf8");
 
   /** @type {Set<string>} */
   const rules = new Set();
@@ -60,10 +57,10 @@ const readAllPendingFixRuleNames = async () => {
    * @param {string} dir
    * @returns {Promise<string[]>}
    */
-  const readRustFiles = async (dir) => {
+  const readRustFiles = async dir => {
     const entries = await readdir(dir, { withFileTypes: true });
     const files = await Promise.all(
-      entries.map((entry) => {
+      entries.map(entry => {
         const fullPath = join(dir, entry.name);
         if (entry.isDirectory()) {
           return readRustFiles(fullPath);
@@ -141,7 +138,7 @@ const NOT_SUPPORTED_RULE_NAMES = new Set(Object.keys(unsupportedRules.unsupporte
  */
 
 /** @param {ReturnType<import("eslint").Linter["getRules"]>} loadedAllRules */
-export const createRuleEntries = (loadedAllRules) => {
+export const createRuleEntries = loadedAllRules => {
   /** @type {RuleEntries} */
   const rulesEntry = new Map();
 
@@ -169,7 +166,7 @@ export const createRuleEntries = (loadedAllRules) => {
 };
 
 /** @param {RuleEntries} ruleEntries */
-export const updateImplementedStatus = async (ruleEntries) => {
+export const updateImplementedStatus = async ruleEntries => {
   const implementedRuleNames = await readAllImplementedRuleNames();
 
   for (const name of implementedRuleNames) {
@@ -192,7 +189,7 @@ export const updateImplementedStatus = async (ruleEntries) => {
 };
 
 /** @param {RuleEntries} ruleEntries */
-export const updateNotSupportedStatus = (ruleEntries) => {
+export const updateNotSupportedStatus = ruleEntries => {
   for (const name of NOT_SUPPORTED_RULE_NAMES) {
     const rule = ruleEntries.get(name);
     if (rule) {
@@ -203,7 +200,7 @@ export const updateNotSupportedStatus = (ruleEntries) => {
 };
 
 /** @param {RuleEntries} ruleEntries */
-export const updatePendingFixStatus = async (ruleEntries) => {
+export const updatePendingFixStatus = async ruleEntries => {
   const pendingFixRuleNames = await readAllPendingFixRuleNames();
 
   for (const name of pendingFixRuleNames) {
@@ -237,13 +234,13 @@ const getArrayEntries = (constName, fileContent) => {
   return new Set(
     vitestCompatibleRules
       .split("\n")
-      .map((line) => line.trim())
-      .filter((line) => line && !line.startsWith("//"))
-      .flatMap((line) =>
+      .map(line => line.trim())
+      .filter(line => line && !line.startsWith("//"))
+      .flatMap(line =>
         line
           .replace(/"/g, "")
           .split(",")
-          .filter((s) => s !== ""),
+          .filter(s => s !== ""),
       ),
   );
 };
@@ -256,15 +253,9 @@ const getArrayEntries = (constName, fileContent) => {
  *
  * @param {RuleEntries} ruleEntries
  */
-export const overrideTypeScriptPluginStatusWithEslintPluginStatus = async (ruleEntries) => {
-  const typescriptCompatibleRulesFile = await readFile(
-    "src/quality/linter/src/utils/mod.rs",
-    "utf8",
-  );
-  const rules = getArrayEntries(
-    "TYPESCRIPT_COMPATIBLE_ESLINT_RULES",
-    typescriptCompatibleRulesFile,
-  );
+export const overrideTypeScriptPluginStatusWithEslintPluginStatus = async ruleEntries => {
+  const typescriptCompatibleRulesFile = await readFile("src/quality/linter/src/utils/mod.rs", "utf8");
+  const rules = getArrayEntries("TYPESCRIPT_COMPATIBLE_ESLINT_RULES", typescriptCompatibleRulesFile);
 
   for (const rule of rules) {
     const typescriptRuleEntry = ruleEntries.get(`typescript/${rule}`);

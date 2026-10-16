@@ -159,11 +159,13 @@ nativeTest.concurrent("pyjs embeds CPython in the JavaScript process through its
   );
 });
 
-nativeTest.concurrent("bun:python shares writable CPython buffers with JSC and keeps failed close recoverable", async () => {
-  success(
-    await run([
-      "-e",
-      `
+nativeTest.concurrent(
+  "bun:python shares writable CPython buffers with JSC and keeps failed close recoverable",
+  async () => {
+    success(
+      await run([
+        "-e",
+        `
     import { Python, PythonError, PyStatus } from "bun:python";
     const py = Python.open();
     const peer = Python.open();
@@ -194,10 +196,11 @@ nativeTest.concurrent("bun:python shares writable CPython buffers with JSC and k
     peer.close();
     console.log("PYTHON_BUFFER_OK");
   `,
-    ]),
-    "PYTHON_BUFFER_OK",
-  );
-});
+      ]),
+      "PYTHON_BUFFER_OK",
+    );
+  },
+);
 
 nativeTest.concurrent("async Python runs in a worker in the same process and serializes dependent calls", async () => {
   success(

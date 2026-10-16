@@ -11,10 +11,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import {
-  repositoryRoot,
-  validateWebConfig,
-} from "../../../packages/web/rust/packages/agent-browser/src/config.ts";
+import { repositoryRoot, validateWebConfig } from "../../../packages/web/rust/packages/agent-browser/src/config.ts";
 
 export const WEB_CRATES = [
   "aphrody-obscura",
@@ -61,14 +58,10 @@ export interface StepResult {
 }
 
 const MINUTE = 60_000;
-const cargoPackages = WEB_CRATES.flatMap((name) => ["-p", name]);
+const cargoPackages = WEB_CRATES.flatMap(name => ["-p", name]);
 
 /** Pure planning: which stages run and with which commands. */
-export function planStages(options: {
-  stages?: StageId[];
-  rust?: boolean;
-  crawlabilityAvailable?: boolean;
-}): Stage[] {
+export function planStages(options: { stages?: StageId[]; rust?: boolean; crawlabilityAvailable?: boolean }): Stage[] {
   const all: Stage[] = [
     {
       id: "config",
@@ -77,8 +70,8 @@ export function planStages(options: {
     {
       id: "bun",
       steps: [
-        ...["@aphrody/agent-browser", "@aphrody/web-test"].flatMap((pkg) =>
-          ["typecheck", "lint", "test"].map((script) => ({
+        ...["@aphrody/agent-browser", "@aphrody/web-test"].flatMap(pkg =>
+          ["typecheck", "lint", "test"].map(script => ({
             name: `${pkg} ${script}`,
             command: [
               "bun",
@@ -108,14 +101,7 @@ export function planStages(options: {
       steps: [
         {
           name: "cargo build aphrody-web-engine",
-          command: [
-            "scripts/build/rust/cargo-serial.sh",
-            "build",
-            "-p",
-            "aphrody-web-engine",
-            "--bins",
-            "--locked",
-          ],
+          command: ["scripts/build/rust/cargo-serial.sh", "build", "-p", "aphrody-web-engine", "--bins", "--locked"],
           timeoutMs: 40 * MINUTE,
         },
       ],
@@ -149,13 +135,7 @@ export function planStages(options: {
       steps: [
         {
           name: "cargo check --all-targets",
-          command: [
-            "scripts/build/rust/cargo-serial.sh",
-            "check",
-            "--all-targets",
-            "--locked",
-            ...cargoPackages,
-          ],
+          command: ["scripts/build/rust/cargo-serial.sh", "check", "--all-targets", "--locked", ...cargoPackages],
           timeoutMs: 60 * MINUTE,
         },
         {
@@ -174,28 +154,16 @@ export function planStages(options: {
         },
         {
           name: "cargo test",
-          command: [
-            "scripts/build/rust/cargo-serial.sh",
-            "test",
-            "--locked",
-            "--no-fail-fast",
-            ...cargoPackages,
-          ],
+          command: ["scripts/build/rust/cargo-serial.sh", "test", "--locked", "--no-fail-fast", ...cargoPackages],
           timeoutMs: 90 * MINUTE,
         },
       ],
     },
   ];
   const wanted = new Set<StageId>(
-    options.stages ?? [
-      "config",
-      "bun",
-      "build",
-      "smoke",
-      ...(options.rust ? (["rust"] as const) : []),
-    ],
+    options.stages ?? ["config", "bun", "build", "smoke", ...(options.rust ? (["rust"] as const) : [])],
   );
-  return all.filter((stage) => wanted.has(stage.id));
+  return all.filter(stage => wanted.has(stage.id));
 }
 
 export function parseArgs(argv: string[]): {
@@ -210,9 +178,8 @@ export function parseArgs(argv: string[]): {
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--stage") {
       stages = (argv[++i] ?? "").split(",").filter(Boolean) as StageId[];
-      const unknown = stages.filter((stage) => !valid.includes(stage));
-      if (unknown.length)
-        throw new Error(`unknown stage ${unknown.join(", ")}; valid: ${valid.join(", ")}`);
+      const unknown = stages.filter(stage => !valid.includes(stage));
+      if (unknown.length) throw new Error(`unknown stage ${unknown.join(", ")}; valid: ${valid.join(", ")}`);
     } else if (argv[i] === "--out") out = argv[++i];
   }
   return { stages, rust: argv.includes("--rust"), json: argv.includes("--json"), out };
@@ -226,9 +193,7 @@ export function checkConfigFile(root: string): string[] {
   try {
     raw = JSON.parse(readFileSync(file, "utf8"));
   } catch (error) {
-    return [
-      `tools/config/web.json is not valid JSON: ${error instanceof Error ? error.message : String(error)}`,
-    ];
+    return [`tools/config/web.json is not valid JSON: ${error instanceof Error ? error.message : String(error)}`];
   }
   const problems = validateWebConfig(raw);
   const docs = (raw as { docs?: Record<string, unknown> }).docs ?? {};
@@ -249,11 +214,7 @@ export function executionCommand(command: string[], platform = process.platform)
   return command;
 }
 
-async function runCommand(
-  command: string[],
-  cwd: string,
-  timeoutMs: number,
-): Promise<{ ok: boolean; detail: string }> {
+async function runCommand(command: string[], cwd: string, timeoutMs: number): Promise<{ ok: boolean; detail: string }> {
   let child: Bun.Subprocess<"ignore", "pipe", "pipe">;
   try {
     child = Bun.spawn(executionCommand(command), {
@@ -316,12 +277,10 @@ export async function runStages(stages: Stage[], root: string): Promise<StepResu
 if (import.meta.main) {
   const options = parseArgs(process.argv.slice(2));
   const root = repositoryRoot();
-  const crawlabilityAvailable = existsSync(
-    join(root, "../bun/scripts/aphrody-source/audit/web-crawlability.ts"),
-  );
+  const crawlabilityAvailable = existsSync(join(root, "../bun/scripts/aphrody-source/audit/web-crawlability.ts"));
   const stages = planStages({ ...options, crawlabilityAvailable });
   const results = await runStages(stages, root);
-  const failed = results.filter((result) => !result.ok);
+  const failed = results.filter(result => !result.ok);
   if (options.out) {
     const target = resolve(root, options.out);
     mkdirSync(dirname(target), { recursive: true });
@@ -338,9 +297,7 @@ if (import.meta.main) {
       );
       if (!result.ok) console.log(result.detail.replace(/^/gm, "       "));
     }
-    const skipped = ["rust", "crawlability"].filter(
-      (id) => !stages.some((stage) => stage.id === id),
-    );
+    const skipped = ["rust", "crawlability"].filter(id => !stages.some(stage => stage.id === id));
     console.log(
       `\nweb verify: ${results.length - failed.length}/${results.length} steps passed${skipped.length ? `; not run: ${skipped.join(", ")}` : ""}`,
     );

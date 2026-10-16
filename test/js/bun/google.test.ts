@@ -15,9 +15,7 @@ test("Google reuses existing capabilities and public configuration", () => {
     auth: "adc-or-secret-manager",
   });
   expect(googleRuntime({ GOOGLE_CLOUD_PROJECT: "rgfr-8927d" }).project).toBe("rgfr");
-  expect(
-    googleRuntime({ APHRODY_VERTEX_PROJECT: "aphrody", GOOGLE_CLOUD_PROJECT: "rgfr" }).project,
-  ).toBe("aphrody");
+  expect(googleRuntime({ APHRODY_VERTEX_PROJECT: "aphrody", GOOGLE_CLOUD_PROJECT: "rgfr" }).project).toBe("aphrody");
 });
 
 test("Google resolves the same builtin through CommonJS and dynamic import", async () => {
@@ -40,8 +38,7 @@ test("Bun bundling preserves the Google builtin as a runtime external", async ()
             namespace: "google-test",
           }));
           builder.onLoad({ filter: /.*/, namespace: "google-test" }, () => ({
-            contents:
-              'import { googleRuntime } from "bun:google"; export const runtime = googleRuntime({});',
+            contents: 'import { googleRuntime } from "bun:google"; export const runtime = googleRuntime({});',
             loader: "js",
           }));
         },
@@ -80,9 +77,11 @@ test("Google authenticates in-process REST fetch and forwards request data", asy
       auth: "Bearer token-2",
       method: "GET",
     });
-    expect(
-      await (await client.request("./v1internal:fetchAvailableModels", { method: "POST" })).json(),
-    ).toEqual({ path: "/v1internal:fetchAvailableModels", auth: "Bearer token-3", method: "POST" });
+    expect(await (await client.request("./v1internal:fetchAvailableModels", { method: "POST" })).json()).toEqual({
+      path: "/v1internal:fetchAvailableModels",
+      auth: "Bearer token-3",
+      method: "POST",
+    });
   } finally {
     await server.stop(true);
   }
@@ -169,9 +168,7 @@ test("Google rejects redirects and redacts transport, provider and HTTP errors",
   });
   try {
     const client = createClient({ baseURL: server.url, credentialProvider: () => "secret-token" });
-    await expect(client.request("redirect", { redirect: "follow" })).rejects.toThrow(
-      "Google request failed",
-    );
+    await expect(client.request("redirect", { redirect: "follow" })).rejects.toThrow("Google request failed");
     expect(targetCalls).toBe(0);
     await expect(client.request("forbidden")).rejects.toThrow("Google request failed (HTTP 403)");
     await expect(
@@ -208,7 +205,7 @@ test("Google preserves cancellation before credentials and after refresh", async
   expect(calls).toBe(0);
   const after = new AbortController();
   const refreshing = createClient({
-    credentialProvider: (signal) => {
+    credentialProvider: signal => {
       expect(signal).toBe(after.signal);
       after.abort();
       return "secret";

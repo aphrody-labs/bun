@@ -798,8 +798,7 @@ describe.skipIf(isWindows)("FileSink buffered data is flushed on process exit", 
   // A FileSink write performed inside a process.on('exit') listener should
   // also reach the file.
   it.concurrent("write inside 'exit' listener", () =>
-    check(`process.on("exit", () => { w.write(${JSON.stringify(line)}); }); process.exit(0);`, line + line),
-  );
+    check(`process.on("exit", () => { w.write(${JSON.stringify(line)}); }); process.exit(0);`, line + line));
 });
 
 // On a pipe or socket, a small write() parks the bytes in the sink's buffer and

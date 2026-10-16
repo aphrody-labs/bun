@@ -178,29 +178,64 @@ describe("arena statistics", () => {
   });
 
   test("a slower fork with a real, significant gap is a gated regression", () => {
-    const c = compare("compute.nbody", "fork", "upstream", metric([120, 121, 122, 123, 124]), metric([100, 101, 102, 103, 104]), true);
+    const c = compare(
+      "compute.nbody",
+      "fork",
+      "upstream",
+      metric([120, 121, 122, 123, 124]),
+      metric([100, 101, 102, 103, 104]),
+      true,
+    );
     expect(c.real).toBe(true);
     expect(c.regression).toBe(true);
     expect(c.reason).toContain("ratio 1.196");
   });
 
   test("the same gap against Deno only informs", () => {
-    const c = compare("compute.nbody", "fork", "deno", metric([120, 121, 122, 123, 124]), metric([100, 101, 102, 103, 104]), false);
+    const c = compare(
+      "compute.nbody",
+      "fork",
+      "deno",
+      metric([120, 121, 122, 123, 124]),
+      metric([100, 101, 102, 103, 104]),
+      false,
+    );
     expect(c.regression).toBe(false);
     expect(c.reason).toContain("ratio");
   });
 
   test("a gap under the ratio limit passes", () => {
-    const c = compare("json.roundtrip", "fork", "upstream", metric([103, 103.1, 103.2, 103.3, 103.4]), metric([100, 100.1, 100.2, 100.3, 100.4]), true);
+    const c = compare(
+      "json.roundtrip",
+      "fork",
+      "upstream",
+      metric([103, 103.1, 103.2, 103.3, 103.4]),
+      metric([100, 100.1, 100.2, 100.3, 100.4]),
+      true,
+    );
     expect(c.regression).toBe(false);
   });
 
   test("peak RSS uses the absolute byte limit", () => {
     const mib = 1048576;
     const bytes = (v: number[]): MetricResult => ({ ...metric(v), unit: "bytes" });
-    const small = compare("compute.hwm", "fork", "upstream", bytes([52, 52, 52, 52, 52].map((v, i) => (v + i * 0.01) * mib)), bytes([50, 50, 50, 50, 50].map((v, i) => (v + i * 0.01) * mib)), true);
+    const small = compare(
+      "compute.hwm",
+      "fork",
+      "upstream",
+      bytes([52, 52, 52, 52, 52].map((v, i) => (v + i * 0.01) * mib)),
+      bytes([50, 50, 50, 50, 50].map((v, i) => (v + i * 0.01) * mib)),
+      true,
+    );
     expect(small.regression).toBe(false);
-    const big = compare("compute.hwm", "fork", "upstream", bytes([60, 60, 60, 60, 60].map((v, i) => (v + i * 0.01) * mib)), bytes([50, 50, 50, 50, 50].map((v, i) => (v + i * 0.01) * mib)), true);
+    const big = compare(
+      "compute.hwm",
+      "fork",
+      "upstream",
+      bytes([60, 60, 60, 60, 60].map((v, i) => (v + i * 0.01) * mib)),
+      bytes([50, 50, 50, 50, 50].map((v, i) => (v + i * 0.01) * mib)),
+      true,
+    );
     expect(big.regression).toBe(true);
   });
 
@@ -214,7 +249,9 @@ describe("arena statistics", () => {
   test("arena rows: fork/upstream gate, fork/Deno is info", () => {
     const f = metric([120, 121, 122, 123, 124]);
     const u = metric([100, 101, 102, 103, 104]);
-    const results = { "compute.nbody": { fork: { ...f, samples: [] }, upstream: { ...u, samples: [] }, deno: { ...u, samples: [] } } };
+    const results = {
+      "compute.nbody": { fork: { ...f, samples: [] }, upstream: { ...u, samples: [] }, deno: { ...u, samples: [] } },
+    };
     const comparisons = [
       compare("compute.nbody", "fork", "upstream", f, u, true),
       compare("compute.nbody", "fork", "deno", f, u, false),

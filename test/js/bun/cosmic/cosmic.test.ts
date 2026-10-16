@@ -138,11 +138,7 @@ test("config reads defaults, writes atomically and watches", async () => {
     },
     stderr: "pipe",
   });
-  const [stdout, stderr, exitCode] = await Promise.all([
-    proc.stdout.text(),
-    proc.stderr.text(),
-    proc.exited,
-  ]);
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
   expect(stderr).toBe("");
   expect(normalizeBunSnapshot(stdout, dir)).toMatchInlineSnapshot(`
     "[{"name":"Light"},12,"old","undefined"]
@@ -171,10 +167,7 @@ describe("apps.expandExec", () => {
     ["editor %U --x", ["editor", "https://x/", "--x"]],
     ["editor --file=%f", ["editor", "--file=/a b.txt"]],
     ["editor %i --title=%c %k", ["editor", "--icon", "ed", "--title=Editor", "/e.desktop"]],
-    [
-      '"/opt/my app/bin" "two words" "q\\\\"" 100%%',
-      ["/opt/my app/bin", "two words", 'q"', "100%"],
-    ],
+    ['"/opt/my app/bin" "two words" "q\\\\"" 100%%', ["/opt/my app/bin", "two words", 'q"', "100%"]],
     ['sh -c "echo \\\\$HOME %f"', ["sh", "-c", "echo $HOME %f"]],
     ["editor\\s%d %m --x", ["editor", "--x"]],
   ])("%s", (exec, argv) => {
@@ -189,9 +182,7 @@ describe("apps.expandExec", () => {
     expect(() => apps.expandExec("editor %z")).toThrow(
       expect.objectContaining({ code: "ERR_BUN_COSMIC_INVALID_EXEC" }),
     );
-    expect(() => apps.expandExec('"editor')).toThrow(
-      expect.objectContaining({ code: "ERR_BUN_COSMIC_INVALID_EXEC" }),
-    );
+    expect(() => apps.expandExec('"editor')).toThrow(expect.objectContaining({ code: "ERR_BUN_COSMIC_INVALID_EXEC" }));
   });
 });
 
@@ -200,8 +191,7 @@ test("apps.launch spawns the Exec of an entry or action without a shell", async 
     "print.js": "console.log(JSON.stringify(process.argv.slice(2)));",
   });
   // Exec escaping, then the string-level escaping of every backslash (Windows paths).
-  const quote = (s: string) =>
-    `"${s.replace(/[\\"`$]/g, (c) => "\\" + c).replaceAll("\\", "\\\\")}"`;
+  const quote = (s: string) => `"${s.replace(/[\\"`$]/g, c => "\\" + c).replaceAll("\\", "\\\\")}"`;
   const program = `${quote(bunExe())} ${quote(join(String(dir), "print.js"))}`;
   const entry = {
     id: "t",
@@ -215,18 +205,9 @@ test("apps.launch spawns the Exec of an entry or action without a shell", async 
   } as any;
 
   await using proc = apps.launch(entry, { files: ["a b.txt", "c"], stdout: "pipe", env: bunEnv });
-  if (!proc.stdout || typeof proc.stdout === "number")
-    throw new Error("Expected captured launch stdout");
+  if (!proc.stdout || typeof proc.stdout === "number") throw new Error("Expected captured launch stdout");
   const [stdout, exitCode] = await Promise.all([proc.stdout.text(), proc.exited]);
-  expect(JSON.parse(stdout)).toEqual([
-    "a b.txt",
-    "c",
-    "--name=Test App",
-    "--icon",
-    "test-icon",
-    "100%",
-    "$HOME",
-  ]);
+  expect(JSON.parse(stdout)).toEqual(["a b.txt", "c", "--name=Test App", "--icon", "test-icon", "100%", "$HOME"]);
   expect(exitCode).toBe(0);
 
   await using action = apps.launch(entry, {
@@ -235,8 +216,7 @@ test("apps.launch spawns the Exec of an entry or action without a shell", async 
     stdout: "pipe",
     env: bunEnv,
   });
-  if (!action.stdout || typeof action.stdout === "number")
-    throw new Error("Expected captured action stdout");
+  if (!action.stdout || typeof action.stdout === "number") throw new Error("Expected captured action stdout");
   const [actionOut, actionCode] = await Promise.all([action.stdout.text(), action.exited]);
   expect(JSON.parse(actionOut)).toEqual(["--new", "https://x/"]);
   expect(actionCode).toBe(0);
@@ -249,21 +229,12 @@ test("config rejects names that are not one path component", () => {
   expect(() => config.open("com.example.Test").get("a/b")).toThrow();
 });
 
-test.skipIf(isLinux || isWindows)(
-  "native calls throw ERR_BUN_COSMIC_UNSUPPORTED outside Linux and Windows",
-  () => {
-    expect(isSupported).toBe(false);
-    expect(() => text.layout("x")).toThrow(
-      expect.objectContaining({ code: "ERR_BUN_COSMIC_UNSUPPORTED" }),
-    );
-    expect(() => apps.list({ dirs: [] })).toThrow(
-      expect.objectContaining({ code: "ERR_BUN_COSMIC_UNSUPPORTED" }),
-    );
-    expect(() => openWindow()).toThrow(
-      expect.objectContaining({ code: "ERR_BUN_COSMIC_UNSUPPORTED" }),
-    );
-  },
-);
+test.skipIf(isLinux || isWindows)("native calls throw ERR_BUN_COSMIC_UNSUPPORTED outside Linux and Windows", () => {
+  expect(isSupported).toBe(false);
+  expect(() => text.layout("x")).toThrow(expect.objectContaining({ code: "ERR_BUN_COSMIC_UNSUPPORTED" }));
+  expect(() => apps.list({ dirs: [] })).toThrow(expect.objectContaining({ code: "ERR_BUN_COSMIC_UNSUPPORTED" }));
+  expect(() => openWindow()).toThrow(expect.objectContaining({ code: "ERR_BUN_COSMIC_UNSUPPORTED" }));
+});
 
 describe.skipIf(!isWindows)("windows", () => {
   test("lays out and renders text with cosmic-text", () => {
@@ -271,7 +242,7 @@ describe.skipIf(!isWindows)("windows", () => {
     expect(text.loadFont(fontPath)).toEqual(["Space Mono"]);
     const options = { family: "Space Mono", fontSize: 20, color: "#ff0000" };
     const layout = text.layout("Hello\nBun", options);
-    expect(layout.lines.map((line) => [line.line, line.glyphs.length])).toEqual([
+    expect(layout.lines.map(line => [line.line, line.glyphs.length])).toEqual([
       [0, 5],
       [1, 3],
     ]);
@@ -297,9 +268,7 @@ describe.skipIf(!isWindows)("windows", () => {
   });
 
   test(".desktop application index stays Linux-only", () => {
-    expect(() => apps.list({ dirs: [] })).toThrow(
-      expect.objectContaining({ code: "ERR_BUN_COSMIC_UNSUPPORTED" }),
-    );
+    expect(() => apps.list({ dirs: [] })).toThrow(expect.objectContaining({ code: "ERR_BUN_COSMIC_UNSUPPORTED" }));
   });
 });
 
@@ -307,18 +276,18 @@ describe.skipIf(!isLinux)("linux", () => {
   test("loads a font, lays out and renders text", () => {
     expect(isSupported).toBe(true);
     expect(text.loadFont(fontPath)).toEqual(["Space Mono"]);
-    expect(text.fonts().some((face) => face.family === "Space Mono" && face.monospaced)).toBe(true);
+    expect(text.fonts().some(face => face.family === "Space Mono" && face.monospaced)).toBe(true);
 
     const options = { family: "Space Mono", fontSize: 20, color: "#ff0000" };
     const layout = text.layout("Hello\nBun", options);
-    expect(layout.lines.map((line) => [line.line, line.glyphs.length])).toEqual([
+    expect(layout.lines.map(line => [line.line, line.glyphs.length])).toEqual([
       [0, 5],
       [1, 3],
     ]);
     const glyphs = layout.lines[0].glyphs;
-    expect(new Set(glyphs.map((g) => g.font))).toEqual(new Set(["Space Mono"]));
-    expect(new Set(glyphs.map((g) => g.width)).size).toBe(1);
-    expect(glyphs.map((g) => [g.start, g.end])).toEqual([
+    expect(new Set(glyphs.map(g => g.font))).toEqual(new Set(["Space Mono"]));
+    expect(new Set(glyphs.map(g => g.width)).size).toBe(1);
+    expect(glyphs.map(g => [g.start, g.end])).toEqual([
       [0, 1],
       [1, 2],
       [2, 3],
@@ -377,7 +346,7 @@ Exec=hidden
       dirs: [join(String(dir), "a"), join(String(dir), "b")],
       locales: ["fr"],
     });
-    const byId = Object.fromEntries(entries.map((e) => [e.id, e]));
+    const byId = Object.fromEntries(entries.map(e => [e.id, e]));
     expect(Object.keys(byId).sort()).toEqual(["org.example.Editor", "org.example.Hidden"]);
     expect(byId["org.example.Editor"]).toMatchObject({
       name: "Éditeur",
@@ -417,9 +386,7 @@ esac
         "window\n--title=Hi\n--body=--not a flag\n--button=OK\n--button=Cancel\n--width=300\n",
       );
 
-      expect(
-        await notify({ summary: "Done", urgency: "critical", actions: { open: "Open" } }),
-      ).toEqual({
+      expect(await notify({ summary: "Done", urgency: "critical", actions: { open: "Open" } })).toEqual({
         id: 7,
         action: "open",
       });

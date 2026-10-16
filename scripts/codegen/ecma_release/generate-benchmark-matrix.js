@@ -44,7 +44,7 @@ function checkGlobalChanges(changedFiles) {
   }
 
   for (const file of changedFiles) {
-    if (GLOBAL_FILES.some((globalFile) => file === globalFile || file.endsWith(`/${globalFile}`))) {
+    if (GLOBAL_FILES.some(globalFile => file === globalFile || file.endsWith(`/${globalFile}`))) {
       console.error(`Global file changed: ${file}`);
       return true;
     }
@@ -75,7 +75,7 @@ function getFeatureForComponent(component) {
  * @returns {Array<{component: string, feature: string, mode: string}>} Matrix entries
  */
 function buildMatrixEntries(components) {
-  return components.map((component) => ({
+  return components.map(component => ({
     component,
     feature: getFeatureForComponent(component),
     mode: component === "pipeline" ? "simulation,memory" : "simulation",
@@ -129,7 +129,7 @@ function isComponentAffected(component, changedFiles) {
   // Check if any dependency files changed
   for (const dep of dependencies) {
     const depPath = `crates/${dep}/`;
-    if (changedFiles.some((file) => file.startsWith(depPath))) {
+    if (changedFiles.some(file => file.startsWith(depPath))) {
       console.error(`  Component ${component} affected by changes in ${depPath}`);
       return true;
     }
@@ -159,7 +159,7 @@ async function determineAffectedComponents() {
   // Check benchmark and common task files - affects all components
   if (
     changedFiles.some(
-      (file) => file.startsWith("src/codegen/ecma_benchmark/") || file.startsWith("src/codegen/ecma_common/"),
+      file => file.startsWith("src/codegen/ecma_benchmark/") || file.startsWith("src/codegen/ecma_common/"),
     )
   ) {
     console.error("Benchmark/common task files changed - will run all benchmarks");
@@ -167,7 +167,7 @@ async function determineAffectedComponents() {
   }
 
   // If no crate files changed, no benchmarks need to run
-  if (!changedFiles.some((file) => file.startsWith("crates/"))) {
+  if (!changedFiles.some(file => file.startsWith("crates/"))) {
     console.error("No crate files changed - skipping cargo tree and all benchmarks");
     return [];
   }
@@ -204,11 +204,9 @@ async function main() {
 
     // Set GitHub Actions notice
     if (affectedComponents.length === 0) {
-      console.error(
-        "::notice title=No benchmarks to run::No components were affected by the changes",
-      );
+      console.error("::notice title=No benchmarks to run::No components were affected by the changes");
     } else {
-      const componentNames = affectedComponents.map((obj) => obj.component).join(", ");
+      const componentNames = affectedComponents.map(obj => obj.component).join(", ");
       console.error(`::notice title=Running benchmarks::Affected components: ${componentNames}`);
     }
 

@@ -1362,18 +1362,16 @@ test.concurrent("--isolate: cached SourceProvider's module_info rebuilds correct
   expect(exitCode).toBe(0);
 });
 
-test.concurrent(
-  "--isolate: cached module_info handles `import * as ns; export { ns }` as a Namespace export",
-  async () => {
-    // The zod pattern: re-exporting a namespace import binding. Bun's module_info
-    // must record this as a [Namespace] export entry (not [Local]) so the cached
-    // analyze result matches JSC's ModuleAnalyzer. The debug build's
-    // fallbackParse diff would print "BEGIN analyzeTranspiledModule" + a DIFF
-    // and assert if they disagree.
-    using dir = tempDir("isolate-ns-reexport", {
-      "external.ts": `export const a = 1;\nexport const b = 2;\n`,
-      "re.ts": `import * as ns from "./external";\nexport { ns };\nexport default ns;\nexport * from "./external";\n`,
-      "t1.test.ts": `import {test,expect} from "bun:test";
+test.concurrent("--isolate: cached module_info handles `import * as ns; export { ns }` as a Namespace export", async () => {
+  // The zod pattern: re-exporting a namespace import binding. Bun's module_info
+  // must record this as a [Namespace] export entry (not [Local]) so the cached
+  // analyze result matches JSC's ModuleAnalyzer. The debug build's
+  // fallbackParse diff would print "BEGIN analyzeTranspiledModule" + a DIFF
+  // and assert if they disagree.
+  using dir = tempDir("isolate-ns-reexport", {
+    "external.ts": `export const a = 1;\nexport const b = 2;\n`,
+    "re.ts": `import * as ns from "./external";\nexport { ns };\nexport default ns;\nexport * from "./external";\n`,
+    "t1.test.ts": `import {test,expect} from "bun:test";
 import { ns } from "./re";
 import def, * as all from "./re";
 test("t1", () => {
@@ -1385,7 +1383,7 @@ test("t1", () => {
   expect(Object.keys(ns).sort()).toEqual(["a","b"]);
 });
 `,
-      "t2.test.ts": `import {test,expect} from "bun:test";
+    "t2.test.ts": `import {test,expect} from "bun:test";
 import { ns } from "./re";
 test("t2", () => {
   // Isolation sentinel: system bun ignores --isolate, so t2 would see t1's
@@ -1395,23 +1393,22 @@ test("t2", () => {
   expect(ns.b).toBe(2);
 });
 `,
-    });
+  });
 
-    await using proc = Bun.spawn({
-      cmd: [bunExe(), "test", "--isolate", "./t1.test.ts", "./t2.test.ts"],
-      env: bunEnv,
-      cwd: String(dir),
-      stderr: "pipe",
-      stdout: "pipe",
-    });
-    const [, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
-    expect(stderr).not.toContain("BEGIN analyzeTranspiledModule");
-    expect(stderr).not.toContain("DIFF:");
-    expect(stderr).toContain("2 pass");
-    expect(stderr).toContain("0 fail");
-    expect(exitCode).toBe(0);
-  },
-);
+  await using proc = Bun.spawn({
+    cmd: [bunExe(), "test", "--isolate", "./t1.test.ts", "./t2.test.ts"],
+    env: bunEnv,
+    cwd: String(dir),
+    stderr: "pipe",
+    stdout: "pipe",
+  });
+  const [, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  expect(stderr).not.toContain("BEGIN analyzeTranspiledModule");
+  expect(stderr).not.toContain("DIFF:");
+  expect(stderr).toContain("2 pass");
+  expect(stderr).toContain("0 fail");
+  expect(exitCode).toBe(0);
+});
 
 test.concurrent("--isolate: leaked AbortSignal.timeout does not fire in next file", async () => {
   using dir = tempDir("isolate-abort-timeout", {
@@ -1783,22 +1780,20 @@ describe.concurrent("--isolate: collects globals pinned by leaked handles", () =
 // thread), not in the refcount destructor; otherwise the file-boundary sweep
 // reaches a dangling pointer and calls close() on freed memory (UAF, caught by
 // ASAN).
-test.concurrent(
-  "--isolate: unwatchFile'd watcher freed on the work pool leaves no dangling registry entry",
-  async () => {
-    // The dance, per file:
-    //   1. watchFile, then touch the file until the listener fires — proof the
-    //      initial stat completed and the watcher sits in the scheduler queue
-    //      (queue ref taken).
-    //   2. unwatchFile (close: Strong self-ref downgraded) + Bun.gc (wrapper
-    //      finalized: wrapper ref dropped).
-    //   3. sleep past a few 10ms scheduler ticks so the work-pool callback pops
-    //      the closed watcher and drops the queue ref — the last one — freeing
-    //      the watcher on the work-pool thread. No JS-observable signal exists
-    //      for that free, hence the bounded sleep.
-    // The file boundary after each file then sweeps the file's context, which
-    // must no longer reference the freed watcher.
-    const raceFixture = `
+test.concurrent("--isolate: unwatchFile'd watcher freed on the work pool leaves no dangling registry entry", async () => {
+  // The dance, per file:
+  //   1. watchFile, then touch the file until the listener fires — proof the
+  //      initial stat completed and the watcher sits in the scheduler queue
+  //      (queue ref taken).
+  //   2. unwatchFile (close: Strong self-ref downgraded) + Bun.gc (wrapper
+  //      finalized: wrapper ref dropped).
+  //   3. sleep past a few 10ms scheduler ticks so the work-pool callback pops
+  //      the closed watcher and drops the queue ref — the last one — freeing
+  //      the watcher on the work-pool thread. No JS-observable signal exists
+  //      for that free, hence the bounded sleep.
+  // The file boundary after each file then sweeps the file's context, which
+  // must no longer reference the freed watcher.
+  const raceFixture = `
     import { test } from "bun:test";
     import fs from "node:fs";
     import path from "node:path";
@@ -1821,24 +1816,23 @@ test.concurrent(
       }
     });
   `;
-    // Two identical files: the drain runs at the boundary BETWEEN files, so the
-    // first file's registry is drained while the second exists to force it.
-    using dir = tempDir("isolate-statwatcher-race", {
-      "a.test.js": raceFixture,
-      "b.test.js": raceFixture,
-    });
-    await using proc = Bun.spawn({
-      cmd: [bunExe(), "test", "--isolate"],
-      env: bunEnv,
-      cwd: String(dir),
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-    const [stderr, exitCode] = await Promise.all([proc.stderr.text(), proc.exited]);
-    expect(stderr).toContain("2 pass");
-    expect(exitCode).toBe(0);
-  },
-);
+  // Two identical files: the drain runs at the boundary BETWEEN files, so the
+  // first file's registry is drained while the second exists to force it.
+  using dir = tempDir("isolate-statwatcher-race", {
+    "a.test.js": raceFixture,
+    "b.test.js": raceFixture,
+  });
+  await using proc = Bun.spawn({
+    cmd: [bunExe(), "test", "--isolate"],
+    env: bunEnv,
+    cwd: String(dir),
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [stderr, exitCode] = await Promise.all([proc.stderr.text(), proc.exited]);
+  expect(stderr).toContain("2 pass");
+  expect(exitCode).toBe(0);
+});
 
 // The synchronous module-load path (require(esm), importSync) must attach the
 // transpiler's ESM-record analysis (module_info) to the ResolvedSource under

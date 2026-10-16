@@ -16,8 +16,7 @@ const ROOT_DIR_URL = pathToFileURL(ROOT_DIR_PATH).href;
 const DIST_DIR_SUBPATH = "src/quality/lint_cli/dist";
 
 // Replace backslashes with forward slashes on Windows. Do nothing on Mac/Linux.
-const normalizeSlashes =
-  pathSep === "\\" ? (path: string) => path.replaceAll("\\", "/") : (path: string) => path;
+const normalizeSlashes = pathSep === "\\" ? (path: string) => path.replaceAll("\\", "/") : (path: string) => path;
 
 /**
  * Generate report of test results as markdown.
@@ -112,7 +111,7 @@ export function generateReport(
     report += str
       .trimStart()
       .split("\n")
-      .map((line) => line.trimStart())
+      .map(line => line.trimStart())
       .join("\n");
   }
 

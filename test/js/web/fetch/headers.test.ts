@@ -557,8 +557,8 @@ describe("Headers", () => {
         forEach,
         forOf: [...headers],
         entries: [...headers.entries()],
-        keysAndValues: [...headers.keys()].map((key, i) => [key, values[i]]),
-      }).toEqual({ forEach: expected, forOf: expected, entries: expected, keysAndValues: expected });
+        keysAndValues: [...headers.keys()].map((key, i): [string, string] => [key, values[i]]),
+      }).toEqual({ forEach: expected, forOf: expected, entries: expected, keysAndValues: expected } as any);
     }
 
     test.each([
@@ -899,7 +899,9 @@ describe("Headers", () => {
       })();
       Bun.gc(true);
       expect([...iterator]).toEqual(
-        Array.from({ length: 32 }, (_, i) => [`x-custom-${i}`, valueOf(i)]).sort((a, b) => byCodeUnit(a[0], b[0])),
+        Array.from({ length: 32 }, (_, i): [string, string] => [`x-custom-${i}`, valueOf(i)]).sort((a, b) =>
+          byCodeUnit(a[0], b[0]),
+        ),
       );
     });
 

@@ -229,10 +229,7 @@ function migrateLineWidth(
 }
 
 // `quoteStyle` -> `singleQuote`
-function migrateQuoteStyle(
-  jsFormatterConfig: BiomeJsFormatterConfig,
-  oxfmtrc: Record<string, unknown>,
-): void {
+function migrateQuoteStyle(jsFormatterConfig: BiomeJsFormatterConfig, oxfmtrc: Record<string, unknown>): void {
   const value = jsFormatterConfig.quoteStyle;
   if (value !== undefined) {
     oxfmtrc.singleQuote = value === "single";
@@ -243,10 +240,7 @@ function migrateQuoteStyle(
 }
 
 // `jsxQuoteStyle` -> `jsxSingleQuote`
-function migrateJsxQuoteStyle(
-  jsFormatterConfig: BiomeJsFormatterConfig,
-  oxfmtrc: Record<string, unknown>,
-): void {
+function migrateJsxQuoteStyle(jsFormatterConfig: BiomeJsFormatterConfig, oxfmtrc: Record<string, unknown>): void {
   const value = jsFormatterConfig.jsxQuoteStyle;
   if (value !== undefined) {
     oxfmtrc.jsxSingleQuote = value === "single";
@@ -258,10 +252,7 @@ function migrateJsxQuoteStyle(
 
 // `quoteProperties` -> `quoteProps`
 // Biome uses "asNeeded", Oxfmt uses "as-needed"
-function migrateQuoteProperties(
-  jsFormatterConfig: BiomeJsFormatterConfig,
-  oxfmtrc: Record<string, unknown>,
-): void {
+function migrateQuoteProperties(jsFormatterConfig: BiomeJsFormatterConfig, oxfmtrc: Record<string, unknown>): void {
   const value = jsFormatterConfig.quoteProperties;
   if (value !== undefined) {
     if (value === "asNeeded") {
@@ -275,10 +266,7 @@ function migrateQuoteProperties(
 }
 
 // `trailingCommas` -> `trailingComma`
-function migrateTrailingCommas(
-  jsFormatterConfig: BiomeJsFormatterConfig,
-  oxfmtrc: Record<string, unknown>,
-): void {
+function migrateTrailingCommas(jsFormatterConfig: BiomeJsFormatterConfig, oxfmtrc: Record<string, unknown>): void {
   const value = jsFormatterConfig.trailingCommas;
   if (value !== undefined) {
     oxfmtrc.trailingComma = value;
@@ -288,10 +276,7 @@ function migrateTrailingCommas(
 }
 
 // `semicolons` -> `semi`
-function migrateSemicolons(
-  jsFormatterConfig: BiomeJsFormatterConfig,
-  oxfmtrc: Record<string, unknown>,
-): void {
+function migrateSemicolons(jsFormatterConfig: BiomeJsFormatterConfig, oxfmtrc: Record<string, unknown>): void {
   const value = jsFormatterConfig.semicolons;
   if (value !== undefined) {
     oxfmtrc.semi = value === "always";
@@ -303,10 +288,7 @@ function migrateSemicolons(
 
 // `arrowParentheses` -> `arrowParens`
 // Biome uses "asNeeded", Oxfmt uses "avoid"
-function migrateArrowParentheses(
-  jsFormatterConfig: BiomeJsFormatterConfig,
-  oxfmtrc: Record<string, unknown>,
-): void {
+function migrateArrowParentheses(jsFormatterConfig: BiomeJsFormatterConfig, oxfmtrc: Record<string, unknown>): void {
   const value = jsFormatterConfig.arrowParentheses;
   if (value !== undefined) {
     if (value === "always") {

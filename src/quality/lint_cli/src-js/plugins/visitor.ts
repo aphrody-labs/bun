@@ -89,18 +89,8 @@
 // for objects created by user code in visitors. If ephemeral user-created objects all fit in new space,
 // it will avoid full GC runs, which should greatly improve performance.
 
-import {
-  LEAF_NODE_TYPES_COUNT,
-  NODE_TYPE_IDS_MAP,
-  NODE_TYPES_COUNT,
-  TYPE_IDS_COUNT,
-} from "../generated/type_ids.ts";
-import {
-  parseSelector,
-  wrapVisitFnWithSelectorMatch,
-  EXIT_FLAG,
-  IDENTIFIER_COUNT_INCREMENT,
-} from "./selector.ts";
+import { LEAF_NODE_TYPES_COUNT, NODE_TYPE_IDS_MAP, NODE_TYPES_COUNT, TYPE_IDS_COUNT } from "../generated/type_ids.ts";
+import { parseSelector, wrapVisitFnWithSelectorMatch, EXIT_FLAG, IDENTIFIER_COUNT_INCREMENT } from "./selector.ts";
 import { debugAssert, debugAssertIsNonNull, typeAssertIs } from "../utils/asserts.ts";
 import { wrapTimedFunction } from "./timing.ts";
 

@@ -6,13 +6,7 @@ import { RuleTester } from "../rule_tester.ts";
 import repos from "../../repos.json" with { type: "json" };
 
 import type { MockFn, TestGroup } from "../index.ts";
-import type {
-  InvalidTestCase,
-  TestCase,
-  TestCases,
-  Error,
-  ErrorSuggestion,
-} from "../rule_tester.ts";
+import type { InvalidTestCase, TestCase, TestCases, Error, ErrorSuggestion } from "../rule_tester.ts";
 import type { Rule } from "#oxlint/plugins";
 
 /**
@@ -60,8 +54,8 @@ const group: TestGroup = {
 
     // Skip stand-alone tests that don't use `RuleTester` in test file for `no-useless-flag` rule
     if (
-      ruleName === "Don't conflict even if using the rules together."
-      && err.message === "Test case was not run with `RuleTester`"
+      ruleName === "Don't conflict even if using the rules together." &&
+      err.message === "Test case was not run with `RuleTester`"
     ) {
       return true;
     }
@@ -90,11 +84,7 @@ class SnapshotRuleTesterShim extends RuleTester {
     // Parse expected outputs from the snapshot file for this rule
     const snapshotCases = parseSnapshot(ruleName);
 
-    assert.equal(
-      tests.invalid.length,
-      snapshotCases.length,
-      "Snapshot file has wrong number of invalid test cases",
-    );
+    assert.equal(tests.invalid.length, snapshotCases.length, "Snapshot file has wrong number of invalid test cases");
 
     tests = {
       valid: tests.valid,
@@ -110,21 +100,13 @@ class SnapshotRuleTesterShim extends RuleTester {
         if (test.output === undefined) {
           test.output = snapshotCase.output;
         } else {
-          assert.equal(
-            test.output,
-            snapshotCase.output,
-            "Output in snapshot does not match test case",
-          );
+          assert.equal(test.output, snapshotCase.output, "Output in snapshot does not match test case");
         }
 
         if (test.errors === undefined) {
           test.errors = snapshotCase.errors;
         } else {
-          assert.deepStrictEqual(
-            test.errors,
-            snapshotCase.errors,
-            "Errors in snapshot do not match test case",
-          );
+          assert.deepStrictEqual(test.errors, snapshotCase.errors, "Errors in snapshot do not match test case");
         }
 
         // Enable recursive fixing to match `SnapshotRuleTester`'s behavior.
@@ -184,7 +166,7 @@ function parseSnapshot(ruleName: string): SnapshotCase[] {
   content = content.slice(0, -FOOTER.length);
 
   // Parse test cases from snapshot
-  return content.split("\n---\n").map((caseText) => {
+  return content.split("\n---\n").map(caseText => {
     const lines = caseText.trimStart().split("\n");
 
     // Parse header.
@@ -193,9 +175,8 @@ function parseSnapshot(ruleName: string): SnapshotCase[] {
     const firstLineExpected = `Test: ${ruleName} >> invalid`;
     const firstLine = lines[0];
     assert(
-      firstLine === firstLineExpected
-        || (firstLine.startsWith(firstLineExpected)
-          && firstLine.slice(firstLineExpected.length).startsWith(" >>> ")),
+      firstLine === firstLineExpected ||
+        (firstLine.startsWith(firstLineExpected) && firstLine.slice(firstLineExpected.length).startsWith(" >>> ")),
       "Invalid header",
     );
 

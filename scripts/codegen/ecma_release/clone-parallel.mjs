@@ -40,11 +40,11 @@ function runGit(gitArgs, cwd) {
     });
 
     let stderr = "";
-    proc.stderr.on("data", (data) => {
+    proc.stderr.on("data", data => {
       stderr += data.toString();
     });
 
-    proc.on("close", (code) => {
+    proc.on("close", code => {
       if (code === 0) {
         resolve();
       } else {
@@ -120,13 +120,7 @@ async function main() {
   const results = await Promise.all([
     cloneRepo(TEST262, "tc39/test262", "src/codegen/ecma_coverage/test262", TEST262_SHA, "test262"),
     cloneRepo(BABEL, "babel/babel", "src/codegen/ecma_coverage/babel", BABEL_SHA, "babel"),
-    cloneRepo(
-      TYPESCRIPT,
-      "microsoft/TypeScript",
-      "src/codegen/ecma_coverage/typescript",
-      TYPESCRIPT_SHA,
-      "typescript",
-    ),
+    cloneRepo(TYPESCRIPT, "microsoft/TypeScript", "src/codegen/ecma_coverage/typescript", TYPESCRIPT_SHA, "typescript"),
     cloneRepo(
       ESTREE_CONFORMANCE,
       "oxc-project/estree-conformance",
@@ -144,7 +138,7 @@ async function main() {
   ]);
 
   // Count failures (excluding skipped)
-  const failedCount = results.filter((r) => !r.success).length;
+  const failedCount = results.filter(r => !r.success).length;
 
   if (failedCount === 0) {
     console.log("[OK] All submodule clones completed successfully!");

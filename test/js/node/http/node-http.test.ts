@@ -7473,7 +7473,7 @@ describe("req.headers and req.rawHeaders", () => {
       return { raw, headers, folded: Object.entries(folded) };
     });
     expect(seen.map(({ raw, headers }) => ({ raw, headers }))).toEqual(
-      seen.map(({ raw, folded }) => ({ raw, headers: folded })),
+      seen.map(({ raw, folded }) => ({ raw, headers: folded as [string, any][] })),
     );
     expect(seen.map(({ raw }) => raw.length / 2)).toEqual(requests.map(lines => lines.length));
   });
@@ -7533,7 +7533,13 @@ it("setHeader and appendHeader check a name however often names were set before"
     "x-appended": ["0", "1", "2"],
     "x-after": "again",
   } as any);
-  expect(message.getRawHeaderNames()).toEqual(["x-custom-NAME", "Content-Type", long, "X-Appended", "X-After"]);
+  expect((message as any).getRawHeaderNames()).toEqual([
+    "x-custom-NAME",
+    "Content-Type",
+    long,
+    "X-Appended",
+    "X-After",
+  ]);
   // A name that is not a string is not one, whatever it converts to; neither is one with a character added.
   expect([
     invalid("bad name"),

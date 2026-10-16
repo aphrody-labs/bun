@@ -34,7 +34,7 @@ function make(extra: Record<string, unknown> = {}) {
   const sup = new Supervisor({
     name: "test",
     budget: Budget.root({ name: "test", bytes: 10_000_000 }),
-    log: (m) => logs.push(m),
+    log: m => logs.push(m),
     signals: false,
     ...extra,
   });
@@ -52,15 +52,13 @@ describe("Windows service plan", () => {
       start: "manual",
       args: ["run", "C:\\Program Files\\worker.ts", "", 'a"b', "C:\\trailing path\\"],
     });
-    expect(plan.commands.some((command) => command[1] === "install")).toBe(false);
-    expect(plan.commands.some((command) => command[1] === "start")).toBe(false);
+    expect(plan.commands.some(command => command[1] === "install")).toBe(false);
+    expect(plan.commands.some(command => command[1] === "start")).toBe(false);
     expect(plan.startsService).toBe(false);
-    expect(plan.commands.find((command) => command[3] === "AppParameters")?.[4]).toBe(
+    expect(plan.commands.find(command => command[3] === "AppParameters")?.[4]).toBe(
       'run "C:\\Program Files\\worker.ts" "" "a\\"b" "C:\\trailing path\\\\"',
     );
-    expect(plan.commands.find((command) => command[3] === "Start")?.[4]).toBe(
-      "SERVICE_DEMAND_START",
-    );
+    expect(plan.commands.find(command => command[3] === "Start")?.[4]).toBe("SERVICE_DEMAND_START");
   });
 
   test("rejects relative executables and control characters", () => {
@@ -79,18 +77,12 @@ describe("Windows service plan", () => {
 describe("ServiceSupervisor", () => {
   test("rejects duplicate IDs, traversal, reserved filenames and invalid commands", () => {
     const service = { id: "worker", command: [bunExe(), "-e", idle] };
-    expect(
-      () => new ServiceSupervisor({ services: [service, { ...service, id: "WORKER" }] }),
-    ).toThrow("duplicate");
+    expect(() => new ServiceSupervisor({ services: [service, { ...service, id: "WORKER" }] })).toThrow("duplicate");
     for (const id of ["../outside", "a/b", "a\\b", "CON", "nul", ""]) {
       expect(() => new ServiceSupervisor({ services: [{ ...service, id }] })).toThrow("Invalid");
     }
-    expect(() => new ServiceSupervisor({ services: [{ ...service, command: [] }] })).toThrow(
-      "command",
-    );
-    expect(() => new ServiceSupervisor({ services: [service], probeTimeoutMs: 0 })).toThrow(
-      "probeTimeoutMs",
-    );
+    expect(() => new ServiceSupervisor({ services: [{ ...service, command: [] }] })).toThrow("command");
+    expect(() => new ServiceSupervisor({ services: [service], probeTimeoutMs: 0 })).toThrow("probeTimeoutMs");
   });
 
   test("uses configured cwd/env/logs and writes the final stopped snapshot", async () => {
@@ -200,15 +192,13 @@ describe("ServiceSupervisor", () => {
     try {
       await sup.start();
       await waitFor(
-        () =>
-          sup.status().services[0]!.state === "backoff" &&
-          sup.status().services[1]!.state === "exited",
+        () => sup.status().services[0]!.state === "backoff" && sup.status().services[1]!.state === "exited",
       );
-      expect(sup.status().services.map((service) => service.restarts)).toEqual([1, 0]);
+      expect(sup.status().services.map(service => service.restarts)).toEqual([1, 0]);
     } finally {
       await sup.stop();
     }
-    expect(sup.status().services.map((service) => [service.state, service.pid])).toEqual([
+    expect(sup.status().services.map(service => [service.state, service.pid])).toEqual([
       ["stopped", null],
       ["stopped", null],
     ]);
@@ -223,7 +213,7 @@ describe("ServiceSupervisor", () => {
       statusFile: String(dir),
       env: bunEnv,
       services: [{ id: "worker", command: [bunExe(), "-e", idle] }],
-      log: (event) => {
+      log: event => {
         if (event.event === "started") pid = event.pid;
       },
     });
@@ -237,41 +227,38 @@ describe("ServiceSupervisor", () => {
     expect(sup.healthUrl).toBeUndefined();
   });
 
-  test.skipIf(process.platform !== "win32")(
-    "Windows Job closes descendants during stop",
-    async () => {
-      using dir = tempDir("service-supervisor-job", {});
-      const sup = new ServiceSupervisor({
-        signals: false,
-        logDirectory: String(dir),
-        env: bunEnv,
-        services: [
-          {
-            id: "parent",
-            command: [
-              bunExe(),
-              "-e",
-              `const child=Bun.spawn({cmd:[process.execPath,"-e",${JSON.stringify(idle)}],stdin:"ignore",stdout:"ignore",stderr:"ignore"}); console.log(child.pid); ${idle}`,
-            ],
-          },
-        ],
+  test.skipIf(process.platform !== "win32")("Windows Job closes descendants during stop", async () => {
+    using dir = tempDir("service-supervisor-job", {});
+    const sup = new ServiceSupervisor({
+      signals: false,
+      logDirectory: String(dir),
+      env: bunEnv,
+      services: [
+        {
+          id: "parent",
+          command: [
+            bunExe(),
+            "-e",
+            `const child=Bun.spawn({cmd:[process.execPath,"-e",${JSON.stringify(idle)}],stdin:"ignore",stdout:"ignore",stderr:"ignore"}); console.log(child.pid); ${idle}`,
+          ],
+        },
+      ],
+    });
+    let descendant: number | undefined;
+    try {
+      await sup.start();
+      descendant = await waitFor(() => {
+        const file = join(String(dir), "parent.log");
+        return existsSync(file) && Number(readFileSync(file, "utf8").trim());
       });
-      let descendant: number | undefined;
-      try {
-        await sup.start();
-        descendant = await waitFor(() => {
-          const file = join(String(dir), "parent.log");
-          return existsSync(file) && Number(readFileSync(file, "utf8").trim());
-        });
-        expect(alive(descendant)).toBe(true);
-        await sup.stop();
-        await waitFor(() => !alive(descendant!));
-      } finally {
-        await sup.stop();
-        if (descendant && alive(descendant)) process.kill(descendant, "SIGKILL");
-      }
-    },
-  );
+      expect(alive(descendant)).toBe(true);
+      await sup.stop();
+      await waitFor(() => !alive(descendant!));
+    } finally {
+      await sup.stop();
+      if (descendant && alive(descendant)) process.kill(descendant, "SIGKILL");
+    }
+  });
 });
 
 describe("ServiceSupervisor pause leases", () => {
@@ -281,7 +268,7 @@ describe("ServiceSupervisor pause leases", () => {
       signals: false,
       env: bunEnv,
       services: [{ id: "done", command: [bunExe(), "-e", "process.exit(0)"], restart: "never" }],
-      log: (event) => {
+      log: event => {
         if (event.event === "started") starts++;
       },
     });
@@ -337,7 +324,7 @@ describe("ServiceSupervisor pause leases", () => {
     });
     try {
       await expect(
-        sup.withPaused("worker", async (signal) => {
+        sup.withPaused("worker", async signal => {
           expect(signal.aborted).toBe(false);
           expect(sup.status().services[0]!.state).toBe("paused");
           throw new Error("lease failure");
@@ -369,13 +356,13 @@ describe("ServiceSupervisor pause leases", () => {
       const restarts = sup.status().services[0]!.restarts;
       let enter!: () => void;
       let release!: () => void;
-      const entered = new Promise<void>((done) => {
+      const entered = new Promise<void>(done => {
         enter = done;
       });
-      const gate = new Promise<void>((done) => {
+      const gate = new Promise<void>(done => {
         release = done;
       });
-      const lease = sup.withPaused("crash", async (signal) => {
+      const lease = sup.withPaused("crash", async signal => {
         enter();
         await gate;
         expect(signal.aborted).toBe(true);
@@ -390,42 +377,39 @@ describe("ServiceSupervisor pause leases", () => {
     }
   });
 
-  test.skipIf(process.platform !== "win32")(
-    "pause closes the Windows Job containing descendants",
-    async () => {
-      using dir = tempDir("service-supervisor-pause-job", {});
-      const sup = new ServiceSupervisor({
-        signals: false,
-        logDirectory: String(dir),
-        env: bunEnv,
-        services: [
-          {
-            id: "parent",
-            command: [
-              bunExe(),
-              "-e",
-              `const child=Bun.spawn({cmd:[process.execPath,"-e",${JSON.stringify(idle)}],stdin:"ignore",stdout:"ignore",stderr:"ignore"}); console.log(child.pid); ${idle}`,
-            ],
-          },
-        ],
+  test.skipIf(process.platform !== "win32")("pause closes the Windows Job containing descendants", async () => {
+    using dir = tempDir("service-supervisor-pause-job", {});
+    const sup = new ServiceSupervisor({
+      signals: false,
+      logDirectory: String(dir),
+      env: bunEnv,
+      services: [
+        {
+          id: "parent",
+          command: [
+            bunExe(),
+            "-e",
+            `const child=Bun.spawn({cmd:[process.execPath,"-e",${JSON.stringify(idle)}],stdin:"ignore",stdout:"ignore",stderr:"ignore"}); console.log(child.pid); ${idle}`,
+          ],
+        },
+      ],
+    });
+    let descendant: number | undefined;
+    try {
+      await sup.start();
+      descendant = await waitFor(() => {
+        const path = join(String(dir), "parent.log");
+        return existsSync(path) && Number(readFileSync(path, "utf8").trim());
       });
-      let descendant: number | undefined;
-      try {
-        await sup.start();
-        descendant = await waitFor(() => {
-          const path = join(String(dir), "parent.log");
-          return existsSync(path) && Number(readFileSync(path, "utf8").trim());
-        });
-        expect(alive(descendant)).toBe(true);
-        await sup.pause("parent");
-        await waitFor(() => !alive(descendant!));
-        expect(sup.status().services[0]).toMatchObject({ state: "paused", restarts: 0 });
-      } finally {
-        await sup.stop();
-        if (descendant && alive(descendant)) process.kill(descendant, "SIGKILL");
-      }
-    },
-  );
+      expect(alive(descendant)).toBe(true);
+      await sup.pause("parent");
+      await waitFor(() => !alive(descendant!));
+      expect(sup.status().services[0]).toMatchObject({ state: "paused", restarts: 0 });
+    } finally {
+      await sup.stop();
+      if (descendant && alive(descendant)) process.kill(descendant, "SIGKILL");
+    }
+  });
 });
 
 describe("Supervisor", () => {
@@ -434,7 +418,7 @@ describe("Supervisor", () => {
     const child = sup.spawnSelf("crash", ["-e", "process.exit(3)"], { bun: true });
     await waitFor(() => child.restarts >= 4);
     await sup.drain();
-    const delays = logs.map((l) => /restart in (\d+) ms/.exec(l)?.[1]).filter(Boolean);
+    const delays = logs.map(l => /restart in (\d+) ms/.exec(l)?.[1]).filter(Boolean);
     expect(delays.slice(0, 4)).toEqual(["20", "40", "80", "80"]);
     expect(child.state).toBe("stopped");
   });
@@ -454,7 +438,7 @@ describe("Supervisor", () => {
     const child = sup.spawnSelf("stable", ["-e", "setTimeout(() => process.exit(1), 150)"]);
     await waitFor(() => child.restarts >= 3);
     await sup.drain();
-    const delays = logs.map((l) => /restart in (\d+) ms/.exec(l)?.[1]).filter(Boolean);
+    const delays = logs.map(l => /restart in (\d+) ms/.exec(l)?.[1]).filter(Boolean);
     expect(delays.slice(0, 3)).toEqual(["20", "20", "20"]);
   });
 
@@ -492,7 +476,7 @@ describe("Supervisor", () => {
   test("ready waits for every ready callback", async () => {
     const { sup } = make();
     let release!: () => void;
-    const gate = new Promise<void>((r) => (release = r));
+    const gate = new Promise<void>(r => (release = r));
     sup.spawnSelf("a", ["-e", idle], { ready: () => gate });
     sup.spawnSelf("b", ["-e", idle]);
     let done = false;
@@ -501,7 +485,7 @@ describe("Supervisor", () => {
     expect(done).toBe(false);
     release();
     await p;
-    expect(sup.children.map((c) => c.state)).toEqual(["ready", "ready"]);
+    expect(sup.children.map(c => c.state)).toEqual(["ready", "ready"]);
     await sup.drain();
   });
 
@@ -509,14 +493,12 @@ describe("Supervisor", () => {
     const order: string[] = [];
     const { sup } = make({
       onDrain: () => {
-        order.push(
-          `onDrain alive=${sup.children.every((c) => c.pid !== undefined && alive(c.pid))}`,
-        );
+        order.push(`onDrain alive=${sup.children.every(c => c.pid !== undefined && alive(c.pid))}`);
       },
     });
     sup.spawnSelf("a", ["-e", idle]);
     sup.spawnSelf("b", ["-e", idle]);
-    const pids = sup.children.map((c) => c.pid!);
+    const pids = sup.children.map(c => c.pid!);
     await sup.ready();
     await sup.drain();
     expect(order).toEqual(["onDrain alive=true"]);
@@ -536,7 +518,7 @@ describe("Supervisor", () => {
     await sup.drain();
     expect(Date.now() - t).toBeGreaterThanOrEqual(250);
     expect(alive(pid)).toBe(false);
-    expect(logs.some((l) => l.includes("SIGKILL"))).toBe(true);
+    expect(logs.some(l => l.includes("SIGKILL"))).toBe(true);
   });
 
   test("/healthz reports children, budget and 503 when a child is down", async () => {

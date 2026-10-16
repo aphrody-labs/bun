@@ -52,7 +52,11 @@ describe("bun host", () => {
     expect(synced.exitCode).toBe(0);
 
     const found = await host(["find", "--ram", "0.001", "--json", "-s", "HOST_TEST_SECRET"], env);
-    expect(JSON.parse(found.stdout).map((h: { id: string }) => h.id).sort()).toEqual(["master", "omar-pc"]);
+    expect(
+      JSON.parse(found.stdout)
+        .map((h: { id: string }) => h.id)
+        .sort(),
+    ).toEqual(["master", "omar-pc"]);
     expect(found.exitCode).toBe(0);
 
     const none = await host(["find", "--vram-free", "100000", "-s", "HOST_TEST_SECRET"], env);

@@ -101,7 +101,8 @@ test.skipIf(!host)("backend: webkitgtk resolves BUN_WEBVIEW_HOST and drives the 
 test.skipIf(!isWindows || !host || process.env.BUN_WEBVIEW_TEST_WEBVIEW2 !== "1")(
   "WebView2 navigates, awaits JavaScript promises, resizes and closes its native window",
   async () => {
-    const { stdout, stderr, exitCode } = await run(`
+    const { stdout, stderr, exitCode } = await run(
+      `
       const view = new Bun.WebView({ backend: "webview2", headless: false, width: 320, height: 200 });
       try {
         await view.navigate("data:text/html,<title>native-webview2</title><p>ready</p>");
@@ -116,7 +117,9 @@ test.skipIf(!isWindows || !host || process.env.BUN_WEBVIEW_TEST_WEBVIEW2 !== "1"
         console.log(JSON.stringify({value,error,viewport,png:Array.from(screenshot.subarray(0,8)),
           history:history.entries.some(entry=>entry.url.includes('native-webview2'))}));
       } finally { view.close(); }
-    `, { BUN_WEBVIEW_HOST: host! });
+    `,
+      { BUN_WEBVIEW_HOST: host! },
+    );
     if (exitCode !== 0) console.error(stderr);
     const result = JSON.parse(stdout);
     expect(result.value).toEqual({ answer: 42, text: "ready" });

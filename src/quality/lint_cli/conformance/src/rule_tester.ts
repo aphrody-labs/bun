@@ -11,10 +11,7 @@ import { SHOULD_SKIP_CODE } from "./filter.ts";
 
 import type { Rule } from "#oxlint/plugins";
 import type { ParserDetails } from "./index.ts";
-import type {
-  LanguageOptionsInternal,
-  ParserOptionsInternal,
-} from "../../src-js/package/rule_tester.ts";
+import type { LanguageOptionsInternal, ParserOptionsInternal } from "../../src-js/package/rule_tester.ts";
 
 type DescribeFn = RuleTester.DescribeFn;
 type ItFn = RuleTester.ItFn;
@@ -38,8 +35,7 @@ export type InvalidTestCase = RuleTester.InvalidTestCase & TestCaseExtension;
 export type TestCase = ValidTestCase | InvalidTestCase;
 
 // Replace backslashes with forward slashes on Windows. Do nothing on Mac/Linux.
-const normalizeSlashes =
-  pathSep === "\\" ? (path: string) => path.replaceAll("\\", "/") : (path: string) => path;
+const normalizeSlashes = pathSep === "\\" ? (path: string) => path.replaceAll("\\", "/") : (path: string) => path;
 
 // Maps of parser `parseForESLint` functions and parser paths to parser details (language + specifier)
 export const parseForESLintFns: Map<Function, ParserDetails> = new Map();
@@ -84,7 +80,7 @@ class RuleTesterShim extends RuleTester {
   run(ruleName: string, rule: Rule, tests: TestCases): void {
     tests = {
       valid: tests.valid
-        .map((test) => {
+        .map(test => {
           if (typeof test === "string") test = { code: test };
           return addBeforeHook(test);
         })
@@ -278,9 +274,7 @@ function getGlobals(languageOptions: LanguageOptionsInternal): Globals {
  * @param ecmaVersion - ECMAScript version (e.g., 3, 5, 6, 2015, 2020, "latest")
  * @returns Globals object for that version
  */
-function getGlobalsForEcmaVersion(
-  ecmaVersion: number | "latest" | undefined,
-): Record<string, boolean> {
+function getGlobalsForEcmaVersion(ecmaVersion: number | "latest" | undefined): Record<string, boolean> {
   switch (ecmaVersion) {
     case 3:
       return eslintGlobals.es3;

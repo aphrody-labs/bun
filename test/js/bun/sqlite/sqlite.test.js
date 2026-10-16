@@ -1,15 +1,7 @@
 import { spawnSync } from "bun";
 import { constants, Database, SQLiteError } from "bun:sqlite";
 import { describe, expect, it } from "bun:test";
-import {
-  existsSync,
-  readdirSync,
-  readFileSync,
-  realpathSync,
-  rmSync,
-  statSync,
-  writeFileSync,
-} from "fs";
+import { existsSync, readdirSync, readFileSync, realpathSync, rmSync, statSync, writeFileSync } from "fs";
 import { bunEnv, bunExe, isMacOS, isMacOSVersionAtLeast, isWindows, tempDir } from "harness";
 import { tmpdir } from "os";
 import path from "path";
@@ -67,9 +59,7 @@ describe("as", () => {
     const db = new Database(":memory:");
     db.exec("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)");
     db.run("INSERT INTO test (name) VALUES ('Hello')");
-    expect(() => db.query("SELECT * FROM test").as(null)).toThrow(
-      "Expected class to be a constructor or undefined",
-    );
+    expect(() => db.query("SELECT * FROM test").as(null)).toThrow("Expected class to be a constructor or undefined");
     expect(() => db.query("SELECT * FROM test").as(() => {})).toThrow("Expected a constructor");
     function BadClass() {}
     BadClass.prototype = 123;
@@ -119,9 +109,7 @@ describe("safeIntegers", () => {
 
     expect(() => query.run({ $value: BigInt(Number.MAX_SAFE_INTEGER) ** 2n })).toThrow(RangeError);
     query.safeIntegers(false);
-    expect(() => query.run({ $value: BigInt(Number.MAX_SAFE_INTEGER) ** 2n })).not.toThrow(
-      RangeError,
-    );
+    expect(() => query.run({ $value: BigInt(Number.MAX_SAFE_INTEGER) ** 2n })).not.toThrow(RangeError);
   });
 });
 
@@ -153,10 +141,7 @@ describe("safeIntegers", () => {
           db.exec(
             "CREATE TABLE cats (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE NOT NULL, age INTEGER NOT NULL)",
           );
-          const { changes, lastInsertRowid } = db.run(
-            `INSERT INTO cats (name, age) VALUES (${query})`,
-            input,
-          );
+          const { changes, lastInsertRowid } = db.run(`INSERT INTO cats (name, age) VALUES (${query})`, input);
           expect(changes).toBe(1);
           expect(lastInsertRowid).toBe(1);
 
@@ -167,19 +152,17 @@ describe("safeIntegers", () => {
               age: 42,
             },
           ]);
-          expect(
-            db.query(`SELECT * FROM cats WHERE (name, age) = (${query})`).all(input),
-          ).toStrictEqual([{ id: 1, name: "myname", age: 42 }]);
-          expect(
-            db.query(`SELECT * FROM cats WHERE (name, age) = (${query})`).get(input),
-          ).toStrictEqual({
+          expect(db.query(`SELECT * FROM cats WHERE (name, age) = (${query})`).all(input)).toStrictEqual([
+            { id: 1, name: "myname", age: 42 },
+          ]);
+          expect(db.query(`SELECT * FROM cats WHERE (name, age) = (${query})`).get(input)).toStrictEqual({
             id: 1,
             name: "myname",
             age: 42,
           });
-          expect(
-            db.query(`SELECT * FROM cats WHERE (name, age) = (${query})`).values(input),
-          ).toStrictEqual([[1, "myname", 42]]);
+          expect(db.query(`SELECT * FROM cats WHERE (name, age) = (${query})`).values(input)).toStrictEqual([
+            [1, "myname", 42],
+          ]);
         });
       }
 
@@ -189,9 +172,7 @@ describe("safeIntegers", () => {
             it(`${method}()`, () => {
               const db = Database.open(":memory:", { strict: true });
 
-              db.exec(
-                "CREATE TABLE cats (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, age INTEGER)",
-              );
+              db.exec("CREATE TABLE cats (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, age INTEGER)");
 
               expect(() => {
                 const query = db.query("INSERT INTO cats (name, age) VALUES (@name, @age)");
@@ -209,12 +190,8 @@ describe("safeIntegers", () => {
 
           // "select ?2" makes sqlite implicitly allocate parameter 1, which has no name.
           expect(() => db.query("select ?2 as x").all({})).toThrow('Missing parameter "?1"');
-          expect(() => db.query("select ?2 as x").all({ 1: "a", 2: "b" })).toThrow(
-            'Missing parameter "?1"',
-          );
-          expect(() => db.query("select ?1, ?3 as x").all({ 0: "a" })).toThrow(
-            'Missing parameter "?2"',
-          );
+          expect(() => db.query("select ?2 as x").all({ 1: "a", 2: "b" })).toThrow('Missing parameter "?1"');
+          expect(() => db.query("select ?1, ?3 as x").all({ 0: "a" })).toThrow('Missing parameter "?2"');
           expect(db.query("select ?2 as x").all({ 0: "a", 1: "b" })).toEqual([{ x: "b" }]);
         });
       }
@@ -338,84 +315,72 @@ describe("bind parameters object mutated by a getter during bind", () => {
       env: bunEnv,
       stderr: "pipe",
     });
-    const [stdout, stderr, exitCode] = await Promise.all([
-      proc.stdout.text(),
-      proc.stderr.text(),
-      proc.exited,
-    ]);
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
     expect(stderr).toBe("");
     expect(stdout.trim()).toBe('error: Missing parameter "$c"');
     expect(exitCode).toBe(0);
   });
 });
 
-var encode = (text) => new TextEncoder().encode(text);
+var encode = text => new TextEncoder().encode(text);
 
 // Use different numbers of columns to ensure we crash if using initializeIndex() on a large array can cause bugs.
 // https://github.com/oven-sh/bun/issues/11747
-it.each([1, 16, 256, 512, 768])(
-  "should work with duplicate columns in values() of length %d",
-  (columnCount) => {
-    const db = new Database(":memory:");
+it.each([1, 16, 256, 512, 768])("should work with duplicate columns in values() of length %d", columnCount => {
+  const db = new Database(":memory:");
 
-    db.prepare(
-      `create table \`users\` ( id integer primary key autoincrement, name text, reportTo integer, ${Array.from(
-        {
-          length: columnCount,
-        },
-        (_, i) =>
-          `column${i} text DEFAULT "make GC happen!!" NOT NULL${i === columnCount - 1 ? "" : ","}`,
-      ).join("")} );`,
-    ).run();
-    const names = [
-      ["dan", null],
-      ["alef", 1],
-      ["bob", 2],
-      ["carl", 3],
-      ["dave", 4],
-      ["eve", 5],
-      ["fred", 6],
-      ["george", 7],
-      ["harry", 8],
-      ["isaac", 9],
-      ["jacob", 10],
-      ["kevin", 11],
-      ["larry", 12],
-      ["mike", 13],
-      ["nathan", 14],
-      ["oscar", 15],
-      ["peter", 16],
-      ["qwerty", 17],
-      ["robert", 18],
-      ["samuel", 19],
-      ["tom", 20],
-      ["william", 21],
-      ["xavier", 22],
-      ["yanny", 23],
-      ["zachary", 24],
-    ];
-    for (const [name, reportTo] of names) {
-      db.prepare("insert into `users` (name, reportTo) values (?, ?);").run(name, reportTo);
+  db.prepare(
+    `create table \`users\` ( id integer primary key autoincrement, name text, reportTo integer, ${Array.from(
+      {
+        length: columnCount,
+      },
+      (_, i) => `column${i} text DEFAULT "make GC happen!!" NOT NULL${i === columnCount - 1 ? "" : ","}`,
+    ).join("")} );`,
+  ).run();
+  const names = [
+    ["dan", null],
+    ["alef", 1],
+    ["bob", 2],
+    ["carl", 3],
+    ["dave", 4],
+    ["eve", 5],
+    ["fred", 6],
+    ["george", 7],
+    ["harry", 8],
+    ["isaac", 9],
+    ["jacob", 10],
+    ["kevin", 11],
+    ["larry", 12],
+    ["mike", 13],
+    ["nathan", 14],
+    ["oscar", 15],
+    ["peter", 16],
+    ["qwerty", 17],
+    ["robert", 18],
+    ["samuel", 19],
+    ["tom", 20],
+    ["william", 21],
+    ["xavier", 22],
+    ["yanny", 23],
+    ["zachary", 24],
+  ];
+  for (const [name, reportTo] of names) {
+    db.prepare("insert into `users` (name, reportTo) values (?, ?);").run(name, reportTo);
+  }
+  const results = db
+    .prepare("select * from 'users' left join 'users' reportee on `users`.id = reportee.reportTo; ")
+    .values();
+  expect(results).toHaveLength(names.length);
+  expect(results[0]).toHaveLength((columnCount + 3) * 2);
+  let prevResult;
+  for (let result of results) {
+    expect(result).toHaveLength((columnCount + 3) * 2);
+    if (prevResult) {
+      expect(prevResult.slice(columnCount + 3, (columnCount + 3) * 2)).toEqual(result.slice(0, columnCount + 3));
     }
-    const results = db
-      .prepare(
-        "select * from 'users' left join 'users' reportee on `users`.id = reportee.reportTo; ",
-      )
-      .values();
-    expect(results).toHaveLength(names.length);
-    expect(results[0]).toHaveLength((columnCount + 3) * 2);
-    let prevResult;
-    for (let result of results) {
-      expect(result).toHaveLength((columnCount + 3) * 2);
-      if (prevResult) {
-        expect(prevResult.slice(columnCount + 3, (columnCount + 3) * 2)).toEqual(
-          result.slice(0, columnCount + 3),
-        );
-      }
-      prevResult = result;
-    }
-  },
-);
+    prevResult = result;
+  }
+});
 
 it("Database.open", () => {
   // in a folder which doesn't exist
@@ -493,31 +458,11 @@ it("creates", () => {
   db.exec(
     "CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT, value INTEGER, created TEXT, deci FLOAT, blobby BLOB)",
   );
-  const stmt = db.prepare(
-    "INSERT INTO test (name, value, deci, created, blobby) VALUES (?, ?, ?, ?, ?)",
-  );
+  const stmt = db.prepare("INSERT INTO test (name, value, deci, created, blobby) VALUES (?, ?, ?, ?, ?)");
 
-  stmt.run([
-    "foo",
-    1,
-    Math.fround(1.111),
-    new Date(1995, 12, 19).toISOString(),
-    encode("Hello World"),
-  ]);
-  stmt.run([
-    "bar",
-    2,
-    Math.fround(2.222),
-    new Date(1995, 12, 19).toISOString(),
-    encode("Hello World"),
-  ]);
-  stmt.run([
-    "baz",
-    3,
-    Math.fround(3.333),
-    new Date(1995, 12, 19).toISOString(),
-    encode("Hello World"),
-  ]);
+  stmt.run(["foo", 1, Math.fround(1.111), new Date(1995, 12, 19).toISOString(), encode("Hello World")]);
+  stmt.run(["bar", 2, Math.fround(2.222), new Date(1995, 12, 19).toISOString(), encode("Hello World")]);
+  stmt.run(["baz", 3, Math.fround(3.333), new Date(1995, 12, 19).toISOString(), encode("Hello World")]);
 
   stmt.finalize();
 
@@ -585,7 +530,7 @@ it("typechecks", () => {
 
   const q = db.prepare("SELECT * FROM test WHERE (name = ?)");
 
-  var expectfail = (val) => {
+  var expectfail = val => {
     try {
       q.run([val]);
       throw new Error("Expected error");
@@ -648,9 +593,7 @@ it("db.query supports TypedArray", () => {
     }),
   );
 
-  expect(
-    JSON.stringify(db.query("SELECT * FROM test WHERE (blobby = ?)").get([encode("Hello World")])),
-  ).toBe(
+  expect(JSON.stringify(db.query("SELECT * FROM test WHERE (blobby = ?)").get([encode("Hello World")]))).toBe(
     JSON.stringify({
       id: 1,
       blobby: encode("Hello World"),
@@ -759,11 +702,7 @@ it("serialize(name) rejects a db closed during name toString()", async () => {
     stderr: "pipe",
   });
 
-  const [stdout, stderr, exitCode] = await Promise.all([
-    proc.stdout.text(),
-    proc.stderr.text(),
-    proc.exited,
-  ]);
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
 
   expect({ stdout: stdout.trim(), stderr, exitCode }).toEqual({
     stdout: JSON.stringify({
@@ -780,10 +719,7 @@ it("Database.deserialize accepts an ArrayBuffer", () => {
   db.exec("CREATE TABLE test (id INTEGER PRIMARY KEY, name TEXT)");
   db.exec('INSERT INTO test (name) VALUES ("Hello")');
   const serialized = db.serialize();
-  const arrayBuffer = serialized.buffer.slice(
-    serialized.byteOffset,
-    serialized.byteOffset + serialized.byteLength,
-  );
+  const arrayBuffer = serialized.buffer.slice(serialized.byteOffset, serialized.byteOffset + serialized.byteLength);
 
   const db2 = Database.deserialize(arrayBuffer);
   expect(db2.prepare("SELECT * FROM test").all()).toEqual([{ id: 1, name: "Hello" }]);
@@ -896,16 +832,12 @@ it("db.query()", () => {
   }
 
   // check that it supports multiple arguments
-  expect(
-    JSON.stringify(
-      db.query("SELECT * FROM test where (name = ? OR name = ?)").all(["Hello", "Fooooo"]),
-    ),
-  ).toBe(JSON.stringify([{ id: 1, name: "Hello" }]));
-  expect(
-    JSON.stringify(
-      db.query("SELECT * FROM test where (name = ? OR name = ?)").all("Hello", "Fooooo"),
-    ),
-  ).toBe(JSON.stringify([{ id: 1, name: "Hello" }]));
+  expect(JSON.stringify(db.query("SELECT * FROM test where (name = ? OR name = ?)").all(["Hello", "Fooooo"]))).toBe(
+    JSON.stringify([{ id: 1, name: "Hello" }]),
+  );
+  expect(JSON.stringify(db.query("SELECT * FROM test where (name = ? OR name = ?)").all("Hello", "Fooooo"))).toBe(
+    JSON.stringify([{ id: 1, name: "Hello" }]),
+  );
 
   // throws if insufficeint arguments
   try {
@@ -998,9 +930,7 @@ it("db.query()", () => {
 it("db.run()", () => {
   const db = Database.open(":memory:");
 
-  db.exec(
-    "CREATE TABLE cats (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE NOT NULL, age INTEGER NOT NULL)",
-  );
+  db.exec("CREATE TABLE cats (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE NOT NULL, age INTEGER NOT NULL)");
 
   const insert = db.query("INSERT INTO cats (name, age) VALUES (@name, @age) RETURNING name").all({
     "@name": "Joey",
@@ -1012,25 +942,19 @@ for (let strict of [false, true]) {
   it(`strict: ${strict}`, () => {
     const db = Database.open(":memory:", { strict });
 
-    db.exec(
-      "CREATE TABLE cats (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, age INTEGER)",
-    );
+    db.exec("CREATE TABLE cats (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, age INTEGER)");
 
-    const result = db
-      .query("INSERT INTO cats (name, age) VALUES (@name, @age) RETURNING name")
-      .all({
-        [(!strict ? "@" : "") + "name"]: "Joey",
-        [(!strict ? "@" : "") + "age"]: 2,
-      });
+    const result = db.query("INSERT INTO cats (name, age) VALUES (@name, @age) RETURNING name").all({
+      [(!strict ? "@" : "") + "name"]: "Joey",
+      [(!strict ? "@" : "") + "age"]: 2,
+    });
     expect(result).toStrictEqual([{ name: "Joey" }]);
   });
 }
 it("strict: true", () => {
   const db = Database.open(":memory:", { strict: true });
 
-  db.exec(
-    "CREATE TABLE cats (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE NOT NULL, age INTEGER NOT NULL)",
-  );
+  db.exec("CREATE TABLE cats (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE NOT NULL, age INTEGER NOT NULL)");
 
   const insert = db.query("INSERT INTO cats (name, age) VALUES (@name, @age) RETURNING name").all({
     name: "Joey",
@@ -1073,14 +997,12 @@ describe("does not throw missing parameter error in", () => {
 it("db.transaction()", () => {
   const db = Database.open(":memory:");
 
-  db.exec(
-    "CREATE TABLE cats (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, age INTEGER)",
-  );
+  db.exec("CREATE TABLE cats (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE, age INTEGER)");
 
   const insert = db.prepare("INSERT INTO cats (name, age) VALUES (@name, @age)");
 
   expect(db.inTransaction).toBe(false);
-  const insertMany = db.transaction((cats) => {
+  const insertMany = db.transaction(cats => {
     expect(db.inTransaction).toBe(true);
     for (const cat of cats) insert.run(cat);
   });
@@ -1225,7 +1147,7 @@ it("supports FTS5", () => {
   const db = new Database();
   db.run("CREATE VIRTUAL TABLE movies USING fts5(title, tokenize='trigram')");
   const insert = db.prepare("INSERT INTO movies VALUES ($title)");
-  const insertMovies = db.transaction((movies) => {
+  const insertMovies = db.transaction(movies => {
     for (const movie of movies) insert.run(movie);
   });
   insertMovies([
@@ -1271,21 +1193,18 @@ describe("Database.prepare", () => {
   // has no SQL (only whitespace/comments). That must be rejected up front, not
   // wrapped in a Statement that later derefs the NULL (crashed when params were
   // passed, threw "Statement has finalized" otherwise).
-  it.each([" ", "\n", ";", " ; ", "-- comment", "/* block */"])(
-    "throws on SQL with no statement: %p",
-    (sql) => {
-      const db = new Database(":memory:");
-      for (const call of [
-        () => db.prepare(sql),
-        () => db.prepare(sql, {}),
-        () => db.prepare(sql, []),
-        () => db.query(sql),
-      ]) {
-        expect(call).toThrow(RangeError);
-        expect(call).toThrow("Invalid SQL statement");
-      }
-    },
-  );
+  it.each([" ", "\n", ";", " ; ", "-- comment", "/* block */"])("throws on SQL with no statement: %p", sql => {
+    const db = new Database(":memory:");
+    for (const call of [
+      () => db.prepare(sql),
+      () => db.prepare(sql, {}),
+      () => db.prepare(sql, []),
+      () => db.query(sql),
+    ]) {
+      expect(call).toThrow(RangeError);
+      expect(call).toThrow("Invalid SQL statement");
+    }
+  });
 });
 
 it("#3991", () => {
@@ -1337,10 +1256,7 @@ it("latin1 sqlite3 column name", () => {
 
   db.run("CREATE TABLE foo (id INTEGER PRIMARY KEY AUTOINCREMENT, copyright© TEXT)");
 
-  db.run("INSERT INTO foo (id, copyright©) VALUES (?, ?)", [
-    1,
-    "© 2021 The Authors. All rights reserved.",
-  ]);
+  db.run("INSERT INTO foo (id, copyright©) VALUES (?, ?)", [1, "© 2021 The Authors. All rights reserved."]);
 
   expect(db.query("SELECT * FROM foo").all()).toEqual([
     {
@@ -1377,12 +1293,12 @@ it("Missing DB throws SQLITE_CANTOPEN", () => {
 });
 
 it.each([
-  ["query().get() with a syntax error", (db) => db.query("selecx 1").get()],
-  ["query().all() with an unknown table", (db) => db.query("SELECT * FROM not_a_table").all()],
-  ["query().all() with an unknown column", (db) => db.query("SELECT not_a_column FROM foo").all()],
-  ["run() with a syntax error", (db) => db.run("selecx 1")],
-  ["exec() with a syntax error", (db) => db.exec("selecx 1")],
-  ["prepare() with a syntax error", (db) => db.prepare("selecx 1")],
+  ["query().get() with a syntax error", db => db.query("selecx 1").get()],
+  ["query().all() with an unknown table", db => db.query("SELECT * FROM not_a_table").all()],
+  ["query().all() with an unknown column", db => db.query("SELECT not_a_column FROM foo").all()],
+  ["run() with a syntax error", db => db.run("selecx 1")],
+  ["exec() with a syntax error", db => db.exec("selecx 1")],
+  ["prepare() with a syntax error", db => db.prepare("selecx 1")],
 ])("generic errors set code to SQLITE_ERROR: %s", (label, fn) => {
   using db = new Database(":memory:");
   db.run("CREATE TABLE foo (id INTEGER PRIMARY KEY)");
@@ -1433,9 +1349,7 @@ it("binds a detached TypedArray as a zero-length blob, not NULL", () => {
   insert.run({ $id: 2, $blob: u8 });
   db.run("INSERT INTO foo (id, blob) VALUES (?, ?)", [3, view]);
 
-  expect(
-    db.query("SELECT id, typeof(blob) AS type, length(blob) AS length FROM foo ORDER BY id").all(),
-  ).toEqual([
+  expect(db.query("SELECT id, typeof(blob) AS type, length(blob) AS length FROM foo ORDER BY id").all()).toEqual([
     { id: 1, type: "blob", length: 0 },
     { id: 2, type: "blob", length: 0 },
     { id: 3, type: "blob", length: 0 },
@@ -1476,9 +1390,7 @@ it("rejects a 2 GiB blob parameter instead of truncating it", async () => {
     stderr: "inherit",
   });
   const [stdout, exitCode] = await Promise.all([proc.stdout.text(), proc.exited]);
-  expect(["SKIP", "string or blob too big"]).toContainEqual(
-    JSON.parse(stdout.trim() || '"NO_OUTPUT"'),
-  );
+  expect(["SKIP", "string or blob too big"]).toContainEqual(JSON.parse(stdout.trim() || '"NO_OUTPUT"'));
   expect(exitCode).toBe(0);
 });
 
@@ -1946,11 +1858,7 @@ it("WAL is checkpointed at exit for a database closed with close(false) while a 
     env: bunEnv,
     stderr: "pipe",
   });
-  const [stdout, stderr, exitCode] = await Promise.all([
-    proc.stdout.text(),
-    proc.stderr.text(),
-    proc.exited,
-  ]);
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
   expect({ stdout, stderr, exitCode }).toEqual({
     stdout: '{"a":1}\n{"a":1}\n',
     stderr: "",
@@ -2131,11 +2039,7 @@ it("close() does not crash with FTS5 virtual tables (#37044)", async () => {
     stderr: "pipe",
   });
 
-  const [stdout, stderr, exitCode] = await Promise.all([
-    proc.stdout.text(),
-    proc.stderr.text(),
-    proc.exited,
-  ]);
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
 
   expect(stderr).toBe("");
   expect(stdout.trim()).toBe("survived");
@@ -2315,11 +2219,7 @@ it("internal SQL helpers reject out-of-range database handles", async () => {
     stderr: "pipe",
   });
 
-  const [stdout, stderr, exitCode] = await Promise.all([
-    proc.stdout.text(),
-    proc.stderr.text(),
-    proc.exited,
-  ]);
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
 
   expect({ stdout: stdout.trim(), stderr, exitCode }).toEqual({
     stdout: JSON.stringify([
@@ -2409,11 +2309,7 @@ it("binds blob parameters by copy and rejects statements finalized while binding
     stderr: "pipe",
   });
 
-  const [stdout, stderr, exitCode] = await Promise.all([
-    proc.stdout.text(),
-    proc.stderr.text(),
-    proc.exited,
-  ]);
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
 
   expect(stderr).toBe("");
   expect(stdout.trim()).toBe(
@@ -2478,11 +2374,7 @@ it("all() reports an error when a result-row push finalizes the statement", asyn
     stderr: "pipe",
   });
 
-  const [stdout, stderr, exitCode] = await Promise.all([
-    proc.stdout.text(),
-    proc.stderr.text(),
-    proc.exited,
-  ]);
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
 
   expect(stderr).toBe("");
   expect(stdout.trim()).toBe(
@@ -2538,11 +2430,7 @@ it("raw() does not touch the statement when a result-row push closes the databas
     stderr: "pipe",
   });
 
-  const [stdout, stderr, exitCode] = await Promise.all([
-    proc.stdout.text(),
-    proc.stderr.text(),
-    proc.exited,
-  ]);
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
 
   expect(stderr).toBe("");
   expect(stdout.trim()).toBe(JSON.stringify({ closeDuringRaw: "boom" }));
@@ -2587,11 +2475,7 @@ it("binds sparse array holes as NULL instead of reading past the backing store",
     stderr: "pipe",
   });
 
-  const [stdout, stderr, exitCode] = await Promise.all([
-    proc.stdout.text(),
-    proc.stderr.text(),
-    proc.exited,
-  ]);
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
 
   expect(stderr).toBe("");
   expect(stdout.trim()).toBe(
@@ -2643,11 +2527,7 @@ it("run() reports a closed database when a bound parameter's getter closes it", 
     stderr: "pipe",
   });
 
-  const [stdout, stderr, exitCode] = await Promise.all([
-    proc.stdout.text(),
-    proc.stderr.text(),
-    proc.exited,
-  ]);
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
 
   expect({ stdout: stdout.trim(), exitCode }).toEqual({
     stdout: JSON.stringify({
@@ -2685,7 +2565,7 @@ it("fileControl rejects result TypedArrays smaller than 8 bytes", () => {
 
 it("decodes non-UTF-8 TEXT leniently and consistently across the 64-byte boundary", () => {
   const db = new Database(":memory:");
-  const q = (bytes) => db.query(`SELECT CAST(x'${Buffer.from(bytes).toString("hex")}' AS TEXT) t`);
+  const q = bytes => db.query(`SELECT CAST(x'${Buffer.from(bytes).toString("hex")}' AS TEXT) t`);
 
   // Short non-UTF-8 TEXT (4 bytes, Latin-1 "José") used to be silently dropped to "".
   // It must now decode leniently with U+FFFD, matching node:sqlite.
@@ -2877,11 +2757,7 @@ it("keeps database handles working when many Workers open databases concurrently
     stderr: "pipe",
   });
 
-  const [stdout, stderr, exitCode] = await Promise.all([
-    proc.stdout.text(),
-    proc.stderr.text(),
-    proc.exited,
-  ]);
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
 
   expect({ stdout: stdout.trim(), stderr, exitCode }).toEqual({
     stdout: JSON.stringify({ workers: ["ok", "ok", "ok", "ok"], main: 42 }),
@@ -2914,11 +2790,7 @@ it("exit-time WAL checkpoint runs even with a never-finalized prepared statement
     stdout: "pipe",
     stderr: "pipe",
   });
-  const [stdout, , exitCode] = await Promise.all([
-    proc.stdout.text(),
-    proc.stderr.text(),
-    proc.exited,
-  ]);
+  const [stdout, , exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
   expect(stdout).toBe("true\n");
   const wal = path.join(dir, "exit.db-wal");
   // TRUNCATE moved every frame into exit.db (or the sidecar was unlinked
@@ -2966,21 +2838,11 @@ it("exec/run with an embedded NUL byte in the SQL string does not hang", async (
     killSignal: "SIGKILL",
   });
 
-  const [stdout, stderr, exitCode] = await Promise.all([
-    proc.stdout.text(),
-    proc.stderr.text(),
-    proc.exited,
-  ]);
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
 
   const empty = "Query contained no valid SQL statement; likely empty query.";
   expect({ stdout: stdout.trim(), stderr, signalCode: proc.signalCode, exitCode }).toEqual({
-    stdout: JSON.stringify([
-      "lone: " + empty,
-      "trailing: ok",
-      "leading: " + empty,
-      "mid: ok",
-      "run: ok",
-    ]),
+    stdout: JSON.stringify(["lone: " + empty, "trailing: ok", "leading: " + empty, "mid: ok", "run: ok"]),
     stderr: "",
     signalCode: null,
     exitCode: 0,

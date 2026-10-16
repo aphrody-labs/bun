@@ -48,32 +48,29 @@ describe("stacked adversarial", () => {
     encoding: ["identity", "gzip", "br"] as const,
     keepalive: [false, true] as const,
   })) {
-    test.concurrent(
-      `${proxyTls ? "https" : "http"}-proxy split=${splitConnect} chunked/${encoding} keepalive=${keepalive}`,
-      async () => {
-        const payload = makeBody(8192, "A");
-        await using origin = await createAdversarialOrigin({
-          tls: true,
-          body: payload,
-          framing: "chunked",
-          encoding,
-        });
-        await using proxy = await createAdversarialProxy({
-          tls: proxyTls,
-          splitConnectReply: splitConnect,
-        });
-        const res = await fetch(origin.url, {
-          method: "POST",
-          body: Buffer.alloc(1024, "q"),
-          proxy: proxy.url,
-          keepalive,
-          tls: laxTls,
-        });
-        expect(await res.text()).toBe(payload);
-        expect(res.status).toBe(200);
-        expect(origin.requests[0].body.length).toBe(1024);
-      },
-    );
+    test.concurrent(`${proxyTls ? "https" : "http"}-proxy split=${splitConnect} chunked/${encoding} keepalive=${keepalive}`, async () => {
+      const payload = makeBody(8192, "A");
+      await using origin = await createAdversarialOrigin({
+        tls: true,
+        body: payload,
+        framing: "chunked",
+        encoding,
+      });
+      await using proxy = await createAdversarialProxy({
+        tls: proxyTls,
+        splitConnectReply: splitConnect,
+      });
+      const res = await fetch(origin.url, {
+        method: "POST",
+        body: Buffer.alloc(1024, "q"),
+        proxy: proxy.url,
+        keepalive,
+        tls: laxTls,
+      });
+      expect(await res.text()).toBe(payload);
+      expect(res.status).toBe(200);
+      expect(origin.requests[0].body.length).toBe(1024);
+    });
   }
 });
 
@@ -90,28 +87,25 @@ describe("origin status through tunnel", () => {
     originTls: [false, true] as const,
     status: STATUSES,
   })) {
-    test.concurrent(
-      `${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin status=${status}`,
-      async () => {
-        // 204/304 carry no body per RFC; everything else does.
-        const hasBody = status !== 204 && status !== 304;
-        await using origin = await createAdversarialOrigin({
-          tls: originTls,
-          status,
-          body: hasBody ? `status-${status}` : "",
-          framing: "content-length",
-        });
-        await using proxy = await createAdversarialProxy({ tls: proxyTls });
-        const res = await fetch(origin.url, {
-          proxy: proxy.url,
-          keepalive: false,
-          tls: laxTls,
-          redirect: "manual", // surface 3xx as-is
-        });
-        expect(res.status).toBe(status);
-        expect(await res.text()).toBe(hasBody ? `status-${status}` : "");
-      },
-    );
+    test.concurrent(`${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin status=${status}`, async () => {
+      // 204/304 carry no body per RFC; everything else does.
+      const hasBody = status !== 204 && status !== 304;
+      await using origin = await createAdversarialOrigin({
+        tls: originTls,
+        status,
+        body: hasBody ? `status-${status}` : "",
+        framing: "content-length",
+      });
+      await using proxy = await createAdversarialProxy({ tls: proxyTls });
+      const res = await fetch(origin.url, {
+        proxy: proxy.url,
+        keepalive: false,
+        tls: laxTls,
+        redirect: "manual", // surface 3xx as-is
+      });
+      expect(res.status).toBe(status);
+      expect(await res.text()).toBe(hasBody ? `status-${status}` : "");
+    });
   }
 });
 
@@ -126,29 +120,26 @@ describe("origin-facing headers", () => {
     proxyTls: [false, true] as const,
     originTls: [false, true] as const,
   })) {
-    test.concurrent(
-      `${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin Host + user headers`,
-      async () => {
-        await using origin = await createAdversarialOrigin({ tls: originTls, body: "ok" });
-        await using proxy = await createAdversarialProxy({ tls: proxyTls });
-        const res = await fetch(`${origin.url}/path?q=1`, {
-          proxy: proxy.url,
-          keepalive: false,
-          tls: laxTls,
-          headers: {
-            "X-User-Header": "user-value",
-            "Accept": "application/json",
-          },
-        });
-        expect(res.status).toBe(200);
-        const h = origin.requests[0].headers;
-        // Host names the origin, not the proxy.
-        expect(h["host"]).toBe(`localhost:${origin.port}`);
-        expect(h["x-user-header"]).toBe("user-value");
-        expect(h["accept"]).toBe("application/json");
-        expect(origin.requests[0].path).toBe("/path?q=1");
-      },
-    );
+    test.concurrent(`${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin Host + user headers`, async () => {
+      await using origin = await createAdversarialOrigin({ tls: originTls, body: "ok" });
+      await using proxy = await createAdversarialProxy({ tls: proxyTls });
+      const res = await fetch(`${origin.url}/path?q=1`, {
+        proxy: proxy.url,
+        keepalive: false,
+        tls: laxTls,
+        headers: {
+          "X-User-Header": "user-value",
+          "Accept": "application/json",
+        },
+      });
+      expect(res.status).toBe(200);
+      const h = origin.requests[0].headers;
+      // Host names the origin, not the proxy.
+      expect(h["host"]).toBe(`localhost:${origin.port}`);
+      expect(h["x-user-header"]).toBe("user-value");
+      expect(h["accept"]).toBe("application/json");
+      expect(origin.requests[0].path).toBe("/path?q=1");
+    });
   }
 });
 
@@ -185,55 +176,48 @@ describe("checkServerIdentity through tunnel", () => {
       expect(called).toBe(1);
     });
 
-    test.concurrent(
-      `${proxyTls ? "https" : "http"}-proxy: callback rejects → fetch rejects, origin untouched`,
-      async () => {
-        await using origin = await createAdversarialOrigin({ tls: true, body: "never" });
-        await using proxy = await createAdversarialProxy({ tls: proxyTls });
-        let caught: any;
-        try {
-          await fetch(origin.url, {
-            proxy: proxy.url,
-            keepalive: false,
-            tls: {
-              ca: tlsCert.cert,
-              rejectUnauthorized: true,
-              checkServerIdentity: () => new Error("nope"),
-            },
-            signal: AbortSignal.timeout(10_000),
-          });
-        } catch (e) {
-          caught = e;
-        }
-        expect(caught?.message).toBe("nope");
-        expect(origin.requests.length).toBe(0);
-      },
-    );
+    test.concurrent(`${proxyTls ? "https" : "http"}-proxy: callback rejects → fetch rejects, origin untouched`, async () => {
+      await using origin = await createAdversarialOrigin({ tls: true, body: "never" });
+      await using proxy = await createAdversarialProxy({ tls: proxyTls });
+      let caught: any;
+      try {
+        await fetch(origin.url, {
+          proxy: proxy.url,
+          keepalive: false,
+          tls: {
+            ca: tlsCert.cert,
+            rejectUnauthorized: true,
+            checkServerIdentity: () => new Error("nope"),
+          },
+          signal: AbortSignal.timeout(10_000),
+        });
+      } catch (e) {
+        caught = e;
+      }
+      expect(caught?.message).toBe("nope");
+      expect(origin.requests.length).toBe(0);
+    });
 
-    test.concurrent(
-      `${proxyTls ? "https" : "http"}-proxy: callback approves ${isASAN ? 50 : 20}× under GC pressure`,
-      async () => {
-        await using origin = Bun.serve({ port: 0, tls: tlsCert, fetch: () => new Response("gc") });
-        await using proxy = await createAdversarialProxy({ tls: proxyTls });
-        const N = isASAN ? 50 : 20;
-        for (let i = 0; i < N; i++) {
-          const res = await fetch(origin.url, {
-            proxy: proxy.url,
-            keepalive: true,
-            tls: {
-              ca: tlsCert.cert,
-              rejectUnauthorized: true,
-              checkServerIdentity: () => {
-                Bun.gc(false);
-                return undefined;
-              },
+    test.concurrent(`${proxyTls ? "https" : "http"}-proxy: callback approves ${isASAN ? 50 : 20}× under GC pressure`, async () => {
+      await using origin = Bun.serve({ port: 0, tls: tlsCert, fetch: () => new Response("gc") });
+      await using proxy = await createAdversarialProxy({ tls: proxyTls });
+      const N = isASAN ? 50 : 20;
+      for (let i = 0; i < N; i++) {
+        const res = await fetch(origin.url, {
+          proxy: proxy.url,
+          keepalive: true,
+          tls: {
+            ca: tlsCert.cert,
+            rejectUnauthorized: true,
+            checkServerIdentity: () => {
+              Bun.gc(false);
+              return undefined;
             },
-          });
-          expect(await res.text()).toBe("gc");
-        }
-      },
-      60_000,
-    );
+          },
+        });
+        expect(await res.text()).toBe("gc");
+      }
+    }, 60_000);
   }
 });
 
@@ -256,16 +240,13 @@ describe("path and query through proxy", () => {
     path: PATHS,
   })) {
     const short = path.length > 20 ? path.slice(0, 17) + "..." : path;
-    test.concurrent(
-      `${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin path="${short}"`,
-      async () => {
-        await using origin = await createAdversarialOrigin({ tls: originTls, body: "ok" });
-        await using proxy = await createAdversarialProxy({ tls: proxyTls });
-        const res = await fetch(origin.url + path, { proxy: proxy.url, keepalive: false, tls: laxTls });
-        expect(res.status).toBe(200);
-        expect(origin.requests[0].path).toBe(path);
-      },
-    );
+    test.concurrent(`${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin path="${short}"`, async () => {
+      await using origin = await createAdversarialOrigin({ tls: originTls, body: "ok" });
+      await using proxy = await createAdversarialProxy({ tls: proxyTls });
+      const res = await fetch(origin.url + path, { proxy: proxy.url, keepalive: false, tls: laxTls });
+      expect(res.status).toBe(200);
+      expect(origin.requests[0].path).toBe(path);
+    });
   }
 });
 
@@ -280,21 +261,18 @@ describe("verbose through proxy", () => {
     proxyTls: [false, true] as const,
     originTls: [false, true] as const,
   })) {
-    test.concurrent(
-      `${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin verbose:true`,
-      async () => {
-        await using origin = await createAdversarialOrigin({ tls: originTls, body: "v" });
-        await using proxy = await createAdversarialProxy({ tls: proxyTls });
-        const res = await fetch(origin.url, {
-          proxy: proxy.url,
-          keepalive: false,
-          tls: laxTls,
-          verbose: true,
-        });
-        expect(await res.text()).toBe("v");
-        expect(res.status).toBe(200);
-      },
-    );
+    test.concurrent(`${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin verbose:true`, async () => {
+      await using origin = await createAdversarialOrigin({ tls: originTls, body: "v" });
+      await using proxy = await createAdversarialProxy({ tls: proxyTls });
+      const res = await fetch(origin.url, {
+        proxy: proxy.url,
+        keepalive: false,
+        tls: laxTls,
+        verbose: true,
+      });
+      expect(await res.text()).toBe("v");
+      expect(res.status).toBe(200);
+    });
   }
 });
 
@@ -308,48 +286,44 @@ describe("AbortSignal.timeout through proxy", () => {
     proxyTls: [false, true] as const,
     originTls: [false, true] as const,
   })) {
-    test.concurrent(
-      `${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin, origin never replies → TimeoutError`,
-      async () => {
-        // Origin accepts the connection but never writes a response.
-        const handler = (sock: net.Socket) => {
-          sock.on("error", () => {});
-          // swallow data forever
-        };
-        const server = originTls
-          ? tls.createServer({ ...tlsCert, rejectUnauthorized: false }, handler)
-          : net.createServer(handler);
-        server.listen(0, "127.0.0.1");
-        await once(server, "listening");
-        const originPort = (server.address() as net.AddressInfo).port;
-        try {
-          await using proxy = await createAdversarialProxy({ tls: proxyTls });
+    test.concurrent(`${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin, origin never replies → TimeoutError`, async () => {
+      // Origin accepts the connection but never writes a response.
+      const handler = (sock: net.Socket) => {
+        sock.on("error", () => {});
+        // swallow data forever
+      };
+      const server = originTls
+        ? tls.createServer({ ...tlsCert, rejectUnauthorized: false }, handler)
+        : net.createServer(handler);
+      server.listen(0, "127.0.0.1");
+      await once(server, "listening");
+      const originPort = (server.address() as net.AddressInfo).port;
+      try {
+        await using proxy = await createAdversarialProxy({ tls: proxyTls });
 
-          let code: string;
-          const t0 = Date.now();
-          try {
-            const res = await fetch(`${originTls ? "https" : "http"}://127.0.0.1:${originPort}/`, {
-              proxy: proxy.url,
-              keepalive: false,
-              tls: laxTls,
-              signal: AbortSignal.timeout(500),
-            });
-            await res.arrayBuffer().catch(() => {});
-            code = `resolved:${res.status}`;
-          } catch (e) {
-            code = errcode(e);
-          }
-          const elapsed = Date.now() - t0;
-          expect(code).toBe("TimeoutError");
-          // The 500ms timeout is honored (with generous slack for debug+ASAN
-          // builds), not the client's multi-second default idle timeout.
-          expect(elapsed).toBeLessThan(10_000);
-        } finally {
-          server.close();
+        let code: string;
+        const t0 = Date.now();
+        try {
+          const res = await fetch(`${originTls ? "https" : "http"}://127.0.0.1:${originPort}/`, {
+            proxy: proxy.url,
+            keepalive: false,
+            tls: laxTls,
+            signal: AbortSignal.timeout(500),
+          });
+          await res.arrayBuffer().catch(() => {});
+          code = `resolved:${res.status}`;
+        } catch (e) {
+          code = errcode(e);
         }
-      },
-      20_000,
-    );
+        const elapsed = Date.now() - t0;
+        expect(code).toBe("TimeoutError");
+        // The 500ms timeout is honored (with generous slack for debug+ASAN
+        // builds), not the client's multi-second default idle timeout.
+        expect(elapsed).toBeLessThan(10_000);
+      } finally {
+        server.close();
+      }
+    }, 20_000);
   }
 });
 

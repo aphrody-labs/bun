@@ -66,8 +66,8 @@ if (!existsSync(rulesRoot)) {
 let updatedCount = 0;
 
 const ruleFiles = readdirSync(rulesRoot, { recursive: true })
-  .filter((f) => typeof f === "string" && f.endsWith(".rs"))
-  .map((f) => path.join(rulesRoot, String(f)))
+  .filter(f => typeof f === "string" && f.endsWith(".rs"))
+  .map(f => path.join(rulesRoot, String(f)))
   .sort();
 
 for (const filePath of ruleFiles) {

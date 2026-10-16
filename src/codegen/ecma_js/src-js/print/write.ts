@@ -21,12 +21,7 @@ import {
 } from "./categories.ts";
 
 import type { Category } from "./categories.ts";
-import type {
-  MappableNode,
-  NamedMappableNode,
-  IdentMappableNode,
-  UnnamedMappableNode,
-} from "./types.ts";
+import type { MappableNode, NamedMappableNode, IdentMappableNode, UnnamedMappableNode } from "./types.ts";
 import type { State } from "../state.ts";
 import type * as ESTree from "../../../../../packages/bun-oxc/adapters/types_npm/types.d.ts";
 
@@ -547,11 +542,11 @@ function markMapNamed(
   const nameStart = start + hashLength;
   const nameEnd = nameStart + printedName.length;
   const matchesSource =
-    end <= sourceText.length
-    && nameEnd <= end
-    && (hashLength === 0 || sourceText.charCodeAt(start) === 35) /* # */
-    && sourceText.startsWith(printedName, nameStart)
-    && (nameEnd === end || isDefinitelyIdentifierBoundary(sourceText.charCodeAt(nameEnd)));
+    end <= sourceText.length &&
+    nameEnd <= end &&
+    (hashLength === 0 || sourceText.charCodeAt(start) === 35) /* # */ &&
+    sourceText.startsWith(printedName, nameStart) &&
+    (nameEnd === end || isDefinitelyIdentifierBoundary(sourceText.charCodeAt(nameEnd)));
 
   if (!matchesSource) {
     // Read the name out of the source.
@@ -563,10 +558,7 @@ function markMapNamed(
     // A transformed or hand-authored AST can carry ranges unrelated to `sourceText`.
     // Preserve the existing fallback in that case instead of recording an arbitrary source substring.
     if (originalName === undefined || !isSameToken(originalName, printedName, hashLength)) {
-      state.mapNames.push(
-        mapPositionsLen >> 1,
-        originalName === undefined ? printedName : originalName,
-      );
+      state.mapNames.push(mapPositionsLen >> 1, originalName === undefined ? printedName : originalName);
     }
   }
 
@@ -590,12 +582,12 @@ function markMapNamed(
  */
 function hasMappableSpan(start: number, end: number): boolean {
   return (
-    typeof start === "number"
-    && typeof end === "number"
-    && Number.isSafeInteger(start)
-    && Number.isSafeInteger(end)
-    && start >= 0
-    && end > start
+    typeof start === "number" &&
+    typeof end === "number" &&
+    Number.isSafeInteger(start) &&
+    Number.isSafeInteger(end) &&
+    start >= 0 &&
+    end > start
   );
 }
 
@@ -633,9 +625,9 @@ function isSameToken(originalName: string, printedName: string, hashLength: 0 | 
   // Compare with 2 operations rather than `originalName === "#" + printedName`
   // to avoid allocating a temporary string
   return (
-    originalName.length === printedName.length + 1
-    && originalName.charCodeAt(0) === 35 /* # */
-    && originalName.endsWith(printedName)
+    originalName.length === printedName.length + 1 &&
+    originalName.charCodeAt(0) === 35 /* # */ &&
+    originalName.endsWith(printedName)
   );
 }
 
@@ -650,11 +642,7 @@ function isSameToken(originalName: string, printedName: string, hashLength: 0 | 
  * @param end - Offset the scan stops at, already validated
  * @returns The identifier as it appears in the source, or `undefined` if the offsets do not span one
  */
-function originalNameFromSource(
-  sourceText: string,
-  start: number,
-  end: number,
-): string | undefined {
+function originalNameFromSource(sourceText: string, start: number, end: number): string | undefined {
   if (end > sourceText.length) return undefined;
 
   let index = start;
@@ -693,11 +681,7 @@ function originalNameFromSource(
  * @param end - End offset of the node, already validated
  * @returns The identifier as it was spelled in the source, or `undefined` if the offsets do not span one
  */
-function originalJSXNameFromSource(
-  sourceText: string,
-  start: number,
-  end: number,
-): string | undefined {
+function originalJSXNameFromSource(sourceText: string, start: number, end: number): string | undefined {
   if (end > sourceText.length) return undefined;
 
   const originalName = sourceText.slice(start, end);
@@ -767,12 +751,12 @@ function isHexDigit(code: number): boolean {
  */
 function isDefinitelyIdentifierBoundary(code: number): boolean {
   return (
-    code <= 0x7f
-    && !((code >= 48 && code <= 57) || (code >= 65 && code <= 90) || (code >= 97 && code <= 122))
-    && code !== 36 // `$`
-    && code !== 45 // `-` in JSX identifiers
-    && code !== 92 // `\` starting a Unicode escape
-    && code !== 95 // `_`
+    code <= 0x7f &&
+    !((code >= 48 && code <= 57) || (code >= 65 && code <= 90) || (code >= 97 && code <= 122)) &&
+    code !== 36 && // `$`
+    code !== 45 && // `-` in JSX identifiers
+    code !== 92 && // `\` starting a Unicode escape
+    code !== 95 // `_`
   );
 }
 
@@ -807,10 +791,7 @@ function debugAssertSpanMatches(node: MappableNode, start: number, end: number):
  * @param name - Name the mapping records, which is what was printed
  */
 function debugAssertNameMatches(node: NamedMappableNode, name: string): void {
-  debugAssert(
-    node.name === name,
-    () => `\`${node.type}\` has name "${node.name}", but "${name}" was printed`,
-  );
+  debugAssert(node.name === name, () => `\`${node.type}\` has name "${node.name}", but "${name}" was printed`);
 }
 
 /**

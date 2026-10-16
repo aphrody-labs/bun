@@ -8,12 +8,7 @@
 import CodePathAnalyzer from "../../node_modules/eslint/lib/linter/code-path-analysis/code-path-analyzer.js";
 
 import visitorKeys from "../generated/keys.ts";
-import {
-  LEAF_NODE_TYPES_COUNT,
-  NODE_TYPE_IDS_MAP,
-  NODE_TYPES_COUNT,
-  TYPE_IDS_COUNT,
-} from "../generated/type_ids.ts";
+import { LEAF_NODE_TYPES_COUNT, NODE_TYPE_IDS_MAP, NODE_TYPES_COUNT, TYPE_IDS_COUNT } from "../generated/type_ids.ts";
 import { ancestors } from "../generated/walk.js";
 import { debugAssert, debugAssertIsFunction } from "../utils/asserts.ts";
 
@@ -31,10 +26,7 @@ import type { Node, Program } from "../generated/types.d.ts";
  */
 const EXIT_TYPE_ID_OFFSET = 256;
 
-debugAssert(
-  EXIT_TYPE_ID_OFFSET >= TYPE_IDS_COUNT,
-  "`EXIT_TYPE_ID_OFFSET` must be >= `TYPE_IDS_COUNT`",
-);
+debugAssert(EXIT_TYPE_ID_OFFSET >= TYPE_IDS_COUNT, "`EXIT_TYPE_ID_OFFSET` must be >= `TYPE_IDS_COUNT`");
 debugAssert(isPowerOfTwo(EXIT_TYPE_ID_OFFSET), "`EXIT_TYPE_ID_OFFSET` must be a power of 2");
 
 // Struct of Arrays (SoA) pattern for step storage.
@@ -89,10 +81,7 @@ export function resetCfgWalk(): void {
  * @param ast - AST
  * @param visitors - Visitors array
  */
-export function walkProgramWithCfg(
-  ast: Program,
-  visitors: (VisitFn | EnterExit | CfgVisitFn | null)[],
-): void {
+export function walkProgramWithCfg(ast: Program, visitors: (VisitFn | EnterExit | CfgVisitFn | null)[]): void {
   // Get the steps that need to be run to walk the AST
   prepareSteps(ast);
 
@@ -225,9 +214,7 @@ function prepareSteps(ast: Program) {
             }
           }
 
-          throw new Error(
-            `CFG events emitted during visiting leaf node \`${node.type}\`: ${eventNames.join(", ")}`,
-          );
+          throw new Error(`CFG events emitted during visiting leaf node \`${node.type}\`: ${eventNames.join(", ")}`);
         }
       }
     },
@@ -242,10 +229,7 @@ function prepareSteps(ast: Program) {
   // Walk AST, calling `analyzer` methods for each node
   traverseNode(ast, analyzer.enterNode.bind(analyzer), analyzer.leaveNode.bind(analyzer));
 
-  debugAssert(
-    stepTypeIds.length === stepData.length,
-    "`stepTypeIds` and `stepData` should have the same length",
-  );
+  debugAssert(stepTypeIds.length === stepData.length, "`stepTypeIds` and `stepData` should have the same length");
 }
 
 /**

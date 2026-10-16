@@ -111,9 +111,7 @@ AJV.addMetaSchema(metaSchema);
  * @param schema - Rule's schema from `meta.schema`
  * @returns Compiled AJV validator, or `null` if no options accepted, or `false` if validation is disabled
  */
-export function compileSchema(
-  schema: RuleOptionsSchema | null | undefined,
-): SchemaValidator | false | null {
+export function compileSchema(schema: RuleOptionsSchema | null | undefined): SchemaValidator | false | null {
   // `null` or `undefined` means no validator provided. Rule does not accept any options.
   // `false` means validation is disabled. Rule accepts any options.
   if (schema == null) return null;
@@ -155,20 +153,18 @@ function wrapSchemaValidator(validate: Ajv.ValidateFunction): SchemaValidator {
     // The code doesn't match AJV's types, but we use the same version of AJV as ESLint, so assuming it's OK.
     // We cast `error` to `any` to avoid TS errors.
     throw new Error(
-      `Options validation failed for rule '${ruleName}':\n`
-        + `Options:\n${JSON.stringify(options, null, 2)}\n`
-        + `Errors:\n`
-        + validate.errors
+      `Options validation failed for rule '${ruleName}':\n` +
+        `Options:\n${JSON.stringify(options, null, 2)}\n` +
+        `Errors:\n` +
+        validate.errors
           .map((error: any) => {
             if (
-              error.keyword === "additionalProperties"
-              && error.schema === false
-              && typeof error.parentSchema?.properties === "object"
-              && typeof error.params?.additionalProperty === "string"
+              error.keyword === "additionalProperties" &&
+              error.schema === false &&
+              typeof error.parentSchema?.properties === "object" &&
+              typeof error.params?.additionalProperty === "string"
             ) {
-              const expectedProperties = Object.keys(error.parentSchema.properties).map(
-                (property) => `"${property}"`,
-              );
+              const expectedProperties = Object.keys(error.parentSchema.properties).map(property => `"${property}"`);
               return `\tValue ${JSON.stringify(error.data)} ${error.message}.\n\t\tUnexpected property "${error.params.additionalProperty}". Expected properties: ${expectedProperties.join(", ")}.`;
             }
 
@@ -201,11 +197,7 @@ export function setOptions(optionsJson: string): void {
     assert(typeof cwd === "string", `cwd must be a string, got ${typeof cwd}`);
     assert(Array.isArray(allOptions), `options must be an array, got ${typeof allOptions}`);
     assert(Array.isArray(ruleIds), `ruleIds must be an array, got ${typeof ruleIds}`);
-    assert.strictEqual(
-      allOptions.length,
-      ruleIds.length,
-      "ruleIds and options arrays must be the same length",
-    );
+    assert.strictEqual(allOptions.length, ruleIds.length, "ruleIds and options arrays must be the same length");
 
     for (const options of allOptions) {
       assert(Array.isArray(options), `Elements of options must be arrays, got ${typeof options}`);
@@ -290,10 +282,7 @@ function processOptions(configOptions: Options, ruleDetails: RuleDetails): Reado
   // Merge with `defaultOptions` first
   const { defaultOptions } = ruleDetails;
 
-  const options =
-    defaultOptions === DEFAULT_OPTIONS
-      ? configOptions
-      : mergeOptions(configOptions, defaultOptions);
+  const options = defaultOptions === DEFAULT_OPTIONS ? configOptions : mergeOptions(configOptions, defaultOptions);
 
   // Apply schema defaults (mutates `options` in place).
   //

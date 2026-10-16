@@ -66,18 +66,12 @@ export function getCommentsBefore(nodeOrToken: NodeOrToken): Comment[] {
   const targetStart = nodeOrToken.range[0];
 
   // Binary search merged buffer for first entry at or after target's start
-  const searchIndex = firstTokenAtOrAfter(
-    tokensAndCommentsInt32,
-    targetStart,
-    0,
-    tokensAndCommentsLen,
-  );
+  const searchIndex = firstTokenAtOrAfter(tokensAndCommentsInt32, targetStart, 0, tokensAndCommentsLen);
 
   // Walk backwards over consecutive comments.
   // Operate in pos32 space: `typePos32` points directly at the type field, decrementing by 4 each step,
   // instead of recomputing `(i << 2) + 2` per iteration.
-  const startTypePos32 =
-    (searchIndex << MERGED_SIZE32_SHIFT) - (MERGED_SIZE32 - MERGED_TYPE_OFFSET32);
+  const startTypePos32 = (searchIndex << MERGED_SIZE32_SHIFT) - (MERGED_SIZE32 - MERGED_TYPE_OFFSET32);
   let typePos32 = startTypePos32;
   // `MERGED_TYPE_OFFSET32` is greater than 0 (checked by debug assert above), so `typePos32 > 0` is right check.
   // If `MERGED_TYPE_OFFSET32` was zero, it'd be `typePos32 >= 0`.
@@ -91,9 +85,7 @@ export function getCommentsBefore(nodeOrToken: NodeOrToken): Comment[] {
   // Read `originalIndex` of earliest comment, calculate slice end from how far we walked.
   // `typePos32` is at the entry before the first comment.
   const sliceStart =
-    tokensAndCommentsInt32[
-      typePos32 + (MERGED_SIZE32 - MERGED_TYPE_OFFSET32 + MERGED_ORIGINAL_INDEX_OFFSET32)
-    ];
+    tokensAndCommentsInt32[typePos32 + (MERGED_SIZE32 - MERGED_TYPE_OFFSET32 + MERGED_ORIGINAL_INDEX_OFFSET32)];
   const sliceEnd = sliceStart + (count32 >> MERGED_SIZE32_SHIFT);
 
   for (let i = sliceStart; i < sliceEnd; i++) {
@@ -130,12 +122,7 @@ export function getCommentsAfter(nodeOrToken: NodeOrToken): Comment[] {
   const targetEnd = nodeOrToken.range[1];
 
   // Binary search merged buffer for first entry at or after target's end.
-  const searchIndex = firstTokenAtOrAfter(
-    tokensAndCommentsInt32,
-    targetEnd,
-    0,
-    tokensAndCommentsLen,
-  );
+  const searchIndex = firstTokenAtOrAfter(tokensAndCommentsInt32, targetEnd, 0, tokensAndCommentsLen);
 
   // Walk forwards over consecutive comments.
   // Operate in pos32 space: `typePos32` points directly at the type field, incrementing by 4 each step,
@@ -152,10 +139,7 @@ export function getCommentsAfter(nodeOrToken: NodeOrToken): Comment[] {
   if (count32 === 0) return [];
 
   // Read `originalIndex` of earliest comment, calculate slice end from how far we walked
-  const sliceStart =
-    tokensAndCommentsInt32[
-      startTypePos32 - (MERGED_TYPE_OFFSET32 - MERGED_ORIGINAL_INDEX_OFFSET32)
-    ];
+  const sliceStart = tokensAndCommentsInt32[startTypePos32 - (MERGED_TYPE_OFFSET32 - MERGED_ORIGINAL_INDEX_OFFSET32)];
   const sliceEnd = sliceStart + (count32 >> MERGED_SIZE32_SHIFT);
 
   for (let i = sliceStart; i < sliceEnd; i++) {
@@ -199,10 +183,7 @@ export function getCommentsInside(node: Node): Comment[] {
  * @param nodeOrToken2 - End node/token.
  * @returns `true` if one or more comments exist between the two.
  */
-export function commentsExistBetween(
-  nodeOrToken1: NodeOrToken,
-  nodeOrToken2: NodeOrToken,
-): boolean {
+export function commentsExistBetween(nodeOrToken1: NodeOrToken, nodeOrToken2: NodeOrToken): boolean {
   if (commentsInt32 === null) initCommentsBuffer();
   debugAssertIsNonNull(commentsInt32);
 
@@ -215,10 +196,7 @@ export function commentsExistBetween(
 
   // Check if its end is before `nodeOrToken2` starts.
   // Read `end` from buffer: u32 at offset 1 of the entry.
-  return (
-    firstCommentBetween < commentsLen
-    && commentsInt32[(firstCommentBetween << 2) + 1] <= nodeOrToken2.range[0]
-  );
+  return firstCommentBetween < commentsLen && commentsInt32[(firstCommentBetween << 2) + 1] <= nodeOrToken2.range[0];
 }
 
 /**

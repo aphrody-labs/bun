@@ -151,7 +151,8 @@ const randomness = freeze({
 
 const privacyPass = freeze({
   createTokens(count = 1): Uint8Array[] {
-    if (!isSafeInteger(count) || count < 1 || count > 4096) throw $ERR_OUT_OF_RANGE("count", "an integer in 1..4096", count);
+    if (!isSafeInteger(count) || count < 1 || count > 4096)
+      throw $ERR_OUT_OF_RANGE("count", "an integer in 1..4096", count);
     const out: Uint8Array[] = [];
     for (let i = 0; i < count; i++) out.push(native("privacyPass.token"));
     return out;
@@ -188,7 +189,11 @@ const privacyPass = freeze({
     );
   },
   redeem(unblinded: Bytes, message: Bytes) {
-    const [preimage, signature] = native("privacyPass.redeem", bytes("unblinded", unblinded), bytes("message", message));
+    const [preimage, signature] = native(
+      "privacyPass.redeem",
+      bytes("unblinded", unblinded),
+      bytes("message", message),
+    );
     return { preimage, signature };
   },
   verify(signingKey: Bytes, redemption: import("bun:privacy").PrivacyPassRedemption, message: Bytes): boolean {

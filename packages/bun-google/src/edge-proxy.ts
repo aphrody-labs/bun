@@ -45,7 +45,7 @@ const COMPRESSIBLE = /^(text\/|application\/(json|javascript|xml)|image\/svg\+xm
 const KEY = /^[A-Za-z0-9._-]+(\/[A-Za-z0-9._-]+)*$/;
 
 export const validEdgeKey = (key: string): boolean =>
-  KEY.test(key) && !key.split("/").some((s) => s === "." || s === "..");
+  KEY.test(key) && !key.split("/").some(s => s === "." || s === "..");
 
 // Bun's CompressionStream accepts brotli and a level; the DOM lib types know neither.
 const BrotliStream = CompressionStream as unknown as new (
@@ -54,9 +54,7 @@ const BrotliStream = CompressionStream as unknown as new (
 ) => CompressionStream;
 
 async function brotli(data: Uint8Array): Promise<Uint8Array> {
-  const stream = new Blob([data.slice()])
-    .stream()
-    .pipeThrough(new BrotliStream("brotli", { level: 11 }));
+  const stream = new Blob([data.slice()]).stream().pipeThrough(new BrotliStream("brotli", { level: 11 }));
   return new Uint8Array(await new Response(stream).arrayBuffer());
 }
 
@@ -114,12 +112,10 @@ export function createEdgeProxy(options: EdgeProxyOptions) {
       signal: AbortSignal.timeout(timeout),
     });
     if (!res.ok) throw new UpstreamError(res.status, `upstream ${res.status}`);
-    if (Number(res.headers.get("content-length") ?? 0) > maxBytes)
-      throw new UpstreamError(502, "upstream too large");
+    if (Number(res.headers.get("content-length") ?? 0) > maxBytes) throw new UpstreamError(502, "upstream too large");
     let body = await res.bytes();
     if (body.byteLength > maxBytes) throw new UpstreamError(502, "upstream too large");
-    if (route.transform)
-      body = new TextEncoder().encode(route.transform(new TextDecoder().decode(body)));
+    if (route.transform) body = new TextEncoder().encode(route.transform(new TextDecoder().decode(body)));
     const type = res.headers.get("content-type") ?? "application/octet-stream";
     const previous = await readMeta(path);
     const name = `${path.slice(path.lastIndexOf("/") + 1)}~${Date.now().toString(36)}`;
@@ -154,13 +150,7 @@ export function createEdgeProxy(options: EdgeProxyOptions) {
     return p;
   }
 
-  function respond(
-    req: Request,
-    route: EdgeRoute,
-    path: string,
-    meta: Meta,
-    status: string,
-  ): Response {
+  function respond(req: Request, route: EdgeRoute, path: string, meta: Meta, status: string): Response {
     const headers: Record<string, string> = {
       ...options.headers,
       "content-type": meta.type,

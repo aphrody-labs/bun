@@ -50,11 +50,7 @@ async function runOxlint(files: Record<string, string>) {
     stdout: "pipe",
     stderr: "pipe",
   });
-  const [stdout, stderr, exitCode] = await Promise.all([
-    proc.stdout.text(),
-    proc.stderr.text(),
-    proc.exited,
-  ]);
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
   return { stdout, stderr, exitCode };
 }
 
@@ -220,9 +216,7 @@ if (options.b != null) y = options.b;
     const { stdout, exitCode } = await runOxlint({
       "msg.js": `if (options.fragment != null) { x = options.fragment; }\n`,
     });
-    expect(stdout).toContain(
-      "`options.fragment` is read in the `if` condition and again in the body",
-    );
+    expect(stdout).toContain("`options.fragment` is read in the `if` condition and again in the body");
     expect(stdout).toContain("const { fragment } = options");
     expect(exitCode).toBe(1);
   });
@@ -240,11 +234,7 @@ describeOxlint("src/js lint", () => {
       stdout: "pipe",
       stderr: "pipe",
     });
-    const [stdout, stderr, exitCode] = await Promise.all([
-      proc.stdout.text(),
-      proc.stderr.text(),
-      proc.exited,
-    ]);
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
     expect(stderr).not.toContain("Failed");
     expect({ stdout, exitCode }).toEqual({
       stdout: expect.stringContaining("0 errors"),

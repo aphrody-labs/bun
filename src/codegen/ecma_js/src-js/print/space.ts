@@ -28,10 +28,7 @@ if (DEBUG) {
   for (const category of ALL_CATEGORIES) {
     const expected = [CAT_IDENT, CAT_INT_DIGIT, CAT_REGEX_SLASH].includes(category);
     const actual = category <= CAT_REGEX_SLASH;
-    debugAssert(
-      actual === expected,
-      `Category ${category} disagrees with \`last <= CAT_REGEX_SLASH\``,
-    );
+    debugAssert(actual === expected, `Category ${category} disagrees with \`last <= CAT_REGEX_SLASH\``);
   }
 }
 
@@ -58,18 +55,11 @@ export function printSpaceBeforeIdentifier(state: State): void {
 // plain `!`, so it sits below the range and storing it costs the slow path nothing.
 if (DEBUG) {
   for (const category of ALL_CATEGORIES) {
-    const expected = [
-      CAT_OP_UN_NOT_AFTER_LT,
-      CAT_OP_UN_PLUS,
-      CAT_OP_UPD_INC,
-      CAT_OP_UN_NEG,
-      CAT_OP_UPD_DEC,
-    ].includes(category);
-    const actual = category >= CAT_OP_UN_NOT_AFTER_LT;
-    debugAssert(
-      actual === expected,
-      `Category ${category} disagrees with \`last >= CAT_OP_UN_NOT_AFTER_LT\``,
+    const expected = [CAT_OP_UN_NOT_AFTER_LT, CAT_OP_UN_PLUS, CAT_OP_UPD_INC, CAT_OP_UN_NEG, CAT_OP_UPD_DEC].includes(
+      category,
     );
+    const actual = category >= CAT_OP_UN_NOT_AFTER_LT;
+    debugAssert(actual === expected, `Category ${category} disagrees with \`last >= CAT_OP_UN_NOT_AFTER_LT\``);
   }
 }
 
@@ -111,9 +101,9 @@ export function printSpaceBeforeOperator(state: State, next: Category): void {
  */
 function printSpaceBeforeOperatorSlow(state: State, prev: Category, next: Category): void {
   if (
-    (prev === CAT_OP_UN_PLUS && (next === CAT_OP_UN_PLUS || next === CAT_OP_UPD_INC))
-    || (prev === CAT_OP_UN_NEG && (next === CAT_OP_UN_NEG || next === CAT_OP_UPD_DEC))
-    || (prev === CAT_OP_UN_NOT_AFTER_LT && next === CAT_OP_UPD_DEC)
+    (prev === CAT_OP_UN_PLUS && (next === CAT_OP_UN_PLUS || next === CAT_OP_UPD_INC)) ||
+    (prev === CAT_OP_UN_NEG && (next === CAT_OP_UN_NEG || next === CAT_OP_UPD_DEC)) ||
+    (prev === CAT_OP_UN_NOT_AFTER_LT && next === CAT_OP_UPD_DEC)
   ) {
     write(state, " ", CAT_OTHER);
   }

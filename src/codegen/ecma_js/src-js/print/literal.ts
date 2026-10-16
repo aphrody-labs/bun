@@ -38,12 +38,7 @@ type LiteralNode =
  * The kind is told apart by the type of `value` and by which extra property is present,
  * since the node itself does not say.
  */
-export function printLiteral(
-  node: LiteralNode,
-  state: State,
-  precedence: number,
-  ctx: number,
-): void {
+export function printLiteral(node: LiteralNode, state: State, precedence: number, ctx: number): void {
   // Ordered for the hot path - `value` is a `RegExp` / `null` for regexes and a `BigInt` / `null` for bigints,
   // so a string or number `value` identifies a plain string/numeric literal without touching `regex` / `bigint` first.
   const { value } = node;
@@ -85,12 +80,7 @@ export function printLiteral(
  * In TypeScript positions the source text is printed back rather than the shortest form,
  * so a type keeps the digits it was written with.
  */
-function printNumericLiteral(
-  node: ESTree.NumericLiteral,
-  state: State,
-  precedence: number,
-  ctx: number,
-): void {
+function printNumericLiteral(node: ESTree.NumericLiteral, state: State, precedence: number, ctx: number): void {
   const { value } = node;
   if ((ctx & CTX_TYPESCRIPT) !== 0 && node.raw != null) {
     // A number's raw text can only end 3 ways: a digit, a hex letter, or a trailing `.` as in `1.`.
@@ -99,14 +89,7 @@ function printNumericLiteral(
     // `CAT_IDENT` rather than `CAT_INT_DIGIT` - raw text only prints inside a TS type,
     // where no member `.` can follow, so there is no `0 .toExponential()` hazard to separate.
     const { raw } = node;
-    writeWithMap(
-      state,
-      raw,
-      raw[raw.length - 1] === "." ? CAT_OTHER : CAT_IDENT,
-      node.start,
-      node.end,
-      node,
-    );
+    writeWithMap(state, raw, raw[raw.length - 1] === "." ? CAT_OTHER : CAT_IDENT, node.start, node.end, node);
     return;
   }
 

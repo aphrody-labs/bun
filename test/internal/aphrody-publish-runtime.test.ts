@@ -93,7 +93,10 @@ describe("aphrody runtime platforms", () => {
       "@aphrody/bun-runtime-darwin-aarch64": "1.4.3-aphrody.1",
       "@aphrody/bun-runtime-linux-x64": "1.4.3-aphrody.1",
     });
-    const linux = platformManifest(platforms.find(p => p.os === "linux")!, "1.4.3-aphrody.1");
+    const linux = platformManifest(
+      platforms.find(p => p.os === "linux")!,
+      "1.4.3-aphrody.1",
+    );
     expect(linux).toMatchObject({ os: ["linux"], cpu: ["x64"], libc: ["glibc"], files: ["bin"] });
     expect(launcherTable(platforms)).toEqual({
       "darwin-arm64": { pkg: "@aphrody/bun-runtime-darwin-aarch64", exe: "bin/bun" },

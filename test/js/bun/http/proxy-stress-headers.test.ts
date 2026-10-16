@@ -53,21 +53,18 @@ describe("many response headers", () => {
     originTls: [false, true] as const,
     count: [5, 50, 200] as const,
   })) {
-    test.concurrent(
-      `${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin, ${count} response headers`,
-      async () => {
-        const headers: Record<string, string> = {};
-        for (let i = 0; i < count; i++) headers[`X-Resp-${i}`] = `val-${i}`;
-        await using origin = await createAdversarialOrigin({ tls: originTls, body: "ok", headers });
-        const proxy = sharedProxy(proxyTls);
-        const res = await fetch(origin.url, { proxy: proxy.url, keepalive: false, tls: laxTls });
-        expect(res.status).toBe(200);
-        expect(await res.text()).toBe("ok");
-        for (let i = 0; i < count; i++) {
-          expect(res.headers.get(`x-resp-${i}`)).toBe(`val-${i}`);
-        }
-      },
-    );
+    test.concurrent(`${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin, ${count} response headers`, async () => {
+      const headers: Record<string, string> = {};
+      for (let i = 0; i < count; i++) headers[`X-Resp-${i}`] = `val-${i}`;
+      await using origin = await createAdversarialOrigin({ tls: originTls, body: "ok", headers });
+      const proxy = sharedProxy(proxyTls);
+      const res = await fetch(origin.url, { proxy: proxy.url, keepalive: false, tls: laxTls });
+      expect(res.status).toBe(200);
+      expect(await res.text()).toBe("ok");
+      for (let i = 0; i < count; i++) {
+        expect(res.headers.get(`x-resp-${i}`)).toBe(`val-${i}`);
+      }
+    });
   }
 });
 
@@ -80,41 +77,38 @@ describe("duplicate Set-Cookie through tunnel", () => {
     proxyTls: [false, true] as const,
     originTls: [false, true] as const,
   })) {
-    test.concurrent(
-      `${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin, 3 Set-Cookie headers`,
-      async () => {
-        // The adversarial origin writes headers from a plain object, so
-        // duplicate names need a raw writer. Build one inline for this test.
-        const handler = (sock: net.Socket) => {
-          sock.on("error", () => {});
-          sock.once("data", () => {
-            sock.write(
-              "HTTP/1.1 200 OK\r\n" +
-                "Set-Cookie: a=1\r\n" +
-                "Set-Cookie: b=2\r\n" +
-                "Set-Cookie: c=3\r\n" +
-                "Content-Length: 2\r\n" +
-                "Connection: close\r\n\r\nok",
-            );
-            sock.end();
-          });
-        };
-        const server = originTls
-          ? tls.createServer({ ...tlsCert, rejectUnauthorized: false }, handler)
-          : net.createServer(handler);
-        server.listen(0, "127.0.0.1");
-        await once(server, "listening");
-        const originUrl = `${originTls ? "https" : "http"}://localhost:${(server.address() as net.AddressInfo).port}`;
-        const proxy = sharedProxy(proxyTls);
-        try {
-          const res = await fetch(originUrl, { proxy: proxy.url, keepalive: false, tls: laxTls });
-          expect(res.status).toBe(200);
-          expect(res.headers.getSetCookie()).toEqual(["a=1", "b=2", "c=3"]);
-        } finally {
-          server.close();
-        }
-      },
-    );
+    test.concurrent(`${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin, 3 Set-Cookie headers`, async () => {
+      // The adversarial origin writes headers from a plain object, so
+      // duplicate names need a raw writer. Build one inline for this test.
+      const handler = (sock: net.Socket) => {
+        sock.on("error", () => {});
+        sock.once("data", () => {
+          sock.write(
+            "HTTP/1.1 200 OK\r\n" +
+              "Set-Cookie: a=1\r\n" +
+              "Set-Cookie: b=2\r\n" +
+              "Set-Cookie: c=3\r\n" +
+              "Content-Length: 2\r\n" +
+              "Connection: close\r\n\r\nok",
+          );
+          sock.end();
+        });
+      };
+      const server = originTls
+        ? tls.createServer({ ...tlsCert, rejectUnauthorized: false }, handler)
+        : net.createServer(handler);
+      server.listen(0, "127.0.0.1");
+      await once(server, "listening");
+      const originUrl = `${originTls ? "https" : "http"}://localhost:${(server.address() as net.AddressInfo).port}`;
+      const proxy = sharedProxy(proxyTls);
+      try {
+        const res = await fetch(originUrl, { proxy: proxy.url, keepalive: false, tls: laxTls });
+        expect(res.status).toBe(200);
+        expect(res.headers.getSetCookie()).toEqual(["a=1", "b=2", "c=3"]);
+      } finally {
+        server.close();
+      }
+    });
   }
 });
 
@@ -137,20 +131,17 @@ describe("Content-Type through tunnel", () => {
     originTls: [false, true] as const,
     ct: CONTENT_TYPES,
   })) {
-    test.concurrent(
-      `${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin Content-Type="${ct}"`,
-      async () => {
-        await using origin = await createAdversarialOrigin({
-          tls: originTls,
-          body: "ct",
-          headers: { "Content-Type": ct },
-        });
-        const proxy = sharedProxy(proxyTls);
-        const res = await fetch(origin.url, { proxy: proxy.url, keepalive: false, tls: laxTls });
-        expect(res.status).toBe(200);
-        expect(res.headers.get("content-type")).toBe(ct);
-      },
-    );
+    test.concurrent(`${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin Content-Type="${ct}"`, async () => {
+      await using origin = await createAdversarialOrigin({
+        tls: originTls,
+        body: "ct",
+        headers: { "Content-Type": ct },
+      });
+      const proxy = sharedProxy(proxyTls);
+      const res = await fetch(origin.url, { proxy: proxy.url, keepalive: false, tls: laxTls });
+      expect(res.status).toBe(200);
+      expect(res.headers.get("content-type")).toBe(ct);
+    });
   }
 });
 
@@ -163,28 +154,25 @@ describe("206 Content-Range through tunnel", () => {
     proxyTls: [false, true] as const,
     originTls: [false, true] as const,
   })) {
-    test.concurrent(
-      `${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin 206 with Content-Range`,
-      async () => {
-        await using origin = await createAdversarialOrigin({
-          tls: originTls,
-          status: 206,
-          body: "partial",
-          headers: { "Content-Range": "bytes 0-6/100", "Accept-Ranges": "bytes" },
-        });
-        const proxy = sharedProxy(proxyTls);
-        const res = await fetch(origin.url, {
-          proxy: proxy.url,
-          keepalive: false,
-          tls: laxTls,
-          headers: { Range: "bytes=0-6" },
-        });
-        expect(res.status).toBe(206);
-        expect(res.headers.get("content-range")).toBe("bytes 0-6/100");
-        expect(await res.text()).toBe("partial");
-        expect(origin.requests[0].headers["range"]).toBe("bytes=0-6");
-      },
-    );
+    test.concurrent(`${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin 206 with Content-Range`, async () => {
+      await using origin = await createAdversarialOrigin({
+        tls: originTls,
+        status: 206,
+        body: "partial",
+        headers: { "Content-Range": "bytes 0-6/100", "Accept-Ranges": "bytes" },
+      });
+      const proxy = sharedProxy(proxyTls);
+      const res = await fetch(origin.url, {
+        proxy: proxy.url,
+        keepalive: false,
+        tls: laxTls,
+        headers: { Range: "bytes=0-6" },
+      });
+      expect(res.status).toBe(206);
+      expect(res.headers.get("content-range")).toBe("bytes 0-6/100");
+      expect(await res.text()).toBe("partial");
+      expect(origin.requests[0].headers["range"]).toBe("bytes=0-6");
+    });
   }
 });
 
@@ -199,31 +187,28 @@ describe("decompress:false through tunnel", () => {
     originTls: [false, true] as const,
     encoding: ["gzip", "br"] as const,
   })) {
-    test.concurrent(
-      `${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin ${encoding} decompress:false`,
-      async () => {
-        const payload = Buffer.alloc(2048, "Z").toString("latin1");
-        await using origin = await createAdversarialOrigin({
-          tls: originTls,
-          body: payload,
-          encoding,
-        });
-        const proxy = sharedProxy(proxyTls);
-        const res = await fetch(origin.url, {
-          proxy: proxy.url,
-          keepalive: false,
-          tls: laxTls,
-          decompress: false,
-        });
-        expect(res.status).toBe(200);
-        expect(res.headers.get("content-encoding")).toBe(encoding);
-        const raw = Buffer.from(await res.arrayBuffer());
-        // The raw bytes are the compressed form, not the plaintext.
-        expect(raw.toString("latin1")).not.toBe(payload);
-        const decoded = encoding === "gzip" ? zlib.gunzipSync(raw) : zlib.brotliDecompressSync(raw);
-        expect(decoded.toString("latin1")).toBe(payload);
-      },
-    );
+    test.concurrent(`${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin ${encoding} decompress:false`, async () => {
+      const payload = Buffer.alloc(2048, "Z").toString("latin1");
+      await using origin = await createAdversarialOrigin({
+        tls: originTls,
+        body: payload,
+        encoding,
+      });
+      const proxy = sharedProxy(proxyTls);
+      const res = await fetch(origin.url, {
+        proxy: proxy.url,
+        keepalive: false,
+        tls: laxTls,
+        decompress: false,
+      });
+      expect(res.status).toBe(200);
+      expect(res.headers.get("content-encoding")).toBe(encoding);
+      const raw = Buffer.from(await res.arrayBuffer());
+      // The raw bytes are the compressed form, not the plaintext.
+      expect(raw.toString("latin1")).not.toBe(payload);
+      const decoded = encoding === "gzip" ? zlib.gunzipSync(raw) : zlib.brotliDecompressSync(raw);
+      expect(decoded.toString("latin1")).toBe(payload);
+    });
   }
 });
 
@@ -257,17 +242,14 @@ describe("long URL through proxy", () => {
     originTls: [false, true] as const,
     len: [1024, 4096, 8000] as const,
   })) {
-    test.concurrent(
-      `${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin, ${len}B path`,
-      async () => {
-        const path = "/" + Buffer.alloc(len - 1, "p").toString("latin1");
-        await using origin = await createAdversarialOrigin({ tls: originTls, body: "ok" });
-        const proxy = sharedProxy(proxyTls);
-        const res = await fetch(origin.url + path, { proxy: proxy.url, keepalive: false, tls: laxTls });
-        expect(res.status).toBe(200);
-        expect(origin.requests[0].path).toBe(path);
-      },
-    );
+    test.concurrent(`${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin, ${len}B path`, async () => {
+      const path = "/" + Buffer.alloc(len - 1, "p").toString("latin1");
+      await using origin = await createAdversarialOrigin({ tls: originTls, body: "ok" });
+      const proxy = sharedProxy(proxyTls);
+      const res = await fetch(origin.url + path, { proxy: proxy.url, keepalive: false, tls: laxTls });
+      expect(res.status).toBe(200);
+      expect(origin.requests[0].path).toBe(path);
+    });
   }
 });
 
@@ -305,19 +287,16 @@ describe("Content-Encoding header after decompress", () => {
     proxyTls: [false, true] as const,
     originTls: [false, true] as const,
   })) {
-    test.concurrent(
-      `${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin gzip, body decoded`,
-      async () => {
-        const payload = Buffer.alloc(2048, "D").toString("latin1");
-        await using origin = await createAdversarialOrigin({ tls: originTls, body: payload, encoding: "gzip" });
-        const proxy = sharedProxy(proxyTls);
-        const res = await fetch(origin.url, { proxy: proxy.url, keepalive: false, tls: laxTls });
-        expect(res.status).toBe(200);
-        // Bun keeps Content-Encoding after transparent decompression
-        // (fetch.test.ts, issue #5668); the tunnel must match direct fetch.
-        expect(res.headers.get("content-encoding")).toBe("gzip");
-        expect(await res.text()).toBe(payload);
-      },
-    );
+    test.concurrent(`${proxyTls ? "https" : "http"}-proxy → ${originTls ? "https" : "http"}-origin gzip, body decoded`, async () => {
+      const payload = Buffer.alloc(2048, "D").toString("latin1");
+      await using origin = await createAdversarialOrigin({ tls: originTls, body: payload, encoding: "gzip" });
+      const proxy = sharedProxy(proxyTls);
+      const res = await fetch(origin.url, { proxy: proxy.url, keepalive: false, tls: laxTls });
+      expect(res.status).toBe(200);
+      // Bun keeps Content-Encoding after transparent decompression
+      // (fetch.test.ts, issue #5668); the tunnel must match direct fetch.
+      expect(res.headers.get("content-encoding")).toBe("gzip");
+      expect(await res.text()).toBe(payload);
+    });
   }
 });

@@ -43,27 +43,25 @@ const group: TestGroup = {
     // to use actual `eslint-plugin-react-hooks` package.
     // This avoids having to build the React compiler.
     const { rules } = plugin;
-    const allRules = Object.fromEntries(
-      Object.entries(rules).map(([name, rule]) => [name, { rule }]),
-    );
+    const allRules = Object.fromEntries(Object.entries(rules).map(([name, rule]) => [name, { rule }]));
     mock("../src/shared/ReactCompiler.ts", { allRules });
   },
 
   shouldSkipTest(ruleName: string, test: TestCase, code: string, err: Error): boolean {
     // Code is flow syntax
     if (
-      ruleName.startsWith("rules-of-hooks/")
-      && err.message === "Parsing failed"
-      && code.match(/^\s*(\/\/[^\n]*\n)*(hook|component) [a-zA-Z]/)
+      ruleName.startsWith("rules-of-hooks/") &&
+      err.message === "Parsing failed" &&
+      code.match(/^\s*(\/\/[^\n]*\n)*(hook|component) [a-zA-Z]/)
     ) {
       return true;
     }
 
     // Code is TypeScript, but they're being parsed as JSX
     if (
-      ruleName.startsWith("rules-of-hooks/")
-      && err.message === "Parsing failed"
-      && [
+      ruleName.startsWith("rules-of-hooks/") &&
+      err.message === "Parsing failed" &&
+      [
         "function Example({ prop }) {\n  const bar = useEffect(<T>(a: T): Hello => {\n    prop();\n  }, [prop]);\n}",
         "function Foo() {\n  const foo = ({}: any);\n  useMemo(() => {\n    console.log(foo);\n  }, [foo]);\n}",
       ].includes(code.trim())

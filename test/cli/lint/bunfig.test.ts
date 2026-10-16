@@ -1782,7 +1782,7 @@ describe.concurrent("type information without a config file", () => {
       reported: ["a.ts @typescript-eslint/no-floating-promises error"],
     },
   ])("turning on a rule that needs types is enough to run it: $name", async ({ bunfig, args, reported }) => {
-    expect(await run(bunfig, args)).toEqual([reported, false]);
+    expect(await run(bunfig, [...args])).toEqual([[...reported], false]);
   });
 
   // `consistent-type-imports` only reads tsconfig.json when type information is on.

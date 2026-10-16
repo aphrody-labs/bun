@@ -14,7 +14,9 @@ const schemaPath = resolve(repoRoot, "packages/bun-oxc/adapters/lint/configurati
 const outputPath = resolve(oxlintDir, "src-js/package/config.generated.ts");
 
 if (!existsSync(schemaPath)) {
-  throw new Error(`Missing schema at ${schemaPath}. From the repository root, run \`cargo run -p bun_ecma_website_linter -- schema-json > packages/bun-oxc/adapters/lint/configuration_schema.json\` first.`);
+  throw new Error(
+    `Missing schema at ${schemaPath}. From the repository root, run \`cargo run -p bun_ecma_website_linter -- schema-json > packages/bun-oxc/adapters/lint/configuration_schema.json\` first.`,
+  );
 }
 
 const schema = JSON.parse(readFileSync(schemaPath, "utf8"));
@@ -57,10 +59,7 @@ function sanitizeSchema(value: any): void {
     return;
   }
   for (const key of Object.keys(value)) {
-    if (
-      (key === "description" || key === "markdownDescription")
-      && typeof value[key] === "string"
-    ) {
+    if ((key === "description" || key === "markdownDescription") && typeof value[key] === "string") {
       value[key] = sanitizeJsonCodeBlocks(value[key]);
     } else {
       sanitizeSchema(value[key]);
@@ -81,8 +80,8 @@ function getEnumPrimitiveType(definition: unknown): "string" | "number" | "boole
 
   const definitionType = definition.type;
   if (
-    (definitionType === "string" || definitionType === "number" || definitionType === "boolean")
-    && Array.isArray(definition.enum)
+    (definitionType === "string" || definitionType === "number" || definitionType === "boolean") &&
+    Array.isArray(definition.enum)
   ) {
     return definitionType;
   }
@@ -177,8 +176,8 @@ function getDefinitionPrimitiveTypes(schema: any): Map<string, Set<PrimitiveType
     if (Array.isArray(value.enum) && value.enum.length > 0) {
       const enumValueType = typeof value.enum[0];
       if (
-        (enumValueType === "string" || enumValueType === "number" || enumValueType === "boolean")
-        && value.enum.every((item) => typeof item === enumValueType)
+        (enumValueType === "string" || enumValueType === "number" || enumValueType === "boolean") &&
+        value.enum.every(item => typeof item === enumValueType)
       ) {
         result.add(enumValueType);
       }
@@ -189,13 +188,13 @@ function getDefinitionPrimitiveTypes(schema: any): Map<string, Set<PrimitiveType
       if (!Array.isArray(branch)) continue;
 
       for (const item of branch) {
-        inferPrimitiveTypes(item).forEach((primitiveType) => result.add(primitiveType));
+        inferPrimitiveTypes(item).forEach(primitiveType => result.add(primitiveType));
       }
     }
 
     const refName = getDefinitionRefName(value);
     if (refName && allNames.has(refName)) {
-      inferDefinitionByName(refName).forEach((primitiveType) => result.add(primitiveType));
+      inferDefinitionByName(refName).forEach(primitiveType => result.add(primitiveType));
     }
 
     return result;
@@ -253,10 +252,10 @@ function collapseEnumPrimitiveIntersections(
 }
 
 const bannerComment =
-  "/*\n"
-  + " * This file is generated from packages/bun-oxc/adapters/lint/configuration_schema.json.\n"
-  + " * Run `bun src/quality/lint_cli/scripts/generate-config-types.ts` from the repository root to regenerate.\n"
-  + " */";
+  "/*\n" +
+  " * This file is generated from packages/bun-oxc/adapters/lint/configuration_schema.json.\n" +
+  " * Run `bun src/quality/lint_cli/scripts/generate-config-types.ts` from the repository root to regenerate.\n" +
+  " */";
 
 const enumDefinitionTypes = getEnumDefinitionTypes(schema);
 const definitionPrimitiveTypes = getDefinitionPrimitiveTypes(schema);

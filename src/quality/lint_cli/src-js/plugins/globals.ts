@@ -52,10 +52,7 @@ export function initGlobals(): void {
     typeof globals === "object" && globals !== null && !Array.isArray(globals),
     "`globals` should be an object",
   );
-  debugAssert(
-    typeof envs === "object" && envs !== null && !Array.isArray(envs),
-    "`envs` should be an object",
-  );
+  debugAssert(typeof envs === "object" && envs !== null && !Array.isArray(envs), "`envs` should be an object");
 
   Object.freeze(globals);
   Object.freeze(envs);

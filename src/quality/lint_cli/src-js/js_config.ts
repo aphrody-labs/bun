@@ -20,15 +20,10 @@ function validateConfigExtends(root: object): void {
   const stackPaths: string[] = [];
 
   const formatCycleError = (refPath: string, cycleStart: string, idx: number): string => {
-    const cycle =
-      idx === -1
-        ? `${cycleStart} -> ${cycleStart}`
-        : [...stackPaths.slice(idx), cycleStart].join(" -> ");
+    const cycle = idx === -1 ? `${cycleStart} -> ${cycleStart}` : [...stackPaths.slice(idx), cycleStart].join(" -> ");
 
     return (
-      "`extends` contains a circular reference.\n\n"
-      + `${refPath} points back to ${cycleStart}\n`
-      + `Cycle: ${cycle}`
+      "`extends` contains a circular reference.\n\n" + `${refPath} points back to ${cycleStart}\n` + `Cycle: ${cycle}`
     );
   };
 
@@ -47,16 +42,12 @@ function validateConfigExtends(root: object): void {
     const maybeExtends = (config as Record<string, unknown>).extends;
     if (maybeExtends !== undefined) {
       if (!Array.isArray(maybeExtends)) {
-        throw new Error(
-          "`extends` must be an array of config objects (strings/paths are not supported).",
-        );
+        throw new Error("`extends` must be an array of config objects (strings/paths are not supported).");
       }
       for (let i = 0; i < maybeExtends.length; i++) {
         const item = maybeExtends[i];
         if (!isObject(item)) {
-          throw new Error(
-            `\`extends[${i}]\` must be a config object (strings/paths are not supported).`,
-          );
+          throw new Error(`\`extends[${i}]\` must be a config object (strings/paths are not supported).`);
         }
 
         const itemPath = `${path}.extends[${i}]`;
@@ -103,10 +94,7 @@ async function resolveVitePlusConfig(path: string): Promise<JsConfigResult> {
 /**
  * Load config files in parallel using the given resolver, and return JSON-stringified result.
  */
-async function loadConfigs(
-  paths: string[],
-  resolver: (path: string) => Promise<JsConfigResult>,
-): Promise<string> {
+async function loadConfigs(paths: string[], resolver: (path: string) => Promise<JsConfigResult>): Promise<string> {
   try {
     const results = await Promise.allSettled(paths.map(resolver));
 
@@ -142,15 +130,14 @@ export type ConfigLoader = (paths: string[]) => Promise<string>;
 /**
  * Load standard oxlint JS/TS config files in parallel.
  */
-export const loadJsConfigs: ConfigLoader = (paths) => {
+export const loadJsConfigs: ConfigLoader = paths => {
   // Share one cache-busting key across the batch so that `?cache=<key>` is identical
   // for every path resolved in this call (consistent reload semantics for LSP).
   const cacheKey = Date.now();
-  return loadConfigs(paths, (path) => resolveJsConfig(path, cacheKey));
+  return loadConfigs(paths, path => resolveJsConfig(path, cacheKey));
 };
 
 /**
  * Load Vite+ config files in parallel, extracting the `.lint` field from each.
  */
-export const loadVitePlusConfigs: ConfigLoader = (paths) =>
-  loadConfigs(paths, resolveVitePlusConfig);
+export const loadVitePlusConfigs: ConfigLoader = paths => loadConfigs(paths, resolveVitePlusConfig);

@@ -34,11 +34,7 @@ function cleanup(outfile: string) {
 // cwd; asserting on the combined object means a flake shows the real stderr
 // instead of just "Expected: 0, Received: 1".
 async function expectBuildOk(proc: Bun.Subprocess<"ignore", "pipe", "pipe">) {
-  const [stdout, stderr, exitCode] = await Promise.all([
-    proc.stdout.text(),
-    proc.stderr.text(),
-    proc.exited,
-  ]);
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
   expect({ stderr, exitCode }).toEqual({ stderr: "", exitCode: 0 });
   return { stdout, stderr, exitCode };
 }
@@ -70,11 +66,7 @@ async function readVersionInfo(outfile: string) {
     stdout: "pipe",
     stderr: "pipe",
   });
-  const [stdout, stderr, exitCode] = await Promise.all([
-    proc.stdout.text(),
-    proc.stderr.text(),
-    proc.exited,
-  ]);
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
   expect({ stderr, exitCode }).toEqual({ stderr: "", exitCode: 0 });
   const info = JSON.parse(stdout) as Record<string, string | null>;
   for (const k of fields) info[k] ??= "";
@@ -255,11 +247,7 @@ describe.skipIf(!isWindows).concurrent("Windows compile metadata", () => {
         stderr: "pipe",
       });
 
-      const [, stderr, exitCode] = await Promise.all([
-        proc.stdout.text(),
-        proc.stderr.text(),
-        proc.exited,
-      ]);
+      const [, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
 
       expect(stderr).toContain("--windows-title requires --compile");
       expect(exitCode).not.toBe(0);
@@ -286,11 +274,7 @@ describe.skipIf(!isWindows).concurrent("Windows compile metadata", () => {
         stderr: "pipe",
       });
 
-      const [, stderr, exitCode] = await Promise.all([
-        proc.stdout.text(),
-        proc.stderr.text(),
-        proc.exited,
-      ]);
+      const [, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
 
       // Windows flags require a Windows compile target
       expect(stderr.toLowerCase()).toContain("windows compile target");
@@ -733,11 +717,7 @@ function lastSectionEnd(bytes: Buffer): number {
   return end;
 }
 
-async function compileWindowsTemplate(
-  dir: string,
-  tmpl: Buffer,
-  extraArgs: string[] = [],
-): Promise<Buffer> {
+async function compileWindowsTemplate(dir: string, tmpl: Buffer, extraArgs: string[] = []): Promise<Buffer> {
   const tmplPath = join(dir, "template.exe");
   const outPath = join(dir, "out.exe");
   await Bun.write(tmplPath, tmpl);
@@ -855,28 +835,21 @@ function readResources(bytes: Buffer) {
   const rootRva = bytes.readUInt32LE(peOff + 24 + 112 + 2 * 8);
   const sections = peSections(bytes);
   const fileOffset = (rva: number) => {
-    const s = sections.find((s) => rva >= s.va && rva < s.va + s.rawSize)!;
+    const s = sections.find(s => rva >= s.va && rva < s.va + s.rawSize)!;
     return s.raw + rva - s.va;
   };
   const base = fileOffset(rootRva);
   const entries = (off: number) =>
     Array.from(
       { length: bytes.readUInt16LE(base + off + 12) + bytes.readUInt16LE(base + off + 14) },
-      (_, i) =>
-        [
-          bytes.readUInt32LE(base + off + 16 + i * 8),
-          bytes.readUInt32LE(base + off + 20 + i * 8),
-        ] as const,
+      (_, i) => [bytes.readUInt32LE(base + off + 16 + i * 8), bytes.readUInt32LE(base + off + 20 + i * 8)] as const,
     );
   const leaves = new Map<string, Buffer>();
   for (const [type, typeDir] of entries(0))
     for (const [name, nameDir] of entries(typeDir & 0x7fffffff))
       for (const [lang, leaf] of entries(nameDir & 0x7fffffff)) {
         const at = fileOffset(bytes.readUInt32LE(base + leaf));
-        leaves.set(
-          `${type}/${name}/${lang}`,
-          bytes.subarray(at, at + bytes.readUInt32LE(base + leaf + 4)),
-        );
+        leaves.set(`${type}/${name}/${lang}`, bytes.subarray(at, at + bytes.readUInt32LE(base + leaf + 4)));
       }
   return { rootRva, leaves };
 }
@@ -935,7 +908,7 @@ describe.concurrent("Windows resources from any host", () => {
     ]);
 
     const sections = peSections(out);
-    expect(sections.map((s) => s.name)).toEqual([".text", ".rsrc_0", ".rsrc", ".bun"]);
+    expect(sections.map(s => s.name)).toEqual([".text", ".rsrc_0", ".rsrc", ".bun"]);
     const { rootRva, leaves } = readResources(out);
     expect(rootRva).toBe(sections[2].va);
     expect([...leaves.keys()]).toEqual(["3/1/1033", "14/1/1033", "16/1/1033", "24/1/1033"]);
@@ -999,11 +972,7 @@ describe.concurrent("Windows resources from any host", () => {
       stderr: "pipe",
     });
 
-    const [, stderr, exitCode] = await Promise.all([
-      proc.stdout.text(),
-      proc.stderr.text(),
-      proc.exited,
-    ]);
+    const [, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
     expect(stderr).toContain("InvalidVersionFormat");
     expect(exitCode).not.toBe(0);
   });
@@ -1035,11 +1004,7 @@ describe.concurrent("Windows resources from any host", () => {
       stderr: "pipe",
     });
 
-    const [, stderr, exitCode] = await Promise.all([
-      proc.stdout.text(),
-      proc.stderr.text(),
-      proc.exited,
-    ]);
+    const [, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
     expect(stderr).toContain("InvalidIcon");
     expect(exitCode).not.toBe(0);
   });

@@ -1113,7 +1113,7 @@ describe.concurrent("a note says that a plugin that is built in is installed in 
     { ts: { name: "@typescript-eslint/eslint-plugin", version: "8.43.0" } },
     { n: { name: "eslint-plugin-node", version: "11.1.0" } },
   ])("not for a plugin that runs in JavaScript: %j", async plugin => {
-    expect(await notes(flat(plugin))).toEqual([]);
+    expect(await notes(flat(plugin as unknown as Record<string, { name?: string; version?: string }>))).toEqual([]);
   });
 
   // eslint-plugin-react-hooks 7.1.1 ships with `meta.version: "7.0.0"`.
@@ -6503,7 +6503,7 @@ describe.skipIf(isWindows).concurrent("a symbolic link that leads nowhere, to it
   });
 
   test("nothing but a link that leads nowhere is nothing", async () => {
-    const only = (flavor: string) => linted(flavor, { "gone.js": "nowhere.js" }, ["."], {});
+    const only = (flavor: string) => linted(flavor, { "gone.js": "nowhere.js" }, ["."], {} as typeof others);
     const [eslint8, oxlint] = await Promise.all([only(".eslintrc.json"), only(".oxlintrc.json")]);
     // 'No files matching the pattern "." were found.'
     expect(eslint8.stderr).toContain('pattern "."');
@@ -6614,9 +6614,9 @@ describe.concurrent("a search that leaves the project of an eslint.config.js", (
   };
   const ofMine = ["mine/nested/x.js", "mine/sub/x.js", "mine/x.js"];
 
-  test.each([[".."], ["<w>/**/x.js"], ["../**/x.js"], ["<w>"], [".", ".."]])(
+  test.each([[".."], ["<w>/**/x.js"], ["../**/x.js"], ["<w>"], [".", ".."]] as string[][])(
     "only what is in the working directory is entered: %s",
-    async (...args) => {
+    async (...args: string[]) => {
       expect(await run("mine", args)).toMatchObject({ ran: ["mine", "mine/nested"], files: ofMine, exitCode: 1 });
     },
   );

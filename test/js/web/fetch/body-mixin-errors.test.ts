@@ -327,36 +327,33 @@ describe("body-mixin-errors", () => {
     }
   }
 
-  it.concurrent(
-    "fetch: re-fetching a Request whose stream body was consumed rejects before any network I/O",
-    async () => {
-      await withConnectionCountingServer(async ({ url, makeBody, expectConnections }) => {
-        const req = new Request(url, { method: "POST", body: makeBody(), duplex: "half" } as RequestInit);
+  it.concurrent("fetch: re-fetching a Request whose stream body was consumed rejects before any network I/O", async () => {
+    await withConnectionCountingServer(async ({ url, makeBody, expectConnections }) => {
+      const req = new Request(url, { method: "POST", body: makeBody(), duplex: "half" } as RequestInit);
 
-        const first = await fetch(req);
-        expect(first.status).toBe(200);
-        expect(req.bodyUsed).toBe(true);
+      const first = await fetch(req);
+      expect(first.status).toBe(200);
+      expect(req.bodyUsed).toBe(true);
 
-        const errors: unknown[] = [];
-        for (let i = 0; i < 3; i++) {
-          await fetch(req).then(
-            () => errors.push(null),
-            e => errors.push(e),
-          );
-        }
+      const errors: unknown[] = [];
+      for (let i = 0; i < 3; i++) {
+        await fetch(req).then(
+          () => errors.push(null),
+          e => errors.push(e),
+        );
+      }
 
-        // First fetch + probe only. The three re-fetches must not have opened
-        // connections or written request heads to the origin.
-        await expectConnections(2);
+      // First fetch + probe only. The three re-fetches must not have opened
+      // connections or written request heads to the origin.
+      await expectConnections(2);
 
-        expect(errors).toHaveLength(3);
-        for (const e of errors) {
-          expect(e).toBeInstanceOf(TypeError);
-          expect((e as any).code).toBe("ERR_BODY_ALREADY_USED");
-        }
-      });
-    },
-  );
+      expect(errors).toHaveLength(3);
+      for (const e of errors) {
+        expect(e).toBeInstanceOf(TypeError);
+        expect((e as any).code).toBe("ERR_BODY_ALREADY_USED");
+      }
+    });
+  });
 
   it.concurrent("fetch: Request with a locked stream body rejects before any network I/O", async () => {
     await withConnectionCountingServer(async ({ url, makeBody, expectConnections }) => {
