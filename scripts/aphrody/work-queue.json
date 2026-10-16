@@ -27,7 +27,7 @@
       "docs/runtime/lsp.mdx",
       "test/cli/lsp"
     ],
-    "status": "active"
+    "status": "done"
   },
   {
     "id": "D-plugin",
@@ -47,7 +47,7 @@
       ".claude/skills",
       "src/agent_tools"
     ],
-    "status": "active"
+    "status": "done"
   },
   {
     "id": "F-gitssh",
@@ -100,5 +100,13 @@
       "packages/bun-video"
     ],
     "status": "done"
+  },
+  {
+    "id": "audit-untracked-crate-0",
+    "goal": "untracked-crate: src/bun-os/native crate not committed",
+    "paths": [
+      "src/bun-os/native"
+    ],
+    "status": "blocked"
   }
 ]
