@@ -14,6 +14,7 @@
 
 pub mod bun_apis;
 pub mod cli_commands;
+pub mod file_kind;
 pub mod imports_ast;
 pub mod node_imports;
 pub mod test_apis;

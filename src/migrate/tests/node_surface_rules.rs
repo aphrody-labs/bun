@@ -67,3 +67,54 @@ fn call_with_extra_arguments_is_not_rewritten() {
     let (_, after) = scan_source("example.ts", source, &options());
     assert_eq!(source, after);
 }
+
+#[test]
+fn browser_bundled_sources_keep_bare_builtins() {
+    let src = "import { EventEmitter } from 'events';\nwindow.ethereum = new EventEmitter();\n";
+    let path = "components/brave_wallet/resources/ethereum_provider.js";
+    let (_, after) = scan_source(path, src, &options());
+    assert_eq!(after, src);
+    let tsx = "import * as React from 'react';\nimport { createHash } from 'crypto';\n";
+    let path = "components/brave_wallet_ui/components/desktop/hardware_wallet_connect.tsx";
+    assert_eq!(scan_source(path, tsx, &options()).1, tsx);
+    let (_, after) =
+        scan_source("tools/lit_mangler/mangle.ts", "import fs from 'fs';\n", &options());
+    assert_eq!(after, "import fs from 'node:fs';\n");
+}
+
+#[test]
+fn jest_config_imports_are_never_rewritten_to_bun_test() {
+    let src = "import type { Config } from 'jest';\nimport { createJsWithTsEsmPreset } from 'ts-jest';\nexport default { ...createJsWithTsEsmPreset() } satisfies Config;\n";
+    let (findings, after) = scan_source("jest.config.ts", src, &options());
+    assert!(!after.contains("bun:test"), "{after}");
+    assert!(
+        findings
+            .iter()
+            .any(|f| f.rule_id == "imports/bun-native" && f.message.contains("not applied"))
+    );
+}
+
+#[test]
+fn jest_globals_kept_while_project_runs_jest() {
+    let root = std::env::temp_dir().join(format!("n2b-jest-{}", std::process::id()));
+    std::fs::create_dir_all(&root).unwrap();
+    std::fs::write(root.join("jest.config.ts"), "export default { testEnvironment: 'jsdom' }\n")
+        .unwrap();
+    let mut opts = options();
+    opts.root = root.clone();
+    let src = "import { describe, expect, test } from '@jest/globals';\ntest('a', () => expect(1).toBe(1));\n";
+    let (findings, after) = scan_source("common/a.test.ts", src, &opts);
+    std::fs::remove_dir_all(&root).unwrap();
+    assert_eq!(after, src);
+    assert!(findings.iter().any(|f| f.message.contains("exécute encore Jest")));
+    let (_, after) = scan_source("common/a.test.ts", src, &options());
+    assert!(after.contains("from 'bun:test'"), "{after}");
+}
+
+#[test]
+fn node_run_tool_configs_keep_node_apis() {
+    let src = "import path from 'node:path';\nimport { fileURLToPath } from 'node:url';\nconst __filename = fileURLToPath(import.meta.url);\nexport default { context: path.dirname(__filename) };\n";
+    let (findings, after) = scan_source("ios/brave-ios/webpack.config.js", src, &options());
+    assert_eq!(after, src);
+    assert!(findings.iter().any(|f| f.rule_id == "api/filename-esm" && !f.autofix));
+}

@@ -117,6 +117,15 @@ message = "ts-node/tsx <fichier> → bun <fichier> (Bun exécute TypeScript nati
 docs    = "https://bun.com/docs/runtime/typescript"
 
 [[cli]]
+id         = "cli/node-script"
+pattern    = '(?m)(^|[\s;&|(])node\s+([^\s;&|\-][^\s;&|]*\.[cm]?[jt]sx?)([\s;&|)]|$)'
+replace    = "${1}bun ${2}${3}"
+unless     = 'node_modules/'
+message    = "node <script> → bun <script> (Bun exécute JS et TypeScript)"
+docs       = "https://bun.com/docs/cli/run"
+aggressive = true
+
+[[cli]]
 id      = "cli/pnpm-recursive"
 pattern = '(?m)(^|[\s;&|(])pnpm\s+(?:-r|--recursive)\s+(?:run\s+)?([\w:.][\w:.-]*)'
 replace = "${1}bun run --filter '*' ${2}"
@@ -269,6 +278,18 @@ replace = "${1}bunx "
 message = "npx → bunx"
 
 # --- pnpm ---
+
+[[cli]]
+id      = "cli/pnpm-install-frozen"
+pattern = '(?m)\bpnpm\s+(?:install|i)\s+--frozen-lockfile(?:\s+(?:--yes|-y))?([\s;&|)]|$)'
+replace = "bun install${1}"
+message = "pnpm install --frozen-lockfile → bun install (aucun bun.lock encore : remettre --frozen-lockfile une fois bun.lock commité ; --yes est propre à pnpm)"
+
+[[cli]]
+id      = "cli/pnpm-install-yes"
+pattern = '(?m)\bpnpm\s+(?:install|i)\s+(?:--yes|-y)([\s;&|)]|$)'
+replace = "bun install${1}"
+message = "pnpm install --yes → bun install (--yes est propre à pnpm)"
 
 [[cli]]
 id      = "cli/pnpm-install-dev"

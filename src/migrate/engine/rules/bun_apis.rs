@@ -114,6 +114,10 @@ pub(crate) fn apply_bun_api_rules_with_context(
     let offsets = line_offsets(source);
     let mut findings: Vec<Finding> = Vec::new();
     let mut edits: Vec<Edit> = Vec::new();
+    // Une config d'outil (webpack, jest…) est chargée par Node via l'outil, le
+    // code navigateur par le bundler : les API Bun n'y existent pas.
+    let not_bun_runtime = crate::rules::file_kind::is_tool_config(path)
+        || crate::rules::file_kind::is_browser_source(path, source);
 
     for r in RULES.iter() {
         for mat in r.re.captures_iter(source) {
@@ -248,7 +252,8 @@ pub(crate) fn apply_bun_api_rules_with_context(
                 || buffer_byte_length_invalid
                 || write_result_used
                 || target_shadowed
-                || parse_invalid;
+                || parse_invalid
+                || not_bun_runtime;
             if inserts_await && context.await_needs_parentheses(index, whole.end()) {
                 replacement = replacement.map(|value| format!("({value})"));
             }
@@ -271,6 +276,11 @@ pub(crate) fn apply_bun_api_rules_with_context(
                         .to_string()
                 } else if await_invalid {
                     format!("{} — not applied: await is invalid in this scope", r.message)
+                } else if not_bun_runtime {
+                    format!(
+                        "{} — not applied: fichier exécuté par Node (config d'outil) ou un                          navigateur, pas par Bun",
+                        r.message
+                    )
                 } else if call_context_invalid || parse_invalid {
                     format!("{} — not applied: unsupported call syntax", r.message)
                 } else if buffer_byte_length_invalid {

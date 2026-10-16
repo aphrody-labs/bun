@@ -26,8 +26,9 @@ pub fn scan_source(path: &str, content: &str, opts: &RunOptions) -> (Vec<Finding
 
     let (f, working) = scan_shebang(path, content);
     all.extend(f);
+    let keeps_jest = crate::rules::file_kind::project_keeps_jest(&opts.root);
     let (f, imported, context) = analyze_source(path, &working, |specifiers| {
-        apply_node_import_rules_with_specifiers(path, &working, aggressive, specifiers)
+        apply_node_import_rules_with_specifiers(path, &working, aggressive, keeps_jest, specifiers)
     });
     all.extend(f);
     let (f, working) =

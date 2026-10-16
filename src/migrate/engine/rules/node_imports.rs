@@ -19,7 +19,7 @@ use crate::types::{CompatInfo, CompatStatus, Finding, MakeFindingOpts, Severity}
 use crate::util::{Edit, apply_edits, line_offsets, make_finding};
 use once_cell::sync::Lazy;
 
-use crate::rules::imports_ast;
+use crate::rules::{file_kind, imports_ast};
 
 /// Builtins Node `node:*` — alimenté par `src/migrate/registry/data/modules.toml`.
 /// La liste inclut les sous-chemins shimmés par Bun (`fs/promises`, etc.).
@@ -99,16 +99,21 @@ pub fn apply_node_import_rules(
     aggressive: bool,
 ) -> (Vec<Finding>, String) {
     let specifiers = imports_ast::extract_specifiers(path, source);
-    apply_node_import_rules_with_specifiers(path, source, aggressive, &specifiers)
+    apply_node_import_rules_with_specifiers(path, source, aggressive, false, &specifiers)
 }
 
+/// `keeps_jest` : le projet exécute encore Jest (voir
+/// [`file_kind::project_keeps_jest`]) ; les imports de runner restent intacts.
 pub(crate) fn apply_node_import_rules_with_specifiers(
     path: &str,
     source: &str,
     aggressive: bool,
+    keeps_jest: bool,
     specifiers: &[imports_ast::Specifier],
 ) -> (Vec<Finding>, String) {
     let offsets = line_offsets(source);
+    let browser = file_kind::is_browser_source(path, source);
+    let tool_config = file_kind::is_tool_config(path);
     let mut findings: Vec<Finding> = Vec::new();
     let mut edits: Vec<Edit> = Vec::new();
 
@@ -121,6 +126,10 @@ pub(crate) fn apply_node_import_rules_with_specifiers(
         let spec = &s.value;
 
         if BUILTINS.contains(spec.as_str()) {
+            // Webpack 5 ne mappe pas `node:events` vers le polyfill `events`.
+            if browser {
+                continue;
+            }
             edits.push(Edit { index: pos, len, replacement: format!("node:{spec}") });
             if seen_builtin_finding.insert(spec.clone()) {
                 // Phase 3 : attache le compat info + dérive la sévérité depuis
@@ -144,13 +153,30 @@ pub(crate) fn apply_node_import_rules_with_specifiers(
         }
 
         if let Some(r) = BUN_REPLACEMENTS.get(spec.as_str()) {
+            let runner = file_kind::is_test_runner_package(spec);
+            let blocked = if runner && tool_config {
+                Some(
+                    "not applied: la config du runner n'a pas d'équivalent bun:test (bunfig.toml [test])",
+                )
+            } else if runner && keeps_jest {
+                Some(
+                    "not applied: le projet exécute encore Jest (jest.config) ; migrer le runner d'abord",
+                )
+            } else {
+                None
+            };
             if seen_repl_finding.insert(spec.clone()) {
+                let mut message =
+                    format!("remplacer '{}' par {} — {}", spec, r.replacement, r.note);
+                if let Some(reason) = blocked {
+                    message = format!("{message} — {reason}");
+                }
                 findings.push(make_finding(
                     path,
                     &offsets,
                     pos,
                     "imports/bun-native",
-                    format!("remplacer '{}' par {} — {}", spec, r.replacement, r.note),
+                    message,
                     spec.clone(),
                     Some(r.replacement.to_string()),
                     MakeFindingOpts {
@@ -161,6 +187,7 @@ pub(crate) fn apply_node_import_rules_with_specifiers(
                 ));
             }
             if aggressive
+                && blocked.is_none()
                 && r.aggressive
                 && (r.replacement.starts_with("bun:") || r.replacement.starts_with("node:"))
             {

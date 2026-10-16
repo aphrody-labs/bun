@@ -229,7 +229,7 @@ fn native_command_rules_preserve_comments_arguments_and_unrelated_packages() {
         "echo 'tsc --noEmit'",
         "echo prettier.config.js",
         "echo prettier --write .",
-        "node scripts/oxlint.js",
+        "node --inspect scripts/oxlint.js",
         "bunx @eslint/js",
         "bunx prettier-plugin-tailwindcss",
         "tsgo-helper --noEmit",
@@ -515,6 +515,9 @@ fn procfile_scanner_preserves_process_labels_and_reports_commands() {
         let source = "web: npm start\nworker: node worker.js\n";
         let (findings, output) = scan_procfile(path, source, false);
         assert_eq!(output, "web: bun start\nworker: node worker.js\n", "{path}");
+        assert!(findings.iter().any(|f| f.rule_id == "cli/node-script" && !f.autofix));
+        let findings: Vec<_> =
+            findings.into_iter().filter(|f| f.rule_id != "cli/node-script").collect();
         assert_eq!(findings.len(), 1, "{path}");
         assert_eq!(findings[0].rule_id, "cli/npm-start");
         assert_eq!(findings[0].original, "npm start");
@@ -556,4 +559,19 @@ fn procfile_labels_do_not_enable_shell_arguments_comments_or_literals() {
         assert_eq!(output, source);
         assert!(findings.is_empty());
     }
+}
+
+#[test]
+fn brave_pnpm_frozen_yes_and_node_scripts() {
+    let src =
+        "pnpm install --frozen-lockfile --yes && node ./build/commands/scripts/sync.ts --init";
+    let (_, out) = apply_cli_rules("package.json [scripts.init]", src, true);
+    assert_eq!(out, "bun install && bun ./build/commands/scripts/sync.ts --init");
+    let (_, out) = apply_cli_rules("p [scripts.a]", "pnpm install --yes", true);
+    assert_eq!(out, "bun install");
+    let jest = "node --no-sparkplug node_modules/jest/bin/jest.js";
+    assert_eq!(apply_cli_rules("p [scripts.t]", jest, true).1, jest);
+    let (findings, out) = apply_cli_rules("p [scripts.b]", "node ./build.ts", false);
+    assert_eq!(out, "node ./build.ts", "node → bun is aggressive-only");
+    assert!(findings.iter().any(|f| f.rule_id == "cli/node-script" && !f.autofix));
 }
