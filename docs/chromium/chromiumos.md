@@ -43,8 +43,9 @@ ne deviennent pas une distribution ChromiumOS par ajout de quelques crates.
 ## Réutilisation dans l'écosystème Bun
 
 `packages/bun-tauri/crates/aphrody-tauri-runtime-cef` fournit déjà le propriétaire
-Chromium embarqué. `packages/bun-obscura` fournit un moteur headless indépendant
-avec DOM, CDP, réseau et rendu optionnel. `bun:windows` et `bun:cosmic` possèdent
+Chromium embarqué. `src/browser` contient les bibliothèques DOM, CDP, réseau et
+rendu optionnel intégrées au workspace Cargo racine de Bun ; leurs gates natifs
+restent suivis dans `src/browser/PLAN.md`. `bun:windows` et `bun:cosmic` possèdent
 leurs primitives système et texte ; ces sources ne fournissent pas le SDK,
 les paquets système, le boot ou les images ChromiumOS.
 

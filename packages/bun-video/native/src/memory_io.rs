@@ -59,6 +59,18 @@ unsafe extern "C" fn seek(opaque: *mut c_void, offset: i64, whence: i32) -> i64 
 }
 
 impl MemoryInput {
+    #[cfg(feature = "mpv")]
+    pub(crate) fn copy_bytes(&self) -> Result<Vec<u8>, i32> {
+        // SAFETY: a constructed MemoryInput owns its source and byte allocation through this borrow.
+        let source = unsafe { &*self.source };
+        let mut bytes = Vec::new();
+        bytes
+            .try_reserve_exact(source.length)
+            .map_err(|_| NO_MEMORY)?;
+        // SAFETY: the owned source allocation contains exactly length readable bytes.
+        bytes.extend_from_slice(unsafe { std::slice::from_raw_parts(source.data, source.length) });
+        Ok(bytes)
+    }
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, i32> {
         if bytes.is_empty() || bytes.len() > MAX_BYTES {
             return Err(INVALID);

@@ -1,5 +1,52 @@
 # Native FFmpeg foundation
 
+## Selected-frame provider and Bun.Image pipeline
+
+The runtime exposes `Bun.Video` with the same lazy source and worker pipeline
+as `Bun.Image`. The optional `bun_runtime/video_native` feature enables its
+existing libav provider; GPU and mpv features remain disabled for this path.
+`Bun.Video.available` reports whether that provider was compiled into the runtime.
+Build with `bun bd --video-native=on` to opt in; standard builds leave it off.
+
+```ts
+if (!Bun.Video.available) throw new Error("This runtime has no native video provider");
+const video = new Bun.Video(Bun.file("/media/input.mp4"));
+const metadata = await video.metadata();
+const frame = await video.frame(12).resize(320, 180).png().bytes();
+await Bun.write("/media/frame.png", frame);
+```
+
+Frame timestamps are seconds. Sources are captured lazily, while mutable byte
+inputs are snapshotted when an asynchronous operation starts. Resize and PNG,
+JPEG or WebP encoding reuse Bun.Image rather than a second image implementation.
+Native provider compilation and playback are separate qualification steps.
+
+The native owner in `native/src/libav.rs` exposes `VideoInput::Path` and
+`VideoInput::Bytes(Arc<[u8]>)`, `probe_video`, and `decode_video_frame`. Their
+cancel-aware variants share an atomic cancellation token with the caller.
+The caller runs these operations off the JavaScript thread; the provider does
+not turn synchronous FFmpeg calls into promises.
+
+Memory sources use the existing FFmpeg Rust `StreamIo` owner with a seekable
+`Cursor<Arc<[u8]>>`. One immutable byte allocation stays alive; that owner's
+destructor releases custom AVIO. Selected-frame decoding seeks against the
+best video stream's timestamp base, checks dimensions before opening the
+decoder, uses one decoder thread, and stops after 100000 packets. Memory input
+is capped at 512 MiB and `maxPixels` at 268435456.
+
+The result is one PNG frame with dimensions and its optional presentation
+timestamp. PNG encoding reuses `encode_rgba_png`. Bun.Image remains the owner
+of subsequent resize and image-format operations. Metadata reports dimensions,
+codec and optional duration. This contract does not claim whole-video
+transcoding, shared GPU textures, DRM decoding or a default heavyweight FFmpeg
+link in Bun.
+
+Provider tests use a synthetic PNG stream and cover exact decoded pixels,
+dimension limits, invalid timestamps and cancellation. Runtime integration and
+host qualification remain separate gates. Source vendors and license notices
+remain until a qualified single-owner replacement is published and dependent
+paths are verified.
+
 Official reference: https://www.ffmpeg.org/documentation.html and the Doxygen
 API at https://www.ffmpeg.org/doxygen/trunk/index.html. The checked-in headers
 in `vendor/ffmpeg` define the exact ABI used here; online trunk can advance.
@@ -42,6 +89,7 @@ through an owned `AVDictionary`. For example, network protocols supporting
 `rw_timeout` accept its value in microseconds. Protocol-specific support still
 depends on FFmpeg; this is not an asynchronous JavaScript cancellation hook.
 The dictionary and failed input contexts are released on every error path.
+Unconsumed options are rejected instead of silently ignored.
 
 `FFmpeg.openDecoder(name, codecParameters?)` owns an opened native decoder.
 The optional parameters pointer must reference valid `AVCodecParameters` from
@@ -52,6 +100,14 @@ the decoder, receive frames until `eof`, and call `flush()` before restarting
 after a seek. `receiveFrame(frame)` reports the same states and clears the
 previous frame reference. Disposal releases the codec before unloading its DLL.
 Codec configuration and packet/frame native pointers remain directly accessible.
+
+`openEncoder(name, options?, codecParameters?)` uses the same owned codec
+context and option dictionary as the decoder. `sendFrame(frame)` and
+`receivePacket(packet)` return `ok`, `again`, or `eof`; send `null` to drain.
+Use native context options such as `video_size`, `pixel_format` and `time_base`
+to configure video encoders. Frames received by the native decoder can be
+submitted directly when their dimensions and pixel format match the encoder.
+No PNG serialization or FFmpeg subprocess is required between these codec calls.
 
 `openVideoPipeline` opens the normalized media source with the owned FFmpeg
 demuxer and exposes it as `pipeline.input`. Closing the pipeline stops its mpv
@@ -125,6 +181,12 @@ Build: `bun run ffmpeg build`. Windows uses Clang-CL/MSVC, Git's native Bash
 and GNU Make; it does not use WSL. Outputs and headers install in `build/media`.
 FFmpeg includes its built-in codecs and Windows D3D11/D3D12 acceleration;
 optional external codecs require their own dependencies.
+
+Windows media builds first compile the existing Bun `vendor/zlib` source in
+shared zlib-compatible mode. Its `zlib1.dll` accompanies the FFmpeg libraries,
+enabling PNG and the other codecs requiring zlib. `BUN_MEDIA_JOBS` limits the
+native build's parallelism (1..16, default at most 4). Compression support is
+required explicitly, so configuration fails if this dependency cannot link.
 
 Qualification on the owner Windows host: the built DLLs opened a generated
 FFV1 Matroska fixture and yielded its three packets through Bun FFI. Native

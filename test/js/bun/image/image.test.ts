@@ -4,6 +4,37 @@ import { isMacOS, isWindows, tempDir } from "harness";
 import zlib from "node:zlib";
 import { join } from "path";
 
+test("Bun.Video captures a source and validates fluent frame selection before scheduling", () => {
+  const video = new Bun.Video(new Uint8Array([1, 2, 3]));
+  expect(video.frame(0)).toBe(video);
+  expect(video.resize(2, 1)).toBe(video);
+  expect(video.png()).toBe(video);
+  for (const seconds of [-1, NaN, Infinity, -Infinity])
+    expect(() => video.frame(seconds)).toThrow("frame time must be finite, non-negative seconds");
+});
+
+test.skipIf(Bun.Video.available)("Bun.Video reports a missing provider before reading a path", async () => {
+  const video = new Bun.Video("not-read-without-video-provider");
+  await expect(video.metadata()).rejects.toMatchObject({ code: "ERR_VIDEO_PROVIDER_UNAVAILABLE" });
+  await expect(video.bytes()).rejects.toMatchObject({ code: "ERR_VIDEO_PROVIDER_UNAVAILABLE" });
+});
+
+test.skipIf(!Bun.Video.available)("Bun.Video decodes a native frame through the shared Image pipeline", async () => {
+  const input = makePng(2, 1, x => x === 0 ? [255, 0, 0, 255] : [0, 0, 255, 255]);
+  const mutable = Uint8Array.from(input);
+  const captured = new Bun.Video(mutable).metadata();
+  mutable.fill(0);
+  expect(await captured).toMatchObject({ width: 2, height: 1, codec: "png" });
+  const video = new Bun.Video(input);
+  expect(await video.metadata()).toMatchObject({ width: 2, height: 1, codec: "png" });
+  const output = decodePngRaw(await video.frame(0).png().bytes());
+  expect([output.w, output.h]).toEqual([2, 1]);
+  expect(rgbaAt(output.data, 2, 0, 0)).toEqual([255, 0, 0, 255]);
+  expect(rgbaAt(output.data, 2, 1, 0)).toEqual([0, 0, 255, 255]);
+  await video.resize(1, 1).blob();
+  expect([video.width, video.height]).toEqual([1, 1]);
+});
+
 // ─── Fixture builders ───────────────────────────────────────────────────────
 // Fixtures are generated in-process so the test stays hermetic and we never
 // commit binary blobs. PNG is hand-assembled (it's the only format where the

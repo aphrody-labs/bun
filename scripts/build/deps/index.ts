@@ -21,6 +21,7 @@ import { libdeflate } from "./libdeflate.ts";
 import { libjpegTurbo } from "./libjpeg-turbo.ts";
 import { libspng } from "./libspng.ts";
 import { libuv } from "./libuv.ts";
+import { winfw } from "./winfw.ts";
 import { libwebp } from "./libwebp.ts";
 import { lolhtml } from "./lolhtml.ts";
 import { lshpack } from "./lshpack.ts";
@@ -28,6 +29,7 @@ import { lsqpack } from "./lsqpack.ts";
 import { lsquic } from "./lsquic.ts";
 import { mimalloc } from "./mimalloc.ts";
 import { nodejsHeaders } from "./nodejs-headers.ts";
+import { oxc } from "./oxc.ts";
 import { picohttpparser } from "./picohttpparser.ts";
 import { rustArgon2 } from "./rust-argon2.ts";
 import { uutils } from "./uutils.ts";
@@ -49,6 +51,7 @@ export const allDeps: readonly Dependency[] = [
   // Header-only / source-only first — no link order concerns.
   picohttpparser,
   nodejsHeaders,
+  oxc,
 
   zlib,
   zstd,
@@ -63,6 +66,7 @@ export const allDeps: readonly Dependency[] = [
   hdrhistogram,
   highway,
   libuv,
+  winfw,
   lolhtml,
   rustArgon2,
   uutils,
@@ -101,6 +105,7 @@ export {
   lsquic,
   mimalloc,
   nodejsHeaders,
+  oxc,
   picohttpparser,
   rustArgon2,
   sqlite,

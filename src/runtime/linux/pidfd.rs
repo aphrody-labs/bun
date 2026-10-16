@@ -2,6 +2,36 @@
 
 use bun_jsc::{CallFrame, JSGlobalObject, JSValue, JsResult};
 
+/// Duplicate the pidfd owned by Bun.spawn, without looking up a recyclable PID.
+#[bun_jsc::host_fn]
+pub(crate) fn js_pidfd_for_process(
+    global: &JSGlobalObject,
+    frame: &CallFrame,
+) -> JsResult<JSValue> {
+    #[cfg(target_os = "linux")]
+    {
+        use crate::api::bun::subprocess::Subprocess;
+        use bun_jsc::JsClass;
+        let [value] = frame.arguments_as_array::<1>();
+        let Some(pointer) = Subprocess::from_js(value) else {
+            return Err(global.throw(format_args!("process must be a Bun.Subprocess")));
+        };
+        // SAFETY: the native class cast validates the wrapper, which keeps its Process alive throughout this call.
+        let subprocess = unsafe { &*pointer };
+        let Some(result) = subprocess.process.duplicate_pidfd() else {
+            return Ok(JSValue::NULL);
+        };
+        let fd = result
+            .map_err(|error| global.throw(format_args!("duplicate subprocess pidfd: {error}")))?;
+        Ok(JSValue::js_number_from_int32(fd.native()))
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        let _ = frame;
+        Err(super::unsupported(global))
+    }
+}
+
 /// `pidfdOpen(pid, flags)` returns the new file descriptor.
 #[bun_jsc::host_fn]
 pub(crate) fn js_pidfd_open(global: &JSGlobalObject, frame: &CallFrame) -> JsResult<JSValue> {
@@ -21,7 +51,7 @@ pub(crate) fn js_pidfd_open(global: &JSGlobalObject, frame: &CallFrame) -> JsRes
     }
 }
 
-/// `pidfdSendSignal(pidfd, signal)`
+/// `pidfdSendSignal(pidfd, signal, flags)`
 #[bun_jsc::host_fn]
 pub(crate) fn js_pidfd_send_signal(
     global: &JSGlobalObject,
@@ -31,6 +61,7 @@ pub(crate) fn js_pidfd_send_signal(
     {
         let pidfd = super::int_arg(frame, 0) as libc::c_long;
         let signal = super::int_arg(frame, 1) as libc::c_long;
+        let flags = super::int_arg(frame, 2) as libc::c_long;
         // SAFETY: a null `siginfo` is allowed and means "as if by kill(2)".
         let rc = unsafe {
             libc::syscall(
@@ -38,7 +69,7 @@ pub(crate) fn js_pidfd_send_signal(
                 pidfd,
                 signal,
                 core::ptr::null::<libc::c_void>(),
-                0 as libc::c_long,
+                flags,
             )
         };
         super::check(global, rc, "pidfd_send_signal", None)?;

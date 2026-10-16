@@ -14,6 +14,7 @@ path = "lib.rs"
 workspace = true
 
 [dependencies]
+bun_video_native = { package = "bun-video-native", path = "../../packages/bun-video/native", optional = true, default-features = false }
 bun_browser_dom.workspace = true
 aphrody-oxc-tools = { path = "../../packages/bun-oxc/crates/oxc-tools" }
 aphrody-oxc-bridge = { path = "../../packages/bun-oxc/crates/oxc-bridge" }
@@ -22,6 +23,8 @@ serde_json = "=1.0.151"
 globset = "=0.4.20"
 ignore = "=0.4.33"
 bun_graph.workspace = true
+bun_workspace.workspace = true
+tokio = { version = "1.53.1", features = ["rt", "sync"] }
 bun_opaque.workspace = true
 rust-argon2.workspace = true
 bcrypt.workspace = true
@@ -141,5 +144,6 @@ find-msvc-tools = { path = "../../vendor/find-msvc-tools" }
 
 [features]
 default = []
+video_native = ["dep:bun_video_native", "bun_video_native/libav"]
 # uutils applets (src/coreutils, ~10 MB): `bun` run as `head`, `sort`, ... and Bun Shell's fallback.
 coreutils = ["dep:bun_coreutils"]

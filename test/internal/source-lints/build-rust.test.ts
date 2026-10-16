@@ -104,6 +104,30 @@ describe("native coreutils feature", () => {
   });
 });
 
+test("native video is optional and shares the configured Cargo feature invocation", () => {
+  const base = { os: "linux", arch: "x64", linuxSysroot: "/fake" } as const;
+  const standard = resolve(base);
+  expect(standard.videoNative).toBe(false);
+  const standardArgs = cargoBuildInvocation(standard).args;
+  expect(standardArgs[standardArgs.indexOf("--features") + 1]).toBe("coreutils");
+  const enabled = cargoBuildInvocation(resolve({ ...base, videoNative: true })).args;
+  expect(enabled[enabled.indexOf("--features") + 1]).toBe("coreutils,video_native");
+  const videoOnly = cargoBuildInvocation(resolve({ ...base, videoNative: true, coreutils: false })).args;
+  expect(videoOnly[videoOnly.indexOf("--features") + 1]).toBe("video_native");
+});
+
+test.each(["x64", "aarch64"] as const)("Windows %s C build scripts use the configured SDK", arch => {
+  const cfg = resolve({ os: "windows", arch, winsysroot: "/fake Windows SDK" });
+  const { unitEnv } = cargoBuildInvocation(cfg);
+  const triple = rustTriple("windows", arch, undefined).replaceAll("-", "_");
+  expect(unitEnv[`CFLAGS_${triple}`]).toBe("/MT /winsysroot '/fake Windows SDK'");
+  expect(unitEnv[`CXXFLAGS_${triple}`]).toBe(unitEnv[`CFLAGS_${triple}`]);
+  expect(unitEnv.CC_SHELL_ESCAPED_FLAGS).toBe("1");
+  expect(unitEnv[`CC_${triple}`]).toBe(cfg.cc);
+  expect(unitEnv[`CXX_${triple}`]).toBe(cfg.cxx);
+  expect(unitEnv[`AR_${triple}`]).toBe(cfg.ar);
+});
+
 describe("allRustTargets", () => {
   test("is exactly the set of triples .buildkite/ci.ts builds", () => {
     const ciScript = readFileSync(join(repoRoot, ".buildkite", "ci.ts"), "utf8");

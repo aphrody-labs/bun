@@ -1,8 +1,0 @@
-{
-  "source": "c82e6a6e3bd90511d44ada44819bbeda31ebaa76",
-  "version": "1.4.4",
-  "repository": "aphrody-labs/bun",
-  "description": "Bun OS by Aphrody Labs: JavaScript and TypeScript runtime, package manager, test runner and bundler with native system integrations",
-  "homepage": "https://aphrody.app",
-  "topics": ["bun", "javascript", "typescript", "runtime", "windows"]
-}

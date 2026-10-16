@@ -57,6 +57,60 @@ const transportLost = {
   rejected: expect.stringMatching(/^Chrome (process closed the pipe|exited|killed by signal \d+)$/),
 };
 
+test.concurrent("close fires once after teardown and allows a replacement view", async () => {
+  const result = await runScenario(`
+    const view = newView();
+    await view.navigate("http://fake/");
+    let count = 0;
+    let replacement;
+    view.addEventListener("close", event => {
+      count++;
+      view.close();
+      replacement = newView();
+    });
+    view.close();
+    view.close();
+    await replacement.navigate("http://fake/replacement");
+    print({ count, url: replacement.url });
+    replacement.close();
+  `);
+  expect(result).toEqual({ count: 1, url: "http://fake/replacement" });
+});
+
+test.concurrent("browser death fires close once and rejects pending operations", async () => {
+  const result = await runScenario(`
+    const view = newView();
+    await view.navigate("http://fake/");
+    let count = 0;
+    const closed = new Promise(resolve => view.addEventListener("close", () => { count++; resolve(); }, { once: true }));
+    const pending = outcome(view.evaluate("process.exit(0)"));
+    await closed;
+    const operation = await pending;
+    view.close();
+    print({ count, operation });
+  `);
+  expect(result).toEqual({ count: 1, operation: transportLost });
+});
+
+test.concurrent("detachment marks the view closed before delivering events", async () => {
+  const result = await runScenario(`
+    const view = newView();
+    await view.navigate("http://fake/");
+    let duringDetach;
+    view.addEventListener("Target.detachedFromTarget", () => {
+      try { view.evaluate("42"); } catch (error) { duringDetach = error.message; }
+    });
+    const closed = new Promise(resolve => view.addEventListener("close", resolve, { once: true }));
+    const operation = outcome(view.evaluate("__fake_detach()"));
+    await closed;
+    print({ duringDetach, operation: await operation });
+  `);
+  expect(result).toEqual({
+    duringDetach: "Invalid state: WebView.evaluate: view is closed",
+    operation: { rejected: "page detached (crashed or closed)" },
+  });
+});
+
 test.concurrent("navigate, events and evaluate cross the pipes", async () => {
   const result = await runScenario(`
     const view = newView();
@@ -72,6 +126,37 @@ test.concurrent("navigate, events and evaluate cross the pipes", async () => {
     value: { answer: 42, text: "from the fake" },
     undef: "undefined",
   });
+});
+
+test.concurrent("headless WebView preserves GPU availability unless explicitly disabled", async () => {
+  const result = await runScenario(`
+    const view = newView();
+    await view.navigate("http://fake/");
+    print(await view.evaluate("[...process.execArgv, ...process.argv].includes('--disable-gpu')"));
+    view.close();
+  `);
+  expect(result).toBe(false);
+});
+
+test.concurrent("headless Linux temporary profiles avoid the desktop keyring", async () => {
+  const result = await runScenario(`
+    const view = newView();
+    await view.navigate("http://fake/");
+    print(await view.evaluate("[...process.execArgv, ...process.argv].includes('--password-store=basic')"));
+    view.close();
+  `);
+  expect(result).toBe(process.platform === "linux");
+});
+
+test.concurrent("explicit WebView profiles preserve their password store policy", async () => {
+  using dir = tempDir("webview-explicit-profile", {});
+  const result = await runScenario(`
+    const view = new Bun.WebView({ backend, dataStore: { directory: ${JSON.stringify(String(dir))} } });
+    await view.navigate("http://fake/");
+    print(await view.evaluate("[...process.execArgv, ...process.argv].includes('--password-store=basic')"));
+    view.close();
+  `);
+  expect(result).toBe(false);
 });
 
 test.concurrent("a reply larger than the read buffer is reassembled", async () => {

@@ -1,5 +1,55 @@
 # Crunchyroll client migration
 
+## Stateless metadata API and CLI
+
+`@aphrody/bun-video/crunchyroll/api` exports `createCrunchyrollApi`, a Fetch
+handler suitable for a Bun server or serverless Bun deployment. It creates no
+upstream client for public `/health` and `/v1/watch?url=...` requests. The watch
+route parses an official URL and omits its query/hash; it does not fetch a video
+or establish playback.
+
+Private GET routes require a separately configured API bearer token:
+`/v1/anime/:id`, `/v1/anime/:id/seasons`, `/v1/seasons/:id/episodes`, and
+`/v1/search?q=...`. Their injected `clientFactory(signal)` reuses the existing
+client's metadata methods. `crunchyrollClientFactory` creates a fresh client
+from caller-owned upstream options and authenticates its supplied access token.
+API authorization is never forwarded as upstream authorization.
+
+Missing API authorization returns 401; missing configured metadata provider
+returns 503. Upstream failures expose a stable error code and optional numeric
+status, never a response body or credentials. Requests have a bounded deadline,
+propagate cancellation to the factory and return `Cache-Control: no-store`.
+
+A Bun serverless entry can export the handler directly. Supply deployment-owned
+tokens to the factory explicitly; the public-only entry needs no credentials:
+
+```ts
+import { createCrunchyrollApi } from "@aphrody/bun-video/crunchyroll/api";
+
+export default { fetch: createCrunchyrollApi() };
+// For a Bun HTTP server: Bun.serve({ fetch: createCrunchyrollApi() });
+```
+
+This adapter requires a Bun runtime; it does not provision a deployment or a
+browser/media provider.
+
+```sh
+bun-video-crunchyroll watch https://www.crunchyroll.com/fr/watch/G4VUQ9QWX/fixture
+bun-video-crunchyroll serve --hostname 127.0.0.1 --port 3000
+```
+
+Serve defaults to public parsing/health only. Private metadata requires explicit
+`BUN_VIDEO_CRUNCHYROLL_API_TOKEN` and upstream
+`BUN_VIDEO_CRUNCHYROLL_ACCESS_TOKEN` configuration. Optional account ID and locale
+use the corresponding `BUN_VIDEO_CRUNCHYROLL_ACCOUNT_ID` and
+`BUN_VIDEO_CRUNCHYROLL_LOCALE` variables. Keep values in the deployment's isolated
+secret configuration. This CLI does not open private Chrome profiles, import
+cookies/passwords, upload protected stores or supply application credentials.
+
+The API does not implement DRM, license acquisition or media playback. Generated
+routes and synthetic tests are separate from qualification against an actual
+authorized Crunchyroll account and supported browser environment.
+
 The native TypeScript client in `src/crunchyroll.ts` implements every public function
 from the inspected MIT-licensed `crunchyroll.js` 1.1.1 migration baseline: `login`, `getProfile`,
 `getAnime`, `getSeasons`, `getEpisodes`, `getCategories`, `getRate`, `getSimilar`,

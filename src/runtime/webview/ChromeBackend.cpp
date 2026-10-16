@@ -1228,14 +1228,14 @@ static void deliverConsole(Zig::GlobalObject* g, JSWebView* view, std::span<cons
 // Every event on a view's session reaches addEventListener(method)
 // listeners, after the internal handling of the events Bun consumes
 // (frameNavigated, loadEventFired, consoleAPICalled, detachedFromTarget).
-static void dispatchCdpEvent(JSGlobalObject* g, JSWebView* view, std::span<const char> method, std::span<const char> params)
+static void dispatchCdpEvent(JSGlobalObject* g, JSWebView* view, std::span<const char> method, std::span<const char> params, bool allowClosed = false)
 {
     auto& vm = g->vm();
     auto scope = DECLARE_THROW_SCOPE(vm);
     // The onConsole callback threw; onData reports it.
     RETURN_IF_EXCEPTION(scope, void());
     // A callback (onNavigated) may have closed the view.
-    if (view->m_closed) return;
+    if (view->m_closed && !allowClosed) return;
     // Check hasEventListeners first: Chrome is chatty
     // (frameScheduledNavigation, lifecycleEvent, etc.) and most events
     // won't have listeners; skipping the JSONParse saves an alloc per
@@ -1280,12 +1280,14 @@ void Transport::handleEvent(std::span<const char> method, std::span<const char> 
         JSWebView* view = viewFor(vid);
         m_views.remove(vid);
         if (!view) return;
+        Strong<JSWebView> protectedView(vm, view);
+        view->m_closed = true;
         rejectViewSlots(g, view, createError(g, "page detached (crashed or closed)"_s));
         // Erase stale m_pending entries — replies won't come.
         m_pending.removeIf([vid](auto& kv) { return kv.value.viewId == vid; });
-        dispatchCdpEvent(g, view, method, params);
-        view->m_closed = true;
+        dispatchCdpEvent(g, view, method, params, true);
         updateKeepAlive();
+        view->notifyClosed();
         return;
     }
     auto sidStr = WTF::String::fromUTF8(sessionId);
@@ -1369,11 +1371,14 @@ void Transport::rejectAllAndMarkDead(const WTF::String& reason)
     if (!m_global) return;
     auto* g = m_global;
     JSValue err = createError(g, reason);
+    JSC::EnsureStillAliveScope errorRoot { err };
     for (auto& weak : views.values()) {
         JSWebView* v = weak.get();
         if (!v) continue;
-        rejectViewSlots(g, v, err);
+        Strong<JSWebView> protectedView(g->vm(), v);
         v->m_closed = true;
+        rejectViewSlots(g, v, err);
+        v->notifyClosed();
     }
     updateKeepAlive();
 }

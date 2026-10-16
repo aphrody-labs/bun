@@ -8,20 +8,22 @@ license = "MIT"
 [workspace]
 
 [features]
-default = ["libav", "gpu"]
+default = ["libav", "gpu", "mpv"]
 gpu = ["dep:gpu-video"]
 libav = ["dep:ffmpeg-next"]
+mpv = ["libav", "dep:libloading"]
 
 [dependencies]
 ffmpeg-next = { path = "../../../vendor/ffmpeg-rs", version = "=9.0.1", optional = true, default-features = false, features = ["codec", "device", "filter", "format", "software-resampling", "software-scaling"] }
 gpu-video = { git = "https://github.com/software-mansion/smelter.git", rev = "6637f3df71282c816140cd3bb9821d69b30be2ba", package = "gpu-video", default-features = true, optional = true }
 png = "=0.17.16"
+libloading = { version = "=0.8.9", optional = true }
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "=0.61.2", features = ["Win32_Foundation", "Win32_Security", "Win32_System_JobObjects", "Win32_System_Threading"] }
 
 [target.'cfg(target_os = "linux")'.dependencies]
-libc = "=0.2.186"
+libc = "=0.2.190"
 
 [lib]
 path = "src/lib.rs"

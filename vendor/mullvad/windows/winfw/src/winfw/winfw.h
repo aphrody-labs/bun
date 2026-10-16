@@ -7,7 +7,9 @@
 // WINFW public API
 //
 
-#ifdef WINFW_EXPORTS
+#if defined(WINFW_STATIC)
+#define WINFW_LINKAGE
+#elif defined(WINFW_EXPORTS)
 #define WINFW_LINKAGE __declspec(dllexport)
 #else
 #define WINFW_LINKAGE __declspec(dllimport)

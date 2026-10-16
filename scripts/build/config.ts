@@ -167,6 +167,7 @@ export interface Config {
   webAssembly: boolean;
   /** Include the native uutils owner in the single Bun executable. */
   coreutils: boolean;
+  videoNative: boolean;
   /** Bundle small .cpp files into unified TUs (WebKit-style). See unified.ts. */
   unifiedSources: boolean;
   /**
@@ -250,6 +251,7 @@ export interface Config {
    */
   clangResourceDir: string | undefined;
   ar: string;
+  hostAr: string;
   /** llvm-ranlib. undefined on windows (llvm-lib indexes itself). */
   ranlib: string | undefined;
   /**
@@ -396,6 +398,7 @@ export interface PartialConfig {
   codeGenerationFromStrings?: boolean;
   webAssembly?: boolean;
   coreutils?: boolean;
+  videoNative?: boolean;
   unifiedSources?: boolean;
   archiveDeps?: boolean;
   timeTrace?: boolean;
@@ -469,6 +472,7 @@ export interface Toolchain extends JsToolchain {
    */
   hostCc: string | undefined;
   hostCxx: string | undefined;
+  hostAr?: string;
   /**
    * Parsed clang --version (X.Y.Z). Captured during toolchain resolution
    * so downstream checks (workarounds.ts) don't re-spawn. undefined if
@@ -1427,6 +1431,7 @@ export function resolveConfig(partial: PartialConfig, toolchain: Toolchain): Con
     codeGenerationFromStrings: partial.codeGenerationFromStrings ?? true,
     webAssembly: partial.webAssembly ?? true,
     coreutils: partial.coreutils ?? true,
+    videoNative: partial.videoNative ?? false,
     unifiedSources: partial.unifiedSources ?? true,
     archiveDeps: partial.archiveDeps ?? false,
     timeTrace: partial.timeTrace ?? false,
@@ -1445,6 +1450,7 @@ export function resolveConfig(partial: PartialConfig, toolchain: Toolchain): Con
     cxx: toolchain.cxx,
     hostCc: toolchain.hostCc ?? toolchain.cc,
     hostCxx: toolchain.hostCxx ?? toolchain.cxx,
+    hostAr: toolchain.hostAr ?? toolchain.ar,
     clangVersion: toolchain.clangVersion,
     clangResourceDir: toolchain.clangResourceDir,
     ar: toolchain.ar,
@@ -1816,6 +1822,7 @@ export function formatConfig(cfg: Config, exe: string): string {
   if (!cfg.codeGenerationFromStrings) features.push("code-generation-from-strings:off");
   if (!cfg.webAssembly) features.push("webassembly:off");
   features.push(`coreutils:${cfg.coreutils ? "on" : "off"}`);
+  if (cfg.videoNative) features.push("video-native");
   if (!cfg.canary) features.push("canary:off");
   if (cfg.versionTag) features.push(`version-tag:${cfg.versionTag}`);
   // Non-default modes — show so you notice when a build is unusual.

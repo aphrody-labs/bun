@@ -61,6 +61,7 @@ test("every spelling of a field is accepted", async () => {
     "--link-threads=1",
     "--lto=off",
     "--coreutils=off",
+    "--video-native=on",
     "--help",
   );
   expect(stderr).toStartWith("Usage: bun scripts/build.ts");

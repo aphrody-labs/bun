@@ -5,6 +5,7 @@ import { lstat, mkdir, readFile, realpath, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 import { LOLHTML_SOURCE } from "../build/deps/lolhtml.ts";
+import { OXC_SOURCE } from "../build/deps/oxc.ts";
 import { RUST_ARGON2_PATCHES, RUST_ARGON2_SOURCE } from "../build/deps/rust-argon2.ts";
 import { UUTILS_PATCHES, UUTILS_SOURCE } from "../build/deps/uutils.ts";
 import { computeSourceIdentity } from "../build/fetch-cli.ts";
@@ -158,6 +159,13 @@ export async function rustDependencyPlan(checkout: string) {
         manifest: "Cargo.toml",
         package: "lol_html",
         source: LOLHTML_SOURCE,
+        patches: [] as string[],
+      },
+      {
+        name: "oxc",
+        manifest: "crates/oxc_allocator/Cargo.toml",
+        package: "oxc_allocator",
+        source: OXC_SOURCE,
         patches: [] as string[],
       },
       {

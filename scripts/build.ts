@@ -305,7 +305,9 @@ async function main(): Promise<void> {
 `),
     );
     const result = await configure(input);
-    for (const exe of [result.output.exe, result.output.strippedExe]) if (exe) unlockRunningExe(exe);
+    if (!args.ninjaArgs.includes("-n")) {
+      for (const exe of [result.output.exe, result.output.strippedExe]) if (exe) unlockRunningExe(exe);
+    }
 
     // Quiet one-liner when configure was a no-op — the full banner only
     // prints when build.ninja changed. Timing matters: a regression here
@@ -560,6 +562,7 @@ const configFlags: {
   codeGenerationFromStrings: "boolean",
   webAssembly: "boolean",
   coreutils: "boolean",
+  videoNative: "boolean",
   unifiedSources: "boolean",
   archiveDeps: "boolean",
   timeTrace: "boolean",

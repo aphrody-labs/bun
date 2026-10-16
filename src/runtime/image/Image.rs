@@ -255,6 +255,31 @@ const MAX_INPUT_FILE_BYTES: u64 = 256 << 20;
 // ───────────────────────────── lifecycle ────────────────────────────────────
 
 impl Image {
+    pub(crate) fn capture_media_source(global: &JSGlobalObject, input: JSValue, options: JSValue) -> JsResult<(JSValue, core::ptr::NonNull<Image>)> {
+        let mut image = Box::<Image>::default();
+        apply_options(&mut image, global, options)?;
+        let pointer = core::ptr::NonNull::from(image.as_ref());
+        let value = Image::to_js_boxed(image, global);
+        let _hold = Strong::create(value, global);
+        let source = source_from_js(global, input, value)?;
+        // The Strong protects the wrapper while source coercion can re-enter JS.
+        unsafe { pointer.as_ref() }.source.set(source);
+        Ok((value, pointer))
+    }
+
+    pub(crate) fn schedule_video(&self, cx: &jsc::JsThread<'_>, image_value: JSValue, time: Option<f64>, deliver: Deliver) -> JsResult<JSValue> {
+        #[cfg(not(feature = "video_native"))]
+        {
+            let _ = (self, image_value, time, deliver);
+            return Ok(JSPromise::rejected_promise(cx.global(), error_with_code(
+                cx.global(), zstr!("ERR_VIDEO_PROVIDER_UNAVAILABLE"),
+                zstr!("Bun.Video requires the optional native libav provider"),
+            )).as_value(cx.global()));
+        }
+        #[cfg(feature = "video_native")]
+        self.schedule(cx, image_value, time.map_or(Kind::VideoMetadata, Kind::VideoFrame), deliver)
+    }
+
     // No `#[bun_jsc::host_fn]` here — `#[bun_jsc::JsClass]` on the
     // struct emits the constructor C-ABI shim; the bare attribute would expand
     // to a free-fn call (`constructor(__g, __f)`) that can't resolve in `impl`.
@@ -1128,6 +1153,19 @@ impl Image {
                 .as_value(cx.global()));
             }
         };
+        #[cfg(feature = "video_native")]
+        let mut input = input;
+        #[cfg(feature = "video_native")]
+        if matches!(kind, Kind::VideoMetadata | Kind::VideoFrame(_)) &&
+            matches!(self.source.get(), Source::JsBuffer) && input.copied.is_none() {
+            if input.slice().len() as u64 > MAX_INPUT_FILE_BYTES {
+                return Ok(JSPromise::rejected_promise(cx.global(), error_with_code(
+                    cx.global(), zstr!("ERR_VIDEO_PROVIDER"), zstr!("Video input exceeds the 256 MiB source limit"),
+                )).as_value(cx.global()));
+            }
+            // Snapshot on the JS thread before libav receives owned stream bytes.
+            input.copied = Some(input.slice().to_vec());
+        }
         let work = PipelineTask {
             pipeline: self.pipeline.get(),
             input,
@@ -1228,6 +1266,8 @@ impl Image {
             // Preserve errno/path/syscall instead of flattening to DecodeFailed.
             TaskResult::IoErr(e) => Err(global.throw_value(e.to_js(global))),
             TaskResult::Meta { .. } => unreachable!(),
+            #[cfg(feature = "video_native")]
+            TaskResult::VideoMeta(_) | TaskResult::VideoError(_) => unreachable!("Image body tasks only encode images"),
         }
     }
 }
@@ -1514,6 +1554,10 @@ pub(crate) enum Kind {
     /// `None` ⇒ re-encode in the source format (resolved after decode).
     Encode(Option<codecs::EncodeOptions>),
     Metadata,
+    #[cfg(feature = "video_native")]
+    VideoMetadata,
+    #[cfg(feature = "video_native")]
+    VideoFrame(f64),
     /// `.placeholder()` — decode → box-resize ≤100 → ThumbHash → render
     /// → PNG → `data:` URL. The whole chain runs on the worker; the
     /// hash itself never crosses the JS boundary unless we add an
@@ -1533,6 +1577,10 @@ pub(crate) enum TaskResult {
         h: u32,
         format: codecs::Format,
     },
+    #[cfg(feature = "video_native")]
+    VideoMeta(bun_video_native::libav::VideoMetadata),
+    #[cfg(feature = "video_native")]
+    VideoError(String),
     Err(codecs::Error),
     IoErr(sys::Error),
 }
@@ -1608,6 +1656,38 @@ impl PipelineTask {
             owned_file.as_deref().unwrap()
         } else {
             self.input.slice()
+        };
+
+        #[cfg(feature = "video_native")]
+        let video_frame;
+        #[cfg(feature = "video_native")]
+        let input = {
+            use bun_video_native::libav::{VideoInput, probe_video, decode_video_frame};
+            if matches!(self.kind, Kind::VideoMetadata | Kind::VideoFrame(_)) {
+                if input.len() as u64 > MAX_INPUT_FILE_BYTES {
+                    self.result = TaskResult::VideoError("Video input exceeds the 256 MiB source limit".into());
+                    return;
+                }
+                let source = VideoInput::Bytes(std::sync::Arc::from(input));
+                match self.kind {
+                    Kind::VideoMetadata => {
+                        self.result = match probe_video(source, self.max_pixels) {
+                            Ok(metadata) => TaskResult::VideoMeta(metadata),
+                            Err(error) => TaskResult::VideoError(error.to_string()),
+                        };
+                        return;
+                    }
+                    Kind::VideoFrame(time) => {
+                        match decode_video_frame(source, time, self.max_pixels) {
+                            Ok(frame) => video_frame = frame.png,
+                            Err(error) => { self.result = TaskResult::VideoError(error.to_string()); return; }
+                        }
+                        self.kind = Kind::Encode(self.pipeline.output);
+                        video_frame.as_slice()
+                    }
+                    _ => unreachable!(),
+                }
+            } else { input }
         };
 
         // Header-only fast path for `.metadata()` — Sharp parses just the
@@ -1771,6 +1851,11 @@ impl PipelineTask {
                 image.last_width.set(i32::try_from(*w).expect("int cast"));
                 image.last_height.set(i32::try_from(*h).expect("int cast"));
             }
+            #[cfg(feature = "video_native")]
+            TaskResult::VideoMeta(metadata) => {
+                image.last_width.set(i32::try_from(metadata.width).expect("video width"));
+                image.last_height.set(i32::try_from(metadata.height).expect("video height"));
+            }
             _ => {}
         }
         let result = mem::replace(
@@ -1932,6 +2017,21 @@ impl PipelineTask {
                     .unwrap_or(JSValue::UNDEFINED);
                 obj.put(global, b"format", fmt_js);
                 promise.resolve(global, obj)?;
+            }
+            #[cfg(feature = "video_native")]
+            TaskResult::VideoMeta(metadata) => {
+                let object = JSValue::create_empty_object(global, 4);
+                object.put(global, b"width", JSValue::js_number(f64::from(metadata.width)));
+                object.put(global, b"height", JSValue::js_number(f64::from(metadata.height)));
+                object.put(global, b"duration", metadata.duration_seconds.map_or(JSValue::NULL, JSValue::js_number));
+                object.put(global, b"codec", bun_core::String::from_bytes(metadata.codec.as_bytes()).to_js(global)?);
+                promise.resolve(global, object)?;
+            }
+            #[cfg(feature = "video_native")]
+            TaskResult::VideoError(message) => {
+                let error = EncodedSlice::utf8(message.as_bytes()).to_error_instance(global);
+                error.put(global, b"code", bun_core::String::static_(b"ERR_VIDEO_PROVIDER").to_js(global)?);
+                promise.reject(global, Ok(error))?;
             }
             TaskResult::Err(e) => promise.reject(global, Ok(reject_error(global, e)))?,
             TaskResult::IoErr(e) => promise.reject(global, Ok(e.to_js(global)))?,

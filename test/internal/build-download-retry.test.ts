@@ -26,6 +26,25 @@ const BODY = "tarball bytes";
 /** The production attempt count with no waiting between attempts. */
 const noBackoff: RetryPolicy = { ...downloadRetry, backoffMs: () => 0 };
 
+test("pinned SDK downloads check streaming size and checksum before publication", async () => {
+  using dir = tempDir("native-sdk-download", {});
+  await using server = await fakeServer([]);
+  const dest = join(String(dir), "sdk.zip");
+  const pin = { bytes: BODY.length, sha256: new Bun.CryptoHasher("sha256").update(BODY).digest("hex") };
+  await downloadWithRetry(server.url, dest, "fixture", noBackoff, undefined, pin);
+  expect(readFileSync(dest, "utf8")).toBe(BODY);
+  const overflow = join(String(dir), "overflow.zip");
+  await expect(
+    downloadWithRetry(server.url, overflow, "fixture", noBackoff, undefined, { ...pin, bytes: BODY.length - 1 }),
+  ).rejects.toThrow("exceeded its size");
+  expect(existsSync(overflow)).toBe(false);
+  const corrupted = join(String(dir), "corrupted.zip");
+  await expect(
+    downloadWithRetry(server.url, corrupted, "fixture", noBackoff, undefined, { ...pin, sha256: "0".repeat(64) }),
+  ).rejects.toThrow("checksum mismatch");
+  expect(existsSync(corrupted)).toBe(false);
+});
+
 /** "drop" closes the connection without answering; a string is a status line. */
 type Outcome = "drop" | string;
 

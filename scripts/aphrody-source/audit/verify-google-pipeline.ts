@@ -4,17 +4,17 @@
  * Google pipeline gate: the Rust (`aphrody-google` in the multi-call `aphrody`), Bun
  * (`@aphrody/google`, `@aphrody/doc-ai`) and Python (`aphrody`, `aphrody-cli`) owners exist where
  * the manifests say, the uv pin matches the monorepo toolchain and no source assigns a literal API
- * key; then, unless `--static`, every `crates/google/*` crate runs serialized clippy and tests on
+ * key; then, unless `--static`, every transferred Google crate runs serialized clippy and tests on
  * its own, the Bun packages verify, and the locked Python workspace syncs, imports the pinned
  * google-antigravity SDK and runs its tests. Child processes never open a console window.
  *
- * Usage: bun scripts/audit/verify-google-pipeline.ts [--static] [--root <aphrody>] [--python-root <py>]
+ * Usage: bun scripts/aphrody-source/audit/verify-google-pipeline.ts [--static] [--root <aphrody>] [--bun-root <bun>] [--python-root <py>]
  */
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 
 const HELP =
-  "Usage: bun scripts/audit/verify-google-pipeline.ts [--static] [--root <aphrody>] [--python-root <py>]";
+  "Usage: bun scripts/aphrody-source/audit/verify-google-pipeline.ts [--static] [--root <aphrody>] [--bun-root <bun>] [--python-root <py>]";
 
 interface CargoTarget {
   name: string;
@@ -28,6 +28,8 @@ interface CargoPackage {
 
 export interface Owners {
   root: string;
+  bun: string;
+  googleWorkspace: string;
   python: string;
   cargoManifest: string;
   rustCli: string;
@@ -44,14 +46,16 @@ export interface Owners {
   cargoSerial: string;
 }
 
-export function owners(root: string, python = join(root, "py")): Owners {
+export function owners(root: string, python = join(root, "py"), bun = resolve(import.meta.dir, "../../..")): Owners {
   return {
     root,
+    bun,
+    googleWorkspace: join(bun, "packages/bun-google/aphrody"),
     python,
-    cargoManifest: join(root, "crates/google/google/Cargo.toml"),
-    rustCli: join(root, "crates/google/google/src/cli.rs"),
-    bunManifest: join(root, "packages/google/google/package.json"),
-    bunEntry: join(root, "packages/google/google/src/cli.ts"),
+    cargoManifest: join(bun, "packages/bun-google/aphrody/crates/google/Cargo.toml"),
+    rustCli: join(bun, "packages/bun-google/aphrody/crates/google/src/cli.rs"),
+    bunManifest: join(bun, "packages/bun-google/aphrody/packages/google/package.json"),
+    bunEntry: join(bun, "packages/bun-google/aphrody/packages/google/src/cli.ts"),
     docAiManifest: join(root, "packages/ai/doc-ai/package.json"),
     docAiEntry: join(root, "packages/ai/doc-ai/src/llm.ts"),
     pythonManifest: join(python, "packages/aphrody/pyproject.toml"),
@@ -160,6 +164,7 @@ export function verifyStatic(paths: Owners): {
 } {
   for (const path of [
     join(paths.root, "Cargo.toml"),
+    join(paths.googleWorkspace, "Cargo.toml"),
     paths.cargoManifest,
     paths.rustCli,
     paths.bunManifest,
@@ -177,16 +182,16 @@ export function verifyStatic(paths: Owners): {
     if (!existsSync(path) || !statSync(path).isFile())
       throw new Error(`Owner file missing: ${path}`);
 
-  const packages = cargoMetadata(paths.root);
+  const packages = cargoMetadata(paths.googleWorkspace);
   const google = packages.find((item) => item.name === "aphrody-google");
   if (!google?.targets.some((target) => target.kind.includes("lib")))
     throw new Error("Current Cargo metadata does not expose the aphrody-google library.");
   if (!same(google.manifest_path, paths.cargoManifest))
     throw new Error(`Cargo package aphrody-google is not owned by ${paths.cargoManifest}.`);
-  const aphrody = packages.find((item) => item.name === "aphrody");
+  const aphrody = cargoMetadata(paths.root).find((item) => item.name === "aphrody");
   if (!aphrody?.targets.some((target) => target.name === "aphrody" && target.kind.includes("bin")))
     throw new Error("Current Cargo metadata does not expose the aphrody multi-call binary.");
-  const domain = join(paths.root, "crates", "google");
+  const domain = join(paths.googleWorkspace, "crates");
   const onDisk = readdirSync(domain)
     .map((name) => join(domain, name, "Cargo.toml"))
     .filter((manifest) => existsSync(manifest));
@@ -196,7 +201,7 @@ export function verifyStatic(paths: Owners): {
     .toSorted();
   if (crates.length !== onDisk.length)
     throw new Error(
-      `crates/google has ${onDisk.length} manifests but the workspace exposes ${crates.length}: ${crates.join(", ")}`,
+      `${domain} has ${onDisk.length} manifests but the workspace exposes ${crates.length}: ${crates.join(", ")}`,
     );
 
   hasScripts(paths.bunManifest, "@aphrody/google", ["test", "build", "verify"]);
@@ -225,7 +230,7 @@ export function verifyStatic(paths: Owners): {
     );
 
   for (const dir of [
-    join(paths.root, "packages/google/google"),
+    join(paths.googleWorkspace, "packages/google"),
     join(paths.root, "packages/ai/doc-ai"),
     join(paths.python, "packages/aphrody/src/aphrody"),
     join(paths.python, "packages/cli/src/aphrody_cli"),
@@ -266,24 +271,24 @@ export async function verify(paths: Owners, staticOnly: boolean): Promise<void> 
       `Python gate requires uv ${uv.operator}${uv.version} from py/pyproject.toml; found ${version.stdout.toString().trim()}.`,
     );
   // One `-p` per crate, so a crate that silently relies on a sibling's features fails here.
-  const cargo = [process.execPath, paths.cargoSerial];
+  const cargo = [process.execPath, paths.cargoSerial, ...(process.platform === "win32" ? ["--msvc"] : [])];
   for (const crate of crates) {
     await owner(
       `Rust ${crate} clippy (serialized, standalone)`,
       [...cargo, "clippy", "--locked", "-p", crate, "--all-targets", "--", "-D", "warnings"],
-      paths.root,
+      paths.googleWorkspace,
     );
     await owner(
       `Rust ${crate} tests (serialized, standalone)`,
       [...cargo, "test", "--locked", "-p", crate],
-      paths.root,
+      paths.googleWorkspace,
     );
   }
   const bun = process.execPath;
   await owner(
     "@aphrody/google verify (tests + Bun build)",
-    [bun, "run", "--filter", "@aphrody/google", "verify"],
-    paths.root,
+    [bun, "run", "verify"],
+    join(paths.googleWorkspace, "packages/google"),
   );
   await owner(
     "@aphrody/doc-ai tests",
@@ -326,7 +331,8 @@ export async function verify(paths: Owners, staticOnly: boolean): Promise<void> 
 
 if (import.meta.main) {
   const args = process.argv.slice(2);
-  let root = resolve(import.meta.dir, "../..");
+  let root = resolve(import.meta.dir, "../../../../aphrody");
+  let bun = resolve(import.meta.dir, "../../..");
   let python: string | undefined;
   let staticOnly = false;
   try {
@@ -334,13 +340,14 @@ if (import.meta.main) {
       const arg = args[index];
       if (arg === "--static") staticOnly = true;
       else if (arg === "--root") root = resolve(args[++index] ?? "");
+      else if (arg === "--bun-root") bun = resolve(args[++index] ?? "");
       else if (arg === "--python-root") python = resolve(args[++index] ?? "");
       else if (arg === "--help" || arg === "-h") {
         console.log(HELP);
         process.exit(0);
       } else throw new Error(`Unknown argument: ${arg}\n${HELP}`);
     }
-    await verify(owners(root, python), staticOnly);
+    await verify(owners(root, python, bun), staticOnly);
   } catch (error) {
     console.error(error instanceof Error ? error.message : String(error));
     process.exitCode = 1;

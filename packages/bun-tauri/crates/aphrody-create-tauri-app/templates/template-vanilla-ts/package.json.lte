@@ -9,11 +9,10 @@
     "tauri": "tauri"
   },
   "dependencies": {
-    "@tauri-apps/api": "{% if v2 %}^3.0.0-alpha{% else %}^1{% endif %}"{% if v2 %},
-    "@tauri-apps/plugin-opener": "^3.0.0-alpha"{% endif %}
+    {% if v2 %}"@aphrody/tauri": "^1.4.4"{% else %}"@tauri-apps/api": "^1"{% endif %}
   },
   "devDependencies": {
-    "@tauri-apps/cli": "{% if v2 %}^3.0.0-alpha{% else %}^1{% endif %}",
+    {% if v1 %}"@tauri-apps/cli": "^1",{% endif %}
     "@types/bun": "^1.4.2",
     "typescript": "~6.0.3"
   }

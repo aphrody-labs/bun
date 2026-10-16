@@ -1,7 +1,463 @@
-import { expect, test } from "bun:test";
+import { expect, spyOn, test } from "bun:test";
 import { connect, findExecutable, launch, manifests, profiles, protocol } from "bun:chromium";
-import { tempDir } from "harness";
-import { existsSync } from "node:fs";
+import { bunEnv, bunExe, tempDir } from "harness";
+import { chmodSync, existsSync, readFileSync } from "node:fs";
+
+test("native profile applications delegate to the owning browser without a debugging flag", () => {
+  const options = {
+    url: "https://www.crunchyroll.com/fr/watch/GE00389313JAJP/the-god-who-destroys",
+    executable: "C:/Program Files/Google/Chrome/Application/chrome.exe",
+    userDataDir: "C:/Users/fixture/AppData/Local/Google/Chrome/User Data",
+  };
+  expect(profiles.planApplication(options)).toEqual([
+    options.executable,
+    `--user-data-dir=${options.userDataDir}`,
+    "--profile-directory=Default",
+    `--app=${options.url}`,
+  ]);
+  for (const profileDirectory of ["..", "../Default", "Default/Other", "Default\0"]) {
+    expect(() => profiles.planApplication({ ...options, profileDirectory })).toThrow("single directory");
+  }
+  expect(typeof Bun.WebView.openApplication).toBe("function");
+  expect(typeof Bun.WebView.prototype.importProfile).toBe("function");
+});
+
+test("profile applications select the existing last-used Chrome profile and honor an explicit selection", async () => {
+  using directory = tempDir("application-profiles", {
+    "Local State": JSON.stringify({
+      profile: {
+        last_used: "Profile 1",
+        info_cache: { Default: { name: "Default" }, "Profile 1": { name: "Fixture" } },
+      },
+    }),
+    Default: { Preferences: "{}" },
+    "Profile 1": { Preferences: "{}" },
+  });
+  const unref = () => undefined;
+  const spawn = spyOn(Bun, "spawn").mockReturnValue({ pid: 123, unref } as any);
+  const options = { url: "https://example.test/app", executable: "/fixture/chrome", userDataDir: String(directory) };
+  try {
+    expect((await Bun.WebView.openApplication(options)).profileDirectory).toBe("Profile 1");
+    const [command, processOptions] = spawn.mock.calls[0]!;
+    expect(command).toContain("--profile-directory=Profile 1");
+    expect(command).toContain("--app=https://example.test/app");
+    expect(processOptions).toEqual({ stdin: "ignore", stdout: "ignore", stderr: "ignore", detached: true });
+    expect((await Bun.WebView.openApplication({ ...options, profileDirectory: "Default" })).profileDirectory).toBe(
+      "Default",
+    );
+    expect(spawn.mock.calls[1]![0]).toContain("--profile-directory=Default");
+  } finally {
+    spawn.mockRestore();
+  }
+});
+
+test("site import copies acknowledged cookies and only explicitly selected same-origin sessions", async () => {
+  const calls: any[] = [];
+  const writes: any[] = [];
+  const navigations: string[] = [];
+  using browser = mockBrowser((message, socket) => {
+    calls.push(message);
+    let result: unknown = {};
+    if (message.method === "Target.getTargets")
+      result = {
+        targetInfos: [
+          { type: "page", targetId: "owned", url: "https://site.test/account", title: "Account" },
+          { type: "page", targetId: "other", url: "https://other.test/", title: "Other" },
+          { type: "page", targetId: "port", url: "https://site.test:8443/", title: "Other origin" },
+          { type: "worker", targetId: "worker", url: "https://site.test/worker" },
+        ],
+      };
+    if (message.method === "Target.attachToTarget") result = { sessionId: "source-session" };
+    if (message.method === "Network.getCookies")
+      result = {
+        cookies: [
+          {
+            name: "fixture",
+            value: "fixture-value",
+            domain: "site.test",
+            path: "/",
+            secure: true,
+            httpOnly: true,
+            session: true,
+            expires: -1,
+            size: 28,
+            sameSite: "Lax",
+          },
+        ],
+      };
+    socket.send(JSON.stringify({ id: message.id, result }));
+  });
+  const source = await connect(browser.url);
+  const view = {
+    async cdp(method: string, params: unknown) {
+      writes.push({ method, params });
+      if (method === "Network.getCookies")
+        return {
+          cookies: [
+            {
+              name: "fixture",
+              value: "fixture-value",
+              domain: "site.test",
+              path: "/",
+              secure: true,
+              httpOnly: true,
+              sameSite: "Lax",
+            },
+          ],
+        };
+      return {};
+    },
+    async navigate(url: string) {
+      navigations.push(url);
+    },
+  } as unknown as Bun.WebView;
+  try {
+    const result = await profiles.importSite({ source, view, site: "https://site.test/", navigate: "owned" });
+    expect(calls.map(call => call.method)).toEqual([
+      "Target.getTargets",
+      "Target.attachToTarget",
+      "Network.getCookies",
+      "Target.detachFromTarget",
+    ]);
+    expect(calls[2].params).toEqual({ urls: ["https://site.test/"] });
+    expect(calls[2].sessionId).toBe("source-session");
+    expect(writes).toEqual([
+      {
+        method: "Network.setCookies",
+        params: {
+          cookies: [
+            {
+              name: "fixture",
+              value: "fixture-value",
+              url: "https://site.test/",
+              path: "/",
+              secure: true,
+              httpOnly: true,
+              sameSite: "Lax",
+            },
+          ],
+        },
+      },
+      { method: "Network.getCookies", params: { urls: ["https://site.test/"] } },
+    ]);
+    expect(navigations).toEqual(["https://site.test/account"]);
+    expect(result).toEqual({
+      site: "https://site.test",
+      cookiesRequested: 1,
+      cookiesImported: 1,
+      sessions: [{ targetId: "owned", url: "https://site.test/account", title: "Account" }],
+      navigated: true,
+    });
+    expect(JSON.stringify(result)).not.toContain("fixture-value");
+  } finally {
+    source.close();
+  }
+});
+
+test("site import rejects passwords before calling either browser", async () => {
+  const calls: string[] = [];
+  const source = {
+    async send() {
+      calls.push("source");
+    },
+  } as any;
+  const view = {
+    async cdp() {
+      calls.push("destination");
+    },
+  } as any;
+  await expect(profiles.importSite({ source, view, site: "https://site.test/", passwords: true })).rejects.toThrow(
+    "Stored password import is unavailable",
+  );
+  expect(calls).toEqual([]);
+});
+
+test("site import rejects foreign cookies and negative destination acknowledgement without navigation", async () => {
+  for (const domain of ["other.test", "site.test"]) {
+    const writes: string[] = [];
+    using browser = mockBrowser((message, socket) =>
+      socket.send(
+        JSON.stringify({
+          id: message.id,
+          result: {
+            cookies: [{ name: "fixture", value: "fixture-value", domain, path: "/", secure: true, session: true }],
+          },
+        }),
+      ),
+    );
+    const source = await connect(browser.url);
+    const view = {
+      async cdp() {
+        writes.push("cookies");
+        return { success: false };
+      },
+    } as any;
+    try {
+      await expect(
+        profiles.importSite({
+          source,
+          sourceSessionId: "existing-session",
+          view,
+          site: "https://site.test/",
+          sessions: false,
+        }),
+      ).rejects.toThrow(domain === "other.test" ? "outside the selected site" : "rejected the site cookies");
+      expect(writes).toEqual(domain === "other.test" ? [] : ["cookies"]);
+    } finally {
+      source.close();
+    }
+  }
+});
+
+test("site import narrows parent domain cookies and verifies the destination rather than trusting acknowledgement", async () => {
+  for (const includeSubdomains of [false, true]) {
+    let written: any;
+    using browser = mockBrowser((message, socket) =>
+      socket.send(
+        JSON.stringify({
+          id: message.id,
+          result: {
+            cookies: [
+              {
+                name: "fixture",
+                value: "fixture-value",
+                domain: ".parent.test",
+                path: "/",
+                secure: true,
+                session: true,
+              },
+            ],
+          },
+        }),
+      ),
+    );
+    const source = await connect(browser.url);
+    const view = {
+      async cdp(method: string, params: any) {
+        if (method === "Network.setCookies") {
+          written = params.cookies[0];
+          return {};
+        }
+        return { cookies: [{ ...written, domain: includeSubdomains ? ".child.parent.test" : "child.parent.test" }] };
+      },
+    } as any;
+    try {
+      const result = await profiles.importSite({
+        source,
+        sourceSessionId: "existing-session",
+        view,
+        site: "https://child.parent.test/",
+        sessions: false,
+        includeSubdomains,
+      });
+      expect(written.domain).toBe(includeSubdomains ? ".child.parent.test" : undefined);
+      expect(written.url).toBe("https://child.parent.test/");
+      expect(result.cookiesImported).toBe(1);
+    } finally {
+      source.close();
+    }
+  }
+  using browser = mockBrowser((message, socket) =>
+    socket.send(
+      JSON.stringify({
+        id: message.id,
+        result: {
+          cookies: [
+            { name: "fixture", value: "fixture-value", domain: "site.test", path: "/", secure: true, session: true },
+          ],
+        },
+      }),
+    ),
+  );
+  const source = await connect(browser.url);
+  try {
+    const view = {
+      async cdp(method: string) {
+        return method === "Network.setCookies" ? {} : { cookies: [] };
+      },
+    } as any;
+    await expect(
+      profiles.importSite({
+        source,
+        sourceSessionId: "existing-session",
+        view,
+        site: "https://site.test/",
+        sessions: false,
+      }),
+    ).rejects.toThrow("did not verify the site cookies");
+  } finally {
+    source.close();
+  }
+});
+
+test("site import rejects a foreign first-party cookie partition before destination mutation", async () => {
+  let writes = 0;
+  using browser = mockBrowser((message, socket) =>
+    socket.send(
+      JSON.stringify({
+        id: message.id,
+        result: {
+          cookies: [
+            {
+              name: "fixture",
+              value: "fixture-value",
+              domain: "site.test",
+              path: "/",
+              secure: true,
+              session: true,
+              partitionKey: { topLevelSite: "https://other.test", hasCrossSiteAncestor: false },
+            },
+          ],
+        },
+      }),
+    ),
+  );
+  const source = await connect(browser.url);
+  try {
+    const view = {
+      async cdp() {
+        writes++;
+      },
+    } as any;
+    await expect(
+      profiles.importSite({
+        source,
+        sourceSessionId: "existing-session",
+        view,
+        site: "https://site.test/",
+        sessions: false,
+      }),
+    ).rejects.toThrow("partition does not match");
+    expect(writes).toBe(0);
+  } finally {
+    source.close();
+  }
+});
+
+test.skipIf(process.platform !== "win32")("Chromium discovery skips command wrappers on Windows PATH", async () => {
+  using dir = tempDir("chromium-native-discovery", {
+    "chromium.cmd": "@echo off\r\nexit /b 1\r\n",
+    "chrome.exe": "",
+  });
+  await using child = Bun.spawn({
+    cmd: [bunExe(), "-e", 'console.log(require("bun:chromium").findExecutable())'],
+    env: { ...bunEnv, PATH: String(dir), BUN_CHROMIUM_PATH: undefined, BUN_CHROME_PATH: undefined },
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [stdout, stderr, exitCode] = await Promise.all([child.stdout.text(), child.stderr.text(), child.exited]);
+  expect(stdout.trim().replaceAll("\\", "/")).toBe(`${String(dir).replaceAll("\\", "/")}/chrome.exe`);
+  expect(stderr).toBe("");
+  expect(exitCode).toBe(0);
+});
+
+test.skipIf(process.platform === "win32")(
+  "Chromium close requests browser shutdown before termination and disposes idempotently",
+  async () => {
+    using dir = tempDir("chromium-close", {
+      "browser": `#!${bunExe()}
+const profile = process.argv.find(value => value.startsWith('--user-data-dir=')).slice('--user-data-dir='.length);
+const server = Bun.serve({
+  hostname: '127.0.0.1', port: 0,
+  fetch(request, server) { if (server.upgrade(request)) return; return new Response(null, { status: 400 }); },
+  websocket: { message(socket, data) {
+    const message = JSON.parse(String(data));
+    if (message.method === 'Browser.close') {
+      require('node:fs').writeFileSync(require('node:path').dirname(Bun.main) + '/closed', JSON.stringify({ profile, basic: process.argv.includes('--password-store=basic') }));
+      socket.send(JSON.stringify({ id: message.id, result: {} }));
+      server.stop(true);
+    }
+  } }
+});
+console.error('DevTools listening on ws://127.0.0.1:' + server.port + '/devtools/browser/test');
+`,
+    });
+    chmodSync(`${dir}/browser`, 0o755);
+    const browser = await launch({ executable: `${dir}/browser`, headless: true, timeout: 2000 });
+    const profile = browser.userDataDir;
+    await browser[Symbol.asyncDispose]();
+    await browser.close();
+    expect(JSON.parse(readFileSync(`${dir}/closed`, "utf8"))).toEqual({ profile, basic: process.platform === "linux" });
+    expect(browser.connection.closed).toBe(true);
+    expect(existsSync(profile)).toBe(false);
+    expect(browser.process.exitCode).toBe(0);
+    const persistentProfile = `${dir}/persistent-profile`;
+    const persistent = await launch({
+      executable: `${dir}/browser`,
+      headless: true,
+      userDataDir: persistentProfile,
+      timeout: 2000,
+    });
+    await persistent.close();
+    expect(JSON.parse(readFileSync(`${dir}/closed`, "utf8"))).toEqual({ profile: persistentProfile, basic: false });
+    expect(existsSync(persistentProfile)).toBe(true);
+  },
+);
+
+test("Chromium launch retries a transient first debugging upgrade within its deadline", async () => {
+  using dir = tempDir("chromium-upgrade-retry", {
+    [process.platform === "win32" ? "server.ts" : "browser"]: `#!${bunExe()}
+let attempts = 0;
+const server = Bun.serve({
+  hostname: '127.0.0.1', port: 0,
+  fetch(request, server) {
+    attempts++;
+    if (attempts === 1) return new Response('not ready', { status: 503 });
+    if (server.upgrade(request)) return;
+    return new Response(null, { status: 400 });
+  },
+  websocket: { message(socket, data) {
+    const message = JSON.parse(String(data));
+    if (message.method === 'Browser.getVersion') socket.send(JSON.stringify({ id: message.id, result: { attempts } }));
+    if (message.method === 'Browser.close') {
+      socket.send(JSON.stringify({ id: message.id, result: {} }));
+      server.stop(true);
+    }
+  } }
+});
+console.error('DevTools listening on ws://127.0.0.1:' + server.port + '/devtools/browser/test');
+`,
+    ...(process.platform === "win32" ? { "browser.cmd": `@"${bunExe()}" "%~dp0server.ts" %*\r\n` } : {}),
+  });
+  const executable = `${dir}/${process.platform === "win32" ? "browser.cmd" : "browser"}`;
+  if (process.platform !== "win32") chmodSync(executable, 0o755);
+  await using browser = await launch({ executable, timeout: 2000 });
+  const result = await browser.connection.send<{ attempts: number }>("Browser.getVersion");
+  expect(result.attempts).toBe(2);
+  await browser.close();
+  expect(browser.process.exitCode).toBe(0);
+  expect(existsSync(browser.userDataDir)).toBe(false);
+});
+
+test.skipIf(process.platform === "win32")(
+  "Chromium cancellation terminates an unresponsive browser and retains an explicit profile",
+  async () => {
+    using dir = tempDir("chromium-cancel", {
+      "browser": `#!${bunExe()}
+const server = Bun.serve({
+  hostname: '127.0.0.1', port: 0,
+  fetch(request, server) { if (server.upgrade(request)) return; return new Response(null, { status: 400 }); },
+  websocket: { message() {} }
+});
+console.error('DevTools listening on ws://127.0.0.1:' + server.port + '/devtools/browser/test');
+`,
+      "profile/keep": "owner profile",
+    });
+    chmodSync(`${dir}/browser`, 0o755);
+    const controller = new AbortController();
+    const browser = await launch({
+      executable: `${dir}/browser`,
+      userDataDir: `${dir}/profile`,
+      signal: controller.signal,
+      timeout: 2000,
+    });
+    controller.abort();
+    await browser.close();
+    expect(browser.connection.closed).toBe(true);
+    expect(readFileSync(`${dir}/profile/keep`, "utf8")).toBe("owner profile");
+    expect(browser.process.signalCode).toBe("SIGKILL");
+  },
+);
 
 function mockBrowser(handler: (message: any, socket: any) => void) {
   const server = Bun.serve({
@@ -126,6 +582,62 @@ test("bookmark import flattens an explicitly selected JSON file", async () => {
   expect(bookmarks[0].name).toBe("Docs");
   expect(bookmarks[0].url).toBe("https://example.com/docs");
   expect(bookmarks[0].folder.at(-1)).toBe("Work");
+});
+
+test("profile discovery distinguishes Default from last used without copying stores", async () => {
+  using dir = tempDir("chrome-profile-discovery", {
+    "Local State": JSON.stringify({
+      profile: { last_used: "Profile 2", info_cache: { Default: { name: "Main" }, "Profile 2": { name: "Work" } } },
+    }),
+    "Default/Bookmarks": "{}",
+    "Profile 2/Bookmarks": "{}",
+  });
+  const found = await profiles.discover({ userDataDirs: [String(dir), String(dir)] });
+  expect(found).toHaveLength(2);
+  expect(found.find(profile => profile.isDefault)).toMatchObject({ name: "Main", isLastUsed: false });
+  expect(found.find(profile => profile.isLastUsed)).toMatchObject({ name: "Work", isDefault: false });
+  expect(profiles.capabilities()).toMatchObject({ storedCookies: "unavailable", storedPasswords: "unavailable" });
+});
+
+test("bookmark site filtering normalizes IDNA and respects domain boundaries", async () => {
+  using dir = tempDir("chrome-bookmark-site", {
+    Bookmarks: JSON.stringify({
+      roots: {
+        bookmark_bar: {
+          type: "folder",
+          name: "Sites",
+          children: [
+            { type: "url", id: "1", name: "Root", url: "https://BÜCHER.example/root" },
+            { type: "url", id: "2", name: "Sub", url: "https://docs.xn--bcher-kva.example/doc" },
+            { type: "url", id: "3", name: "Other", url: "https://notxn--bcher-kva.example/" },
+            { type: "url", id: "4", name: "Script", url: "javascript:alert(1)" },
+          ],
+        },
+      },
+    }),
+  });
+  expect(
+    (await profiles.readBookmarks(`${dir}/Bookmarks`, { site: "https://bücher.example/" })).map(
+      bookmark => bookmark.id,
+    ),
+  ).toEqual(["1"]);
+  expect(
+    (
+      await profiles.readBookmarks(`${dir}/Bookmarks`, { site: "https://bücher.example/", includeSubdomains: true })
+    ).map(bookmark => bookmark.id),
+  ).toEqual(["1", "2"]);
+  await expect(
+    profiles.readBookmarks(`${dir}/Bookmarks`, { site: "https://user:secret@example.test/" }),
+  ).rejects.toThrow("without credentials");
+});
+
+test("profile metadata rejects path traversal and oversized JSON", async () => {
+  using dir = tempDir("chrome-profile-bounds", {
+    "Local State": JSON.stringify({ profile: { info_cache: { "../outside": { name: "Other" } } } }),
+    Bookmarks: " ".repeat(8 * 1024 * 1024 + 1),
+  });
+  await expect(profiles.discover({ userDataDirs: [String(dir)] })).rejects.toThrow("single path component");
+  await expect(profiles.readBookmarks(`${dir}/Bookmarks`)).rejects.toThrow("8 MiB limit");
 });
 
 test.concurrent("CDP correlates replies received in reverse order and forwards sessions", async () => {

@@ -11,6 +11,7 @@
  *   - smoke test: run `<exe> --revision` to catch load-time failures
  */
 
+import { WINFW_SYSTEM_LIBRARIES } from "./deps/winfw.ts";
 import { existsSync, lstatSync, readdirSync, readFileSync, realpathSync } from "node:fs";
 import { relative, resolve, sep } from "node:path";
 import type { Sources } from "../glob-sources.ts";
@@ -22,6 +23,7 @@ import { generateDepVersionsHeader } from "./depVersionsHeader.ts";
 import { dotnetHostRustSources } from "./deps/dotnet-host.ts";
 import { allDeps } from "./deps/index.ts";
 import { lolhtml } from "./deps/lolhtml.ts";
+import { oxc } from "./deps/oxc.ts";
 import { rustArgon2 } from "./deps/rust-argon2.ts";
 import { uutils } from "./deps/uutils.ts";
 import { uv, uvRustSources } from "./deps/uv.ts";
@@ -105,6 +107,7 @@ function systemLibs(cfg: Config): string[] {
   }
 
   if (cfg.windows) {
+    libs.push(...WINFW_SYSTEM_LIBRARIES);
     // Explicit .lib: these go after /link so no auto-suffixing by the
     // clang-cl driver. lld-link auto-appends .lib but link.exe doesn't;
     // explicit is portable.
@@ -195,6 +198,9 @@ export function emitBun(n: Ninja, cfg: Config, sources: Sources): BunOutput {
   const uvDep = resolveDep(n, cfg, uv, depsByName);
   assert(uvDep !== null, "uv resolveDep returned null — should never be skipped");
   depsByName.set(uv.name, uvDep);
+  const oxcDep = resolveDep(n, cfg, oxc, depsByName);
+  assert(oxcDep !== null, "oxc resolveDep returned null — should never be skipped");
+  depsByName.set(oxc.name, oxcDep);
   const rust = emitRust(n, cfg, {
     codegenOrderOnly: codegen.rustInputs,
     rustSources: [
@@ -203,7 +209,7 @@ export function emitBun(n: Ninja, cfg: Config, sources: Sources): BunOutput {
       ...windowsToolchainRustSources(cfg),
       ...dotnetHostRustSources(cfg),
     ],
-    vendorStamps: [...lolhtmlDep.outputs, ...rustArgon2Dep.outputs, ...uutilsDep.outputs, ...uvDep.outputs],
+    vendorStamps: [...lolhtmlDep.outputs, ...rustArgon2Dep.outputs, ...uutilsDep.outputs, ...uvDep.outputs, ...oxcDep.outputs],
     shimValidations: emitShimVerify(n, cfg),
   });
 

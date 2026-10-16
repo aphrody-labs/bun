@@ -619,6 +619,13 @@ export function resolveLlvmToolchain(
     checkVersion: false,
     required: true,
   })?.path;
+  const hostAr =
+    msvcTarget === (os === "windows")
+      ? ar
+      : findLlvmTool(os === "windows" ? "llvm-lib" : "llvm-ar", paths, os, {
+        checkVersion: false,
+        required: true,
+      })?.path;
 
   // ranlib: llvm-ranlib (unix hosts only — llvm-lib targets don't need it).
   // Needed for nested cmake builds (CMAKE_RANLIB). llvm-ar's `s` flag does the
@@ -749,6 +756,7 @@ export function resolveLlvmToolchain(
     cxx,
     hostCc,
     hostCxx,
+    hostAr,
     ar,
     ranlib,
     ld,

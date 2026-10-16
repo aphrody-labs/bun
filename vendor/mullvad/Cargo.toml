@@ -188,7 +188,7 @@ explicit_outlives_requirements = "warn"
 macro_use_extern_crate = "deny"
 missing_abi = "deny"
 # Security
-non_ascii_idents = "forbid"
+non_ascii_idents = "deny"
 # Deny old style Rust
 rust_2018_idioms = { level = "deny", priority = -1 }
 single_use_lifetimes = "warn"

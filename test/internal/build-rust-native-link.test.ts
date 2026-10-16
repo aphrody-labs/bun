@@ -13,6 +13,17 @@ function output(directives: string, cwd = "/package") {
   return { ...parseBuildScriptOutput(directives), cwd };
 }
 
+test("Windows build-script import libraries reach the final C++ link", () => {
+  using directory = tempDir("windows-native-link", {});
+  const native = join(String(directory), "native");
+  expect(
+    nativeLinkArguments(
+      [output(`cargo::rustc-link-search=native=${native}\ncargo::rustc-link-lib=dylib=winfw\n`, String(directory))],
+      "windows",
+    ),
+  ).toEqual([`/LIBPATH:${native}`, "winfw.lib"]);
+});
+
 test("native directories and dylibs reach the Linux final link in dependency order", () => {
   const gtk = output(
     "cargo:rustc-link-search=native=/usr/lib\ncargo:rustc-link-lib=gtk-3\ncargo:rustc-link-lib=gdk-3\n",
@@ -108,7 +119,7 @@ describe("Ninja native response edge", () => {
     const { script, graph, cfg } = fixture(String(dir));
     const n = new Ninja({ buildDir: String(dir) });
     const rsp = emitRustNativeLink(n, cfg, graph)!;
-    n.rule("link", { command: "clang++ @$out.rsp $lazy $ldflags -o $out" });
+    n.rule("link", { command: "clang++ $driverflags @$out.rsp $lazy $ldflags -o $out" });
     link(n, cfg, "bun", [], { libs: [], flags: [`@${rsp}`], implicitInputs: [rsp] });
     expect(JSON.parse(readFileSync(join(String(dir), "native-link.json"), "utf8"))).toEqual([
       { output: script, cwd: String(dir) },

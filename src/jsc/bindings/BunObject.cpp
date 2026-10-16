@@ -926,6 +926,7 @@ JSC_DEFINE_HOST_FUNCTION(functionFileURLToPath, (JSC::JSGlobalObject * globalObj
     FileSystemRouter                               BunObject_lazyPropCb_wrap_FileSystemRouter                          DontDelete|PropertyCallback
     Glob                                           BunObject_lazyPropCb_wrap_Glob                                      DontDelete|PropertyCallback
     Image                                          BunObject_lazyPropCb_wrap_Image                                     DontDelete|PropertyCallback
+    Video                                          BunObject_lazyPropCb_wrap_Video                                     DontDelete|PropertyCallback
     MD4                                            BunObject_lazyPropCb_wrap_MD4                                       DontDelete|PropertyCallback
     MD5                                            BunObject_lazyPropCb_wrap_MD5                                       DontDelete|PropertyCallback
     ModuleGraph                                    constructModuleGraphObject                                          DontDelete|ReadOnly|PropertyCallback

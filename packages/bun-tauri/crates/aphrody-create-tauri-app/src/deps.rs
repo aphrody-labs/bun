@@ -3,7 +3,7 @@ use template::Template;
 use crate::package_manager::PackageManager;
 use crate::utils::colors::*;
 use crate::{args::TauriVersion, internal::template};
-use std::process::{Command, Output};
+use std::process::Command;
 
 fn is_cli_installed(cli: &str, arg: &str) -> bool {
     Command::new(cli)
@@ -13,20 +13,31 @@ fn is_cli_installed(cli: &str, arg: &str) -> bool {
         .unwrap_or(false)
 }
 
-fn is_tauri_cli_installed(tauri_version: TauriVersion) -> bool {
-    let check = |o: Output| match o.status.success() {
-        true => String::from_utf8_lossy(&o.stdout)
-            .split_once(' ')
-            .map(|(_, v)| v.starts_with(&tauri_version.to_string()))
-            .unwrap_or(false),
-        s => s,
+fn tauri_cli_version_matches(output: &str, tauri_version: TauriVersion) -> bool {
+    let Some(version) = output.split_whitespace().nth(1) else {
+        return false;
     };
-    Command::new("cargo")
-        .args(["tauri", "-V"])
-        .output()
-        .map(check)
-        .or_else(|_| Command::new("tauri").arg("-V").output().map(check))
-        .unwrap_or(false)
+    match tauri_version {
+        TauriVersion::V1 => version.starts_with("1.") && version != env!("CARGO_PKG_VERSION"),
+        TauriVersion::V2 => version == env!("CARGO_PKG_VERSION"),
+    }
+}
+
+fn is_tauri_cli_installed(tauri_version: TauriVersion) -> bool {
+    [("tauri", &["-V"][..]), ("cargo", &["tauri", "-V"][..])]
+        .into_iter()
+        .any(|(command, args)| {
+            Command::new(command)
+                .args(args)
+                .output()
+                .is_ok_and(|output| {
+                    output.status.success()
+                        && tauri_cli_version_matches(
+                            &String::from_utf8_lossy(&output.stdout),
+                            tauri_version,
+                        )
+                })
+        })
 }
 
 fn is_wasm32_installed() -> bool {
@@ -192,11 +203,15 @@ pub fn print_missing_deps(
                     "Run `{BLUE}{BOLD}cargo install tauri-cli --version ^1.0.0 --locked{RESET}`"
                 ),
                 TauriVersion::V2 => format!(
-                    "Run `{BLUE}{BOLD}cargo install aphrody-tauri-cli --version ^3.0.0-alpha --locked{RESET}`"
+                    "Install the native Aphrody Tauri CLI matching this release ({}) on PATH",
+                    env!("CARGO_PKG_VERSION")
                 ),
             },
             exists: &|| is_tauri_cli_installed(tauri_version),
-            skip: pkg_manager.is_node() || !template.needs_tauri_cli(),
+            skip: match tauri_version {
+                TauriVersion::V1 => pkg_manager.is_node() || !template.needs_tauri_cli(),
+                TauriVersion::V2 => false,
+            },
         },
         Dep {
             name: "Trunk",
@@ -360,5 +375,23 @@ pub fn print_missing_deps(
         true
     } else {
         false
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::tauri_cli_version_matches;
+    use crate::args::TauriVersion;
+
+    #[test]
+    fn v2_uses_the_aphrody_release_version() {
+        let release = format!("tauri {}\n", env!("CARGO_PKG_VERSION"));
+        assert!(tauri_cli_version_matches(&release, TauriVersion::V2));
+        assert!(!tauri_cli_version_matches(&release, TauriVersion::V1));
+        for output in ["tauri 2.0.0", "tauri 3.0.0-alpha", "tauri 1.0.0", "tauri"] {
+            assert!(!tauri_cli_version_matches(output, TauriVersion::V2));
+        }
+        assert!(tauri_cli_version_matches("tauri 1.0.0", TauriVersion::V1));
+        assert!(!tauri_cli_version_matches("tauri 10.0.0", TauriVersion::V1));
     }
 }

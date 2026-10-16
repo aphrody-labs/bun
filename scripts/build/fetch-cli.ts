@@ -29,6 +29,8 @@ import { downloadWithRetry, extractTarGz, fetchPrebuilt } from "./download.ts";
 import { BuildError, assert } from "./error.ts";
 import { writeIfChanged } from "./fs.ts";
 import { formatElapsed } from "./tty.ts";
+import { verifyVendorReceipt } from "../aphrody/vendor-oxc.ts";
+import { fetchNativeSDK } from "./native-sdk.ts";
 
 /**
  * Absolute path to this file. Ninja rules use this in their command strings.
@@ -47,6 +49,11 @@ async function main(): Promise<void> {
   const [, , kind, ...args] = process.argv;
 
   switch (kind) {
+    case "native-sdk": {
+      const [descriptor, destination] = args;
+      assert(descriptor !== undefined && destination !== undefined, "native-sdk: missing descriptor/destination");
+      return fetchNativeSDK(descriptor, destination);
+    }
     case "dep": {
       // fetch-cli.ts dep <name> <repo> <commit> <dest> <cache> [...patches]
       const [name, repo, commit, dest, cache, ...patches] = args;
@@ -153,7 +160,7 @@ function checkUndefined(name: string, nm: string, rspfile: string, stamp: string
   const forbidden = new Set(symbols);
   let undefinedSymbols = 0;
   const offenders: string[] = [];
-  for (let start = 0; start < objects.length; ) {
+  for (let start = 0; start < objects.length;) {
     let end = start;
     let length = 0;
     do {
@@ -230,6 +237,16 @@ async function fetchDep(
   }
 
   const identity = computeSourceIdentity(commit, patchContents);
+
+  if (name === "oxc" && existsSync(join(dest, ".bun-vendor.json"))) {
+    if (patches.length) throw new BuildError("OXC Git export cannot adopt archive patches");
+    await verifyVendorReceipt(dest, commit);
+    if (existsSync(refPath) && readFileSync(refPath, "utf8").trim() !== identity)
+      throw new BuildError("OXC Git export stamp differs; preserved");
+    if (!existsSync(refPath)) await writeFile(refPath, identity + "\n", { flag: "wx" });
+    console.log("verified OXC Git export");
+    return;
+  }
 
   // Short-circuit: already fetched at this identity?
   if (existsSync(refPath)) {

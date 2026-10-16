@@ -472,17 +472,20 @@ void HostClient::rejectAllAndMarkDead(const WTF::String& reason)
     if (!global) return;
     auto* g = global;
     JSValue err = createError(g, reason);
-    for (auto& [id, weak] : viewsById) {
+    JSC::EnsureStillAliveScope errorRoot { err };
+    auto views = std::exchange(viewsById, {});
+    for (auto& [id, weak] : views) {
         JSWebView* v = weak.get();
         if (!v) continue;
+        Strong<JSWebView> protectedView(g->vm(), v);
+        v->m_closed = true;
         v->m_loading = false;
         settleSlot(g, v, v->m_pendingNavigate, false, err);
         settleSlot(g, v, v->m_pendingEval, false, err);
         settleSlot(g, v, v->m_pendingScreenshot, false, err);
         settleSlot(g, v, v->m_pendingMisc, false, err);
-        v->m_closed = true;
+        v->notifyClosed();
     }
-    viewsById.clear();
     updateKeepAlive();
 }
 

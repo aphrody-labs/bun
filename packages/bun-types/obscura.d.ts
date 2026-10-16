@@ -1,29 +1,22 @@
 declare module "bun:obscura" {
-  /** Connect to an existing native Obscura engine's loopback CDP endpoint. */
+  import type { ChromiumBrowser, LaunchOptions as ChromiumLaunchOptions } from "bun:chromium";
+  /** Connect to the shared Chromium engine's loopback CDP endpoint. */
   export const connect: typeof import("bun:chromium").connect;
-  /** Find aphrody-web, honoring BUN_OBSCURA_PATH. */
+  /** Discover Chromium using the same executable owner as bun:chromium. */
   export function findExecutable(): string | null;
 
-  export interface LaunchOptions {
-    executable?: string;
-    /** Startup deadline in milliseconds. Defaults to 10000. */
-    timeout?: number;
-    signal?: AbortSignal;
-    /** Native worker count, from 1 to 64; Windows currently requires 1. Defaults to 1. */
+  export interface LaunchOptions extends ChromiumLaunchOptions {
+    /** The shared Chromium browser currently requires one worker. Defaults to 1. */
     workers?: number;
   }
 
-  export interface ObscuraBrowser {
-    readonly connection: import("bun:chromium").ChromiumConnection;
-    readonly process: Bun.Subprocess;
-    readonly endpoint: string;
-    close(): Promise<void>;
+  export interface ObscuraBrowser extends ChromiumBrowser {
+    readonly engine: "chromium";
   }
 
   /**
-   * Launch the native Obscura V8 headless engine and await a CDP handshake.
-   * The existing owner CLI requires releasing a reserved port before binding,
-   * so a competing process can cause startup to fail during that interval.
+   * Launch the owner Chromium through bun:chromium and await its CDP handshake.
+   * Shares Chromium executable discovery and uses an isolated profile by default.
    */
   export function launch(options?: LaunchOptions): Promise<ObscuraBrowser>;
 

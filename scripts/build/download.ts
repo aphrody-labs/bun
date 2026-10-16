@@ -47,9 +47,9 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { createWriteStream, existsSync, readFileSync } from "node:fs";
-import { chmod, copyFile, cp, lstat, mkdir, readdir, rename, rm, writeFile } from "node:fs/promises";
+import { chmod, copyFile, cp, lstat, mkdir, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
 import { basename, resolve } from "node:path";
-import { Readable } from "node:stream";
+import { Readable, Transform } from "node:stream";
 import { pipeline } from "node:stream/promises";
 import type { ReadableStream as NodeWebReadable } from "node:stream/web";
 import { locations } from "./ci-images/spec.ts";
@@ -181,15 +181,27 @@ export async function downloadWithRetry(
   retry: RetryPolicy = downloadRetry,
   /** Gives the whole download up when it fires (an `AbortSignal.timeout`): for a caller that has a fallback. */
   signal?: AbortSignal,
+  pin?: { bytes: number; sha256: string },
 ): Promise<void> {
+  if (pin && (!Number.isSafeInteger(pin.bytes) || pin.bytes < 1 || !/^[a-f0-9]{64}$/.test(pin.sha256)))
+    throw new BuildError("Invalid pinned download size/checksum");
   const prefetched = prefetchPathForUrl(url);
   if (prefetched !== undefined && existsSync(prefetched)) {
+    if (pin && (await stat(prefetched)).size !== pin.bytes) throw new BuildError("Pinned prefetch size mismatch");
     console.log(`using prefetch cache: ${prefetched}`);
     await mkdir(resolve(dest, ".."), { recursive: true });
     // Same temp-then-rename atomicity as the network path below — an
     // interrupted copy must not leave a partial file claiming to be complete.
     const tmp = `${dest}.${process.pid}.partial`;
     await copyFile(prefetched, tmp);
+    if (pin) {
+      const hash = new Bun.CryptoHasher("sha256");
+      for await (const chunk of Bun.file(tmp).stream()) hash.update(chunk);
+      if ((await stat(tmp)).size !== pin.bytes || hash.digest("hex") !== pin.sha256) {
+        await rm(tmp, { force: true });
+        throw new BuildError("Pinned prefetch checksum mismatch");
+      }
+    }
     await rename(tmp, dest);
     return;
   }
@@ -219,7 +231,29 @@ export async function downloadWithRetry(
 
       // Cast: DOM ReadableStream vs node:stream/web ReadableStream — same
       // shape at runtime, different TS lib declarations.
-      await pipeline(Readable.fromWeb(res.body as unknown as NodeWebReadable), createWriteStream(tmpPath));
+      if (pin) {
+        let bytes = 0;
+        const hash = createHash("sha256");
+        const bounded = new Transform({
+          transform(chunk, _encoding, callback) {
+            bytes += chunk.length;
+            if (bytes > pin.bytes) {
+              permanent = true;
+              callback(new BuildError("Pinned download exceeded its size"));
+              return;
+            }
+            hash.update(chunk);
+            callback(null, chunk);
+          },
+        });
+        await pipeline(Readable.fromWeb(res.body as unknown as NodeWebReadable), bounded, createWriteStream(tmpPath));
+        if (bytes !== pin.bytes || hash.digest("hex") !== pin.sha256) {
+          permanent = true;
+          throw new BuildError("Pinned download size/checksum mismatch");
+        }
+      } else {
+        await pipeline(Readable.fromWeb(res.body as unknown as NodeWebReadable), createWriteStream(tmpPath));
+      }
       await rename(tmpPath, dest);
       return;
     } catch (err) {

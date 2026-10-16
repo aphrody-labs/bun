@@ -44,6 +44,10 @@ Object.assign(globalThis, {
   __fake_no_reply() {
     return NO_REPLY;
   },
+  __fake_detach() {
+    send({ method: "Target.detachedFromTarget", params: { sessionId: "S1", targetId: "T1" } });
+    return NO_REPLY;
+  },
   // The process stays alive; only the reply pipe goes away.
   __fake_close_replies() {
     closeSync(REPLIES);

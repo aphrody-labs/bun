@@ -660,6 +660,15 @@ function buildScriptRunManifest(ctx: ManifestContext, unit: RustUnit): BuildScri
     // What the library will be compiled with (target units only get rustflags); RUSTFLAGS itself is removed by cargo.
     CARGO_ENCODED_RUSTFLAGS: isHost ? "" : plan.plannedWith.rustflags.join("\x1f"),
   };
+  if (isHost) {
+    env.CC = ctx.cfg.hostCc;
+    env.CXX = ctx.cfg.hostCxx;
+    env.AR = ctx.cfg.hostAr;
+  }
+  if (!isHost && info.triple.endsWith("-windows-msvc") && unit.pkg.name === "talpid-core") {
+    env.BUN_WINFW_STATIC = "1";
+    env.WINFW_LIB_DIR = join(ctx.cfg.buildDir, "deps/winfw");
+  }
   if (
     !isHost &&
     info.triple.endsWith("-windows-msvc") &&

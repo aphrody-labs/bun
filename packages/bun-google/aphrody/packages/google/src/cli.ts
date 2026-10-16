@@ -49,3 +49,5 @@ export async function runGoogle(argv: readonly string[]): Promise<number> {
   console.error(`yolo google ${command}: not a Bun command; the Rust owner runs it: aphrody google ${argv.join(" ")}`);
   return 2;
 }
+
+if (import.meta.main) process.exitCode = await runGoogle(process.argv.slice(2));

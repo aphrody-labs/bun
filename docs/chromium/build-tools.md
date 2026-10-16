@@ -54,8 +54,10 @@ ou les dépendances nécessaires à Chromium.
 
 `bun bd` reste la factory du runtime Bun ; elle ne construit pas un fork
 Chromium. Le workspace indépendant `packages/bun-tauri` déclare déjà le runtime
-CEF et verrouille ses crates ; `packages/bun-obscura` possède sa propre chaîne.
-Réutiliser ces propriétaires évite de confondre trois builds et trois livrables.
+CEF et verrouille ses crates ; les bibliothèques navigateur sous `src/browser`
+appartiennent au workspace Cargo racine de Bun et utilisent son lockfile.
+Leurs gates sont décrits dans `src/browser/PLAN.md`. Chromium conserve sa chaîne
+et son livrable indépendants.
 Les outils Python de `depot_tools` doivent conserver leur bootstrap amont ;
 le choix Bun pour les scripts du dépôt ne remplace pas leur contrat d'exécution.
 

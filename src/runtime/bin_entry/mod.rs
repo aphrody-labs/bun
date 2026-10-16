@@ -33,6 +33,7 @@
 use core::ffi::{c_char, c_int};
 
 mod c_abi_exports;
+mod workspace_command;
 
 // Force-link `bun_platform` so its `#[no_mangle]` C exports
 // (`sys_epoll_pwait2`, …) reach the linker.
@@ -208,6 +209,7 @@ pub(crate) unsafe extern "C" fn main(argc: c_int, argv: *const *const c_char) ->
     bun_io::ParentDeathWatchdog::install();
 
     // 7. CLI dispatch.
+    workspace_command::dispatch();
     crate::cli::Cli::start();
     // `Global::exit` is `-> !`; it coerces to the `c_int` return type.
     Global::exit(0)

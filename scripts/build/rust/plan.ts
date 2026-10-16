@@ -266,26 +266,46 @@ function targetInfo(rustc: string, triple: string, rustflags: string[], sysroot:
 }
 
 /**
- * The `[workspace]` manifest a package inherits from (cargo `find_workspace_root`): `package.workspace` if given,
+ * The path of the `[workspace]` manifest a package inherits from (cargo `find_workspace_root`): `package.workspace` if given,
  * else the package's own manifest if it has `[workspace]`, else the nearest ancestor directory's `Cargo.toml` that does.
  * A vendored crate with its own workspace table (lol-html) inherits from that, not from bun's root.
  */
-function workspaceManifestOf(manifest: TomlTable, manifestPath: string): TomlTable {
+function workspaceManifestPathOf(manifest: TomlTable, manifestPath: string, required = true): string {
   const explicit = (manifest.package as TomlTable | undefined)?.workspace;
   if (typeof explicit === "string") {
     const p = join(resolve(dirname(manifestPath), explicit), "Cargo.toml");
-    return parseToml(readFileSync(p, "utf8"), p);
+    return p;
   }
-  if (manifest.workspace !== undefined) return manifest;
+  if (manifest.workspace !== undefined) return manifestPath;
   for (let dir = dirname(dirname(manifestPath)); ; dir = dirname(dir)) {
     const p = join(dir, "Cargo.toml");
     if (existsSync(p)) {
       const m = parseToml(readFileSync(p, "utf8"), p);
-      if (m.workspace !== undefined) return m;
+      if (m.workspace !== undefined) return p;
     }
-    if (dirname(dir) === dir)
+    if (dirname(dir) === dir) {
+      if (!required) return manifestPath;
       throw new BuildError(`${manifestPath}: lints.workspace = true but no workspace manifest found above it`);
+    }
   }
+}
+
+function workspaceManifestOf(manifest: TomlTable, manifestPath: string): TomlTable {
+  const path = workspaceManifestPathOf(manifest, manifestPath);
+  return parseToml(readFileSync(path, "utf8"), path);
+}
+
+/** Path dependencies outside the source glob still inherit package facts and lints from their workspace. */
+export function manifestInputPaths(packages: Iterable<Pick<MetadataPackage, "source" | "manifest_path">>): string[] {
+  const paths = new Set<string>();
+  for (const pkg of packages) {
+    if (pkg.source !== null) continue;
+    const path = pkg.manifest_path;
+    paths.add(path);
+    const manifest = parseToml(readFileSync(path, "utf8"), path);
+    paths.add(workspaceManifestPathOf(manifest, path, false));
+  }
+  return [...paths].sort();
 }
 
 /**

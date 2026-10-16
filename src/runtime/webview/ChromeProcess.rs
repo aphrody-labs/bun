@@ -57,6 +57,66 @@ pub(crate) struct ChromeProcess {
     pipes: WindowsPipes,
     #[cfg(windows)]
     generation: u32,
+    #[cfg(windows)]
+    job: ChromeJob,
+    _profile: Option<TemporaryProfile>,
+}
+
+struct TemporaryProfile(ZBox);
+
+impl Drop for TemporaryProfile {
+    fn drop(&mut self) {
+        if let Err(error) = bun_sys::Dir::cwd().delete_tree(self.0.as_bytes()) {
+            scoped_log!(Chrome, "temporary profile cleanup failed: {}", error);
+        }
+    }
+}
+
+#[cfg(windows)]
+struct ChromeJob(u32);
+
+#[cfg(windows)]
+impl ChromeJob {
+    fn error(error: crate::windows::sys::WinErr) -> bun_sys::Error {
+        if let Ok(code) = u16::try_from(error.code) {
+            bun_sys::Error::from_win32(
+                bun_sys::windows::Win32Error::from_raw(code),
+                bun_sys::Tag::TODO,
+            )
+        } else {
+            bun_sys::Error::from_code(bun_sys::E::UNKNOWN, bun_sys::Tag::TODO)
+        }
+    }
+
+    fn create() -> crate::Result<Self> {
+        use crate::windows::sys::jobs;
+        let job = Self(jobs::create(None).map_err(Self::error)?);
+        jobs::set_limits(
+            job.0,
+            &jobs::Limits {
+                kill_on_close: true,
+                process_memory: None,
+                job_memory: None,
+                active_processes: None,
+                cpu_rate: None,
+            },
+        )
+        .map_err(Self::error)?;
+        Ok(job)
+    }
+
+    fn terminate(&self) {
+        if let Err(error) = crate::windows::sys::jobs::terminate(self.0, 1) {
+            scoped_log!(Chrome, "job termination failed: {} ({})", error.call, error.code);
+        }
+    }
+}
+
+#[cfg(windows)]
+impl Drop for ChromeJob {
+    fn drop(&mut self) {
+        crate::windows::sys::jobs::close(self.0);
+    }
 }
 
 /// Our ends of the two pipes (boxed, null once closed) and the read scratch.
@@ -90,6 +150,8 @@ extern "C" fn Bun__Chrome__kill() {
     // SAFETY: JS-thread-only global; see INSTANCE decl.
     unsafe {
         if let Some(i) = INSTANCE.load(Ordering::Relaxed).as_mut() {
+            #[cfg(windows)]
+            i.job.terminate();
             let _ = i.process.kill(9);
         }
     }
@@ -110,6 +172,7 @@ extern "C" fn Bun__Chrome__retire() {
         // Queued events from this Chrome carry its generation; `QueuedEvent::deliver` drops them.
         GENERATION.fetch_add(1, Ordering::Relaxed);
         chrome.pipes.close();
+        chrome.job.terminate();
     }
     let _ = chrome.process.kill(9);
 }
@@ -262,7 +325,7 @@ fn find_webview_host() -> Option<ZBox> {
 ///            (arm64 non-cft builds use chrome-linux/headless_shell instead)
 ///   windows: %LOCALAPPDATA%\ms-playwright\chromium_headless_shell-<rev>\chrome-headless-shell-win64\chrome-headless-shell.exe
 fn find_chrome(explicit_path: Option<&CStr>) -> Option<ZBox> {
-    // Precedence: backend.path > BUN_CHROME_PATH > $PATH > hardcoded > playwright.
+    // Precedence: backend.path > BUN_CHROMIUM_PATH > BUN_CHROME_PATH > $PATH > hardcoded > playwright.
     // backend.path is per-Bun.WebView call (first wins — later views reuse
     // the already-spawned Chrome); env var is per-process.
     if let Some(p) = explicit_path {
@@ -270,6 +333,9 @@ fn find_chrome(explicit_path: Option<&CStr>) -> Option<ZBox> {
             return find_webview_host();
         }
         return Some(ZBox::from_bytes(p.to_bytes()));
+    }
+    if let Some(p) = getenv_z(zstr!("BUN_CHROMIUM_PATH")) {
+        return Some(ZBox::from_bytes(p));
     }
     if let Some(p) = getenv_z(zstr!("BUN_CHROME_PATH")) {
         return Some(ZBox::from_bytes(p));
@@ -544,6 +610,7 @@ fn spawn(
         // layout every headless harness uses. Without it, ProcessSingleton locks
         // the default profile (~/Library/Application Support/Google/Chrome) and
         // aborts if a real Chrome is already running.
+        let mut profile = None;
         let data_dir: ZBox = if let Some(d) = user_data_dir {
             let d = d.to_bytes();
             let mut v = Vec::with_capacity(16 + d.len());
@@ -562,6 +629,7 @@ fn spawn(
             let dir =
                 resolve_path::join_string_buf_z::<platform::Auto>(&mut dir_buf[..], &dir_parts);
             bun_sys::mkdir(dir, 0o700)?;
+            profile = Some(TemporaryProfile(ZBox::from_bytes(&dir[..])));
             let mut v = Vec::with_capacity(16 + dir.len());
             v.extend_from_slice(b"--user-data-dir=");
             v.extend_from_slice(&dir[..]);
@@ -576,7 +644,10 @@ fn spawn(
         // headless: false keeps a real window per view (Target.createTarget's newWindow) and the GPU.
         if headless {
             argv.push(c"--headless".as_ptr());
-            argv.push(c"--disable-gpu".as_ptr()); // headless CI has no GPU context
+        }
+        #[cfg(target_os = "linux")]
+        if headless && profile.is_some() {
+            argv.push(c"--password-store=basic".as_ptr());
         }
         argv.extend_from_slice(&[
             c"--no-first-run".as_ptr(),
@@ -618,6 +689,13 @@ fn spawn(
         // `.map` is its `&mut Map` slot.
         let env = unsafe { (*(*vm).transpiler.env).map.create_null_delimited_env_map() }?;
 
+        #[cfg(windows)]
+        let job_handle = {
+            let job = ChromeJob::create()?;
+            let handle = crate::windows::sys::jobs::duplicate(job.0).map_err(ChromeJob::error)?;
+            endpoints.job = Some(job);
+            handle
+        };
         let opts = SpawnOptions {
             stdin: Stdio::Ignore,
             stdout: if stdout_inherit {
@@ -632,6 +710,8 @@ fn spawn(
             },
             extra_fds: endpoints.child_fds(), // dup2'd to child fd 3 and 4, in order
             argv0: Some(chrome.as_ptr()),
+            #[cfg(windows)]
+            job_handle: Some(job_handle.0),
             #[cfg(windows)]
             windows: bun_spawn::WindowsOptions {
                 loop_: event_loop,
@@ -650,7 +730,7 @@ fn spawn(
         // Keeping our copies of the child's ends would mask Chrome's death (no EOF).
         endpoints.close_child_ends();
 
-        endpoints.attach(spawned.to_process_handle(event_loop))
+        endpoints.attach(spawned.to_process_handle(event_loop), profile)
     }
 }
 
@@ -714,10 +794,11 @@ impl Endpoints {
     }
 
     /// Publishes the singleton and returns our fd for C++ to adopt.
-    fn attach(mut self, process: ProcessHandle) -> crate::Result<i32> {
+    fn attach(mut self, process: ProcessHandle, profile: Option<TemporaryProfile>) -> crate::Result<i32> {
         let self_ptr = bun_core::heap::into_raw(Box::new(ChromeProcess {
             process,
             retired: false,
+            _profile: profile,
         }));
         // SAFETY: `self_ptr` is the freshly-allocated Box that owns `process`
         // and outlives it.
@@ -765,6 +846,7 @@ struct Endpoints {
     /// The child's ends; `None` once closed.
     cmd_child: Option<Fd>,
     reply_child: Option<Fd>,
+    job: Option<ChromeJob>,
     /// Our ends; null once handed over.
     cmd: *mut uv::Pipe,
     reply: *mut uv::Pipe,
@@ -780,6 +862,7 @@ impl Endpoints {
             .to_result(bun_sys::Tag::uv_pipe)?;
         let mut endpoints = Endpoints {
             cmd_child: Some(Fd::from_uv(cmd_fds[0])),
+            job: None,
             reply_child: None,
             cmd: ptr::null_mut(),
             reply: ptr::null_mut(),
@@ -849,7 +932,7 @@ impl Endpoints {
     }
 
     /// Moves our ends into a [`ChromeProcess`], starts reading replies, and publishes it.
-    fn attach(mut self, process: ProcessHandle) -> crate::Result<i32> {
+    fn attach(mut self, process: ProcessHandle, profile: Option<TemporaryProfile>) -> crate::Result<i32> {
         let pipes = WindowsPipes {
             cmd: core::mem::replace(&mut self.cmd, ptr::null_mut()),
             reply: core::mem::replace(&mut self.reply, ptr::null_mut()),
@@ -860,8 +943,10 @@ impl Endpoints {
         let self_ptr = bun_core::heap::into_raw(Box::new(ChromeProcess {
             process,
             retired: false,
+            _profile: profile,
             pipes,
             generation,
+            job: self.job.take().expect("spawned Chrome owns its job"),
         }));
         // SAFETY: `self_ptr` is the freshly-allocated Box that owns `process`.
         let process: *mut Process = unsafe { (*self_ptr).process.as_ptr() };

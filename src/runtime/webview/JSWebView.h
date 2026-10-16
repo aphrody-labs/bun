@@ -84,6 +84,7 @@ public:
     // does Target.createTarget. WebKit: held in the child.
     uint32_t m_width = 0, m_height = 0;
     bool m_closed = false;
+    bool m_closeEventDispatched = false;
     // Updated from NavDone replies / Page.frameNavigated — the getters are
     // synchronous but the real values live in the child.
     WTF::String m_url;
@@ -183,6 +184,7 @@ public:
     JSC::JSPromise* goForward(JSC::JSGlobalObject*);
     JSC::JSPromise* reload(JSC::JSGlobalObject*);
     void doClose();
+    void notifyClosed();
 
 #if OS(DARWIN)
     // WebKit constructor: spawn host if needed, allocate viewId, register

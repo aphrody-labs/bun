@@ -1,5 +1,5 @@
 {
-  "$schema": "../../../../../crates/tauri-schema-generator/schemas/config.schema.json",
+  "$schema": "../../../../aphrody-tauri-schema-generator/schemas/config.schema.json",
   "identifier": "studio.tauri.example",
   "build": {
     "frontendDist": "../dist",

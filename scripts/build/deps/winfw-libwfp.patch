@@ -1,0 +1,45 @@
+diff --git a/src/libwfp/filterbuilder.h b/src/libwfp/filterbuilder.h
+index 01c8abe..dc73078 100644
+--- a/src/libwfp/filterbuilder.h
++++ b/src/libwfp/filterbuilder.h
+@@ -77,8 +77,8 @@ public:
+ 
+ 	bool build(FilterSink sink);
+ 
+-	const GUID &IIdentifiable::id() const override;
+-	const GUID &IIdentifiable::providerId() const override;
++	const GUID &id() const override;
++	const GUID &providerId() const override;
+ 
+ private:
+ 
+diff --git a/src/libwfp/providerbuilder.h b/src/libwfp/providerbuilder.h
+index 2a2e665..9c2d27f 100644
+--- a/src/libwfp/providerbuilder.h
++++ b/src/libwfp/providerbuilder.h
+@@ -37,8 +37,8 @@ public:
+ 
+ 	bool build(ProviderSink sink);
+ 
+-	const GUID &IIdentifiable::id() const override;
+-	const GUID &IIdentifiable::providerId() const override;
++	const GUID &id() const override;
++	const GUID &providerId() const override;
+ 
+ private:
+ 
+diff --git a/src/libwfp/sublayerbuilder.h b/src/libwfp/sublayerbuilder.h
+index 856f099..dc338d4 100644
+--- a/src/libwfp/sublayerbuilder.h
++++ b/src/libwfp/sublayerbuilder.h
+@@ -34,8 +34,8 @@ public:
+ 
+ 	bool build(SublayerSink sink);
+ 
+-	const GUID &IIdentifiable::id() const override;
+-	const GUID &IIdentifiable::providerId() const override;
++	const GUID &id() const override;
++	const GUID &providerId() const override;
+ 
+ private:
+ 

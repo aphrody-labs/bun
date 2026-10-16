@@ -10,7 +10,7 @@
     "tauri": "tauri"
   },
   "dependencies": {
-    "@aphrody/api": "^2.0.0",
+    "@aphrody/tauri": "^1.4.4",
     "tauri-plugin-{{ plugin_name }}-api": "file:../../"
   },
   "devDependencies": {

@@ -9648,6 +9648,26 @@ declare module "bun" {
    *   .bytes();
    * ```
    */
+  /** Native media probing and frame extraction through an optional libav provider. */
+  export class Video {
+    /** Whether this runtime was built with the optional provider; individual codecs may still reject. */
+    static readonly available: boolean;
+    constructor(input: string | ArrayBuffer | ArrayBufferView | Blob, options?: { maxPixels?: number });
+    /** Select a frame in seconds. Repeated calls overwrite the previous selection. Defaults to zero. */
+    frame(seconds: number): this;
+    /** Apply the existing Bun.Image geometry pipeline to the extracted frame. */
+    resize(width: number, height?: number, options?: Image.ResizeOptions): this;
+    png(): this;
+    jpeg(options?: Parameters<Image["jpeg"]>[0]): this;
+    webp(options?: Parameters<Image["webp"]>[0]): this;
+    /** Encoded still-frame bytes, PNG by default; this does not encode a video container. */
+    bytes(): Promise<Uint8Array>;
+    blob(): Promise<Blob>;
+    metadata(): Promise<{ width: number; height: number; duration: number | null; codec: string }>;
+    readonly width: number;
+    readonly height: number;
+  }
+
   export class Image {
     /**
      * Process-global pipeline backend.
@@ -9842,12 +9862,12 @@ declare module "bun" {
     /**
      * Browser backend selection.
      *
-     * - `"webkit"` (default): WKWebView. macOS only. Zero external
+     * - `"webkit"` (default on macOS): WKWebView. macOS only. Zero external
      *   dependencies — uses the system WebKit.framework.
-     * - `"chrome"`: Chrome/Chromium via DevTools Protocol over
+     * - `"chrome"` (default elsewhere): Chrome/Chromium via DevTools Protocol over
      *   `--remote-debugging-pipe`. Works anywhere Chrome is installed.
      *   Auto-detects the binary in standard locations; override with
-     *   `backend.path` or the `BUN_CHROME_PATH` environment variable.
+     *   `backend.path`, `BUN_CHROMIUM_PATH`, or `BUN_CHROME_PATH`.
      *
      * The object form accepts extra launch flags. Chrome switches are
      * last-wins for duplicates, so `argv` can override the defaults.
@@ -9857,11 +9877,24 @@ declare module "bun" {
      * the same Chrome instance via `Target.createTarget`.
      *
      * Default flags: `--remote-debugging-pipe --headless --no-first-run
-     * --no-default-browser-check --disable-gpu --user-data-dir=<temp>`.
+     * --no-default-browser-check --user-data-dir=<temp>`.
+     * GPU support stays enabled unless `argv` explicitly includes `--disable-gpu`.
      */
     type Backend =
       | "webkit"
       | "chrome"
+      | "webkitgtk"
+      | "webview2"
+      | "wkwebview"
+      | "cef"
+      | {
+          /** Optional native host backend; requires its qualified bun-webview-host. */
+          type: "webkitgtk" | "webview2" | "wkwebview" | "cef";
+          path?: string;
+          argv?: readonly string[];
+          stdout?: "inherit" | "ignore";
+          stderr?: "inherit" | "ignore";
+        }
       | {
           type: "chrome";
           /**
@@ -9916,6 +9949,8 @@ declare module "bun" {
            * Extra command-line arguments appended after the default flags.
            * Chrome's CommandLine does last-wins for duplicate switches, so
            * `["--headless=new"]` would override the default `--headless`.
+           * Debugging transport and `--user-data-dir` switches are reserved;
+           * use `url` and `dataStore.directory` to select their owners.
            */
           argv?: string[];
           /**
@@ -9974,9 +10009,8 @@ declare module "bun" {
        */
       headless?: boolean;
       /**
-       * Browser backend. Defaults to `"webkit"` on macOS, throws on other
-       * platforms unless `"chrome"` is specified.
-       * @default "webkit"
+       * Browser backend. Defaults to `"webkit"` on macOS and `"chrome"`
+       * elsewhere. Optional native hosts must be installed separately.
        */
       backend?: Backend;
       /**
@@ -9994,7 +10028,8 @@ declare module "bun" {
       /**
        * Storage backing for cookies, localStorage, IndexedDB, etc.
        *
-       * - `"ephemeral"` (default): in-memory only, nothing written to disk.
+       * - `"ephemeral"` (default): nonpersistent storage. Chrome uses a
+       *   temporary profile removed when its owned process closes.
        * - `{ directory }`: persistent storage rooted at the given path.
        *   Multiple views with the same directory share state.
        *
@@ -10036,6 +10071,10 @@ declare module "bun" {
    * @experimental
    */
   class WebView extends EventTarget {
+    /** Open an application window in its native browser-owned profile, including that browser's credentials and sessions. */
+    static openApplication(options: import("bun:chromium").profiles.OpenApplicationOptions): Promise<import("bun:chromium").profiles.OpenApplicationResult>;
+    /** Import only the selected site's live cookies and session metadata from an explicit source browser. */
+    importProfile(options: Omit<import("bun:chromium").profiles.ImportSiteOptions, "view">): Promise<import("bun:chromium").profiles.ImportSiteResult>;
     /**
      * @throws on non-macOS platforms when `backend` is `"webkit"` (the
      * default). Pass `backend: "chrome"` for cross-platform support.
@@ -10313,6 +10352,8 @@ declare module "bun" {
     /**
      * Close the view and release its WebContent process. After close,
      * all methods throw. Idempotent.
+     * Emits a `close` event once after teardown. Closing the browser target
+     * or losing its host process also emits that event.
      *
      * Pending operations reject with `Error("WebView closed")`. The
      * rejections are marked as handled: a promise you hold still rejects

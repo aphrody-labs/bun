@@ -22,7 +22,7 @@
     "pretest": "bun run build"
   },
   "dependencies": {
-    "@aphrody/api": "^2.0.0"
+    "@aphrody/tauri": "^1.4.4"
   },
   "devDependencies": {
     "@rollup/plugin-typescript": "^12.0.0",

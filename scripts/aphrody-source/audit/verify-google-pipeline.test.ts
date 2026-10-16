@@ -55,7 +55,7 @@ describe("verify-google-pipeline", () => {
   });
 
   test("the current checkout satisfies the static owner checks", () => {
-    const { crates, uv } = verifyStatic(owners(resolve(import.meta.dir, "../..")));
+    const { crates, uv } = verifyStatic(owners(resolve(import.meta.dir, "../../../../aphrody")));
     expect(crates).toContain("aphrody-google");
     expect(uv.version).toMatch(/^\d+\.\d+/);
   });

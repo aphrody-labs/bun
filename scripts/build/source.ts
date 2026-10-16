@@ -31,6 +31,7 @@ import type { Ninja } from "./ninja.ts";
 import { quote, quoteArgs, slash } from "./shell.ts";
 import { streamPath } from "./stream.ts";
 import { toolIdentityFile } from "./tools.ts";
+import { nativeSDKHash, nativeSDKSourceRoot, registerNativeSDKRoot, selectNativeSDK } from "./native-sdk.ts";
 
 /**
  * If the source dir exists with a stale (or missing) identity stamp,
@@ -197,6 +198,9 @@ export interface HeaderSubst {
  */
 export interface DirectBuild {
   kind: "direct";
+  /** Produce a named archive even when the final Bun link otherwise consumes dependency objects. */
+  archive?: boolean;
+  preBuild?: PreBuildSpec;
   /**
    * C/.S sources relative to srcDir. A bare string compiles with the dep's
    * shared flags; the object form appends per-file cflags (used for SIMD
@@ -358,6 +362,7 @@ export interface NestedCmakeBuild {
 }
 
 export interface PreBuildSpec {
+  inputs?: string[];
   /** Command argv. First element is the executable. */
   command: string[];
   /** Working directory (absolute). */
@@ -446,6 +451,7 @@ export type DepName =
   | "boringssl"
   | "brotli"
   | "cares"
+  | "curl"
   | "hdrhistogram"
   | "highway"
   | "libarchive"
@@ -460,12 +466,14 @@ export type DepName =
   | "lsquic"
   | "mimalloc"
   | "nodejs"
+  | "oxc"
   | "picohttpparser"
   | "rust-argon2"
   | "sqlite"
   | "tinycc"
   | "uutils"
   | "uv"
+  | "winfw"
   | "zlib"
   | "zstd";
 
@@ -504,6 +512,7 @@ export interface Dependency {
    * build. Does NOT link the other dep's libs (that's `provides.libs`).
    */
   fetchDeps?: DepName[];
+  buildDeps?: DepName[];
 
   /** How to build. */
   build: (cfg: Config) => BuildSpec;
@@ -620,6 +629,13 @@ export function registerDepRules(n: Ninja, cfg: Config): void {
     restat: true,
     pool: "dep",
   });
+  n.rule("dep_fetch_native_sdk", {
+    command: `${stream} ${cfg.jsRuntime} ${fetchCli} native-sdk $descriptor $dest`,
+    description: "fetch $name (native SDK)",
+    restat: true,
+    pool: "dep",
+  });
+  n.phony("native-sdk-verify-always", []);
 
   // Configure: runs cmake in the dep source dir, outputs CMakeCache.txt.
   // The full cmake args are baked into $args per-build — flag changes
@@ -760,7 +776,7 @@ export function registerDepRules(n: Ninja, cfg: Config): void {
  * `srcDir` computed in resolveDep() for those.
  */
 export function depSourceDir(cfg: Config, name: DepName): string {
-  return cfg.localDeps[name] ?? resolve(cfg.vendorDir, name);
+  return cfg.localDeps[name] ?? nativeSDKSourceRoot(cfg, name) ?? resolve(cfg.vendorDir, name);
 }
 
 /**
@@ -813,6 +829,44 @@ export function resolveDep(
   const source = depSource(cfg, dep);
   const buildSpec = dep.build(cfg);
   const provides = dep.provides(cfg);
+  const sdk = !provides.sources?.length ? selectNativeSDK(cfg, dep, source) : undefined;
+  if (sdk) {
+    const identity = nativeSDKHash(sdk);
+    const destination = resolve(cfg.cacheDir, "native-sdk", dep.name, identity);
+    const descriptor = resolve(cfg.buildDir, "native-sdk", `${dep.name}.json`);
+    writeIfChanged(descriptor, JSON.stringify(sdk, null, 2));
+    registerNativeSDKRoot(cfg, dep.name, destination);
+    const outputs = Object.keys(sdk.files).map(file => resolve(destination, file));
+    const libraries = sdk.libraries.map(file => resolve(destination, file));
+    const receipt = resolve(destination, "bun-native-sdk.json");
+    n.build({
+      outputs: [receipt],
+      implicitOutputs: outputs,
+      rule: "dep_fetch_native_sdk",
+      inputs: [descriptor, "native-sdk-verify-always"],
+      implicitInputs: [
+        fetchCliPath,
+        resolve(cfg.cwd, "scripts/build/native-sdk.ts"),
+        resolve(cfg.cwd, "scripts/build/download.ts"),
+      ],
+      vars: {
+        name: dep.name,
+        descriptor: quote(descriptor, cfg.host.os === "windows"),
+        dest: quote(destination, cfg.host.os === "windows"),
+      },
+    });
+    n.phony(dep.name, libraries);
+    return {
+      name: dep.name,
+      libs: libraries,
+      objects: [],
+      checks: [],
+      sources: [],
+      includes: sdk.includes.map(file => resolve(destination, file)),
+      defines: sdk.defines,
+      outputs: libraries,
+    };
+  }
 
   // ─── Prebuilt: entire acquisition is download + extract. No build step. ───
   // Handled separately because there's no "source dir" in the usual sense —
@@ -919,6 +973,11 @@ export function resolveDep(
     assert(r, `${dep.name}: fetchDeps references '${d}' but it wasn't resolved first — fix allDeps ordering`);
     return r.outputs;
   });
+  for (const name of dep.buildDeps ?? []) {
+    const dependency = resolved.get(name);
+    assert(dependency, `${dep.name}: buildDeps requires '${name}' to be resolved first`);
+    fetchDepStamps.push(...dependency.outputs, ...dependency.libs, ...dependency.objects);
+  }
 
   // ─── Step 2+3: build ───
   let libs: string[];
@@ -1577,6 +1636,16 @@ function emitDirect(
   const headers = Object.entries(spec.headers ?? {});
   const needsBuildDirInc = headers.length > 0 || spec.codegen !== undefined;
   const generated: string[] = [];
+  if (spec.preBuild) {
+    n.build({
+      outputs: spec.preBuild.outputs,
+      rule: "dep_prebuild",
+      inputs: spec.preBuild.inputs ?? [],
+      orderOnlyInputs: orderOnly,
+      vars: { name, cwd: spec.preBuild.cwd, cmd: quoteArgs(spec.preBuild.command, hostWin) },
+    });
+    generated.push(...spec.preBuild.outputs);
+  }
   if (headers.length > 0) {
     mkdirSync(buildDir, { recursive: true });
     for (const [h, body] of headers) {
@@ -1678,7 +1747,7 @@ function emitDirect(
   // archive. With cfg.archiveDeps the old per-dep .a is produced instead
   // (useful for bisecting duplicate-symbol issues, since a .a only
   // contributes members the linker actually pulls).
-  if (cfg.archiveDeps) {
+  if (spec.archive ?? cfg.archiveDeps) {
     // ar's output dir + the per-source obj dirs both need pre-creating —
     // configure.ts:mkdirAll only sees `output.objects`, which is empty
     // in this branch.

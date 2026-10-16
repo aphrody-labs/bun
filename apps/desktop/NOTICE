@@ -1,6 +1,0 @@
-Generic index explorer, assistant context preparation, service and cache diagnostics,
-production worker bundling, and WASM qualification adapted from aphrody-labs/omar,
-server/apps/bun-webos at d565a5a67d570e3648c091c351698781fb24bf54.
-The upstream app manifest declares Apache-2.0. Personal infrastructure defaults,
-account paths, model choices, data stores and runtime records are not included.
-Existing Bun WebOS capabilities retain their original source and notices.
