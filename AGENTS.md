@@ -42,8 +42,9 @@ test runner and package manager.
 - Use the measured host budget instead of historical two-CPU or low-parallelism
   limits. On `vps`, the owner authorizes 12 build jobs and 12 linker threads on
   its 12 allocated CPUs and 45.93 GiB RAM. Recheck available memory, affinity and
-  free disk before execution; coordinate native builds through the existing
-  `/home/ubuntu/build/locks/heavy.lock` and reuse compiled outputs.
+  free disk before execution. The VPS runs in multi-build mode: 3 slots of 4 CPUs
+  (`heavy.lock`, `heavy.1.lock`, `heavy.2.lock`); run each native build through
+  `bun factory run [--slots n] -- <command>` and reuse compiled outputs.
 - Read repository guidance before changes; preserve concurrent edits and staged work.
 - Report actual results and qualification limits. Never print or commit secrets.
 
@@ -54,7 +55,9 @@ test runner and package manager.
   `~/src/<project>` (chromium, chromiumos, cef, brave-core, bun), GN outputs in
   `~/build/out/<project>/<config>`, shared caches in
   `~/build/storage/google/cache`, services in `~/apps`. Drive it with
-  `bun factory sync|gen|build|all <target>`, which holds `heavy.lock`.
+  `bun factory sync|gen|build|all <target>`, which takes free build slots
+  (multi-build mode, `bun factory slots`); `bun factory run -- <command>` runs
+  any other heavy command, such as `bun bd`, in a slot.
 - The shared artifact pool is `/home/ubuntu/build/storage`. Put heavy outputs,
   caches, downloads, toolchains and transient files there. The older
   `/home/ubuntu/src` and `/home/ubuntu/build` filesystem can fill independently

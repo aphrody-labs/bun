@@ -15,7 +15,7 @@ directories in `~` (`~/factory`, `~/builds`, `~/aphrody-build`,
 | `~/src/<project>`                                        | gclient/repo checkouts: `chromium`, `chromiumos`, `cef`, `brave-core`, `bun`, ...       |
 | `~/build/out/<project>/<config>`                         | GN output directories (symlink into the pool, `~/build/storage/out`)                    |
 | `~/build/storage/google/cache/{git,sccache,ccache,siso}` | Shared caches: gclient git cache, compiler caches, Siso                                 |
-| `~/build/locks/heavy.lock`                               | Heavy-build lock; every sync, gen and build runs under `flock`                          |
+| `~/build/locks/heavy{,.1,.2}.lock`                       | Build slots; every sync, gen and build holds one or more under `flock`                  |
 | `~/apps`                                                 | Services (Docker compose, Gitea, Komodo, control plane)                                 |
 
 Mounts: `~/src`, `~/apps` and `~/build/storage` are mergerfs pools over
@@ -38,4 +38,26 @@ bun factory sync|gen|build|all chromium [--config release] [--dry-run]
 
 `sync` uses `gclient sync --no-history` (pinned revision when configured) or
 `repo sync`; `gen` writes `~/build/out/<target>/<config>`; `build` runs
-`autoninja -j 12`. Add a target by adding an entry under `google.targets`.
+`autoninja` with the jobs of its slots. Add a target by adding an entry under
+`google.targets`.
+
+## Multi-build mode
+
+`builds` in `tools/config/fusion-factory.json` splits the 12 CPUs into 3 slots
+of 4 (`"mode": "multi"`). Slot 0 is `heavy.lock` (CPUs 0-3), slot 1
+`heavy.1.lock` (4-7), slot 2 `heavy.2.lock` (8-11). A step takes the first free
+set of slots with `flock -n`, runs under `taskset` on their CPUs, so `nproc`,
+ninja and cargo see only those, and waits when every set is taken. Locks are
+always taken in ascending order, so concurrent builds cannot deadlock. A target
+may hold more slots with `"slots": n` (Chromium builds in 2 slots, 8 jobs).
+Scripts that still `flock heavy.lock` directly hold slot 0.
+
+```sh
+bun factory slots                          # which slots are taken
+bun factory run -- bun bd                  # any heavy command in one free slot
+bun factory run --slots 2 -- cargo build   # in two slots, 8 CPUs
+BUN_FACTORY_MODE=single bun factory build chromium   # one exclusive build, 12 jobs
+```
+
+Each slot has about 12 GiB of RAM once `resources.reserveMemoryGiB` is kept
+free; give memory-heavy links two slots.

@@ -12,15 +12,20 @@
     "name": "APHRODY_BUILD_HOST",
     "value": "vps"
   },
+  "builds": {
+    "mode": "multi",
+    "slots": 3,
+    "jobsPerSlot": 4
+  },
   "rust": {
     "maxJobs": 12,
-    "serialized": true,
+    "serialized": false,
     "wrapper": "scripts/build/rust/cargo-serial.sh",
     "incremental": false,
     "cache": "sccache"
   },
   "bun": {
-    "heavyJobs": 1,
+    "heavyJobs": 3,
     "frozenLockfile": true
   },
   "local": {
@@ -76,6 +81,7 @@
         "configs": {
           "release": "is_debug=false is_component_build=true symbol_level=0 blink_symbol_level=0 v8_symbol_level=0 use_remoteexec=false"
         },
+        "slots": 2,
         "ninjaTargets": ["chrome"]
       },
       "chromiumos": {

@@ -30,7 +30,8 @@ test runner and package manager.
 - Use the existing checkout. Do not create extra worktrees, workspaces or vendor
   copies unless requested. Reuse existing sources, dependencies and build outputs.
 - Use native Windows tools on this workstation; do not start WSL.
-- Keep CPU usage bounded: one build at a time, low parallelism, no unnecessary rebuilds.
+- Keep CPU usage bounded: no native build on the workstation, no unnecessary rebuilds. On the VPS,
+  concurrent builds share its CPUs through the factory build slots.
 - Read repository guidance before changes; preserve concurrent edits and staged work.
 - Report actual results and qualification limits. Never print or commit secrets.
 
@@ -41,7 +42,9 @@ test runner and package manager.
   `~/src/<project>` (chromium, chromiumos, cef, brave-core, bun), GN outputs in
   `~/build/out/<project>/<config>`, shared caches in
   `~/build/storage/google/cache`, services in `~/apps`. Drive it with
-  `bun factory sync|gen|build|all <target>`, which holds `heavy.lock`.
+  `bun factory sync|gen|build|all <target>`, which takes free build slots
+  (multi-build mode, `bun factory slots`); `bun factory run -- <command>` runs
+  any other heavy command, such as `bun bd`, in a slot.
 - Use the Aphrody Bun fork for JavaScript, TypeScript and Python tooling.
   Check provenance with `bun agent-plugin doctor --json`.
 - Build and execute checkout changes with `bun bd [command]`; test with
