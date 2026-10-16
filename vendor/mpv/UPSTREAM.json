@@ -1,9 +1,0 @@
-{
-  "repository": "https://github.com/mpv-player/mpv",
-  "commit": "88eb9f2e73945d8bc9c133a2f67babaa9af34680",
-  "archive": "https://codeload.github.com/mpv-player/mpv/tar.gz/88eb9f2e73945d8bc9c133a2f67babaa9af34680",
-  "archiveSha256": "417087077b09b1738c84e5ee543be694def1dc52df73e805bf1bfd11d95f5890",
-  "clientHeader": "include/mpv/client.h",
-  "renderHeader": "include/mpv/render.h",
-  "implementation": "player/client.c"
-}
