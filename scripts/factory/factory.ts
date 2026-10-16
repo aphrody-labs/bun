@@ -100,13 +100,12 @@ function depot(dry: boolean) {
       },
       dry,
     );
-  else run({ cwd: d, argv: ["git", "pull", "--ff-only", "--quiet"] }, dry);
   run({ cwd: d, argv: ["./update_depot_tools"] }, dry);
 }
 
 function timer(dry: boolean) {
   const dir = join(google.home, ".config/systemd/user");
-  const service = `[Unit]\nDescription=Update depot_tools\n\n[Service]\nType=oneshot\nWorkingDirectory=${google.depotTools}\nExecStart=/usr/bin/git -C ${google.depotTools} pull --ff-only --quiet\nExecStart=${google.depotTools}/update_depot_tools\nNice=10\n`;
+  const service = `[Unit]\nDescription=Update depot_tools\n\n[Service]\nType=oneshot\nWorkingDirectory=${google.depotTools}\nExecStart=${google.depotTools}/update_depot_tools\nNice=10\n`;
   const unit = `[Unit]\nDescription=Daily depot_tools update\n\n[Timer]\nOnCalendar=daily\nRandomizedDelaySec=1h\nPersistent=true\n\n[Install]\nWantedBy=timers.target\n`;
   console.log(`${dir}/depot-tools-update.{service,timer}`);
   if (dry) return;
