@@ -27,10 +27,6 @@ async function dependencyFixture() {
       "rust-argon2": {
         "legacy-low-memory.patch": await Bun.file(join(checkout, "patches/rust-argon2/legacy-low-memory.patch")).text(),
       },
-      uutils: {
-        "lazy-startup.patch": await Bun.file(join(checkout, "patches/uutils/lazy-startup.patch")).text(),
-        "linux-kernel-timer.patch": await Bun.file(join(checkout, "patches/uutils/linux-kernel-timer.patch")).text(),
-      },
     },
   });
 }
