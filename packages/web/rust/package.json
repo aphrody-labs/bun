@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@aphrody/agent-browser": "workspace:*",
-    "@aphrody/bun-webview-page": "file:../bun-webview-page",
+    "@aphrody/bun-webview-page": "workspace:*",
     "@aphrody/material-web": "3.3.3",
     "@lit/react": "^1.0.8",
     "@phosphor-icons/react": "^2.1.0",

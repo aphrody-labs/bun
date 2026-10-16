@@ -28,7 +28,7 @@
   "scripts": {
     "typecheck": "bun check --noEmit",
     "test": "bun test test/",
-    "lint": "oxlint"
+    "lint": "bun lint"
   },
   "dependencies": {},
   "peerDependencies": {
@@ -38,6 +38,6 @@
     "bun": ">=1.4.4"
   },
   "devDependencies": {
-    "@types/bun": "npm:@aphrody/bun-types@1.4.4"
+    "@aphrody/bun-types": "workspace:*"
   }
 }

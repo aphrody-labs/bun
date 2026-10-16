@@ -18,11 +18,11 @@
   "scripts": {
     "typecheck": "bun check --noEmit",
     "test": "bun test",
-    "lint": "oxlint src test scripts",
+    "lint": "bun lint src test scripts",
     "fixtures": "bun scripts/gen-fixtures.ts"
   },
   "devDependencies": {
-    "@types/bun": "npm:@aphrody/bun-types@1.4.4"
+    "@aphrody/bun-types": "workspace:*"
   },
   "engines": {
     "bun": ">=1.4.4"

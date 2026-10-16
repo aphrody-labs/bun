@@ -3,19 +3,6 @@
   "version": "1.4.4",
   "private": true,
   "repository": "github:aphrody-labs/bun",
-  "workspaces": [
-    "./packages/bun-types",
-    "./packages/bun-web",
-    "./packages/bun-plugin-tailwind",
-    "./packages/bun-m3",
-    "./packages/bun-next",
-    "./packages/web",
-    "./packages/bun-webview-page",
-    "./packages/web/rust/packages/*",
-    "./packages/web/rust/integrations/m3",
-    "./apps/desktop",
-    "./apps/mobile"
-  ],
   "scripts": {
     "gn": "bun scripts/aphrody/gn.ts",
     "gn:vendor": "bun scripts/aphrody/vendor-gn.ts",

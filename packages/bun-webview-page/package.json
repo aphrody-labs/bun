@@ -14,11 +14,11 @@
   ],
   "scripts": {
     "test": "bun test",
-    "check:types": "tsc --noEmit"
+    "check:types": "bun check --noEmit"
   },
   "devDependencies": {
-    "@types/bun": "../bun-types",
-    "happy-dom": "^20.14.5"
+    "happy-dom": "^20.14.5",
+    "@aphrody/bun-types": "workspace:*"
   },
   "engines": {
     "bun": ">=1.4.2"

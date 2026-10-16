@@ -34,8 +34,8 @@
   "scripts": {
     "prebuild": "echo $(pwd)",
     "build": "bun scripts/build.ts",
-    "test": "tsc",
-    "fmt": "echo $(which biome) && biome format --write ."
+    "test": "bun check",
+    "fmt": "echo $(which biome) && biome format ."
   },
   "keywords": [
     "bun",

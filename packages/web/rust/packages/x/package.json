@@ -39,9 +39,9 @@
     "access": "public"
   },
   "scripts": {
-    "build": "tsc",
+    "build": "bun check",
     "typecheck": "bun check --noEmit",
-    "lint": "oxlint",
+    "lint": "bun lint",
     "test": "bun test",
     "catalog:sync": "bun ../../../scripts/tools/web/x-catalog-sync.ts",
     "coverage": "bun ../../../scripts/tools/web/x-coverage.ts"
@@ -57,6 +57,6 @@
     "bun": ">=1.4.4"
   },
   "devDependencies": {
-    "@types/bun": "npm:@aphrody/bun-types@1.4.4"
+    "@aphrody/bun-types": "workspace:*"
   }
 }
