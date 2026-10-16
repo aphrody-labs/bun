@@ -1,3 +1,0 @@
-target_cpu="x64"
-ozone_platform_x11=true
-v8_enable_sandbox=true

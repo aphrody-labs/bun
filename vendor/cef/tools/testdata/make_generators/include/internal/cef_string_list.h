@@ -1,1 +1,0 @@
-// Auxiliary exported-header fixture.

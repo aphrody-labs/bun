@@ -162,7 +162,7 @@ export function validate(layoutValue = layout()): string[] {
   const errors: string[] = [];
   if (!existsSync(layoutValue.chromiumSource)) errors.push(`Chromium source absent: ${layoutValue.chromiumSource}`);
   if (!existsSync(join(layoutValue.chromiumSource, ".gn"))) errors.push("Chromium source non configuré (.gn absent)");
-  if (!existsSync(join(layoutValue.cefSource, "BUILD.gn"))) errors.push("CEF source absent");
+  if (!existsSync(join(layoutValue.cefSource, "BUILD.gn"))) errors.push("CEF source absent: bun run vendor:setup cef");
   if (!existsSync(layoutValue.distribution)) errors.push(`Distribution CEF absente: ${layoutValue.distribution}`);
   if (!existsSync(join(layoutValue.distribution, layoutValue.marker)))
     errors.push(`Fichier CEF absent: ${join(layoutValue.distribution, layoutValue.marker)}`);

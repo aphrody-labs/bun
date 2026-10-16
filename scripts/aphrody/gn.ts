@@ -266,7 +266,7 @@ async function bootstrap(options: Options) {
 }
 
 async function bootstrapOwned(options: Options) {
-  if (!existsSync(join(SOURCE, "build", "gen.py"))) throw new Error("Pinned vendor/gn sources are missing");
+  if (!existsSync(join(SOURCE, "build", "gen.py"))) throw new Error("Pinned vendor/gn sources are missing: run `bun run vendor:setup gn`");
   const receipt = await verifyGN();
   if (typeof receipt.position !== "string" || !/^\d+ \([0-9a-f]{12,40}\)$/.test(receipt.position)) {
     throw new Error("GN vendor receipt has an invalid commit position");

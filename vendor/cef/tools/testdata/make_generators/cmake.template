@@ -1,6 +1,0 @@
-cmake_minimum_required(VERSION 3.10)
-{{
-  'prefix': 'fixture',
-  'library': 'fixture_library',
-  'includes': ['fixture_common', 'fixture_win:WINDOWS'],
-}}
