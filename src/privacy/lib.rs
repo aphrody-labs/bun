@@ -12,13 +12,41 @@
 extern crate alloc;
 
 // Absorbed upstream modules keep their original item visibility and helpers.
-#[allow(dead_code, deprecated, unreachable_pub, clippy::all)]
+#[allow(
+    dead_code,
+    deprecated,
+    unreachable_pub,
+    clippy::all,
+    clippy::pedantic,
+    clippy::nursery
+)]
 mod ppoprf;
-#[allow(dead_code, deprecated, unreachable_pub, clippy::all)]
+#[allow(
+    dead_code,
+    deprecated,
+    unreachable_pub,
+    clippy::all,
+    clippy::pedantic,
+    clippy::nursery
+)]
 mod privacy_pass;
-#[allow(dead_code, deprecated, unreachable_pub, clippy::all)]
+#[allow(
+    dead_code,
+    deprecated,
+    unreachable_pub,
+    clippy::all,
+    clippy::pedantic,
+    clippy::nursery
+)]
 mod star;
-#[allow(dead_code, deprecated, unreachable_pub, clippy::all)]
+#[allow(
+    dead_code,
+    deprecated,
+    unreachable_pub,
+    clippy::all,
+    clippy::pedantic,
+    clippy::nursery
+)]
 mod strobe_rng;
 
 mod opaque;
@@ -81,7 +109,8 @@ fn star_encode(args: &[&[u8]]) -> Result<Output, String> {
     if threshold < 2 {
         return Err("threshold must be at least 2".into());
     }
-    let generator = MessageGenerator::new(SingleMeasurement::new(measurement), threshold, arg(args, 2));
+    let generator =
+        MessageGenerator::new(SingleMeasurement::new(measurement), threshold, arg(args, 2));
     let aux = arg(args, 3);
     let randomness = arg(args, 4);
     let mut rnd = [0u8; 32];
@@ -92,7 +121,8 @@ fn star_encode(args: &[&[u8]]) -> Result<Output, String> {
     }
     let aux = (!aux.is_empty()).then(|| AssociatedData::new(aux));
     let message = Message::generate(&generator, &rnd, aux).map_err(|e| format!("STAR: {e}"))?;
-    Ok(Output::List(vec![message.to_bytes(), message.tag.clone()]))
+    let bytes = message.to_bytes();
+    Ok(Output::List(vec![bytes, message.tag]))
 }
 
 fn star_parse(args: &[&[u8]]) -> Result<Output, String> {
@@ -100,7 +130,7 @@ fn star_parse(args: &[&[u8]]) -> Result<Output, String> {
     Ok(Output::List(vec![
         message.ciphertext.to_bytes(),
         message.share.to_bytes(),
-        message.tag.clone(),
+        message.tag,
     ]))
 }
 
@@ -174,18 +204,28 @@ fn randomness(op: &str, args: &[&[u8]]) -> Result<Output, String> {
             ))
         }
         "verify" => {
-            let key = ServerPublicKey::from_bytes(arg(args, 0)).ok_or("malformed server public key")?;
+            let key =
+                ServerPublicKey::from_bytes(arg(args, 0)).ok_or("malformed server public key")?;
             let blinded = point(arg(args, 1), "blinded point")?;
             let output = point(arg(args, 2), "evaluated point")?;
-            let proof = ProofDLEQ::from_bytes(arg(args, 3)).ok_or("proof must be 64 canonical bytes")?;
+            let proof =
+                ProofDLEQ::from_bytes(arg(args, 3)).ok_or("proof must be 64 canonical bytes")?;
             let epoch = u8_arg(args, 4, "epoch")?;
-            let eval = Evaluation { output, proof: Some(proof) };
+            let eval = Evaluation {
+                output,
+                proof: Some(proof),
+            };
             Ok(Output::Bool(Client::verify(&key, &blinded, &eval, epoch)))
         }
         "finalize" => {
             let unblinded = point(arg(args, 2), "unblinded point")?;
             let mut out = [0u8; 32];
-            Client::finalize(arg(args, 0), u8_arg(args, 1, "epoch")?, &unblinded, &mut out);
+            Client::finalize(
+                arg(args, 0),
+                u8_arg(args, 1, "epoch")?,
+                &unblinded,
+                &mut out,
+            );
             Ok(Output::Bytes(out.to_vec()))
         }
         _ => Err(format!("unknown randomness operation {op}")),
@@ -216,7 +256,12 @@ fn privacy_pass(op: &str, args: &[&[u8]]) -> Result<Output, String> {
             let signature = preimage.split_off(64);
             Output::List(vec![preimage, signature])
         }
-        "verify" => Output::Bool(pp::verify(arg(args, 0), arg(args, 1), arg(args, 2), arg(args, 3))?),
+        "verify" => Output::Bool(pp::verify(
+            arg(args, 0),
+            arg(args, 1),
+            arg(args, 2),
+            arg(args, 3),
+        )?),
         _ => return Err(format!("unknown Privacy Pass operation {op}")),
     })
 }
@@ -226,9 +271,11 @@ fn opaque_call(op: &str, a: &[&[u8]]) -> Result<Output, String> {
     Ok(match op {
         "serverSetup" => Output::Bytes(o::server_setup()),
         "clientRegistrationStart" => Output::List(o::client_registration_start(arg(a, 0))?),
-        "serverRegistrationStart" => {
-            Output::Bytes(o::server_registration_start(arg(a, 0), arg(a, 1), arg(a, 2))?)
-        }
+        "serverRegistrationStart" => Output::Bytes(o::server_registration_start(
+            arg(a, 0),
+            arg(a, 1),
+            arg(a, 2),
+        )?),
         "clientRegistrationFinish" => Output::List(o::client_registration_finish(
             arg(a, 0),
             arg(a, 1),
@@ -261,24 +308,29 @@ fn opaque_call(op: &str, a: &[&[u8]]) -> Result<Output, String> {
 /// Runs `group.operation` (for example `star.encode`) over byte arguments.
 /// Missing arguments read as empty; integers are little-endian.
 pub fn call(op: &str, args: &[&[u8]]) -> Result<Output, String> {
-    let (group, name) = op.split_once('.').ok_or("operation must be group.name")?;
-    match group {
-        "star" => match name {
+    if let Some(name) = op.strip_prefix("star.") {
+        return match name {
             "encode" => star_encode(args),
             "parse" => star_parse(args),
             "recover" => star_recover(args),
             _ => Err(format!("unknown STAR operation {name}")),
-        },
-        "randomness" => randomness(name, args),
-        "privacyPass" => privacy_pass(name, args),
-        "opaque" => opaque_call(name, args),
-        _ => Err(format!("unknown privacy operation group {group}")),
+        };
     }
+    if let Some(name) = op.strip_prefix("randomness.") {
+        return randomness(name, args);
+    }
+    if let Some(name) = op.strip_prefix("privacyPass.") {
+        return privacy_pass(name, args);
+    }
+    if let Some(name) = op.strip_prefix("opaque.") {
+        return opaque_call(name, args);
+    }
+    Err(format!("unknown privacy operation {op}"))
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{call, Output};
+    use super::{Output, call};
 
     fn list(output: Output) -> Vec<Vec<u8>> {
         match output {
@@ -312,7 +364,10 @@ mod tests {
         assert!(tags.iter().all(|t| t == &tags[0]));
         assert!(call("star.recover", &[&threshold, b"t", &frame(&messages[..2])]).is_err());
         let out = list(call("star.recover", &[&threshold, b"t", &frame(&messages)]).unwrap());
-        assert_eq!(out, vec![b"hello world".to_vec(), vec![1], vec![2], vec![3]]);
+        assert_eq!(
+            out,
+            vec![b"hello world".to_vec(), vec![1], vec![2], vec![3]]
+        );
     }
 
     #[test]
@@ -325,27 +380,50 @@ mod tests {
         let output = eval.output.as_bytes().to_vec();
         let proof = eval.proof.as_ref().unwrap().to_bytes();
         let key = server.get_public_key().to_bytes();
-        let verified = call("randomness.verify", &[&key, &blinded[0], &output, &proof, &[1]]).unwrap();
+        let verified = call(
+            "randomness.verify",
+            &[&key, &blinded[0], &output, &proof, &[1]],
+        )
+        .unwrap();
         assert!(matches!(verified, Output::Bool(true)));
-        let wrong = call("randomness.verify", &[&key, &blinded[0], &output, &proof, &[0]]).unwrap();
+        let wrong = call(
+            "randomness.verify",
+            &[&key, &blinded[0], &output, &proof, &[0]],
+        )
+        .unwrap();
         assert!(matches!(wrong, Output::Bool(false)));
-        let Output::Bytes(unblinded) = call("randomness.unblind", &[&output, &blinded[1]]).unwrap() else {
+        let Output::Bytes(unblinded) = call("randomness.unblind", &[&output, &blinded[1]]).unwrap()
+        else {
             panic!()
         };
-        let Output::Bytes(rnd) = call("randomness.finalize", &[input, &[1], &unblinded]).unwrap() else {
+        let Output::Bytes(rnd) = call("randomness.finalize", &[input, &[1], &unblinded]).unwrap()
+        else {
             panic!()
         };
         let mut expected = [0u8; 32];
-        let direct = server.eval(&Point::from(&blinded[0][..]), 1, false).unwrap();
+        let direct = server
+            .eval(&Point::from(&blinded[0][..]), 1, false)
+            .unwrap();
         let blind_scalar: [u8; 32] = blinded[1].clone().try_into().unwrap();
         let r = super::ppoprf::ppoprf::CurveScalar::from(blind_scalar);
-        Client::finalize(input, 1, &Client::unblind(&direct.output, &r), &mut expected);
+        Client::finalize(
+            input,
+            1,
+            &Client::unblind(&direct.output, &r),
+            &mut expected,
+        );
         assert_eq!(rnd, expected);
         let threshold = 2u32.to_le_bytes();
         let a = list(call("star.encode", &[input, &threshold, b"e", b"", &rnd]).unwrap());
         let b = list(call("star.encode", &[input, &threshold, b"e", b"", &rnd]).unwrap());
         assert_eq!(a[1], b[1]);
-        let out = list(call("star.recover", &[&threshold, b"e", &frame(&[a[0].clone(), b[0].clone()])]).unwrap());
+        let out = list(
+            call(
+                "star.recover",
+                &[&threshold, b"e", &frame(&[a[0].clone(), b[0].clone()])],
+            )
+            .unwrap(),
+        );
         assert_eq!(out[0], input);
     }
 }

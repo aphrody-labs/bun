@@ -26,4 +26,3 @@ macro_rules! impl_base64 {
         }
     };
 }
-

@@ -23,35 +23,35 @@ pub(crate) mod ppoprf;
 
 #[derive(Debug)]
 pub enum PPRFError {
-  BadTag { md: u8 },
-  NoPrefixFound,
-  AlreadyPunctured,
-  BadInputLength { actual: usize, expected: usize },
-  UnexpectedEndOfBv,
-  SerializedDataTooBig,
-  BadPointEncoding,
+    BadTag { md: u8 },
+    NoPrefixFound,
+    AlreadyPunctured,
+    BadInputLength { actual: usize, expected: usize },
+    UnexpectedEndOfBv,
+    SerializedDataTooBig,
+    BadPointEncoding,
 }
 
 impl std::fmt::Display for PPRFError {
-  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    match self {
-      Self::BadTag { md } => write!(f, "Specified tag ({md}) is not a valid metadata tag"),
-      Self::NoPrefixFound => f.write_str("No prefix found"),
-      Self::AlreadyPunctured => f.write_str("Tag already punctured"),
-      Self::BadInputLength { actual, expected } => write!(
-        f,
-        "Input length ({actual}) does not match input param ({expected})"
-      ),
-      Self::UnexpectedEndOfBv => f.write_str("Unexpected end of bv"),
-      Self::SerializedDataTooBig => f.write_str("Serialized data exceeds size limit"),
-      Self::BadPointEncoding => f.write_str("Bad compressed ristretto point encoding"),
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::BadTag { md } => write!(f, "Specified tag ({md}) is not a valid metadata tag"),
+            Self::NoPrefixFound => f.write_str("No prefix found"),
+            Self::AlreadyPunctured => f.write_str("Tag already punctured"),
+            Self::BadInputLength { actual, expected } => write!(
+                f,
+                "Input length ({actual}) does not match input param ({expected})"
+            ),
+            Self::UnexpectedEndOfBv => f.write_str("Unexpected end of bv"),
+            Self::SerializedDataTooBig => f.write_str("Serialized data exceeds size limit"),
+            Self::BadPointEncoding => f.write_str("Bad compressed ristretto point encoding"),
+        }
     }
-  }
 }
 impl std::error::Error for PPRFError {}
 
 pub trait PPRF {
-  fn setup() -> Self;
-  fn eval(&self, input: &[u8], output: &mut [u8]) -> Result<(), PPRFError>;
-  fn puncture(&mut self, input: &[u8]) -> Result<(), PPRFError>;
+    fn setup() -> Self;
+    fn eval(&self, input: &[u8], output: &mut [u8]) -> Result<(), PPRFError>;
+    fn puncture(&mut self, input: &[u8]) -> Result<(), PPRFError>;
 }

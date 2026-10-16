@@ -18,9 +18,9 @@ use sha2::Sha512;
 
 pub(crate) use dleq::BatchDLEQProof;
 pub(crate) use oprf::{
-    BlindedToken, PublicKey, SignedToken, SigningKey, Token, TokenPreimage, UnblindedToken,
-    VerificationSignature, BLINDED_TOKEN_LENGTH, SIGNED_TOKEN_LENGTH, TOKEN_LENGTH,
-    UNBLINDED_TOKEN_LENGTH,
+    BLINDED_TOKEN_LENGTH, BlindedToken, PublicKey, SIGNED_TOKEN_LENGTH, SignedToken, SigningKey,
+    TOKEN_LENGTH, Token, TokenPreimage, UNBLINDED_TOKEN_LENGTH, UnblindedToken,
+    VerificationSignature,
 };
 
 type HmacSha512 = Hmac<Sha512>;
@@ -40,7 +40,10 @@ fn chunks<T>(
             "Privacy Pass: {name} must be a multiple of {size} bytes"
         ));
     }
-    bytes.chunks_exact(size).map(|c| parse(c).map_err(err)).collect()
+    bytes
+        .chunks_exact(size)
+        .map(|c| parse(c).map_err(err))
+        .collect()
 }
 
 pub(crate) fn token() -> Vec<u8> {
@@ -78,8 +81,8 @@ pub(crate) fn sign(signing_key: &[u8], blinded: &[u8]) -> Result<Vec<u8>, String
         .iter()
         .map(|token| key.sign(token).map_err(err))
         .collect::<Result<Vec<_>, _>>()?;
-    let proof = BatchDLEQProof::new::<Sha512, _>(&mut OsRng, &blinded, &signed, &key)
-        .map_err(err)?;
+    let proof =
+        BatchDLEQProof::new::<Sha512, _>(&mut OsRng, &blinded, &signed, &key).map_err(err)?;
     let mut out = Vec::with_capacity(signed.len() * SIGNED_TOKEN_LENGTH + 64);
     for token in &signed {
         out.extend_from_slice(&token.to_bytes());

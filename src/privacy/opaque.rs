@@ -15,8 +15,8 @@ use opaque_ke::rand::rngs::OsRng;
 use opaque_ke::{
     ClientLogin, ClientLoginFinishParameters, ClientRegistration,
     ClientRegistrationFinishParameters, CredentialFinalization, CredentialRequest,
-    CredentialResponse, Identifiers, RegistrationRequest, RegistrationResponse,
-    RegistrationUpload, ServerLogin, ServerLoginStartParameters, ServerRegistration, ServerSetup,
+    CredentialResponse, Identifiers, RegistrationRequest, RegistrationResponse, RegistrationUpload,
+    ServerLogin, ServerLoginStartParameters, ServerRegistration, ServerSetup,
 };
 
 pub(crate) struct Suite;
@@ -81,7 +81,8 @@ pub(crate) fn client_registration_finish(
     client_id: &[u8],
     server_id: &[u8],
 ) -> Result<Vec<Vec<u8>>, String> {
-    let state = ClientRegistration::<Suite>::deserialize(state).map_err(err("registration state"))?;
+    let state =
+        ClientRegistration::<Suite>::deserialize(state).map_err(err("registration state"))?;
     let response = RegistrationResponse::<Suite>::deserialize(response)
         .map_err(err("registration response"))?;
     let result = state
@@ -103,13 +104,14 @@ pub(crate) fn client_registration_finish(
 pub(crate) fn server_registration_finish(upload: &[u8]) -> Result<Vec<u8>, String> {
     let upload =
         RegistrationUpload::<Suite>::deserialize(upload).map_err(err("registration upload"))?;
-    Ok(ServerRegistration::<Suite>::finish(upload).serialize().to_vec())
+    Ok(ServerRegistration::<Suite>::finish(upload)
+        .serialize()
+        .to_vec())
 }
 
 /// Returns `[state, request]`.
 pub(crate) fn client_login_start(password: &[u8]) -> Result<Vec<Vec<u8>>, String> {
-    let result =
-        ClientLogin::<Suite>::start(&mut OsRng, password).map_err(err("login start"))?;
+    let result = ClientLogin::<Suite>::start(&mut OsRng, password).map_err(err("login start"))?;
     Ok(vec![
         result.state.serialize().to_vec(),
         result.message.serialize().to_vec(),
@@ -129,7 +131,10 @@ pub(crate) fn server_login_start(
     let password_file = if password_file.is_empty() {
         None
     } else {
-        Some(ServerRegistration::<Suite>::deserialize(password_file).map_err(err("password file"))?)
+        Some(
+            ServerRegistration::<Suite>::deserialize(password_file)
+                .map_err(err("password file"))?,
+        )
     };
     let request =
         CredentialRequest::<Suite>::deserialize(request).map_err(err("credential request"))?;
@@ -190,14 +195,18 @@ mod tests {
     use super::*;
 
     fn register(setup: &[u8], password: &[u8]) -> Vec<u8> {
-        let [state, request] = <[Vec<u8>; 2]>::try_from(client_registration_start(password).unwrap()).unwrap();
+        let [state, request] =
+            <[Vec<u8>; 2]>::try_from(client_registration_start(password).unwrap()).unwrap();
         let response = server_registration_start(setup, &request, b"alice").unwrap();
-        let finish = client_registration_finish(&state, password, &response, b"alice@example.com", b"").unwrap();
+        let finish =
+            client_registration_finish(&state, password, &response, b"alice@example.com", b"")
+                .unwrap();
         server_registration_finish(&finish[0]).unwrap()
     }
 
     fn login(setup: &[u8], file: &[u8], password: &[u8]) -> Result<(Vec<u8>, Vec<u8>), String> {
-        let [cstate, request] = <[Vec<u8>; 2]>::try_from(client_login_start(password).unwrap()).unwrap();
+        let [cstate, request] =
+            <[Vec<u8>; 2]>::try_from(client_login_start(password).unwrap()).unwrap();
         let [sstate, response] = <[Vec<u8>; 2]>::try_from(
             server_login_start(setup, file, &request, b"alice", b"alice@example.com", b"").unwrap(),
         )
