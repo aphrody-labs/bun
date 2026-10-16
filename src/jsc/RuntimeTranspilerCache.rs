@@ -66,7 +66,8 @@ bun_core::declare_scope!(cache, visible);
 /// Version 34: An import that a plugin `onResolve` answers is printed as it is written.
 /// Version 35: Raw template literals retain UTF-8 and the output encoding reflects it.
 /// Version 36: New builtin modules invalidate cached imports with old namespace resolution.
-const EXPECTED_VERSION: u32 = 36;
+/// Version 37: Long hexadecimal, octal and binary literals are rounded to the nearest double.
+const EXPECTED_VERSION: u32 = 37;
 
 /// Source files smaller than this are not written to / read from the on-disk
 /// transpiler cache. Originally 50 KiB, which excluded almost every file in a

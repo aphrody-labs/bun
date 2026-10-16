@@ -9,8 +9,6 @@ pub enum HardcodedModule {
     Bun,
     #[strum(serialize = "abort-controller")]
     AbortController,
-    #[strum(serialize = "bun:app")]
-    BunApp,
     #[strum(serialize = "bun:cosmic")]
     BunCosmic,
     #[strum(serialize = "bun:chromium")]
@@ -263,7 +261,6 @@ bun_core::comptime_string_map! {
     pub static HARDCODED_MODULE_MAP: HardcodedModule = {
         // Bun
         b"bun" => HardcodedModule::Bun,
-        b"bun:app" => HardcodedModule::BunApp,
         b"bun:cosmic" => HardcodedModule::BunCosmic,
         b"bun:chromium" => HardcodedModule::BunChromium,
         b"bun:google" => HardcodedModule::BunGoogle,
@@ -794,7 +791,6 @@ const BUN_EXTRA_ALIAS_KVS: &[AliasKv] = &[
         },
     ),
     entry!("bun:test"),
-    entry!("bun:app"),
     entry!("bun:cosmic"),
     entry!("bun:chromium"),
     (

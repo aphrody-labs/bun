@@ -1,6 +1,9 @@
 // Aphrody fork: a compiled executable linked as `bun` is the engine (one `yolo` file, aliases bun and vu by argv0).
 import { describe, expect, test } from "bun:test";
-import { bunExe, tempDir } from "harness";
+import { bunExe, isDebug, tempDir } from "harness";
+
+// `bun build --compile` copies the whole executable, which takes seconds for a debug build.
+const compileTimeout = isDebug ? 60_000 : 5_000;
 import { symlinkSync } from "node:fs";
 import { join } from "node:path";
 
@@ -38,7 +41,7 @@ describe.skipIf(process.platform === "win32")("compiled executable argv0 aliases
     symlinkSync("yolo", join(String(dir), "node"));
     const asNode = Bun.spawnSync([join(String(dir), "node"), "-e", 'console.log("engine")']);
     expect(asNode.stdout.toString().trim()).toBe("engine");
-  });
+  }, compileTimeout);
 
   test("BUN_BE_BUN=1 keeps working under the original name", () => {
     using dir = tempDir("argv0-be-bun", { "main.ts": 'console.log("payload");\n' });
@@ -48,5 +51,5 @@ describe.skipIf(process.platform === "win32")("compiled executable argv0 aliases
     ).toBe(0);
     const r = Bun.spawnSync({ cmd: [exe, "-e", 'console.log("engine")'], env: { ...process.env, BUN_BE_BUN: "1" } });
     expect(r.stdout.toString().trim()).toBe("engine");
-  });
+  }, compileTimeout);
 });

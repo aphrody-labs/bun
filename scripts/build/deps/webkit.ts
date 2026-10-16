@@ -3,7 +3,7 @@
  * for local mode. Override via `--webkit-version=<hash>` to test a branch.
  * From https://github.com/oven-sh/WebKit releases.
  */
-export const WEBKIT_VERSION = "3d3257150c40a1aabdc5f8b48d5b33d0413674cb";
+export const WEBKIT_VERSION = "b1e30d08cb1428688c5f24109fe4f534096ee2ad";
 
 /** Upstream prebuilt releases; the default source. */
 export const WEBKIT_UPSTREAM_REPO = "oven-sh/WebKit";
@@ -69,7 +69,8 @@ export const APHRODY_WEBKIT_PREBUILTS: Readonly<Record<string, readonly string[]
  *
  * **prebuilt**: Download tarball from oven-sh/WebKit releases (or from
  *   aphrody-labs/WebKit, see `webkitPrebuiltRepo` / `$BUN_WEBKIT_REPO`). Tarball name
- *   encodes {os, arch, musl, debug|lto, asan} — each is a separate ABI.
+ *   encodes {os, arch, musl, debug|lto, asan, assertions} — each is a separate
+ *   ABI — and coverage.
  *   ASAN MUST match bun's setting: WTF::Vector layout changes with ASAN
  *   (see WTF/Vector.h:682), so mixing → silent memory corruption.
  *
@@ -120,6 +121,13 @@ function prebuiltSuffix(cfg: Config): string {
   if (cfg.debug) s += "-debug";
   else if (cfg.lto) s += "-lto";
   if (cfg.asan) s += "-asan";
+  // Built for fuzzing, for this target only (`FUZZING` in oven-sh/WebKit's
+  // .github/scripts/lanes.mjs). Every other combination gets a JSC without
+  // assertions (unless debug or asan) and without coverage.
+  if (cfg.linux && cfg.x64 && cfg.abi === "gnu" && cfg.release && !cfg.lto && !cfg.asan) {
+    if (cfg.assertions) s += "-assertions";
+    if (cfg.fuzzilli) s += "-coverage";
+  }
   return s;
 }
 
@@ -435,6 +443,8 @@ export const webkit: Dependency = {
       // Bun's C++ is compiled with ASSERT_ENABLED=1 when cfg.assertions (release-asan,
       // release-assertions); WebKit must match or ASSERT-only symbols fail to link.
       ...(cfg.assertions && cfg.release ? { ENABLE_ASSERTS: "ON" } : {}),
+      // JSC compiled with the coverage flag bun's own C++ gets (flags.ts); FuzzilliREPRL.cpp has the callbacks.
+      ...(cfg.fuzzilli ? { ENABLE_FUZZILLI: "ON" } : {}),
     };
 
     const spec: NestedCmakeBuild = {

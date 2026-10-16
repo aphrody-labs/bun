@@ -232,6 +232,7 @@ pub enum FailReason {
     InterpreterNotFound,
     InterpreterNotFoundBun,
     ElevationRequired,
+    BatchFileArgument,
 }
 
 impl FailReason {
@@ -252,6 +253,9 @@ impl FailReason {
             FailReason::BinNotFound => "bin executable does not exist on disk",
             FailReason::ElevationRequired => "process requires elevation",
             FailReason::CreateProcessFailed => "could not create process",
+            FailReason::BatchFileArgument => {
+                "cannot pass an argument containing % & | < > ^ to a .cmd or .bat file"
+            }
 
             FailReason::CouldNotDirectLaunch => {
                 if !IS_STANDALONE {
@@ -327,6 +331,9 @@ impl core::fmt::Display for FailReason {
                 "    powershell -c \"irm bun.sh/install.ps1|iex\"\n",
                 "\n",
             ),
+            FailReason::BatchFileArgument => {
+                "cmd.exe runs the file and would read the character as a command or a variable.\n\n"
+            }
             _ => concat!(
                 "Bun failed to remap this bin to its proper location within node_modules.\n",
                 "This is an indication of a corrupted node_modules directory.\n",
@@ -751,7 +758,6 @@ fn launcher<const MODE: LauncherMode, Ctx: BunCtx>(bun_ctx: &Ctx) -> LauncherRet
             break 'find_args (&cmd_line_u16[0..0], &cmd_line_u8[0..0]);
         }
     };
-    let _ = user_arguments_u16; // only read under DBG
 
     if DBG {
         // Raw dump of the UTF-16-LE arg tail. Display via `fmt16` on the
@@ -937,17 +943,20 @@ fn launcher<const MODE: LauncherMode, Ctx: BunCtx>(bun_ctx: &Ctx) -> LauncherRet
         );
     }
 
-    // Reject incomplete, oversized or odd byte counts before interpreting u16 flags.
-    // A successful read then ends in initialized bytes written by NtReadFile.
-    // END_OF_FILE uses the full buffer length and lands on buf1[BUF1_LEN-1],
-    // zeroed in that arm above; its version tag is rejected by is_valid().
-    if read_len < size_of::<Flags>() || read_len > read_max_len || !read_len.is_multiple_of(2) {
-        if !IS_STANDALONE && MODE == LauncherMode::Launch {
-            return LauncherRet::LaunchFellThrough;
-        }
-        return LauncherMode::fail(MODE, FailReason::InvalidShimBounds);
-    }
-    read_ptr = read_ptr.wrapping_add(read_len / 2).wrapping_sub(1);
+    let metadata_ptr: *mut u16 = read_ptr;
+
+    // All three `read_len` outcomes land on initialized memory:
+    //   - SUCCESS, read_len >= 2  → inside the bytes NtReadFile just wrote.
+    //   - SUCCESS, read_len < 2   → moves *backward* into the image-path prefix we
+    //                               copied into buf1 above (initialized, junk-as-flags).
+    //   - END_OF_FILE             → lands on buf1[BUF1_LEN-1], zeroed in that arm above.
+    // The latter two yield a Flags value whose version_tag ≠ CURRENT, so `is_valid()`
+    // rejects them.
+    read_ptr = read_ptr
+        .cast::<u8>()
+        .wrapping_add(read_len)
+        .wrapping_sub(size_of::<Flags>())
+        .cast::<u16>();
     // SAFETY: per the case analysis above, read_ptr is within buf1 and the 2 bytes
     // there are initialized. `Flags` is `#[repr(transparent)]` over `u16`, so the
     // type-pun half is done via the safe `from_bits` accessor; only the raw read
@@ -962,6 +971,7 @@ fn launcher<const MODE: LauncherMode, Ctx: BunCtx>(bun_ctx: &Ctx) -> LauncherRet
         debug!("    is_node_or_bun: {}", flags.is_node_or_bun());
         debug!("    is_node: {}", flags.is_node());
         debug!("    has_shebang: {}", flags.has_shebang());
+        debug!("    is_absolute_target: {}", flags.is_absolute_target());
         debug!("    version_tag: {}", flags.version_tag().bits());
     }
 
@@ -974,6 +984,15 @@ fn launcher<const MODE: LauncherMode, Ctx: BunCtx>(bun_ctx: &Ctx) -> LauncherRet
 
         return LauncherMode::fail(MODE, FailReason::InvalidShimValidation);
     }
+
+    // An absolute bin path starts where it was read. The u16 before either start is a spare `\`.
+    let bin_path_start: *mut u16 = if flags.is_absolute_target() {
+        metadata_ptr
+    } else {
+        // SAFETY: NT_OBJECT_PREFIX was written at the start of buf1 above.
+        unsafe { buf1_u16.add(NT_OBJECT_PREFIX.len()) }
+    };
+    debug_assert!(unsafe { *bin_path_start.sub(1) } == '\\' as u16);
 
     let mut spawn_command_line: *mut u16 = if !flags.has_shebang() {
         'spawn_command_line: {
@@ -988,12 +1007,13 @@ fn launcher<const MODE: LauncherMode, Ctx: BunCtx>(bun_ctx: &Ctx) -> LauncherRet
             //                                                                  ^^ flags
             //                                                         zero char|
 
-            // change the \ from '\??\' to '""
+            // change the \ before the path (the one from '\??\' here) to '"'
             // the ending quote is assumed to already exist as per the format
             // BUF1: '\??"C:\Users\chloe\project\node_modules\my-cli\src\app.js"##!!!!!!!!!!'
-            //           ^
-            // SAFETY: index 3 is within buf1.
-            unsafe { *buf1_u16.add(3) = '"' as u16 };
+            //           ^ opening_quote_ptr
+            // SAFETY: the u16 before bin_path_start is inside buf1 (see where it is computed).
+            let opening_quote_ptr: *mut u16 = unsafe { bin_path_start.sub(1) };
+            unsafe { *opening_quote_ptr = '"' as u16 };
 
             // Copy user arguments in, overwriting old data. Remember that we ensured the arguments
             // this started with a space.
@@ -1033,10 +1053,7 @@ fn launcher<const MODE: LauncherMode, Ctx: BunCtx>(bun_ctx: &Ctx) -> LauncherRet
                     .write_unaligned(0);
             }
 
-            // SAFETY: buf1_u8 + 2*(4-1) is 2-byte-aligned (buf1 is u16-aligned, offset is even).
-            break 'spawn_command_line unsafe {
-                buf1_u16.add(NT_OBJECT_PREFIX.len() - 1 /* "\"".len */)
-            };
+            break 'spawn_command_line opening_quote_ptr;
         }
     } else {
         'spawn_command_line: {
@@ -1112,18 +1129,15 @@ fn launcher<const MODE: LauncherMode, Ctx: BunCtx>(bun_ctx: &Ctx) -> LauncherRet
                 }
                 // BUF1: '\??\C:\Users\chloe\project\node_modules\my-cli\src\app.js"#node #####!!!!!!!!!!'
                 //            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^  ^ read_ptr
-                let len = ((read_ptr as usize) - (buf1_u8 as usize) - shebang_arg_len_u8 as usize)
+                //            ^ bin_path_start
+                let len = ((read_ptr as usize)
+                    - shebang_arg_len_u8 as usize
+                    - (bin_path_start as usize))
                     / 2
-                    - NT_OBJECT_PREFIX.len()
                     - 2 /* "\"\x00".len */;
-                // SAFETY: buf1_u16 + 4 .. + 4 + len is within buf1; the next char is '"' (the metadata format places '"' after the bin path).
-                let launch_slice =
-                    unsafe { bun_core::ffi::slice_mut(buf1_u16.add(NT_OBJECT_PREFIX.len()), len) };
-                debug_assert_eq!(
-                    // SAFETY: The validated UTF-16 filename length places this initialized closing quote within buf1.
-                    unsafe { *buf1_u16.add(NT_OBJECT_PREFIX.len() + len) },
-                    '"' as u16
-                );
+                // SAFETY: bin_path_start .. + len is within buf1; the next char is '"' (the metadata format places '"' after the bin path).
+                let launch_slice = unsafe { bun_core::ffi::slice_mut(bin_path_start, len) };
+                debug_assert_eq!(unsafe { *bin_path_start.add(len) }, '"' as u16);
                 bun_ctx.direct_launch_with_bun_js(launch_slice);
                 return LauncherMode::fail(MODE, FailReason::CouldNotDirectLaunch);
             }
@@ -1142,9 +1156,9 @@ fn launcher<const MODE: LauncherMode, Ctx: BunCtx>(bun_ctx: &Ctx) -> LauncherRet
             //
             // BUF1: '\??\C:\Users\chloe\project\node_modules\my-cli\src\app.js"#node #####!!!!!!!!!!'
             //            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^ ^ read_ptr
-            let length_of_filename_u8 = (read_ptr as usize)
-                - (buf1_u8 as usize)
-                - 2 * (NT_OBJECT_PREFIX.len() + 1/* "\x00".len */);
+            //            ^ bin_path_start
+            let length_of_filename_u8 =
+                (read_ptr as usize) - (bin_path_start as usize) - 2 * 1 /* "\x00".len */;
             if shebang_arg_len_u8 as usize
                 + 2 /* "\"".len */
                 + length_of_filename_u8
@@ -1176,18 +1190,12 @@ fn launcher<const MODE: LauncherMode, Ctx: BunCtx>(bun_ctx: &Ctx) -> LauncherRet
             // Copy the filename in. There is no leading " but there is a trailing "
             // BUF1: '\??\C:\Users\chloe\project\node_modules\my-cli\src\app.js"#node #####!!!!!!!!!!'
             //            ^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^ ^ read_ptr
+            //            ^ bin_path_start
             // BUF2: 'node "C:\Users\chloe\project\node_modules\my-cli\src\app.js"!!!!!!!!!!!!!!!!!!!!'
             // SAFETY: slice within buf1.
-            let filename: &[u8] = unsafe {
-                bun_core::ffi::slice(
-                    buf1_u8.add(2 * NT_OBJECT_PREFIX.len()),
-                    length_of_filename_u8,
-                )
-            };
-            // `filename` is a UTF-16 byte view: its base is `buf1_u8 + 2*NT_OBJECT_PREFIX.len()`
-            // (even offset from a `*mut u16`-derived pointer ⇒ 2-aligned) and its length is the
-            // difference of two `*mut u16`-derived addresses minus an even constant ⇒ even.
-            // `bytemuck::cast_slice` checks both invariants at runtime, so no `unsafe` needed.
+            let filename: &[u8] =
+                unsafe { bun_core::ffi::slice(bin_path_start.cast::<u8>(), length_of_filename_u8) };
+            // The base is a `*mut u16` and the length is even; `cast_slice` checks both at runtime.
             let filename_u16: &[u16] = bytemuck::cast_slice(filename);
             if DBG {
                 debug!("filename and quote: '{}'", fmt16(filename_u16));
@@ -1205,6 +1213,15 @@ fn launcher<const MODE: LauncherMode, Ctx: BunCtx>(bun_ctx: &Ctx) -> LauncherRet
                     return LauncherRet::LaunchFellThrough;
                 }
                 return LauncherMode::fail(MODE, FailReason::InvalidShimValidation);
+            }
+
+            // These run under `cmd /c`, which parses the line again: quoting protects no argument.
+            if is_batch_file(filename_u16)
+                && user_arguments_u16
+                    .iter()
+                    .any(|&unit| is_cmd_special_character(unit))
+            {
+                return LauncherMode::fail(MODE, FailReason::BatchFileArgument);
             }
 
             // SAFETY: buf2 has room for shebang_arg_len_u8 + 2 + length_of_filename_u8 bytes.
@@ -1765,6 +1782,22 @@ pub(crate) fn main() -> ! {
 }
 
 // ───── helpers ─────
+
+/// `.cmd"` or `.bat"` at the end, in any spelling, as Windows takes them.
+fn is_batch_file(filename_and_quote: &[u16]) -> bool {
+    filename_and_quote.last_chunk::<5>().is_some_and(|end| {
+        [b".cmd\"", b".bat\""].iter().any(|batch| {
+            (end.iter().zip(batch.iter()))
+                .all(|(&unit, byte)| u8::try_from(unit).is_ok_and(|c| c.eq_ignore_ascii_case(byte)))
+        })
+    })
+}
+
+/// `batch_arg_has_cmd_metachars` (src/which/lib.rs) without `"`: a raw command line quotes with it.
+fn is_cmd_special_character(unit: u16) -> bool {
+    // % & | < > ^ \r \n
+    matches!(unit, 0x25 | 0x26 | 0x7C | 0x3C | 0x3E | 0x5E | 0x0D | 0x0A)
+}
 
 /// Lossy (replacement-char) UTF-16-LE formatter — only
 /// used for debug logging under `if DBG`, so lossiness is fine.

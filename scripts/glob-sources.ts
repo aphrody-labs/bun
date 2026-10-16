@@ -71,17 +71,13 @@ const patterns = {
     ],
     exclude: ["src/runtime/bake/generated.ts"],
   },
-  /** legacy bindgen input */
+  /** bindgen input */
   bindgen: {
     paths: ["src/**/*.bind.ts"],
   },
-  /** v2 bindgen input */
-  bindgenV2: {
-    paths: ["src/**/*.bindv2.ts"],
-  },
-  /** bindgen v2 generator code */
-  bindgenV2Internal: {
-    paths: ["src/codegen/bindgenv2/**/*.ts"],
+  /** bindgen generator code */
+  bindgenCodegen: {
+    paths: ["src/codegen/bindgen*.ts", "src/codegen/helpers.ts"],
   },
   /**
    * all `*.rs` + workspace manifests — implicit inputs to the cargo step.
@@ -109,6 +105,7 @@ const patterns = {
       "src/io/*.cpp",
       "src/jsc/modules/*.cpp",
       "src/jsc/bindings/*.cpp",
+      "src/jsc/bindings/Bindgen/*.cpp",
       "src/jsc/bindings/webcore/*.cpp",
       "src/jsc/bindings/webcore/streams/*.cpp",
       "src/jsc/bindings/sqlite/*.cpp",

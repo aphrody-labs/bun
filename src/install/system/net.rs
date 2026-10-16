@@ -18,6 +18,7 @@ pub fn get(env: &bun_dotenv::Loader, url: &str) -> Result<Vec<u8>> {
         b"",
         b"",
         proxy,
+        None,
         http::FetchRedirect::Follow,
     );
     req.client.flags.reject_unauthorized = env.get_tls_reject_unauthorized();

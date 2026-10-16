@@ -11264,6 +11264,8 @@ declare module "bun" {
     optionalDependencies?: Record<string, string>;
     peerDependencies?: Record<string, string>;
     optionalPeers?: string[];
+    /** Names in `optionalDependencies` that did not resolve, listed when another package in the lockfile has the name */
+    unresolved?: string[];
     bin?: string | Record<string, string>;
     binDir?: string;
   };
@@ -11276,6 +11278,7 @@ declare module "bun" {
   type BunLockFilePackageInfo = BunLockFileBasePackageInfo & {
     os?: string | string[];
     cpu?: string | string[];
+    hasInstallScript?: true;
     bundled?: true;
   };
 

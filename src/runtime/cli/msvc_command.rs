@@ -127,6 +127,7 @@ impl find_msvc_tools::cross::Fetch for BunFetch {
             b"",
             b"",
             proxy,
+            None,
             bun_http::FetchRedirect::Follow,
         );
         request.client.flags.reject_unauthorized = env.get_tls_reject_unauthorized();
