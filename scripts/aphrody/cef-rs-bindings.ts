@@ -4,7 +4,7 @@ import { CHROMIUM_BASE_REVISION, CHROMIUM_REVISION } from "./cef.ts";
 
 const root = resolve(import.meta.dir, "../..");
 const source = join(root, "src/browser/cef-rs");
-const cefRevision = "c7272dcfe46849b77d1a3c0789dc38b1bfb14c9c";
+const cefRevision = "7e28cb05af72af8c0cdfafe7facfca97eed139c8";
 const chromiumRevision = CHROMIUM_REVISION;
 const chromiumVersion = "157.0.8099.0";
 const hash = (bytes: Uint8Array) => new Bun.CryptoHasher("sha256").update(bytes).digest("hex");

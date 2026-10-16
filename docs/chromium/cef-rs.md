@@ -13,7 +13,7 @@ The Cargo package identity remains upstream `154.5.0`; it does not select a
 Chromium 154 binary. Its build script requires the selected source-built CEF
 distribution for Chromium `157.0.8099.0` at
 `ce0615a76d6347f1914d673f1da66285b328d494`, with CEF source at
-`c7272dcfe46849b77d1a3c0789dc38b1bfb14c9c`.
+`7e28cb05af72af8c0cdfafe7facfca97eed139c8`.
 Missing or mismatched receipts fail before compiling the wrapper. The active
 build path never downloads a prebuilt library, including the former CEF 152.
 

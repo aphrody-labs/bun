@@ -6315,8 +6315,8 @@
     },
     {
       "path": "patch/patches/osr_fling_2745.patch",
-      "gitBlob": "ab62908caaf687e4d4fbec1b9561f76fc630f60c",
-      "sha256": "6407fa3035acea685b84f1b03342203b9d1b8390ae7bbbb204f147034e701bf8",
+      "gitBlob": "2883d6e5b9e0bd033f56b210c7c726ad4b58098d",
+      "sha256": "c12382a89389b629730a75058dee5f3b7ce264fe36a2b3dfaf13e69dce0f531f",
       "mode": "100644"
     },
     {
@@ -11421,7 +11421,7 @@
   "schema": 1,
   "source": "vendor/cef",
   "archiveSHA256": "6254be2fc032829e5ef123ff8c8f1446fb7f10beb98ee2ed8f684eaa0d5df94c",
-  "revision": "c7272dcfe46849b77d1a3c0789dc38b1bfb14c9c",
+  "revision": "7e28cb05af72af8c0cdfafe7facfca97eed139c8",
   "chromiumUpstreamRevision": "e20c553087353010f4b71143841c189447ac1628",
   "chromiumRevision": "95ff46fdacff0d4973f17710418f12e1ceedeed9",
   "chromiumBaseRevision": "ce0615a76d6347f1914d673f1da66285b328d494",

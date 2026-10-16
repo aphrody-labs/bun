@@ -27,7 +27,7 @@ export const SOURCES: Record<string, Source> = {
   },
   cef: {
     repo: "https://github.com/aphrody-labs/cef",
-    rev: "c7272dcfe46849b77d1a3c0789dc38b1bfb14c9c",
+    rev: "7e28cb05af72af8c0cdfafe7facfca97eed139c8",
     dest: "vendor/cef",
   },
   ffmpeg: {
