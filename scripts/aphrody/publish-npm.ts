@@ -377,7 +377,6 @@ export const PACKAGES: PackageSpec[] = [
   { dir: "bun-runtime-sdk" },
   { dir: "bun-supervisor", name: "supervisor", sourcePaths: ["src", "systemd"] },
   { dir: "bun-tools", sourcePaths: ["src"] },
-  { dir: "bun-tauri", name: "tauri", sourcePaths: ["js", "crates/tauri-plugin-aphrody/iife"] },
   { dir: "bun-nginx", bunVersion: true },
   // REST services and explicit credential adapters over the qualified bun:google builtin.
   { dir: "bun-google", bunVersion: true },

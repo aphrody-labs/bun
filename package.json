@@ -7,7 +7,6 @@
     "./packages/bun-runtime-sdk",
     "./packages/bun-google",
     "./packages/bun-google/aphrody/packages/google",
-    "./packages/bun-tauri",
     "./packages/bun-types",
     "./packages/bun-web",
     "./packages/bun-plugin-tailwind",

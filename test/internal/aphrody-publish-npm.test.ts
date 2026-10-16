@@ -111,7 +111,7 @@ test("portable facade archives preserve exports and import without activating na
     if (code !== 0) throw new Error(`Archive command failed: ${stderr}`);
     return stdout;
   };
-  for (const dir of ["bun-supervisor", "bun-tools", "bun-tauri"]) {
+  for (const dir of ["bun-supervisor", "bun-tools"]) {
     const consumerRoot = join(root, dir);
     mkdirSync(consumerRoot);
     const sourceRoot = join(root, dir + "-source");
@@ -125,7 +125,7 @@ test("portable facade archives preserve exports and import without activating na
     const names = (await command(["tar", "-tzf", archive])).trim().split("\n");
     expect(
       names.every(name =>
-        /^package\/(?:package\.json|LICENSE[^/]*|README\.md|NOTICE|src\/|js\/|systemd\/|crates\/tauri-plugin-aphrody\/iife\/)/.test(
+        /^package\/(?:package\.json|LICENSE[^/]*|README\.md|NOTICE|src\/|systemd\/)/.test(
           name,
         ),
       ),
@@ -134,20 +134,10 @@ test("portable facade archives preserve exports and import without activating na
     await command(["tar", "-xzf", archive, "-C", consumerRoot]);
     const manifest = await Bun.file(join(consumerRoot, "package/package.json")).json();
     expect(manifest.name).toBe(
-      dir === "bun-supervisor" ? "@aphrody/supervisor" : dir === "bun-tauri" ? "@aphrody/tauri" : "@aphrody/bun-tools",
+      dir === "bun-supervisor" ? "@aphrody/supervisor" : "@aphrody/bun-tools",
     );
-    if (dir === "bun-tauri") {
-      expect(names).toContain("package/crates/tauri-plugin-aphrody/iife/aphrody.js");
-      expect(names).toContain("package/js/plugins/mcp-bridge.ts");
-      const facade = await import(join(consumerRoot, "package/js/index.ts"));
-      const server = await import(join(consumerRoot, "package/js/server.ts"));
-      expect(typeof facade.core.invoke).toBe("function");
-      expect(typeof facade.bunInfo).toBe("function");
-      expect(typeof server.serveForTauri).toBe("function");
-    } else {
-      const facade = await import(join(consumerRoot, "package/src/index.ts"));
-      expect(typeof (dir === "bun-supervisor" ? facade.Supervisor : facade.toolAssetPin)).toBe("function");
-    }
+    const facade = await import(join(consumerRoot, "package/src/index.ts"));
+    expect(typeof (dir === "bun-supervisor" ? facade.Supervisor : facade.toolAssetPin)).toBe("function");
   }
 }, 20000);
 
@@ -361,12 +351,6 @@ describe("publishManifest", () => {
       new Map([["bun-supervisor", "1.4.4"]]),
     );
     expect(out.dependencies).toEqual({ "@aphrody/supervisor": "1.4.4" });
-  });
-
-  test("Tauri publication exposes the existing JavaScript facade under its declared alias", () => {
-    expect(npmName(spec("bun-tauri"))).toBe("@aphrody/tauri");
-    expect(spec("bun-tauri").requiresBuild).toBeUndefined();
-    expect(spec("bun-tauri").platform).toBeUndefined();
   });
 
   test("pins fork dependencies whatever their spelling, keeps registry ones", () => {

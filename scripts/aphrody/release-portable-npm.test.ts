@@ -25,7 +25,6 @@ import {
 
 test("portable source qualification never substitutes for native or mixed selections", () => {
   expect(portableNpmSelection("bun-tools,bun-supervisor")).toEqual(["bun-supervisor", "bun-tools"]);
-  expect(portableNpmSelection("bun-tauri")).toEqual(["bun-tauri"]);
   for (const only of [
     undefined,
     "",
@@ -201,7 +200,7 @@ test("CI routes only exact qualified source selections away from the native rele
   expect(typeof route?.run).toBe("string");
   using directory = tempDir("portable-npm-workflow-route", {});
   for (const [only, expected] of [
-    ["bun-tools,bun-tauri", "portable-source"],
+    ["bun-tools", "portable-source"],
     ["bun-agent-plugin", "plugin-source"],
     ["bun-tools,bun-agent-plugin", "native-full"],
     ["bun-tools,bun-runtime-sdk", "native-full"],
@@ -240,7 +239,7 @@ test("CI routes only exact qualified source selections away from the native rele
   expect(steps[publish]?.run).toContain("--portable-qualification");
 });
 
-test.each(["bun-supervisor", "bun-tools", "bun-tauri"] as const)(
+test.each(["bun-supervisor", "bun-tools"] as const)(
   "real tracked %s archive exposes all declared exports to an isolated consumer",
   async selected => {
     const { exportTrackedPackage, packageSourcePaths, PACKAGES } = await import("./publish-npm");

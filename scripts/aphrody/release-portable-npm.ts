@@ -13,7 +13,6 @@ const contracts = {
     name: "@aphrody/bun-tools",
     tests: ["./packages/bun-tools/test/tools.test.ts", "./packages/bun-tools/test/indexing.test.ts"],
   },
-  "bun-tauri": { name: "@aphrody/tauri", tests: ["./test/internal/tauri-package-exports.test.ts"] },
 } as const;
 type Selection = keyof typeof contracts;
 const sha256 = (bytes: string | Uint8Array) => new Bun.CryptoHasher("sha256").update(bytes).digest("hex");
@@ -159,8 +158,7 @@ export async function inspectPortableNpmArchive(
     const source =
       /^package\/(?:package\.json|LICENSE[^/]*|README\.md|NOTICE)$/.test(name) ||
       (directory === "bun-supervisor" && /^package\/(?:src|systemd)\//.test(name)) ||
-      (directory === "bun-tools" && name.startsWith("package/src/")) ||
-      (directory === "bun-tauri" && /^package\/(?:js\/|crates\/tauri-plugin-aphrody\/iife\/)/.test(name));
+      (directory === "bun-tools" && name.startsWith("package/src/"));
     if (!source || !safeMember(name) || (expanded += file.size) > 64 * 1024 ** 2)
       throw new Error("Portable npm archive escaped its source closure");
   }
@@ -208,8 +206,6 @@ export async function inspectPortableNpmArchive(
       exports.set(specifier, name);
     }
   }
-  if (directory === "bun-tauri" && !files.has("package/crates/tauri-plugin-aphrody/iife/aphrody.js"))
-    throw new Error("Tauri facade sidecar source is absent");
   return {
     proof: {
       directory,
