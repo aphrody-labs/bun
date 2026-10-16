@@ -235,6 +235,7 @@ fn windows_shim(root: &InstallRoot, cmd: &str, target: &[u8]) -> Result<Vec<Stri
     let shim = BinLinkingShim {
         bin_path: &rel_w,
         shebang: None,
+        is_absolute_target: false,
     };
     #[repr(align(2))]
     struct Buf([u8; 8192]);
