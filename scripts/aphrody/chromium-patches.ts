@@ -27,14 +27,40 @@ export interface PatchOptions {
   to?: string;
   expect?: string;
   patches: string;
+  cef: string;
   json: boolean;
+}
+
+export interface CefPatch {
+  name: string;
+  path?: string;
+  condition?: string;
+}
+
+/** Entries of CEF patch/patch.cfg (a Python list of dict literals). */
+export function parseCefConfig(text: string): CefPatch[] {
+  const code = text.replace(/^\s*#.*$/gm, "");
+  const entries: CefPatch[] = [];
+  for (const block of code.matchAll(/\{([^{}]*)\}/g)) {
+    const field = (key: string) => new RegExp(`'${key}'\\s*:\\s*'([^']+)'`).exec(block[1]!)?.[1];
+    const name = field("name");
+    if (!name) continue;
+    const entry: CefPatch = { name };
+    const path = field("path");
+    const condition = field("condition");
+    if (path) entry.path = path;
+    if (condition) entry.condition = condition;
+    entries.push(entry);
+  }
+  return entries;
 }
 
 const HELP = `Usage: bun chromium patch <command> [--source dir] [--base sha] [--to rev] [--expect rev] [--json]
   refresh  Rewrite patches/chromium from base..to (or base..worktree): one patch per modified file,
            owned new directories recorded in overlay.json; stale patches are removed
-  check    Apply every patch to a temporary index of base (worktree untouched); report conflicts
-           and, with --expect, verify the patched files equal that revision
+  check    Apply every patch to a temporary index of base (worktree untouched); report conflicts,
+           with --expect verify the patched files equal that revision, then classify each CEF
+           patch (--cef, default vendor/cef) as applied, pending or conflict on the patched tree
   apply    Reset changed targets to base, apply changed patches (3-way on conflict), materialize overlay
   reset    Restore every patched path to base and remove overlay directories
   status   Show patch and overlay counts and the recorded apply state`;
@@ -45,6 +71,7 @@ export function parsePatchArguments(args: string[], root = ROOT): PatchOptions {
     source: join(root, "vendor", "chromium", "src"),
     base: PATCH_BASE,
     patches: join(root, "patches", "chromium"),
+    cef: join(root, "vendor", "cef"),
     json: false,
   };
   for (let i = 0; i < args.length; i++) {
@@ -52,13 +79,14 @@ export function parsePatchArguments(args: string[], root = ROOT): PatchOptions {
     if (["refresh", "check", "apply", "reset", "status", "help"].includes(arg) && options.command === "help")
       options.command = arg as PatchOptions["command"];
     else if (arg === "--json") options.json = true;
-    else if (["--source", "--base", "--to", "--expect", "--patches"].includes(arg)) {
+    else if (["--source", "--base", "--to", "--expect", "--patches", "--cef"].includes(arg)) {
       const value = args[++i];
       if (!value || value.startsWith("--")) throw new Error(`${arg} needs a value`);
-      if (arg !== "--source" && arg !== "--patches" && !/^[\w./^~-]+$/.test(value))
+      if (!["--source", "--patches", "--cef"].includes(arg) && !/^[\w./^~-]+$/.test(value))
         throw new Error(`${arg} must be a Git revision`);
       if (arg === "--source") options.source = resolve(value);
       else if (arg === "--patches") options.patches = resolve(value);
+      else if (arg === "--cef") options.cef = resolve(value);
       else if (arg === "--base") options.base = value;
       else if (arg === "--to") options.to = value;
       else options.expect = value;
@@ -254,10 +282,42 @@ export function check(options: PatchOptions) {
         if (git(options.source, ["rev-parse", `${options.expect}:${root}`], { allowFail: true }).stdout.trim() !== tree)
           mismatched.push(`${root}/`);
     }
-    return { base: options.base, patches: names.length, conflicts, expect: options.expect, mismatched };
+    const cef = conflicts.length ? undefined : cefLayer(options, env);
+    return { base: options.base, patches: names.length, conflicts, expect: options.expect, mismatched, cef };
   } finally {
     rmSync(index, { force: true });
   }
+}
+
+/** CEF's patcher skips reverse-applicable patches; anything neither way is a conflict. */
+function cefLayer(options: PatchOptions, env: Record<string, string>) {
+  const cfg = join(options.cef, "patch", "patch.cfg");
+  if (!existsSync(cfg)) return undefined;
+  const result = { applied: [] as string[], pending: [] as string[], conflicts: [] as string[], skipped: [] as string[] };
+  for (const entry of parseCefConfig(readFileSync(cfg, "utf8"))) {
+    const file = join(options.cef, "patch", "patches", `${entry.name}.patch`);
+    const repo = entry.path ? join(options.source, entry.path) : options.source;
+    if (!existsSync(file)) {
+      result.conflicts.push(`${entry.name} (missing file)`);
+      continue;
+    }
+    if ((entry.condition && !process.env[entry.condition]) || !existsSync(join(repo, ".git"))) {
+      result.skipped.push(entry.name);
+      continue;
+    }
+    const body = readFileSync(file, "utf8").replaceAll("\r\n", "\n");
+    // Patches for the src repository run against the patched temporary index.
+    const run = (reverse: boolean) =>
+      git(
+        repo,
+        ["apply", "-p0", "--ignore-whitespace", ...(entry.path ? [] : ["--cached"]), ...(reverse ? ["--reverse"] : []), "--check", "-"],
+        { input: body, env: entry.path ? {} : env, allowFail: true },
+      ).exitCode === 0;
+    if (run(true)) result.applied.push(entry.name);
+    else if (run(false)) result.pending.push(entry.name);
+    else result.conflicts.push(entry.name);
+  }
+  return result;
 }
 
 interface State {
@@ -411,7 +471,7 @@ export function main(args = process.argv.slice(2)) {
   console.log(JSON.stringify(result, null, 2));
   const failures =
     "conflicts" in result
-      ? result.conflicts.length + result.mismatched.length
+      ? result.conflicts.length + result.mismatched.length + (result.cef?.conflicts.length ?? 0)
       : "failed" in result
         ? result.failed.length
         : 0;
