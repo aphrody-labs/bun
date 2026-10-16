@@ -1,5 +1,5 @@
-import { mkdir, readdir, symlink, lstat } from "node:fs/promises";
-import { dirname, join, resolve, relative, delimiter } from "node:path";
+import { mkdir, readdir, symlink, lstat, realpath } from "node:fs/promises";
+import { dirname, join, resolve, relative, delimiter, isAbsolute } from "node:path";
 import { generate, inputFiles } from "../../packages/bun-agent-plugin/src/generate.ts";
 import { isAphrodyBun } from "../../packages/bun-agent-plugin/src/hooks/common.ts";
 
@@ -455,12 +455,31 @@ export const pluginQualificationTests = [
   ),
 ];
 type PluginFile = { path: string; sha256: string };
+type PluginRuntime = RuntimeIdentity & { sha256: string; platform: string; arch: string };
+type PluginArtifact = { path: string; sha256: string };
+export type PluginSourceChange = { path: string; before: string; after: string };
+export type PluginRuntimeInputs = { core: string; nativeGates: string; layout: string };
+export type PluginProvenance =
+  | { kind: "same-source" }
+  | {
+      kind: "source-only-cohort";
+      runtimeSource: string;
+      runtimeSourceRoot: string;
+      core: PluginArtifact;
+      nativeGates: PluginArtifact;
+      layout: PluginArtifact;
+      nativeLog: PluginArtifact;
+      changes: PluginSourceChange[];
+      compiledPluginInputsSHA256: string;
+      generatedBundleSHA256: string;
+    };
 export type PluginNpmProof = {
-  schema: 1;
+  schema: 2;
   kind: "bun-plugin-npm-source-qualification";
   source: string;
   selection: ["bun-agent-plugin"];
-  runtime: RuntimeIdentity & { sha256: string };
+  runtime: PluginRuntime;
+  provenance: PluginProvenance;
   lockSHA256: string;
   nativePayloadQualified: false;
   allPlatformsQualified: false;
@@ -468,8 +487,39 @@ export type PluginNpmProof = {
   members: PluginFile[];
   archive: { name: string; version: string; bytes: number; sha256: string; integrity: string };
   logs: PluginFile[];
-  mcp: { source: string; suiteSHA256: string; passed: true; logSHA256: string };
+  mcp: { runtimeSource: string; testSource: string; suiteSHA256: string; passed: true; logSHA256: string };
 };
+
+const pluginSourceOnlyPaths = new Set([
+  "docs/project/bun-site-sync.md",
+  "test/cli/agent-plugin/agent-plugin.test.ts",
+  ".github/workflows/aphrody-publish-crates.yml",
+  "scripts/aphrody/publish-crates.ts",
+  "scripts/aphrody/release-portable-crate.ts",
+  "scripts/aphrody/release-portable-crate.test.ts",
+  "scripts/aphrody/release-workflows.test.ts",
+  "scripts/aphrody/release-portable-npm.ts",
+  "scripts/aphrody/release-portable-npm.test.ts",
+  "test/internal/aphrody-publish-npm.test.ts",
+]);
+
+export function validatePluginSourceChanges(changes: PluginSourceChange[]): void {
+  if (
+    !Array.isArray(changes) ||
+    !changes.length ||
+    changes.length > pluginSourceOnlyPaths.size ||
+    changes.some(
+      (file, index) =>
+        !file ||
+        !pluginSourceOnlyPaths.has(file.path) ||
+        !/^[a-f0-9]{40}$/.test(file.before) ||
+        !/^[a-f0-9]{40}$/.test(file.after) ||
+        file.before === file.after ||
+        (index > 0 && changes[index - 1]!.path >= file.path),
+    )
+  )
+    throw new Error("Plugin source-only delta contains an unreviewed, repeated or non-source change");
+}
 
 function safePluginInput(path: string): boolean {
   return !!path && !/[\\:\0]/.test(path) && path.split("/").every(part => !!part && part !== "." && part !== "..");
@@ -490,12 +540,15 @@ export function validatePluginNpmProof(proof: PluginNpmProof, source: string): v
     );
   if (
     !proof ||
-    proof.schema !== 1 ||
+    proof.schema !== 2 ||
     proof.kind !== "bun-plugin-npm-source-qualification" ||
     JSON.stringify(proof.selection) !== JSON.stringify([pluginDirectory]) ||
     !/^[a-f0-9]{40}$/.test(source) ||
     proof.source !== source ||
-    proof.runtime?.revision !== source ||
+    !/^[a-f0-9]{40}$/.test(proof.runtime?.revision ?? "") ||
+    typeof proof.runtime?.platform !== "string" ||
+    !proof.runtime.platform ||
+    !["x64", "arm64"].includes(proof.runtime?.arch) ||
     !/^\d+\.\d+\.\d+$/.test(proof.runtime?.version ?? "") ||
     !hash(proof.runtime?.sha256) ||
     !proof.runtime?.sourceUrl?.startsWith(
@@ -518,12 +571,187 @@ export function validatePluginNpmProof(proof: PluginNpmProof, source: string): v
     !/^sha512-[A-Za-z0-9+/]{86}==$/.test(proof.archive.integrity) ||
     proof.logs?.length !== pluginGates.length ||
     proof.logs.some((file, index) => file.path !== `${pluginGates[index]}.log` || !hash(file.sha256)) ||
-    proof.mcp?.source !== source ||
+    proof.mcp?.testSource !== source ||
+    proof.mcp.runtimeSource !== proof.runtime.revision ||
     proof.mcp.passed !== true ||
     !hash(proof.mcp.suiteSHA256) ||
     proof.mcp.logSHA256 !== proof.logs.at(-1)?.sha256
   )
     throw new Error("Invalid plugin npm source qualification: source, runtime, archive or gates differ");
+  const provenance = proof.provenance;
+  if (provenance?.kind === "same-source") {
+    if (proof.runtime.revision !== source) throw new Error("Same-source plugin proof has a different native revision");
+  } else if (provenance?.kind === "source-only-cohort") {
+    if (
+      provenance.runtimeSource !== proof.runtime.revision ||
+      provenance.runtimeSource === source ||
+      !isAbsolute(provenance.runtimeSourceRoot) ||
+      !hash(provenance.compiledPluginInputsSHA256) ||
+      !hash(provenance.generatedBundleSHA256) ||
+      [provenance.core, provenance.nativeGates, provenance.layout, provenance.nativeLog].some(
+        file => !file || !isAbsolute(file.path) || !hash(file.sha256),
+      )
+    )
+      throw new Error("Invalid plugin source-only native provenance");
+    validatePluginSourceChanges(provenance.changes);
+  } else throw new Error("Plugin proof must identify same-source or source-only native provenance");
+}
+
+export async function readPluginSourceChanges(
+  root: string,
+  runtimeSource: string,
+  source: string,
+): Promise<PluginSourceChange[]> {
+  if (
+    !/^[a-f0-9]{40}$/.test(runtimeSource) ||
+    !/^[a-f0-9]{40}$/.test(source) ||
+    runtimeSource === source ||
+    (await command(root, ["git", "merge-base", runtimeSource, source])).trim() !== runtimeSource
+  )
+    throw new Error("Plugin runtime source is not a strict ancestor of its package source");
+  const raw = (
+    await command(root, ["git", "diff", "--raw", "--no-abbrev", "--no-renames", "-z", runtimeSource, source, "--"])
+  ).split("\0");
+  if (raw.pop() !== "" || raw.length % 2 !== 0) throw new Error("Invalid plugin source-only Git delta");
+  const changes: PluginSourceChange[] = [];
+  for (let index = 0; index < raw.length; index += 2) {
+    const match = /^:100644 100644 ([a-f0-9]{40}) ([a-f0-9]{40}) M$/.exec(raw[index]!);
+    if (!match) throw new Error("Plugin source-only reuse rejects native, added, removed, renamed or mode changes");
+    changes.push({ path: raw[index + 1]!, before: match[1]!, after: match[2]! });
+  }
+  changes.sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+  validatePluginSourceChanges(changes);
+  return changes;
+}
+
+async function pluginRuntimeIdentity(): Promise<PluginRuntime> {
+  return {
+    ...runtimeIdentity(),
+    sha256: await fileSHA256(process.execPath),
+    platform: process.platform,
+    arch: process.arch,
+  };
+}
+
+async function pluginNativeArtifact(path: string, name: string): Promise<{ reference: PluginArtifact; value: any }> {
+  if (!isAbsolute(path) || resolve(path) !== path || path.split(/[\\/]/).at(-1) !== name)
+    throw new Error("Plugin native evidence must name its canonical diagnostic artifact");
+  const stat = await lstat(path);
+  if (!stat.isFile() || stat.isSymbolicLink() || stat.size < 1 || stat.size > 1024 ** 2)
+    throw new Error("Plugin native diagnostic artifact is not a bounded regular file");
+  const bytes = await Bun.file(path).bytes();
+  return { reference: { path, sha256: sha256(bytes) }, value: JSON.parse(new TextDecoder().decode(bytes)) };
+}
+
+async function compiledPluginInputManifest(root: string) {
+  return Promise.all(
+    inputFiles(root).map(async path => {
+      const name = relative(root, path).replaceAll("\\", "/");
+      const stat = await lstat(path);
+      if (!safePluginInput(name) || !stat.isFile() || stat.isSymbolicLink())
+        throw new Error("Compiled plugin input is not an owned regular file");
+      return { path: name, mode: stat.mode & 0o111 ? "100755" : "100644", sha256: await fileSHA256(path) };
+    }),
+  );
+}
+
+function generatedPluginManifest(root: string) {
+  return [...generate({ root })]
+    .sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0))
+    .map(([path, bytes]) => ({ path, sha256: sha256(bytes) }));
+}
+
+export async function pluginSourceProvenance(
+  root: string,
+  source: string,
+  runtime: PluginRuntime,
+  inputs?: PluginRuntimeInputs,
+): Promise<PluginProvenance> {
+  if (!inputs) {
+    if (runtime.revision !== source)
+      throw new Error("Plugin source differs from runtime; complete source-only native evidence is required");
+    return { kind: "same-source" };
+  }
+  if (runtime.revision === source)
+    throw new Error("Source-only native evidence requires distinct native and package sources");
+  const core = await pluginNativeArtifact(inputs.core, "core-preparation.json");
+  const native = await pluginNativeArtifact(inputs.nativeGates, "receipt.json");
+  const layout = await pluginNativeArtifact(inputs.layout, "runtime-build-layout.json");
+  const { mediaReleaseTarget } = await import("./media-release.ts");
+  const target = mediaReleaseTarget(core.value.target);
+  if (
+    core.value.schema !== 1 ||
+    core.value.source !== runtime.revision ||
+    core.value.runtimeSHA256 !== runtime.sha256 ||
+    core.value.nativeReleaseQualified !== false ||
+    native.value.schema !== 1 ||
+    native.value.nativeReleaseQualified !== false ||
+    !Array.isArray(native.value.missing) ||
+    native.value.missing.length !== 0 ||
+    !isAbsolute(core.value.runtime ?? "") ||
+    !isAbsolute(core.value.buildDir ?? "") ||
+    (await realpath(core.value.runtime)) !== (await realpath(process.execPath)) ||
+    (await realpath(core.value.buildDir)) !== dirname(await realpath(core.value.runtime)) ||
+    !isAbsolute(native.value.runtime ?? "") ||
+    (await realpath(native.value.runtime)) !== (await realpath(core.value.runtime)) ||
+    target.platform !== runtime.platform ||
+    target.runtimeArch !== runtime.arch ||
+    native.value.source !== runtime.revision ||
+    native.value.target !== core.value.target ||
+    native.value.runtimeSHA256 !== runtime.sha256 ||
+    native.value.passed !== true ||
+    native.value.exitCode !== 0 ||
+    layout.value.schema !== 1 ||
+    layout.value.source !== runtime.revision ||
+    layout.value.physicalBuildDir !== core.value.buildDir ||
+    !Array.isArray(layout.value.buildFlags) ||
+    !layout.value.buildFlags.length ||
+    layout.value.buildFlags.some((flag: unknown) => typeof flag !== "string" || !flag.startsWith("-")) ||
+    !isAbsolute(layout.value.sourceRoot ?? "") ||
+    native.value.sourceRoot !== layout.value.sourceRoot ||
+    (await realpath(layout.value.logicalBuildDir)) !== (await realpath(core.value.buildDir))
+  )
+    throw new Error("Plugin native core, host, layout or actual gate identity differs");
+  if (
+    !isAbsolute(native.value.log ?? "") ||
+    !/^[a-f0-9]{64}$/.test(native.value.logSHA256 ?? "") ||
+    (await fileSHA256(native.value.log)) !== native.value.logSHA256
+  )
+    throw new Error("Native gate log differs from its completed receipt");
+  verifyPluginNativeGateLog(native.value, await Bun.file(native.value.log).text());
+  const runtimeRoot = layout.value.sourceRoot as string;
+  await identity(runtimeRoot, runtime.revision);
+  if ((await command(runtimeRoot, ["git", "rev-parse", "--abbrev-ref", "HEAD"])).trim() !== "HEAD")
+    throw new Error("Native source snapshot must remain detached");
+  if (
+    (await Bun.file(join(runtimeRoot, "package.json")).json()).version !== runtime.version ||
+    (await Bun.file(join(root, "package.json")).json()).version !== runtime.version
+  )
+    throw new Error("Plugin source-only version differs from the actual native runtime");
+  const changes = await readPluginSourceChanges(root, runtime.revision, source);
+  const oldInputs = await compiledPluginInputManifest(runtimeRoot),
+    newInputs = await compiledPluginInputManifest(root);
+  const oldGenerated = generatedPluginManifest(runtimeRoot),
+    newGenerated = generatedPluginManifest(root);
+  if (
+    JSON.stringify(oldInputs) !== JSON.stringify(newInputs) ||
+    JSON.stringify(oldGenerated) !== JSON.stringify(newGenerated)
+  )
+    throw new Error("Plugin source-only reuse changed compiled inputs or the embedded generated bundle");
+  if ((await fileSHA256(process.execPath)) !== runtime.sha256)
+    throw new Error("Native runtime changed during plugin provenance verification");
+  return {
+    kind: "source-only-cohort",
+    runtimeSource: runtime.revision,
+    runtimeSourceRoot: runtimeRoot,
+    core: core.reference,
+    nativeGates: native.reference,
+    layout: layout.reference,
+    nativeLog: { path: native.value.log, sha256: native.value.logSHA256 },
+    changes,
+    compiledPluginInputsSHA256: sha256(JSON.stringify(newInputs)),
+    generatedBundleSHA256: sha256(JSON.stringify(newGenerated)),
+  };
 }
 
 async function pluginInputs(root: string): Promise<PluginFile[]> {
@@ -658,26 +886,78 @@ function pluginEnvironment(home: string): Record<string, string> {
 }
 
 export function verifyPluginTestSummary(log: string, suites: readonly string[]): void {
+  log = log.replaceAll("\r\n", "\n");
+  const totals = [...log.matchAll(/^Ran ([1-9]\d*) tests across ([1-9]\d*) files?\.(?:[^\r\n]*)$/gm)];
+  const passed = [...log.matchAll(/^[ \t]*([1-9]\d*) pass[ \t]*$/gm)];
+  const failed = [...log.matchAll(/^[ \t]*(\d+) fail[ \t]*$/gm)];
+  const headers = [...log.matchAll(/^((?:[\w.-]+\/)+[^/\r\n]+\.test\.[cm]?[jt]sx?):[ \t]*$/gm)].map(match => match[1]!);
+  const expected = suites.map(path => path.replace(/^\.\//, ""));
   if (
-    !/\b0 fail\b/.test(log) ||
-    !/Ran [1-9]\d* tests/.test(log) ||
-    !/\b[1-9]\d* pass\b/.test(log) ||
-    /\b[1-9]\d* (?:skip|todo)\b/.test(log) ||
-    suites.some(path => !log.includes(path.replace(/^\.\//, "") + ":"))
+    totals.length !== 1 ||
+    passed.length !== 1 ||
+    failed.length !== 1 ||
+    failed[0]![1] !== "0" ||
+    totals[0]![1] !== passed[0]![1] ||
+    Number(totals[0]![2]) !== expected.length ||
+    !expected.length ||
+    new Set(expected).size !== expected.length ||
+    headers.length !== expected.length ||
+    new Set(headers).size !== headers.length ||
+    expected.some(path => !headers.includes(path)) ||
+    /^[ \t]*[1-9]\d* (?:skip|todo)[ \t]*$/m.test(log)
   )
     throw new Error("Plugin qualification did not execute its complete test suites");
 }
 
-export async function qualifyPluginNpm(output: string, source: string, stable = false): Promise<PluginNpmProof> {
+export function verifyPluginNativeGateLog(
+  receipt: {
+    schema?: unknown;
+    nativeReleaseQualified?: unknown;
+    missing?: unknown;
+    files?: unknown;
+    logSHA256?: unknown;
+  },
+  log: string,
+): void {
+  const files = receipt.files;
+  if (
+    receipt.schema !== 1 ||
+    receipt.nativeReleaseQualified !== false ||
+    !Array.isArray(receipt.missing) ||
+    receipt.missing.length ||
+    typeof receipt.logSHA256 !== "string" ||
+    !/^[a-f0-9]{64}$/.test(receipt.logSHA256) ||
+    !Array.isArray(files) ||
+    !files.length ||
+    files.length > 64 ||
+    files.some(
+      path =>
+        typeof path !== "string" ||
+        !path.startsWith("./test/") ||
+        !safePluginInput(path.slice(2)) ||
+        !path.endsWith(".test.ts"),
+    )
+  )
+    throw new Error("Native gate receipt does not identify complete bounded test suites");
+  verifyPluginTestSummary(log, files);
+}
+
+export async function qualifyPluginNpm(
+  output: string,
+  source: string,
+  stable = false,
+  nativeInputs?: PluginRuntimeInputs,
+): Promise<PluginNpmProof> {
   if (process.env.GITHUB_SHA && process.env.GITHUB_SHA !== source)
     throw new Error("Plugin qualification source differs from GITHUB_SHA");
   const { validateOutputDirectory } = await import("./publish-npm.ts");
   output = validateOutputDirectory(output, owner);
   await identity(owner, source);
-  const runtime = { ...runtimeIdentity(), sha256: await fileSHA256(process.execPath) };
+  const runtime = await pluginRuntimeIdentity();
   const version = (await Bun.file(join(owner, "package.json")).json()).version;
-  if (!isAphrodyBun() || runtime.revision !== source || runtime.version !== version)
-    throw new Error("Plugin qualification requires the exact package-source Aphrody runtime");
+  if (!isAphrodyBun() || runtime.version !== version)
+    throw new Error("Plugin qualification requires the recognized matching-version Aphrody runtime");
+  const provenance = await pluginSourceProvenance(owner, source, runtime, nativeInputs);
   await mkdir(output, { mode: 0o700 });
   const inputs = await pluginInputs(owner);
   const env = pluginEnvironment(join(output, "home"));
@@ -770,7 +1050,8 @@ export async function qualifyPluginNpm(output: string, source: string, stable = 
   await identity(owner, source);
   if (
     (await fileSHA256(process.execPath)) !== runtime.sha256 ||
-    JSON.stringify(inputs) !== JSON.stringify(await pluginInputs(owner))
+    JSON.stringify(inputs) !== JSON.stringify(await pluginInputs(owner)) ||
+    JSON.stringify(provenance) !== JSON.stringify(await pluginSourceProvenance(owner, source, runtime, nativeInputs))
   )
     throw new Error("Plugin source or runtime changed during qualification");
   const logs = await Promise.all(
@@ -780,11 +1061,12 @@ export async function qualifyPluginNpm(output: string, source: string, stable = 
     })),
   );
   const proof: PluginNpmProof = {
-    schema: 1,
+    schema: 2,
     kind: "bun-plugin-npm-source-qualification",
     source,
     selection: [pluginDirectory],
     runtime,
+    provenance,
     lockSHA256: sha256(await Bun.file(join(owner, "bun.lock")).bytes()),
     nativePayloadQualified: false,
     allPlatformsQualified: false,
@@ -793,7 +1075,8 @@ export async function qualifyPluginNpm(output: string, source: string, stable = 
     archive: inspected.archive,
     logs,
     mcp: {
-      source,
+      runtimeSource: runtime.revision,
+      testSource: source,
       suiteSHA256: sha256(await Bun.file(join(owner, "test/cli/mcp/mcp.test.ts")).bytes()),
       passed: true,
       logSHA256: logs.at(-1)!.sha256,
@@ -810,7 +1093,7 @@ export async function verifyPluginNpmQualification(receipt: string, source: stri
   const proof = (await Bun.file(receipt).json()) as PluginNpmProof;
   validatePluginNpmProof(proof, source);
   await identity(owner, source);
-  const runtime = { ...runtimeIdentity(), sha256: await fileSHA256(process.execPath) };
+  const runtime = await pluginRuntimeIdentity();
   if (
     !isAphrodyBun() ||
     JSON.stringify(runtime) !== JSON.stringify(proof.runtime) ||
@@ -819,6 +1102,19 @@ export async function verifyPluginNpmQualification(receipt: string, source: stri
     proof.mcp.suiteSHA256 !== sha256(await Bun.file(join(owner, "test/cli/mcp/mcp.test.ts")).bytes())
   )
     throw new Error("Plugin source, lock, runtime or MCP qualification differs");
+  const nativeInputs =
+    proof.provenance.kind === "source-only-cohort"
+      ? {
+          core: proof.provenance.core.path,
+          nativeGates: proof.provenance.nativeGates.path,
+          layout: proof.provenance.layout.path,
+        }
+      : undefined;
+  if (
+    JSON.stringify(proof.provenance) !==
+    JSON.stringify(await pluginSourceProvenance(owner, source, runtime, nativeInputs))
+  )
+    throw new Error("Plugin source-only native provenance changed before publication");
   for (const file of proof.logs)
     if (sha256(await Bun.file(join(dirname(receipt), file.path)).bytes()) !== file.sha256)
       throw new Error("Plugin qualification gate log differs");
@@ -853,7 +1149,24 @@ if (import.meta.main) {
   } else if (args[0] === "qualify-plugin") {
     if (value("--only") !== pluginDirectory || !value("--source") || !value("--out"))
       throw new Error("Expected qualify-plugin --only bun-agent-plugin --source <SHA> --out <private output>");
-    await qualifyPluginNpm(value("--out")!, value("--source")!, args.includes("--stable"));
+    const nativeFlags = ["--runtime-core", "--runtime-native-gates", "--runtime-layout"];
+    const sourceOnly = nativeFlags.some(flag => args.includes(flag));
+    if (sourceOnly && nativeFlags.some(flag => !value(flag)))
+      throw new Error(
+        "Source-only plugin qualification requires --runtime-core, --runtime-native-gates and --runtime-layout",
+      );
+    await qualifyPluginNpm(
+      value("--out")!,
+      value("--source")!,
+      args.includes("--stable"),
+      sourceOnly
+        ? {
+            core: value("--runtime-core")!,
+            nativeGates: value("--runtime-native-gates")!,
+            layout: value("--runtime-layout")!,
+          }
+        : undefined,
+    );
     console.log("Plugin source qualification complete; native payloads and foreign platforms are excluded");
   } else if (args[0] === "qualify") {
     if (!args.includes("--only") || !args.includes("--source") || !args.includes("--out"))

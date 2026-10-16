@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { utimes } from "node:fs/promises";
+import { utimes, chmod } from "node:fs/promises";
 import { join } from "node:path";
 import { tempDir } from "../../test/harness";
 import {
@@ -17,6 +17,10 @@ import {
   verifyPluginNpmPublication,
   type PluginNpmProof,
   verifyPluginTestSummary,
+  validatePluginSourceChanges,
+  readPluginSourceChanges,
+  pluginSourceProvenance,
+  verifyPluginNativeGateLog,
 } from "./release-portable-npm";
 
 test("portable source qualification never substitutes for native or mixed selections", () => {
@@ -46,9 +50,39 @@ test("plugin gate summaries refuse exit-zero no-tests, skipped suites and absent
     log.replace("29 pass", "0 pass"),
     log.replace("0 fail", "1 fail"),
     log + "\n1 skip",
+    log + "\n1 fail",
+    log.replace("29 pass", "28 pass"),
+    log.replace("test/cli/mcp/mcp.test.ts:", "argv --test-file test/cli/mcp/mcp.test.ts:"),
     log.replace("test/cli/mcp/mcp.test.ts:", "foreign.test.ts:"),
   ])
     expect(() => verifyPluginTestSummary(changed, [suite])).toThrow("complete test suites");
+});
+
+test("source-only native evidence requires complete receipts and real suite headers, preserving filtered cases", () => {
+  const files = ["./test/js/bun/archive.test.ts", "./test/internal/browser-cli.test.ts"];
+  const log =
+    "test/js/bun/archive.test.ts:\n(pass) archive\n\ntest/internal/browser-cli.test.ts:\n(pass) crawl\n\n 2 pass\n 195 filtered out\n 0 fail\nRan 2 tests across 2 files. [0.1s]";
+  const receipt = { schema: 1, nativeReleaseQualified: false, missing: [], files, logSHA256: "a".repeat(64) };
+  expect(() => verifyPluginNativeGateLog(receipt, log)).not.toThrow();
+  for (const value of [
+    {},
+    { ...receipt, schema: 2 },
+    { ...receipt, nativeReleaseQualified: true },
+    { ...receipt, missing: [files[0]] },
+    { ...receipt, files: [] },
+    { ...receipt, files: [files[0], files[0]] },
+    { ...receipt, logSHA256: "" },
+  ])
+    expect(() => verifyPluginNativeGateLog(value, log)).toThrow();
+  for (const changed of [
+    "",
+    log.replace("2 pass", "0 pass"),
+    log + "\n 1 todo",
+    log.replace("0 fail", "1 fail"),
+    log.replace("test/js/bun/archive.test.ts:", "argv test/js/bun/archive.test.ts:"),
+    log.replace("across 2 files", "across 1 file"),
+  ])
+    expect(() => verifyPluginNativeGateLog(receipt, changed)).toThrow("complete test suites");
 });
 
 const fixture = (changes: Record<string, string> = {}, pkg: Record<string, unknown> = {}) =>
@@ -350,7 +384,7 @@ test("plugin proof is distinct, source-strict and requires every native MCP and 
   const source = "a".repeat(40),
     hash = "b".repeat(64);
   const proof: PluginNpmProof = {
-    schema: 1,
+    schema: 2,
     kind: "bun-plugin-npm-source-qualification",
     source,
     selection: ["bun-agent-plugin"],
@@ -359,7 +393,10 @@ test("plugin proof is distinct, source-strict and requires every native MCP and 
       revision: source,
       sourceUrl: "https://github.com/aphrody-labs/bun/releases/download/bun-v1.4.5/bun-linux-x64-full.zip",
       sha256: hash,
+      platform: "linux",
+      arch: "x64",
     },
+    provenance: { kind: "same-source" },
     lockSHA256: hash,
     nativePayloadQualified: false,
     allPlatformsQualified: false,
@@ -370,15 +407,18 @@ test("plugin proof is distinct, source-strict and requires every native MCP and 
       path: `${name}.log`,
       sha256: hash,
     })),
-    mcp: { source, suiteSHA256: hash, passed: true, logSHA256: hash },
+    mcp: { runtimeSource: source, testSource: source, suiteSHA256: hash, passed: true, logSHA256: hash },
   };
   expect(() => validatePluginNpmProof(proof, source)).not.toThrow();
   const changed: unknown[] = [
     { ...proof, kind: "bun-portable-npm-source-qualification" },
+    { ...proof, schema: 1 },
+    { ...proof, provenance: undefined },
     { ...proof, selection: ["bun-agent-plugin", "bun-tools"] },
     { ...proof, runtime: { ...proof.runtime, revision: "c".repeat(40) } },
     { ...proof, logs: proof.logs.slice(1) },
     { ...proof, mcp: { ...proof.mcp, passed: false } },
+    { ...proof, mcp: { source, suiteSHA256: hash, passed: true, logSHA256: hash } },
     { ...proof, mcp: { ...proof.mcp, logSHA256: "d".repeat(64) } },
     { ...proof, allPlatformsQualified: true },
     { ...proof, nativePayloadQualified: true },
@@ -387,7 +427,143 @@ test("plugin proof is distinct, source-strict and requires every native MCP and 
     { ...proof, archive: { ...proof.archive, version: "1.4.6" } },
   ];
   for (const value of changed) expect(() => validatePluginNpmProof(value as PluginNpmProof, source)).toThrow();
+  const nativeSource = "c".repeat(40);
+  const cohort: PluginNpmProof = {
+    ...proof,
+    runtime: { ...proof.runtime, revision: nativeSource },
+    mcp: { ...proof.mcp, runtimeSource: nativeSource },
+    provenance: {
+      kind: "source-only-cohort",
+      runtimeSource: nativeSource,
+      runtimeSourceRoot: "/native-source",
+      core: { path: "/native/core-preparation.json", sha256: hash },
+      nativeGates: { path: "/native/receipt.json", sha256: hash },
+      layout: { path: "/native/runtime-build-layout.json", sha256: hash },
+      nativeLog: { path: "/native/native-gates.log", sha256: hash },
+      changes: [{ path: "docs/project/bun-site-sync.md", before: "d".repeat(40), after: "e".repeat(40) }],
+      compiledPluginInputsSHA256: hash,
+      generatedBundleSHA256: hash,
+    },
+  };
+  expect(() => validatePluginNpmProof(cohort, source)).not.toThrow();
+  for (const value of [
+    { ...cohort, provenance: { kind: "same-source" } },
+    { ...cohort, mcp: { ...cohort.mcp, testSource: nativeSource } },
+    { ...cohort, mcp: { ...cohort.mcp, runtimeSource: source } },
+    { ...cohort, runtime: { ...cohort.runtime, version: "1.4.6" } },
+    { ...cohort, runtime: { ...cohort.runtime, sha256: "wrong" } },
+    { ...cohort, provenance: { ...cohort.provenance, runtimeSource: source } },
+    { ...cohort, provenance: { ...cohort.provenance, core: undefined } },
+    { ...cohort, provenance: { ...cohort.provenance, generatedBundleSHA256: "wrong" } },
+    {
+      ...cohort,
+      provenance: {
+        ...cohort.provenance,
+        changes: [{ path: "src/runtime/mod.rs", before: "d".repeat(40), after: "e".repeat(40) }],
+      },
+    },
+  ])
+    expect(() => validatePluginNpmProof(value as PluginNpmProof, source)).toThrow();
   await expect(
     verifyPluginNpmPublication("unused", { source, directory: "bun-tools", archive: "unused" }),
   ).rejects.toThrow("another package");
+});
+
+test("source-only reuse requires a real ancestor and rejects native or mode deltas", async () => {
+  using directory = tempDir("plugin-source-only-git", {});
+  const root = String(directory);
+  const git = async (...args: string[]) => {
+    const child = Bun.spawn(["git", ...args], { cwd: root, stdout: "pipe", stderr: "pipe" });
+    const [stdout, stderr, code] = await Promise.all([child.stdout.text(), child.stderr.text(), child.exited]);
+    if (code !== 0) throw Error("Source-only Git fixture failed: " + stderr);
+    return stdout.trim();
+  };
+  const commit = async () => {
+    await git("add", ".");
+    await git(
+      "-c",
+      "user.name=aphrody-dev",
+      "-c",
+      "user.email=contact@aphrody.com",
+      "commit",
+      "--quiet",
+      "--no-gpg-sign",
+      "-m",
+      "source-only fixture",
+    );
+    return git("rev-parse", "HEAD");
+  };
+  await git("init", "--quiet");
+  const path = "docs/project/bun-site-sync.md";
+  await Bun.write(join(root, path), "old public identity\n");
+  await Bun.write(join(root, "src/runtime/fixture.rs"), "old native input\n");
+  const native = await commit();
+  await Bun.write(join(root, path), "new public identity\n");
+  const pkg = await commit();
+  expect(await readPluginSourceChanges(root, native, pkg)).toEqual([
+    { path, before: await git("rev-parse", `${native}:${path}`), after: await git("rev-parse", `${pkg}:${path}`) },
+  ]);
+  await expect(readPluginSourceChanges(root, pkg, native)).rejects.toThrow("strict ancestor");
+  const added = "scripts/aphrody/release-portable-crate.ts";
+  await Bun.write(join(root, added), "new publication fixture\n");
+  const addedSource = await commit();
+  await expect(readPluginSourceChanges(root, native, addedSource)).rejects.toThrow("added");
+  await git("rm", added);
+  await commit();
+  await chmod(join(root, path), 0o755);
+  await git("update-index", "--chmod=+x", path);
+  const executable = await commit();
+  await expect(readPluginSourceChanges(root, native, executable)).rejects.toThrow("mode changes");
+  await chmod(join(root, path), 0o644);
+  await git("update-index", "--chmod=-x", path);
+  await Bun.write(join(root, "src/runtime/fixture.rs"), "changed native input\n");
+  const changedNative = await commit();
+  await expect(readPluginSourceChanges(root, native, changedNative)).rejects.toThrow("unreviewed");
+});
+
+test("source-only provenance has no implicit revision override or unchecked delta", async () => {
+  const native = "a".repeat(40),
+    source = "b".repeat(40),
+    hash = "c".repeat(64);
+  const runtime = {
+    version: "1.4.5",
+    revision: native,
+    sha256: hash,
+    sourceUrl: "https://github.com/aphrody-labs/bun/releases/download/bun-v1.4.5/bun-linux-x64-full.zip",
+    platform: "linux",
+    arch: "x64",
+  };
+  await expect(pluginSourceProvenance("unused", source, runtime)).rejects.toThrow(
+    "complete source-only native evidence",
+  );
+  expect(await pluginSourceProvenance("unused", native, runtime)).toEqual({ kind: "same-source" });
+  for (const changes of [
+    [],
+    [{ path: "vendor/library.c", before: native, after: source }],
+    [{ path: "docs/project/bun-site-sync.md", before: native, after: native }],
+  ])
+    expect(() => validatePluginSourceChanges(changes)).toThrow();
+  using directory = tempDir("plugin-native-evidence-invalid", {});
+  const core = join(String(directory), "core-preparation.json"),
+    nativeGates = join(String(directory), "receipt.json"),
+    layout = join(String(directory), "runtime-build-layout.json");
+  await Bun.write(
+    core,
+    JSON.stringify({
+      schema: 1,
+      source: "d".repeat(40),
+      target: "linux-x64",
+      runtime: process.execPath,
+      buildDir: join(process.execPath, ".."),
+      runtimeSHA256: hash,
+    }),
+  );
+  await Bun.write(
+    nativeGates,
+    JSON.stringify({ source: native, target: "linux-x64", runtimeSHA256: hash, passed: true, exitCode: 0 }),
+  );
+  await Bun.write(layout, JSON.stringify({ source: native }));
+  await expect(
+    pluginSourceProvenance(String(directory), source, runtime, { core, nativeGates, layout }),
+  ).rejects.toThrow("actual gate identity differs");
 });

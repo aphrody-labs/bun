@@ -10,7 +10,7 @@
 //   bun scripts/aphrody/publish-crates.ts --publish        publish every version not yet on crates.io
 //   options: --out <dir> (staging dir), --toolchain <name> (default stable), --skip-tests,
 //            --only sdk (default: all)
-// Portable CI publication requires --only crates/aphrody-jev and
+// Portable CI publication requires an exact registered source selection and
 // --portable-qualification <directory> from release-portable-crate.ts.
 
 import { isPortableCrateSelection, verifyPortableCrate, verifyPortablePackageOutput } from "./release-portable-crate";
@@ -224,11 +224,14 @@ async function main() {
     qualificationOutput &&
     (!isPortableCrateSelection(opt("--only")) || toolchain !== "stable" || skipTests || !qualificationSource)
   )
-    throw new Error("Portable qualification requires exact JeV selection, stable toolchain, tests and CI source SHA");
+    throw new Error(
+      "Portable qualification requires an exact registered selection, stable toolchain, tests and CI source SHA",
+    );
   const qualification = qualificationOutput
-    ? { output: resolve(qualificationOutput), source: qualificationSource! }
+    ? { output: resolve(qualificationOutput), source: qualificationSource!, selection: opt("--only")! }
     : undefined;
-  if (qualification) await verifyPortableCrate(ROOT, qualification.output, qualification.source);
+  if (qualification)
+    await verifyPortableCrate(ROOT, qualification.output, qualification.source, qualification.selection);
   const selected = (key: string) => !only || only.includes(key);
 
   if (selected("sdk")) {
@@ -287,7 +290,7 @@ async function publishPending(
   toolchain: string,
   pending: { name: string; version: string }[],
   publish: boolean,
-  qualification?: { output: string; source: string },
+  qualification?: { output: string; source: string; selection: string },
 ) {
   if (pending.length === 0) {
     console.log(`nothing to publish in ${cwd}`);
@@ -302,12 +305,12 @@ async function publishPending(
     target,
   );
   if (qualification) {
-    await verifyPortableCrate(ROOT, qualification.output, qualification.source);
-    await verifyPortablePackageOutput(qualification.output);
+    await verifyPortableCrate(ROOT, qualification.output, qualification.source, qualification.selection);
+    await verifyPortablePackageOutput(qualification.output, qualification.selection);
   }
   if (!publish) return;
   cargo(cwd, toolchain, ["publish", ...(qualification ? ["--locked"] : ["--allow-dirty"]), ...sel], target);
-  if (qualification) await verifyPortablePackageOutput(qualification.output);
+  if (qualification) await verifyPortablePackageOutput(qualification.output, qualification.selection);
   for (const c of pending) console.log(`published https://crates.io/crates/${c.name}/${c.version}`);
 }
 

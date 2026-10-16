@@ -1,6 +1,6 @@
 import { expect, test } from "bun:test";
 
-type Step = { name?: string; run?: string; if?: string; uses?: string };
+type Step = { name?: string; run?: string; if?: string; uses?: string; env?: Record<string, string> };
 type Workflow = { jobs: Record<string, { steps?: Step[]; needs?: string[]; [key: string]: unknown }> };
 async function workflow(name: string): Promise<Workflow> {
   return Bun.YAML.parse(
@@ -28,7 +28,7 @@ for (const [name, job, publication] of [
     if (name !== "bun-video-release")
       expect(steps[gate]!.if).toBe(
         name === "aphrody-publish-crates"
-          ? "inputs.dry-run != true && inputs.only != 'crates/aphrody-jev'"
+          ? "inputs.dry-run != true && inputs.only != 'crates/aphrody-jev' && inputs.only != 'src/browser/crates/ssrf'"
           : name === "aphrody-publish-npm"
             ? "inputs.dry-run != true && steps.qualification.outputs.kind != 'portable-source' && steps.qualification.outputs.kind != 'plugin-source'"
             : "inputs.dry-run != true",
@@ -227,4 +227,45 @@ test("main runtime updater accepts stable version changes while preserving sourc
   expect(source.startsWith(suffix("1.4.5+bbbbbbbb"))).toBe(false);
   expect(owner).toContain("!release.target_commitish.startsWith(revisionSuffix)");
   expect(owner).toContain("probe.exitCode !== 0 || !revisionSuffix");
+});
+
+test("crate source qualification is restricted to exact registered JeV and browser selections", async () => {
+  const steps = (await workflow("aphrody-publish-crates")).jobs.publish!.steps!;
+  const prepare = steps.find(step => step.name === "Prepare pinned Rust workspace sources for portable qualification")!;
+  const qualify = steps.find(step => step.name === "Qualify the exact portable Rust crate selection")!;
+  const verify = steps.find(step => step.name === "Verify portable source and package evidence before publication")!;
+  const native = steps.find(step => step.run?.includes("release-aggregation.ts download-verify"))!;
+  const evaluate = (expression: string, inputs: Record<string, unknown>) =>
+    new Function("inputs", "return (" + expression.replaceAll("inputs.dry-run", 'inputs["dry-run"]') + ");")(inputs);
+  for (const only of ["crates/aphrody-jev", "src/browser/crates/ssrf"]) {
+    const inputs = { only, "dry-run": false };
+    expect(evaluate(prepare.if!, inputs)).toBe(true);
+    expect(evaluate(qualify.if!, inputs)).toBe(true);
+    expect(evaluate(verify.if!, inputs)).toBe(true);
+    expect(evaluate(native.if!, inputs)).toBe(false);
+  }
+  for (const only of [
+    "",
+    "sdk",
+    "packages/bun-google/crates/boq",
+    "unknown",
+    "src/browser/crates/dom",
+    "src/browser/crates/ssrf,sdk",
+    "crates/aphrody-jev,src/browser/crates/ssrf",
+    "src/browser/crates/ssrf,",
+  ])
+    for (const dryRun of [false, true]) {
+      const inputs = { only, "dry-run": dryRun };
+      expect(evaluate(qualify.if!, inputs)).toBe(false);
+      expect(evaluate(verify.if!, inputs)).toBe(false);
+      expect(evaluate(native.if!, inputs)).toBe(!dryRun);
+    }
+  for (const step of [qualify, verify]) {
+    expect(step.env!.PORTABLE_SELECTION).toBe("${{ inputs.only }}");
+    expect(step.run).toContain('"$GITHUB_SHA" "$PORTABLE_SELECTION"');
+  }
+  const publish = steps.find(step => step.name === "Publish")!;
+  expect(publish.run).toContain('if [ "$ONLY" = crates/aphrody-jev ] || [ "$ONLY" = src/browser/crates/ssrf ]');
+  expect(publish.run).toContain('if [ "${{ inputs.dry-run }}" != "true" ]; then args+=(--publish); fi');
+  expect(native.run).toContain('"$GITHUB_SHA" "$version" "$channel"');
 });

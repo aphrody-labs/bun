@@ -5,6 +5,7 @@ import {
   mkdirSync,
   readdirSync,
   readFileSync,
+  realpathSync,
   rmSync,
   statSync,
   symlinkSync,
@@ -13,7 +14,7 @@ import {
   writeFileSync,
 } from "fs";
 import { bunEnv, bunExe, isASAN, isWindows, tempDir } from "harness";
-import { join, relative, resolve } from "path";
+import { delimiter, join, relative, resolve } from "path";
 import { lspExtensions, mcpTools } from "../../../packages/bun-agent-plugin/src/catalog.ts";
 import { generate } from "../../../packages/bun-agent-plugin/src/generate.ts";
 import { hasTable } from "../../../packages/bun-agent-plugin/src/install.ts";
@@ -323,7 +324,11 @@ describe("rewriteCommand", () => {
     ["bun check -p packages/app", "bun bd check -p packages/app", { bunCheckout: true }],
     ["bunx --bun oxfmt src", "bun bd fmt src", { bunCheckout: true }],
     ["./node_modules/.bin/oxlint src", "bun lint src"],
-    ["oxlint 'two words.ts' && bun test a.test.ts", "bun bd lint 'two words.ts' && bun bd test a.test.ts", { bunCheckout: true }],
+    [
+      "oxlint 'two words.ts' && bun test a.test.ts",
+      "bun bd lint 'two words.ts' && bun bd test a.test.ts",
+      { bunCheckout: true },
+    ],
     ["bun bd lint src", undefined, { bunCheckout: true }],
     ["bun run build", undefined, { bunCheckout: true }],
     ["bun just build", undefined, { bunCheckout: true }],
@@ -459,6 +464,31 @@ describe("hooks", () => {
 });
 
 describe("bun agent-plugin", () => {
+  test.skipIf(isWindows)(
+    "installed executable keeps physical identity through a bun PATH symlink",
+    async () => {
+      using home = tempDir("agent-plugin-path-alias", { ".codex/config.toml": "", "bin/.keep": "" });
+      const h = String(home),
+        alias = join(h, "bin", "bun");
+      symlinkSync(realpathSync(bunExe()), alias);
+      expect(realpathSync(alias)).toBe(realpathSync(bunExe()));
+      const install = await run([alias, "agent-plugin", "install", "--home", h, "--json"], {
+        cwd: h,
+        env: { PATH: join(h, "bin") + delimiter + (bunEnv.PATH ?? "") },
+      });
+      expect(install.stderr).toBe("");
+      expect(JSON.parse(install.stdout).targets).toEqual(["codex"]);
+      const installed = JSON.parse(readFileSync(join(h, ".bun/agent-plugin/codex/.mcp.json"), "utf8"));
+      expect(installed.mcpServers.bun.command).toEndWith("/bun");
+      expect(realpathSync(installed.mcpServers.bun.command)).toBe(realpathSync(bunExe()));
+      expect(realpathSync(JSON.parse(readFileSync(join(h, ".bun/agent-plugin/install.json"), "utf8")).executable)).toBe(
+        realpathSync(bunExe()),
+      );
+      expect(install.exitCode).toBe(0);
+    },
+    SPAWN_TIMEOUT,
+  );
+
   test.concurrent(
     "installs the embedded plugin and uninstalls it, leaving the other plugins as they were",
     async () => {
@@ -489,11 +519,12 @@ describe("bun agent-plugin", () => {
       expect(readFileSync(join(h, ".codex/AGENTS.md"), "utf8")).toContain("aphrody-labs/bun");
       const plugin = tree(join(h, ".bun/agent-plugin"));
       expect(JSON.parse(plugin["claude/.claude-plugin/plugin.json"]).name).toBe("bun");
+      const executable = realpathSync(bunExe());
       for (const target of ["claude", "codex"]) {
-        expect(resolve(JSON.parse(plugin[`${target}/.mcp.json`]).mcpServers.bun.command)).toBe(resolve(bunExe()));
+        expect(realpathSync(JSON.parse(plugin[`${target}/.mcp.json`]).mcpServers.bun.command)).toBe(executable);
       }
-      expect(resolve(JSON.parse(plugin["agy/mcp_config.json"]).mcpServers.bun.command)).toBe(resolve(bunExe()));
-      expect(resolve(JSON.parse(plugin["install.json"]).executable)).toBe(resolve(bunExe()));
+      expect(realpathSync(JSON.parse(plugin["agy/mcp_config.json"]).mcpServers.bun.command)).toBe(executable);
+      expect(realpathSync(JSON.parse(plugin["install.json"]).executable)).toBe(executable);
       expect(existsSync(join(h, ".gemini/config/plugins/bun/hooks.json"))).toBe(true);
       expect(existsSync(join(h, ".gemini/extensions/bun/gemini-extension.json"))).toBe(true);
 

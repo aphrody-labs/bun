@@ -47,7 +47,7 @@ jobs:
       - name: Install Rust stable
         run: rustup toolchain install stable --profile minimal
       - name: Prepare pinned Rust workspace sources for portable qualification
-        if: inputs.only == 'crates/aphrody-jev'
+        if: inputs.only == 'crates/aphrody-jev' || inputs.only == 'src/browser/crates/ssrf'
         run: |
           bun -e '
             import { provisionRustDependencies } from "./scripts/aphrody/native-ci.ts";
@@ -57,23 +57,30 @@ jobs:
             });
           '
       - name: Qualify the exact portable Rust crate selection
-        if: inputs.only == 'crates/aphrody-jev'
-        run: bun scripts/aphrody/release-portable-crate.ts qualify "$RUNNER_TEMP/portable-crate" "$GITHUB_SHA"
+        if: inputs.only == 'crates/aphrody-jev' || inputs.only == 'src/browser/crates/ssrf'
+        env:
+          PORTABLE_SELECTION: ${{ inputs.only }}
+        run: bun scripts/aphrody/release-portable-crate.ts qualify "$RUNNER_TEMP/portable-crate" "$GITHUB_SHA" "$PORTABLE_SELECTION"
       - name: Verify portable source and package evidence before publication
-        if: inputs.only == 'crates/aphrody-jev'
-        run: bun scripts/aphrody/release-portable-crate.ts verify "$RUNNER_TEMP/portable-crate" "$GITHUB_SHA"
+        if: inputs.only == 'crates/aphrody-jev' || inputs.only == 'src/browser/crates/ssrf'
+        env:
+          PORTABLE_SELECTION: ${{ inputs.only }}
+        run: bun scripts/aphrody/release-portable-crate.ts verify "$RUNNER_TEMP/portable-crate" "$GITHUB_SHA" "$PORTABLE_SELECTION"
       - name: Preserve portable qualification evidence
-        if: always() && inputs.only == 'crates/aphrody-jev'
+        if: always() && (inputs.only == 'crates/aphrody-jev' || inputs.only == 'src/browser/crates/ssrf')
         uses: actions/upload-artifact@v6
         with:
-          name: portable-aphrody-jev-${{ github.sha }}
+          name: portable-${{ inputs.only == 'crates/aphrody-jev' && 'aphrody-jev' || 'browser' }}-${{ github.sha }}
+          include-hidden-files: true
           path: |
             ${{ runner.temp }}/portable-crate/*.json
             ${{ runner.temp }}/portable-crate/*.crate
             ${{ runner.temp }}/portable-crate/*.log
+            ${{ runner.temp }}/portable-crate/consumer/**
+            ${{ runner.temp }}/portable-crate/packages/**
           if-no-files-found: error
       - name: Verify eight native full release receipts before publication
-        if: inputs.dry-run != true && inputs.only != 'crates/aphrody-jev'
+        if: inputs.dry-run != true && inputs.only != 'crates/aphrody-jev' && inputs.only != 'src/browser/crates/ssrf'
         env:
           GH_TOKEN: ${{ secrets.APHRODY_SYNC_TOKEN || github.token }}
           QUALIFICATION_TAG: ${{ inputs.qualification-tag || github.ref_name }}
@@ -88,6 +95,6 @@ jobs:
         run: |
           args=(--out "$RUNNER_TEMP/aphrody-crates")
           if [ -n "$ONLY" ]; then args+=(--only "$ONLY"); fi
-          if [ "$ONLY" = crates/aphrody-jev ]; then args+=(--portable-qualification "$RUNNER_TEMP/portable-crate"); fi
+          if [ "$ONLY" = crates/aphrody-jev ] || [ "$ONLY" = src/browser/crates/ssrf ]; then args+=(--portable-qualification "$RUNNER_TEMP/portable-crate"); fi
           if [ "${{ inputs.dry-run }}" != "true" ]; then args+=(--publish); fi
           bun scripts/aphrody/publish-crates.ts "${args[@]}"

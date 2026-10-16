@@ -65,11 +65,11 @@ configuration and captured public assets must already exist on the host.
 
 ## Source-derived guides and blog dossiers
 
-`editorial-generate.ts` uses the existing protected Aphrody Jev credential and
+`editorial-generate.ts` uses the existing protected Aphrody inference credential and
 read-only public Neon connection. The application SDK owns authentication and
 HTTP; the native `bun:yolo.inspect` owner validates every structured response.
 Neither the Worker nor static browser assets import that native adapter or keys.
-Jev judges relevance, injection and evidence support, not free-form authorship.
+Bun's typed decision layer judges relevance, injection and evidence support, not free-form authorship.
 The resulting French dossiers disclose their source-derived assembly and retain
 literal excerpts, document hashes and the immutable documentation/graph snapshot.
 
