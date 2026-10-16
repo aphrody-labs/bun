@@ -3297,6 +3297,41 @@ describe("binaries", () => {
     }
   });
 
+  test("bun install -g relinks the binaries of every global package, even with linker = isolated", async () => {
+    await write(
+      join(packageDir, "bunfig.toml"),
+      Bun.TOML.stringify({
+        install: {
+          cache: false,
+          registry: `http://localhost:${port}/`,
+          globalBinDir: join(packageDir, "global-bin-dir"),
+          linker: "isolated",
+        },
+      }),
+    );
+    const install = async (...packages: string[]) => {
+      await using proc = spawn({
+        cmd: [bunExe(), "i", "-g", `--config=${join(packageDir, "bunfig.toml")}`, ...packages],
+        cwd: packageDir,
+        stdout: "pipe",
+        stderr: "pipe",
+        env: { ...env, BUN_INSTALL: join(packageDir, "global-install-dir") },
+      });
+      const [out, err, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+      expect(err).not.toContain("error:");
+      expect(exitCode).toBe(0);
+      return out;
+    };
+    const whatBin = join(packageDir, "global-bin-dir", isWindows ? "what-bin.exe" : "what-bin");
+
+    expect(await install("what-bin")).toContain("what-bin@1.5.0");
+    expect(await exists(whatBin)).toBeTrue();
+
+    await rm(join(packageDir, "global-bin-dir"), { recursive: true, force: true });
+    await install();
+    expect(await exists(whatBin)).toBeTrue();
+  });
+
   for (const global of [false, true]) {
     test(`bin types${global ? " (global)" : ""}`, async () => {
       if (global) {

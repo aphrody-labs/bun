@@ -638,20 +638,11 @@ impl<'a> PackageInstaller<'a> {
             if defer_this_bin {
                 deferred.push(dep_id);
             }
-            // globally linked packages shouls always belong to the root
-            // tree (0).
-            let global = if !manager.options.global || tree_id != 0 {
-                false
-            } else {
-                'global: {
-                    for request in manager.update_requests.iter() {
-                        if request.package_id == package_id {
-                            break 'global true;
-                        }
-                    }
-                    break 'global false;
-                }
-            };
+            // Every direct dependency of the global package.json links its
+            // bins into the global bin dir, so `bun install -g` restores them.
+            let global = manager.options.global
+                && tree_id == 0
+                && lockfile.is_workspace_root_dependency(dep_id);
 
             loop {
                 // `node_modules_path` (mut) and `target_node_modules_path`

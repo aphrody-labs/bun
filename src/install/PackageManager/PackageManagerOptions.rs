@@ -815,6 +815,12 @@ impl Options {
                 self.node_linker = node_linker;
             }
 
+            // The global install dir is flat like npm's, and only the hoisted
+            // linker links its packages' bins into the global bin dir.
+            if self.global {
+                self.node_linker = NodeLinker::Hoisted;
+            }
+
             self.log_level = if default_disable_progress_bar || cli.no_progress {
                 cli.log_level.without_progress()
             } else {

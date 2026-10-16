@@ -159,6 +159,8 @@ cowsay "Bun!"
                 ||     ||
 ```
 
+Global packages live in the `package.json` of `globalDir`. `bun install -g` without arguments reinstalls them and links the bins of each one into `globalBinDir`, which restores a deleted or emptied bin directory. Global installs always use the hoisted linker, whatever `install.linker` says.
+
 <Accordion title="Configuring global installation behavior">
 
 ```toml bunfig.toml icon="settings"
