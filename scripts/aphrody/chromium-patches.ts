@@ -262,7 +262,7 @@ export function check(options: PatchOptions) {
 
 interface State {
   base: string;
-  overlay?: string;
+  overlay?: string | undefined;
   patches: Record<string, { patch: string; file: string }>;
 }
 
