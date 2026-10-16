@@ -10682,6 +10682,16 @@ declare module "bun" {
       listener: EventListenerOrEventListenerObject,
       options?: boolean | AddEventListenerOptions,
     ): void;
+    removeEventListener<T = unknown>(
+      type: `${string}.${string}`,
+      listener: (event: MessageEvent<T>) => void,
+      options?: boolean | EventListenerOptions,
+    ): void;
+    removeEventListener(
+      type: string,
+      listener: EventListenerOrEventListenerObject,
+      options?: boolean | EventListenerOptions,
+    ): void;
 
     /**
      * Click at the given viewport coordinates.
