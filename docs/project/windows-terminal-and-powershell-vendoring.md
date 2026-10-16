@@ -1,6 +1,6 @@
 # Windows source submodules
 
-The independently owned Microsoft sources are pinned Git submodules of their Aphrody forks:
+The independently owned Microsoft sources are optional checkouts of their Aphrody forks, fetched with `bun run vendor:setup <name>` (see [vendor.md](./vendor.md)):
 
 | Path | Fork | Upstream | Pin | Aphrody commits over upstream |
 | --- | --- | --- | --- | ---: |

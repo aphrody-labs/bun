@@ -1,21 +1,6 @@
 [submodule "@aphrody/m3"]
 	path = packages/aphrody-migrated/m3/aphrody-m3
 	url = https://github.com/aphrody-labs/aphrody-m3.git
-[submodule "vendor/fluentui"]
-	path = vendor/fluentui
-	url = https://github.com/aphrody-labs/fluentui.git
-[submodule "vendor/vcpkg"]
-	path = vendor/vcpkg
-	url = https://github.com/aphrody-labs/vcpkg.git
-[submodule "vendor/powershell"]
-	path = vendor/powershell
-	url = https://github.com/aphrody-labs/PowerShell.git
-[submodule "vendor/windows-terminal"]
-	path = vendor/windows-terminal
-	url = https://github.com/aphrody-labs/terminal.git
-[submodule "vendor/roslyn"]
-	path = vendor/roslyn
-	url = https://github.com/aphrody-labs/roslyn.git
 [submodule "vendor/brave-core"]
 	path = vendor/brave-core
 	url = https://github.com/aphrody-labs/brave-core.git

@@ -16,7 +16,7 @@ The model is `native Windows ABI + portable orchestration`:
 
 ## Activation boundary
 
-`@aphrody/bun-windows-suite` groups `bun:windows`, `bun:winrt`, `bun:winui` and `bun:dotnet` behind explicit activation. `BUN_WINDOWS_CAPABILITIES` defaults to empty. The source/build payloads remain pinned submodules: `vendor/powershell`, `vendor/roslyn`, `vendor/windows-terminal`, `vendor/vcpkg` and `vendor/fluentui`.
+`@aphrody/bun-windows-suite` groups `bun:windows`, `bun:winrt`, `bun:winui` and `bun:dotnet` behind explicit activation. `BUN_WINDOWS_CAPABILITIES` defaults to empty. The source/build payloads are pinned checkouts fetched by `bun run vendor:setup`: `vendor/powershell`, `vendor/roslyn`, `vendor/windows-terminal`, `vendor/vcpkg` and `vendor/fluentui`.
 
 The package is the distribution boundary, not proof of binary extraction. Moving a capability out of the executable requires before/after release-size, startup, RSS and behavior qualification.
 
