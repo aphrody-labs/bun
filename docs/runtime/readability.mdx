@@ -22,27 +22,27 @@ if (article) {
 
 The input is a string, an `ArrayBuffer` or a `TypedArray` of UTF-8 bytes. The result is `null` when no article candidate is found, or when the text is shorter than `minLength`.
 
-| Field      | Type             | Description                                                     |
-| ---------- | ---------------- | --------------------------------------------------------------- |
+| Field      | Type             | Description                                                           |
+| ---------- | ---------------- | --------------------------------------------------------------------- |
 | `title`    | `string`         | Title from JSON-LD, `<meta>` tags or `<title>`, without the site name |
-| `byline`   | `string \| null` | Author from JSON-LD or `<meta name="author">`                   |
-| `excerpt`  | `string \| null` | Description, or the first sentence of the article               |
-| `lang`     | `string \| null` | `lang` attribute of `<html>`                                    |
-| `content`  | `string`         | Cleaned article HTML                                            |
-| `text`     | `string`         | Text content of the cleaned article                             |
-| `length`   | `number`         | Number of characters in `text`                                  |
-| `score`    | `number`         | Mozilla readability score of the original document              |
-| `readable` | `boolean`        | `score` is above the Speedreader threshold (20)                 |
-| `page`     | `string`         | Speedreader reader page, only with `page: true`                 |
+| `byline`   | `string \| null` | Author from JSON-LD or `<meta name="author">`                         |
+| `excerpt`  | `string \| null` | Description, or the first sentence of the article                     |
+| `lang`     | `string \| null` | `lang` attribute of `<html>`                                          |
+| `content`  | `string`         | Cleaned article HTML                                                  |
+| `text`     | `string`         | Text content of the cleaned article                                   |
+| `length`   | `number`         | Number of characters in `text`                                        |
+| `score`    | `number`         | Mozilla readability score of the original document                    |
+| `readable` | `boolean`        | `score` is above the Speedreader threshold (20)                       |
+| `page`     | `string`         | Speedreader reader page, only with `page: true`                       |
 
 ### Options
 
-| Option        | Description                                                      |
-| ------------- | ---------------------------------------------------------------- |
-| `url`         | URL of the document (default `https://example.com/`). An invalid URL throws |
-| `minLength`   | Return `null` when the article text is shorter                   |
-| `page`        | Also serialize the reader page, a complete HTML document         |
-| `theme`, `fontFamily`, `fontSize`, `columnWidth` | `data-*` attributes of the reader page's `<html>` |
+| Option                                           | Description                                                                 |
+| ------------------------------------------------ | --------------------------------------------------------------------------- |
+| `url`                                            | URL of the document (default `https://example.com/`). An invalid URL throws |
+| `minLength`                                      | Return `null` when the article text is shorter                              |
+| `page`                                           | Also serialize the reader page, a complete HTML document                    |
+| `theme`, `fontFamily`, `fontSize`, `columnWidth` | `data-*` attributes of the reader page's `<html>`                           |
 
 ```ts
 const { page } = Bun.HTML.readability(html, { url, page: true, theme: "dark" })!;

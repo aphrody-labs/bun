@@ -23,4 +23,4 @@ release distribution and provider/production activation remain separate gates.
 
 Receipts: tmp/listener-binding-native-local.log,
 tmp/listener-binding-namedpipe-tls-native.log and
- tmp/listener-binding-<target>.jsonl with exit-code files.
+tmp/listener-binding-<target>.jsonl with exit-code files.

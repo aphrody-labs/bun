@@ -22,12 +22,12 @@ bun scripts/aphrody/alpine/wsl.ts --base ghcr.io/aphrody-labs/alpine:3.24-runtim
 
 `/etc/profile.d/aphrody-wslg.sh` règle Wayland en premier (`GDK_BACKEND`, `QT_QPA_PLATFORM`, `ELECTRON_OZONE_PLATFORM_HINT`) et `WEBKIT_DISABLE_DMABUF_RENDERER=1`. `WGPU_BACKEND` vaut `gl`, ou `vulkan` avec dozen. Testé dans WSLg (WSL 3.0.1, WSLg 1.0.79), rendu llvmpipe :
 
-| Cas | Commande | Résultat |
-| --- | --- | --- |
-| GTK 4 | `bun test/js/bun/ffi/gtk-window.fixture.ts --title café --timeout 50` | `window created: "café" 680x440`, exit 0 |
-| COSMIC | `BUN_COSMIC_WINDOW_LIB=<libbun_cosmic_window.so musl> bun test/js/bun/ffi/cosmic-window.fixture.ts --timeout 50` | `window created`, exit 0 |
-| wgpu 30.0.1 + winit 0.30.13 | `aphrody-wgpu-probe --frames 600` (`wsl/examples/wgpu-probe`) | 600 images à 57,6 i/s, backend GL |
-| WebOS | `startWebOS()` (bun-webos) + `chromium-browser --app=… --ozone-platform=wayland` | bureau affiché |
+| Cas                         | Commande                                                                                                         | Résultat                                 |
+| --------------------------- | ---------------------------------------------------------------------------------------------------------------- | ---------------------------------------- |
+| GTK 4                       | `bun test/js/bun/ffi/gtk-window.fixture.ts --title café --timeout 50`                                            | `window created: "café" 680x440`, exit 0 |
+| COSMIC                      | `BUN_COSMIC_WINDOW_LIB=<libbun_cosmic_window.so musl> bun test/js/bun/ffi/cosmic-window.fixture.ts --timeout 50` | `window created`, exit 0                 |
+| wgpu 30.0.1 + winit 0.30.13 | `aphrody-wgpu-probe --frames 600` (`wsl/examples/wgpu-probe`)                                                    | 600 images à 57,6 i/s, backend GL        |
+| WebOS                       | `startWebOS()` (bun-webos) + `chromium-browser --app=… --ozone-platform=wayland`                                 | bureau affiché                           |
 
 GPU :
 

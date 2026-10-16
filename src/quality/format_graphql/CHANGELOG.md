@@ -85,4 +85,3 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 🐛 Bug Fixes
 
 - 3f355e5 formatter_graphql: Improve major prettier diffs (#23419) (leaysgur)
-

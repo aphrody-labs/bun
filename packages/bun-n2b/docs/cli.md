@@ -82,17 +82,17 @@ or the argument type cannot be proven safe. It also refuses partial calls and in
 
 ## Subcommands
 
-| Command                                        | Purpose                                                                                                                                                                                       |
-| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `rules`                                        | Lists every rule ID, category and docs link. `--report json` prints a flat JSON array.                                                                                                        |
-| `prompt`                                       | Prints a Markdown migration prompt for an LLM.                                                                                                                                                |
-| `audit`                                        | Lists GitHub issues and pull requests that mention Bun or Node.js.                                                                                                                            |
-| `web`                                          | Scans the scripts of a rendered page artifact.                                                                                                                                                |
-| `analyze`                                      | Scans and audits one or more repositories, then links findings to their GitHub issues. The `ai` crate feature adds fastembed embeddings.                                                      |
+| Command                                        | Purpose                                                                                                                                                                                               |
+| ---------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `rules`                                        | Lists every rule ID, category and docs link. `--report json` prints a flat JSON array.                                                                                                                |
+| `prompt`                                       | Prints a Markdown migration prompt for an LLM.                                                                                                                                                        |
+| `audit`                                        | Lists GitHub issues and pull requests that mention Bun or Node.js.                                                                                                                                    |
+| `web`                                          | Scans the scripts of a rendered page artifact.                                                                                                                                                        |
+| `analyze`                                      | Scans and audits one or more repositories, then links findings to their GitHub issues. The `ai` crate feature adds fastembed embeddings.                                                              |
 | `patch`                                        | `bun n2b patch <pkg>` applies the rules to `node_modules/<pkg>` through `bun patch`. `bun n2b patch --self` writes the rewrites of the current project as a diff (`n2b.patch`) without editing files. |
-| `bunpp`                                        | Scaffolds `@bun++/node-<module>` packages for Node modules that Bun lacks (`scaffold`, `scaffold-all`, `status`, `sync`, `doctor`).                                                           |
-| `llmstxt`                                      | Generates `llms.txt` and `llms-full.txt` from a crawled site. Needs `siteone-crawler`.                                                                                                        |
-| `app`, `bin`, `linux`, `win32`, `wasm`, `rust` | Project scaffolders.                                                                                                                                                                          |
+| `bunpp`                                        | Scaffolds `@bun++/node-<module>` packages for Node modules that Bun lacks (`scaffold`, `scaffold-all`, `status`, `sync`, `doctor`).                                                                   |
+| `llmstxt`                                      | Generates `llms.txt` and `llms-full.txt` from a crawled site. Needs `siteone-crawler`.                                                                                                                |
+| `app`, `bin`, `linux`, `win32`, `wasm`, `rust` | Project scaffolders.                                                                                                                                                                                  |
 
 ## The `n2b.json` manifest
 

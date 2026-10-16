@@ -2327,156 +2327,153 @@ for (const rootVersion of versions) {
 }
 
 for (const version of versions) {
-  test.concurrent(
-    `it should allow listing workspace as dependency of the root package version ${version}`,
-    async () => {
-      using ctx = await setupTest();
-      const { packageDir, packageJson, env } = ctx;
-      await write(
-        packageJson,
-        JSON.stringify({
-          name: "foo",
-          workspaces: ["packages/*"],
-          dependencies: {
-            "workspace-1": version,
-          },
-        }),
-      );
+  test.concurrent(`it should allow listing workspace as dependency of the root package version ${version}`, async () => {
+    using ctx = await setupTest();
+    const { packageDir, packageJson, env } = ctx;
+    await write(
+      packageJson,
+      JSON.stringify({
+        name: "foo",
+        workspaces: ["packages/*"],
+        dependencies: {
+          "workspace-1": version,
+        },
+      }),
+    );
 
-      await mkdir(join(packageDir, "packages", "workspace-1"), { recursive: true });
-      await write(
-        join(packageDir, "packages", "workspace-1", "package.json"),
-        JSON.stringify({
-          name: "workspace-1",
-          version: "1.0.0",
-        }),
-      );
-      // install first from the root, the workspace package
-      var { stdout, stderr, exited } = spawn({
-        cmd: [bunExe(), "install"],
-        cwd: packageDir,
-        stdout: "pipe",
-        stdin: "pipe",
-        stderr: "pipe",
-        env,
-      });
-
-      var err = await stderr.text();
-      var out = await stdout.text();
-      expect(err).toContain("Saved lockfile");
-      expect(err).not.toContain("already exists");
-      expect(err).not.toContain("not found");
-      expect(err).not.toContain("Duplicate dependency");
-      expect(err).not.toContain('workspace dependency "workspace-1" not found');
-      expect(err).not.toContain("error:");
-      expect(out.replace(/\s*\[[0-9\.]+m?s\]\s*$/, "").split(/\r?\n/)).toEqual([
-        expect.stringContaining("bun install v1."),
-        "",
-        `+ workspace-1@workspace:packages/workspace-1`,
-        "",
-        "1 package installed",
-      ]);
-      expect(await exited).toBe(0);
-      assertManifestsPopulated(join(packageDir, ".bun-cache"), verdaccio.registryUrl());
-
-      expect(await file(join(packageDir, "node_modules", "workspace-1", "package.json")).json()).toEqual({
+    await mkdir(join(packageDir, "packages", "workspace-1"), { recursive: true });
+    await write(
+      join(packageDir, "packages", "workspace-1", "package.json"),
+      JSON.stringify({
         name: "workspace-1",
         version: "1.0.0",
-      });
+      }),
+    );
+    // install first from the root, the workspace package
+    var { stdout, stderr, exited } = spawn({
+      cmd: [bunExe(), "install"],
+      cwd: packageDir,
+      stdout: "pipe",
+      stdin: "pipe",
+      stderr: "pipe",
+      env,
+    });
 
-      ({ stdout, stderr, exited } = spawn({
-        cmd: [bunExe(), "install"],
-        cwd: join(packageDir, "packages", "workspace-1"),
-        stdout: "pipe",
-        stdin: "pipe",
-        stderr: "pipe",
-        env,
-      }));
+    var err = await stderr.text();
+    var out = await stdout.text();
+    expect(err).toContain("Saved lockfile");
+    expect(err).not.toContain("already exists");
+    expect(err).not.toContain("not found");
+    expect(err).not.toContain("Duplicate dependency");
+    expect(err).not.toContain('workspace dependency "workspace-1" not found');
+    expect(err).not.toContain("error:");
+    expect(out.replace(/\s*\[[0-9\.]+m?s\]\s*$/, "").split(/\r?\n/)).toEqual([
+      expect.stringContaining("bun install v1."),
+      "",
+      `+ workspace-1@workspace:packages/workspace-1`,
+      "",
+      "1 package installed",
+    ]);
+    expect(await exited).toBe(0);
+    assertManifestsPopulated(join(packageDir, ".bun-cache"), verdaccio.registryUrl());
 
-      err = await stderr.text();
-      out = await stdout.text();
-      expect(err).not.toContain("Saved lockfile");
-      expect(err).not.toContain("not found");
-      expect(err).not.toContain("already exists");
-      expect(err).not.toContain("Duplicate dependency");
-      expect(err).not.toContain('workspace dependency "workspace-1" not found');
-      expect(err).not.toContain("error:");
-      expect(out.replace(/\s*\[[0-9\.]+m?s\]\s*$/, "").split(/\r?\n/)).toEqual([
-        expect.stringContaining("bun install v1."),
-        "",
-        "Checked 1 install across 2 packages (no changes)",
-      ]);
-      expect(await exited).toBe(0);
-      assertManifestsPopulated(join(packageDir, ".bun-cache"), verdaccio.registryUrl());
+    expect(await file(join(packageDir, "node_modules", "workspace-1", "package.json")).json()).toEqual({
+      name: "workspace-1",
+      version: "1.0.0",
+    });
 
-      expect(await file(join(packageDir, "node_modules", "workspace-1", "package.json")).json()).toEqual({
-        name: "workspace-1",
-        version: "1.0.0",
-      });
+    ({ stdout, stderr, exited } = spawn({
+      cmd: [bunExe(), "install"],
+      cwd: join(packageDir, "packages", "workspace-1"),
+      stdout: "pipe",
+      stdin: "pipe",
+      stderr: "pipe",
+      env,
+    }));
 
-      await rm(join(packageDir, "node_modules"), { recursive: true, force: true });
-      await rm(join(packageDir, "bun.lock"), { recursive: true, force: true });
+    err = await stderr.text();
+    out = await stdout.text();
+    expect(err).not.toContain("Saved lockfile");
+    expect(err).not.toContain("not found");
+    expect(err).not.toContain("already exists");
+    expect(err).not.toContain("Duplicate dependency");
+    expect(err).not.toContain('workspace dependency "workspace-1" not found');
+    expect(err).not.toContain("error:");
+    expect(out.replace(/\s*\[[0-9\.]+m?s\]\s*$/, "").split(/\r?\n/)).toEqual([
+      expect.stringContaining("bun install v1."),
+      "",
+      "Checked 1 install across 2 packages (no changes)",
+    ]);
+    expect(await exited).toBe(0);
+    assertManifestsPopulated(join(packageDir, ".bun-cache"), verdaccio.registryUrl());
 
-      // install from workspace package then from root
-      ({ stdout, stderr, exited } = spawn({
-        cmd: [bunExe(), "install"],
-        cwd: join(packageDir, "packages", "workspace-1"),
-        stdout: "pipe",
-        stdin: "pipe",
-        stderr: "pipe",
-        env,
-      }));
+    expect(await file(join(packageDir, "node_modules", "workspace-1", "package.json")).json()).toEqual({
+      name: "workspace-1",
+      version: "1.0.0",
+    });
 
-      err = await stderr.text();
-      out = await stdout.text();
-      expect(err).toContain("Saved lockfile");
-      expect(err).not.toContain("already exists");
-      expect(err).not.toContain("not found");
-      expect(err).not.toContain("Duplicate dependency");
-      expect(err).not.toContain('workspace dependency "workspace-1" not found');
-      expect(err).not.toContain("error:");
-      expect(out.replace(/\s*\[[0-9\.]+m?s\]\s*$/, "").split(/\r?\n/)).toEqual([
-        expect.stringContaining("bun install v1."),
-        "",
-        "1 package installed",
-      ]);
-      expect(await exited).toBe(0);
-      expect(await file(join(packageDir, "node_modules", "workspace-1", "package.json")).json()).toEqual({
-        name: "workspace-1",
-        version: "1.0.0",
-      });
+    await rm(join(packageDir, "node_modules"), { recursive: true, force: true });
+    await rm(join(packageDir, "bun.lock"), { recursive: true, force: true });
 
-      ({ stdout, stderr, exited } = spawn({
-        cmd: [bunExe(), "install"],
-        cwd: packageDir,
-        stdout: "pipe",
-        stdin: "pipe",
-        stderr: "pipe",
-        env,
-      }));
+    // install from workspace package then from root
+    ({ stdout, stderr, exited } = spawn({
+      cmd: [bunExe(), "install"],
+      cwd: join(packageDir, "packages", "workspace-1"),
+      stdout: "pipe",
+      stdin: "pipe",
+      stderr: "pipe",
+      env,
+    }));
 
-      err = await stderr.text();
-      out = await stdout.text();
-      expect(err).not.toContain("Saved lockfile");
-      expect(err).not.toContain("already exists");
-      expect(err).not.toContain("not found");
-      expect(err).not.toContain("Duplicate dependency");
-      expect(err).not.toContain('workspace dependency "workspace-1" not found');
-      expect(err).not.toContain("error:");
-      expect(out.replace(/\s*\[[0-9\.]+m?s\]\s*$/, "").split(/\r?\n/)).toEqual([
-        expect.stringContaining("bun install v1."),
-        "",
-        "Checked 1 install across 2 packages (no changes)",
-      ]);
-      expect(await exited).toBe(0);
-      assertManifestsPopulated(join(packageDir, ".bun-cache"), verdaccio.registryUrl());
+    err = await stderr.text();
+    out = await stdout.text();
+    expect(err).toContain("Saved lockfile");
+    expect(err).not.toContain("already exists");
+    expect(err).not.toContain("not found");
+    expect(err).not.toContain("Duplicate dependency");
+    expect(err).not.toContain('workspace dependency "workspace-1" not found');
+    expect(err).not.toContain("error:");
+    expect(out.replace(/\s*\[[0-9\.]+m?s\]\s*$/, "").split(/\r?\n/)).toEqual([
+      expect.stringContaining("bun install v1."),
+      "",
+      "1 package installed",
+    ]);
+    expect(await exited).toBe(0);
+    expect(await file(join(packageDir, "node_modules", "workspace-1", "package.json")).json()).toEqual({
+      name: "workspace-1",
+      version: "1.0.0",
+    });
 
-      expect(await file(join(packageDir, "node_modules", "workspace-1", "package.json")).json()).toEqual({
-        name: "workspace-1",
-        version: "1.0.0",
-      });
-    },
-  );
+    ({ stdout, stderr, exited } = spawn({
+      cmd: [bunExe(), "install"],
+      cwd: packageDir,
+      stdout: "pipe",
+      stdin: "pipe",
+      stderr: "pipe",
+      env,
+    }));
+
+    err = await stderr.text();
+    out = await stdout.text();
+    expect(err).not.toContain("Saved lockfile");
+    expect(err).not.toContain("already exists");
+    expect(err).not.toContain("not found");
+    expect(err).not.toContain("Duplicate dependency");
+    expect(err).not.toContain('workspace dependency "workspace-1" not found');
+    expect(err).not.toContain("error:");
+    expect(out.replace(/\s*\[[0-9\.]+m?s\]\s*$/, "").split(/\r?\n/)).toEqual([
+      expect.stringContaining("bun install v1."),
+      "",
+      "Checked 1 install across 2 packages (no changes)",
+    ]);
+    expect(await exited).toBe(0);
+    assertManifestsPopulated(join(packageDir, ".bun-cache"), verdaccio.registryUrl());
+
+    expect(await file(join(packageDir, "node_modules", "workspace-1", "package.json")).json()).toEqual({
+      name: "workspace-1",
+      version: "1.0.0",
+    });
+  });
 }
 
 describe("install --filter", () => {
@@ -3384,71 +3381,68 @@ test.concurrent("overrides in workspace packages and root pnpm.overrides are ign
   expect(exitCode).toBe(0);
 });
 
-test.concurrent(
-  "workspace: dependencies declared inside a tarball package do not create workspace packages",
-  async () => {
-    using ctx = await setupTest();
-    const { packageDir, packageJson, env } = ctx;
-    const marker = join(packageDir, "extra-postinstall.txt");
-    await Promise.all([
-      write(
-        packageJson,
-        JSON.stringify({
-          name: "foo",
-          dependencies: {
-            lib: "file:./lib.tgz",
+test.concurrent("workspace: dependencies declared inside a tarball package do not create workspace packages", async () => {
+  using ctx = await setupTest();
+  const { packageDir, packageJson, env } = ctx;
+  const marker = join(packageDir, "extra-postinstall.txt");
+  await Promise.all([
+    write(
+      packageJson,
+      JSON.stringify({
+        name: "foo",
+        dependencies: {
+          lib: "file:./lib.tgz",
+        },
+      }),
+    ),
+    Bun.Archive.write(
+      join(packageDir, "lib.tgz"),
+      {
+        "lib/package.json": JSON.stringify({
+          name: "lib",
+          version: "1.0.0",
+          optionalDependencies: {
+            extra: "workspace:extra",
           },
         }),
-      ),
-      Bun.Archive.write(
-        join(packageDir, "lib.tgz"),
-        {
-          "lib/package.json": JSON.stringify({
-            name: "lib",
-            version: "1.0.0",
-            optionalDependencies: {
-              extra: "workspace:extra",
-            },
-          }),
-          "lib/extra/package.json": JSON.stringify({
-            name: "extra",
-            version: "1.0.0",
-            scripts: {
-              postinstall: `${bunExe()} postinstall.js`,
-            },
-          }),
-          "lib/extra/postinstall.js": `require("fs").writeFileSync(${JSON.stringify(marker)}, "")`,
-        },
-        { compress: "gzip" },
-      ),
-    ]);
-
-    await using proc = spawn({
-      cmd: [bunExe(), "install"],
-      cwd: packageDir,
-      stdout: "pipe",
-      stderr: "pipe",
-      env,
-    });
-    const [out, err, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
-
-    expect(err).not.toContain("error:");
-    expect(out).toContain("1 package installed");
-    expect(await readdirSorted(join(packageDir, "node_modules"))).toEqual(["lib"]);
-    expect(await file(join(packageDir, "node_modules", "lib", "package.json")).json()).toEqual({
-      name: "lib",
-      version: "1.0.0",
-      optionalDependencies: {
-        extra: "workspace:extra",
+        "lib/extra/package.json": JSON.stringify({
+          name: "extra",
+          version: "1.0.0",
+          scripts: {
+            postinstall: `${bunExe()} postinstall.js`,
+          },
+        }),
+        "lib/extra/postinstall.js": `require("fs").writeFileSync(${JSON.stringify(marker)}, "")`,
       },
-    });
-    expect(await exists(marker)).toBeFalse();
-    const lockfile = parseLockfile(packageDir);
-    expect(lockfile.workspace_paths).toEqual({});
-    expect(lockfile.packages.map((pkg: any) => pkg.name).sort()).toEqual(["foo", "lib"]);
-    expect(exitCode).toBe(0);
-  },
-);
+      { compress: "gzip" },
+    ),
+  ]);
+
+  await using proc = spawn({
+    cmd: [bunExe(), "install"],
+    cwd: packageDir,
+    stdout: "pipe",
+    stderr: "pipe",
+    env,
+  });
+  const [out, err, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+
+  expect(err).not.toContain("error:");
+  expect(out).toContain("1 package installed");
+  expect(await readdirSorted(join(packageDir, "node_modules"))).toEqual(["lib"]);
+  expect(await file(join(packageDir, "node_modules", "lib", "package.json")).json()).toEqual({
+    name: "lib",
+    version: "1.0.0",
+    optionalDependencies: {
+      extra: "workspace:extra",
+    },
+  });
+  expect(await exists(marker)).toBeFalse();
+  const lockfile = parseLockfile(packageDir);
+  expect(lockfile.workspace_paths).toEqual({});
+  expect(lockfile.packages.map((pkg: any) => pkg.name).sort()).toEqual(["foo", "lib"]);
+  expect(exitCode).toBe(0);
+});
 
 describe("LinkWorkspacePackages", () => {
   // Shared setup previously done in a `beforeEach`: each test gets its own dir,

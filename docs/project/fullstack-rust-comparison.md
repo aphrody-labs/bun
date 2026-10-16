@@ -5,10 +5,10 @@ avec Leptos est une référence pertinente pour comparer routage HTTP, rendu SSR
 hydratation et actions serveur. Aucun benchmark ne permet ici de les désigner
 comme le serveur le plus rapide ou le meilleur pour tous les usages.
 
-| Source | Version du tag | Commit immuable | Fichiers vérifiés |
-| --- | --- | --- | --- |
-| [aphrody-labs/axum](https://github.com/aphrody-labs/axum) | axum-v0.8.9 | c59208c86fded335cd85e388030ad59347b0e5ae | 490 |
-| [aphrody-labs/leptos](https://github.com/aphrody-labs/leptos) | v0.8.22 | 7ec903d4008ddf7679e771863f7b8b90f5cdebde | 1541 |
+| Source                                                        | Version du tag | Commit immuable                          | Fichiers vérifiés |
+| ------------------------------------------------------------- | -------------- | ---------------------------------------- | ----------------- |
+| [aphrody-labs/axum](https://github.com/aphrody-labs/axum)     | axum-v0.8.9    | c59208c86fded335cd85e388030ad59347b0e5ae | 490               |
+| [aphrody-labs/leptos](https://github.com/aphrody-labs/leptos) | v0.8.22        | 7ec903d4008ddf7679e771863f7b8b90f5cdebde | 1541              |
 
 Les snapshots sont dans `vendor/axum` et `vendor/leptos`, avec les licences MIT,
 tests, exemples et documentation du pin. Chaque fichier conserve ses octets
@@ -42,14 +42,14 @@ contrat observé.
 
 ## Réutilisation des propriétaires Bun
 
-| Besoin | Propriétaire à exploiter |
-| --- | --- |
-| HTTP, routes, HEAD/Allow, fichiers, TLS, WS | Bun.serve et src/runtime/server ; les transports expérimentaux gardent leurs gates propres. |
-| Corps, parsing et streaming | Request/Response/Headers, URL/URLSearchParams, FormData/File/Blob, Web Streams et AbortSignal. |
-| Sécurité et état applicatifs | CookieMap, Bun.CSRF, crypto/SubtleCrypto, Bun.password, SQL/SQLite/Redis ; politiques et autorisation restent chez l'application. |
-| Rendu HTML et assets | Bun.build, HTML imports, Bake et HTMLRewriter ; préserver les marqueurs d'hydratation Leptos. |
-| Client Leptos WASM | Pipeline bun:wasm.build existant, features et target séparés pour hydrate/CSR/SSR. |
-| Service Rust Axum/Leptos facultatif | Propriétaire Web existant, Axum/Tower/Tokio/http/bytes/Serde/tracing déjà consommés, crates Leptos uniquement pour les fonctions retenues. |
+| Besoin                                      | Propriétaire à exploiter                                                                                                                   |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------ |
+| HTTP, routes, HEAD/Allow, fichiers, TLS, WS | Bun.serve et src/runtime/server ; les transports expérimentaux gardent leurs gates propres.                                                |
+| Corps, parsing et streaming                 | Request/Response/Headers, URL/URLSearchParams, FormData/File/Blob, Web Streams et AbortSignal.                                             |
+| Sécurité et état applicatifs                | CookieMap, Bun.CSRF, crypto/SubtleCrypto, Bun.password, SQL/SQLite/Redis ; politiques et autorisation restent chez l'application.          |
+| Rendu HTML et assets                        | Bun.build, HTML imports, Bake et HTMLRewriter ; préserver les marqueurs d'hydratation Leptos.                                              |
+| Client Leptos WASM                          | Pipeline bun:wasm.build existant, features et target séparés pour hydrate/CSR/SSR.                                                         |
+| Service Rust Axum/Leptos facultatif         | Propriétaire Web existant, Axum/Tower/Tokio/http/bytes/Serde/tracing déjà consommés, crates Leptos uniquement pour les fonctions retenues. |
 
 L'adaptateur Leptos vers Request/Response Bun reste à implémenter et qualifier :
 transport server_fn, contexte/Owner par requête, headers et cookies avant flush,

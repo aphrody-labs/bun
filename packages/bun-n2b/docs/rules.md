@@ -57,7 +57,7 @@ from that module (default, named, namespace or `require` binding). A local varia
 | `cli/*`                                                                                                                                                                             | `cli.toml`                                                    |
 | `globals/*`                                                                                                                                                                         | `globals.toml`                                                |
 | `next/*`                                                                                                                                                                            | `packages.toml` entries for Next.js                           |
-| `tsconfig/*`, `bunfig/*`, `npmrc/*`, `env/*`, `shebang/*`, `docker/*`, `docker-compose/*`, `lock/*`, `pkg/*`, `husky/*`, `turbo/*`, `tauri/*`, `ci/*`, `js-config/*`, `workspace/*` | Scanners in `src/migrate/engine/scanners/`                   |
+| `tsconfig/*`, `bunfig/*`, `npmrc/*`, `env/*`, `shebang/*`, `docker/*`, `docker-compose/*`, `lock/*`, `pkg/*`, `husky/*`, `turbo/*`, `tauri/*`, `ci/*`, `js-config/*`, `workspace/*` | Scanners in `src/migrate/engine/scanners/`                    |
 
 `test/*` comes from `src/migrate/engine/rules/test_apis.rs`.
 

@@ -6,16 +6,16 @@ Every local branch tip and the detached npm qualification tip were verified as
 ancestors of that source with `git merge-base --is-ancestor`. Ancestry establishes
 committed integration; it does not establish integration of dirty files.
 
-| Retained tree | Source tip | Dirty paths audited | Disposition |
-| --- | --- | ---: | --- |
-| bun-sql-supabase-integration | `1af0a0bf8252` | 24 | UUID-array changes already integrated; retain current Supabase TLS, pooler and typed API behavior. |
-| buv-native-gate | `2ab04a0081ef` | 109 | Integrate source-backed archive capability declarations and three missing regression tests; preserve newer Windows, graph and compiler protections. |
-| neon-plugin | `67f218154586` | 16 | Committed history integrated; retain newer Neon migrations, types and TLS behavior. |
-| release-1.4.4 | `5fb1124099cf` | 24 | Integrate publication confirmation and 16 test-style deltas; preserve actual package versions. |
-| owner-consolidation | `3b7590b4906c` | 19 | Route the shared eleven Windows build/runtime deltas to the runtime owner; preserve other drafts and historical qualification notes. |
-| owner-windows-clean-585a09f7e58 | `3b7590b4906c` | 11 | Same Windows deltas; integrate once through the runtime owner. |
-| bun-npm-release4-source | `41211b56872c` | 1 | Integrate only registry confirmation; retain current stable-version and build guards. |
-| bun-glibc-integrate-20261010 | `67f218154586` | 1 | Preserve the legacy `src/cli` deletion draft; do not delete the current directory. |
+| Retained tree                   | Source tip     | Dirty paths audited | Disposition                                                                                                                                         |
+| ------------------------------- | -------------- | ------------------: | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| bun-sql-supabase-integration    | `1af0a0bf8252` |                  24 | UUID-array changes already integrated; retain current Supabase TLS, pooler and typed API behavior.                                                  |
+| buv-native-gate                 | `2ab04a0081ef` |                 109 | Integrate source-backed archive capability declarations and three missing regression tests; preserve newer Windows, graph and compiler protections. |
+| neon-plugin                     | `67f218154586` |                  16 | Committed history integrated; retain newer Neon migrations, types and TLS behavior.                                                                 |
+| release-1.4.4                   | `5fb1124099cf` |                  24 | Integrate publication confirmation and 16 test-style deltas; preserve actual package versions.                                                      |
+| owner-consolidation             | `3b7590b4906c` |                  19 | Route the shared eleven Windows build/runtime deltas to the runtime owner; preserve other drafts and historical qualification notes.                |
+| owner-windows-clean-585a09f7e58 | `3b7590b4906c` |                  11 | Same Windows deltas; integrate once through the runtime owner.                                                                                      |
+| bun-npm-release4-source         | `41211b56872c` |                   1 | Integrate only registry confirmation; retain current stable-version and build guards.                                                               |
+| bun-glibc-integrate-20261010    | `67f218154586` |                   1 | Preserve the legacy `src/cli` deletion draft; do not delete the current directory.                                                                  |
 
 The archive declarations are supported by `vendor/uv/crates/uv-extract/src/stream.rs`:
 bzip2, xz, lzip and lzma dispatch to real decoders; extraction drains the decoder

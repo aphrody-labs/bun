@@ -17,11 +17,11 @@ bun scripts/aphrody/cuda-torch.ts --dry-run       # print the commands only
 | 12.8, 12.9  | `cu128` |
 | older       | `cu126` |
 
-| Option             | Default                              |
-| ------------------ | ------------------------------------ |
-| `--dir <path>`     | `$APHRODY_HOME/venvs/torch-cuda`     |
-| `--python <ver>`   | `3.12`                               |
-| `--cuda <cuXXX>`   | detected from the driver             |
-| `--cpu`            | CPU wheels, for servers without GPU  |
+| Option           | Default                             |
+| ---------------- | ----------------------------------- |
+| `--dir <path>`   | `$APHRODY_HOME/venvs/torch-cuda`    |
+| `--python <ver>` | `3.12`                              |
+| `--cuda <cuXXX>` | detected from the driver            |
+| `--cpu`          | CPU wheels, for servers without GPU |
 
 The script exits with status 3 when a CUDA index was requested and CUDA is not available after the install. Servers use `--cpu` only.

@@ -129,13 +129,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 50f0ddd mangler: Optimize slot assignment with pre-computed ancestor sets (#17379) (camc314)
 - c3ff642 mangler: Avoid `ToString` allocations (#17378) (camc314)
 
-
 ## [0.95.0] - 2025-10-15
 
 ### 🚀 Features
 
 - bce31b5 napi/playground: Call `with_private_member_mappings()` for private class member mangling (#14380) (copilot-swe-agent)
-
 
 ## [0.94.0] - 2025-10-06
 
@@ -149,13 +147,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - fc519c8 mangler: Mangle private class members in subsequent classes correctly (#14361) (sapphi-red)
 - 5d3114c mangler: Allow using typescript keywords as variable names (#14315) (sapphi-red)
 
-
 ## [0.93.0] - 2025-09-28
 
 ### 🐛 Bug Fixes
 
 - d02d750 mangler: Mangle non top-level `exports` variable (#14169) (sapphi-red)
-
 
 ## [0.92.0] - 2025-09-24
 
@@ -163,18 +159,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 0fe4d95 mangler: Mangle private class members (#14027) (sapphi-red)
 
-
 ## [0.91.0] - 2025-09-22
 
 ### 💼 Other
 
 - fb347da crates: V0.91.0 (#13961) (Boshen)
-
-
-
-
-
-
 
 ## [0.86.0] - 2025-08-31
 
@@ -192,15 +181,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - caf40c5 mangler: Do not sort `Vec` if empty (#13461) (overlookmotel)
 - e473b83 mangler: Replace `FixedBitSet` with `BitSet` based on Rolldown's implementation (#13419) (sapphi-red)
 
-
-
-
-
-
-
-
-
-
 ## [0.80.0] - 2025-08-03
 
 ### 🚜 Refactor
@@ -215,17 +195,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 4adc1ed mangler: Remove unnecessary `AstNode` lookups (#12663) (overlookmotel)
 
-
-
 ## [0.79.0] - 2025-07-30
 
 ### 🚜 Refactor
 
 - a696227 linter: Remove AstKind for SimpleAssignmentTarget (#12401) (Tyler Earls)
-
-
-
-
 
 ## [0.77.1] - 2025-07-16
 
@@ -233,13 +207,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - ee761de ast: Remove `AstKind` for `AssignmentTarget` (#12252) (Tyler Earls)
 
-
 ## [0.77.0] - 2025-07-12
 
 ### ⚡ Performance
 
 - c7889c3 semantic,linter: Simplify implementation and uses of ancestors iterators (#12164) (Ulrich Stark)
-
 
 ## [0.76.0] - 2025-07-08
 
@@ -247,17 +219,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 54cf5cb semantic: Remove Option from parent_* methods (#12087) (Ulrich Stark)
 
-
 ## [0.75.1] - 2025-07-03
 
 ### 🚜 Refactor
 
 - f7a2ae4 ast: Add `AstKind` for `AssignmentTargetPropertyIdentifier`, `AssignmentTargetPropertyProperty` (#11985) (camc314)
-
-
-
-
-
 
 ## [0.73.0] - 2025-06-13
 
@@ -265,7 +231,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - bfa05f2 mangler: Use bump allocator for internal storage (#11409) (camchenry)
 - fa4966d mangler: Use external allocator (#11408) (camchenry)
-
 
 # Changelog
 
@@ -278,7 +243,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 65a6419 mangler: [**BREAKING**] `Mangler::build_with_semantic` take mut ref to `Semantic` (#11132) (overlookmotel)
 
 ### Performance
-
 
 ## [0.61.2] - 2025-03-23
 
@@ -299,7 +263,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Features
 
-
 ## [0.58.0] - 2025-03-13
 
 ### Documentation
@@ -317,7 +280,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 23738bf semantic: [**BREAKING**] Introduce `Scoping` (#9611) (Boshen)
 
 ### Refactor
-
 
 ## [0.55.0] - 2025-03-05
 
@@ -450,7 +412,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Refactor
 
-
 ## [0.25.0] - 2024-08-23
 
 - 5f4c9ab semantic: [**BREAKING**] Rename `SymbolTable::get_flag` to `get_flags` (#5030) (overlookmotel)
@@ -487,4 +448,3 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Bug Fixes
 
 - 3df9e69 mangler: No shorthand `BindingProperty`; handle var hoisting and export variables (#4319) (Boshen)
-

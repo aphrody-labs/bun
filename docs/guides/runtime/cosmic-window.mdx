@@ -4,7 +4,7 @@ sidebarTitle: COSMIC window
 mode: center
 ---
 
-[libcosmic](https://github.com/pop-os/libcosmic) is the Rust toolkit of the COSMIC desktop (Pop!_OS), built on iced and winit. Export a function from a Rust `cdylib` that runs a `cosmic::Application`, and call it from `bun:ffi`. The event loop runs on the calling thread, which is the JavaScript thread.
+[libcosmic](https://github.com/pop-os/libcosmic) is the Rust toolkit of the COSMIC desktop (Pop!\_OS), built on iced and winit. Export a function from a Rust `cdylib` that runs a `cosmic::Application`, and call it from `bun:ffi`. The event loop runs on the calling thread, which is the JavaScript thread.
 
 ```toml Cargo.toml icon="file-code"
 [package]
@@ -82,7 +82,7 @@ cargo build --release
 bun window.ts
 ```
 
-Building libcosmic needs `pkg-config`, `cmake` and the xkbcommon, Wayland, fontconfig and freetype development headers (on Ubuntu 24.04 and Pop!_OS 24.04: `libxkbcommon-dev libwayland-dev libfontconfig-dev libfreetype-dev libexpat1-dev`). With `default-features = false`, iced renders in software with tiny-skia, so the window also opens under `xvfb-run` in CI. `.transparent(false)` keeps the window on a 24-bit visual: softbuffer rejects the 32-bit ARGB visual that a transparent window gets under Xvfb.
+Building libcosmic needs `pkg-config`, `cmake` and the xkbcommon, Wayland, fontconfig and freetype development headers (on Ubuntu 24.04 and Pop!\_OS 24.04: `libxkbcommon-dev libwayland-dev libfontconfig-dev libfreetype-dev libexpat1-dev`). With `default-features = false`, iced renders in software with tiny-skia, so the window also opens under `xvfb-run` in CI. `.transparent(false)` keeps the window on a 24-bit visual: softbuffer rejects the 32-bit ARGB visual that a transparent window gets under Xvfb.
 
 Callbacks into JavaScript must stay on the thread that called into the library. If you pass a [`JSCallback`](/runtime/ffi#callbacks) to the `cdylib`, call it only from that thread, for example from `Application::init` after checking `std::thread::current().id()`.
 

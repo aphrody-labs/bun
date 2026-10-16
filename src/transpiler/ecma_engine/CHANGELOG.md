@@ -72,13 +72,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - e031056 codegen: Add `sourcemap` feature flag (#17305) (Boshen)
 
-
 ## [0.95.0] - 2025-10-15
 
 ### 🐛 Bug Fixes
 
 - 5e0ab1b tranformer_plugins: Define plugin need to add reference to scoping (#14615) (Boshen)
-
 
 ## [0.94.0] - 2025-10-06
 
@@ -86,13 +84,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 013e053 napi/transform: Fix define plugin not applying DCE correctly (#14264) (Boshen)
 
-
 ## [0.93.0] - 2025-09-28
 
 ### 🚀 Features
 
 - 5e05d1b semantic: Put jsdoc behind linter feature, remove runtime flag (#14140) (Boshen)
-
 
 ## [0.92.0] - 2025-09-24
 
@@ -100,16 +96,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 0fe4d95 mangler: Mangle private class members (#14027) (sapphi-red)
 
-
 ## [0.91.0] - 2025-09-22
 
 ### 💼 Other
 
 - fb347da crates: V0.91.0 (#13961) (Boshen)
-
-
-
-
 
 ## [0.88.0] - 2025-09-15
 
@@ -117,43 +108,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 08c05df semantic: Make CFG construction a compile-time feature (#13678) (Boshen)
 
-
-
-
-
-
-
-
-
-
-
-
 ## [0.80.0] - 2025-08-03
 
 ### 📚 Documentation
 
 - 514322c rust: Add minimal documentation to example files in crates directory (#12731) (Copilot)
 
-
-
-
-
-
 ## [0.77.2] - 2025-07-17
 
 ### 🚜 Refactor
 
 - eb12132 minifier: Unify access `CompressOptions` through `ctx.state` (#12346) (Boshen)
-
-
-
-
-
-
-
-
-
-
 
 # Changelog
 
@@ -176,7 +141,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 4795059 transformer_plugins: Provide reference data when identifiers are replaced (#10620) (Boshen)
 
 ### Refactor
-
 
 ## [0.67.0] - 2025-04-27
 
@@ -202,7 +166,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Refactor
 
-
 ## [0.55.0] - 2025-03-05
 
 ### Features
@@ -214,7 +177,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - a5cde10 visit_ast: [**BREAKING**] Add `oxc_visit_ast` crate (#9428) (Boshen)
 
 ### Features
-
 
 ## [0.49.0] - 2025-02-10
 
@@ -233,7 +195,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 4ce6329 semantic: [**BREAKING**] Ensure program outlives semantic (#8455) (Valentinas Janeiko)
 
 ### Bug Fixes
-
 
 ## [0.42.0] - 2024-12-18
 
@@ -265,13 +226,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Refactor
 
-
 ## [0.36.0] - 2024-11-09
 
 - 846711c transformer: [**BREAKING**] Change API to take a `&TransformOptions` instead of `TransformOptions` (#7213) (Boshen)
 
 ### Features
-
 
 ## [0.35.0] - 2024-11-04
 
@@ -292,14 +251,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Features
 
-
 ### Bug Fixes
 
 - 4dc5e51 transformer: Only run typescript plugin for typescript source (#6889) (Boshen)
 - b075982 types: Change @oxc/types package name (#6874) (ottomated)
 
 ### Refactor
-
 
 ## [0.32.0] - 2024-10-19
 
@@ -310,7 +267,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 5200960 oxc: [**BREAKING**] Remove passing `Trivias` around (#6446) (Boshen)
 
 ### Refactor
-
 
 ## [0.31.0] - 2024-10-08
 
@@ -360,7 +316,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 2016bae coverage: Add regular expression idempotency test (#5676) (Boshen)
 
 ### Refactor
-
 
 ## [0.27.0] - 2024-09-06
 
@@ -413,11 +368,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ## [0.11.0] - 2024-03-30
 
 ### Features
+
 - b199cb8 Add oxc sourcemap crate (#2825) (underfin)
 
 ## [0.10.0] - 2024-03-14
 
 ### Features
+
 - 697b6b7 Merge features `serde` and `wasm` to `serialize` (#2716) (Boshen)
 
 ## [0.6.0] - 2024-02-03
@@ -447,4 +404,3 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Features
 
 - 2e2b758 playground: Add transform and minify (#993) (Boshen)
-

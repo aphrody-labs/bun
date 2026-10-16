@@ -920,7 +920,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 ### 🐛 Bug Fixes
 
-- 7958b56 linter: Fix syntax error reporting in some output formatters.  (#19590) (connorshea)
+- 7958b56 linter: Fix syntax error reporting in some output formatters. (#19590) (connorshea)
 - 024f51c linter: Add help text to more eslint diagnostics (#19591) (Anthony Amaro)
 - 50fc70d linter/type-aware: Use correct span for disable directives (#19576) (camc314)
 - 421a99c linter: Add help guidance to eslint diagnostic messages (#19562) (Anthony Amaro)
@@ -1163,7 +1163,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 🚀 Features
 
 - 6154c8c linter/eslint-plugin-vitest: Implemented vitest/warn-todo rule (#17228) (Said Atrahouch)
-- 9e8ec78 linter/only-throw-error rule: Add `allowRethrowing` option for  (#17554) (camc314)
+- 9e8ec78 linter/only-throw-error rule: Add `allowRethrowing` option for (#17554) (camc314)
 - ee34716 linter/react: Implement no-will-update-set-state (#17530) (Kenzo Wada)
 - 3088e1d linter/react: Implement no-this-in-sfc (#17535) (Kenzo Wada)
 - 29a2868 linter/jsx-a11y: Implement no-static-element-interactions (#17538) (Kenzo Wada)
@@ -1539,7 +1539,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 48e646b oxlint/lsp: Update snapshot for invalid syntax test (#15191) (Sysix)
 - dbc260b linter: Disable tsgolint exit code specific test on windows (#15117) (camc314)
 
-
 ## [1.25.0] - 2025-10-30
 
 ### 💥 BREAKING CHANGES
@@ -1561,7 +1560,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 🧪 Testing
 
 - bf898e5 linter: Increase stability of tsgolint test cases (#15063) (camc314)
-
 
 ## [1.24.0] - 2025-10-22
 
@@ -1614,7 +1612,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 5933097 oxlint: Add test for nested configs importing the same plugin 2x (#14646) (camc314)
 - 6570f36 linter/custom-plugins: Snapshot test start, end, range, and loc for comments (#14779) (Arsh)
 
-
 ## [1.23.0] - 2025-10-13
 
 ### 🐛 Bug Fixes
@@ -1636,13 +1633,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 8d8881d linter/plugins: Expand tests for module resolution of plugins (#14559) (overlookmotel)
 
-
 ## [1.22.0] - 2025-10-08
 
 ### 🐛 Bug Fixes
 
 - 0dcdbd1 oxlint: Bundle esquery (#14450) (camc314)
-
 
 ## [1.21.0] - 2025-10-08
 
@@ -1682,7 +1677,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 🧪 Testing
 
 - d8da4a4 linter/plugins: Clarify tests for message placeholders (#14417) (overlookmotel)
-
 
 ## [1.20.0] - 2025-10-06
 
@@ -1725,12 +1719,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - c27a393 linter/plugins: Deserialize AST on demand (#14288) (overlookmotel)
 - 95a8cc4 linter/plugins: Use singleton for `SourceCode` (#14286) (overlookmotel)
 
-
 ### 🧪 Testing
 
 - 0061ce7 linter: Add more tests for disable directives in partial loadable files (#14371) (camc314)
 - 1387aaa linter/plugins: Test `createOnce` returning no visitor functions (#14279) (overlookmotel)
-
 
 ## [1.19.0] - 2025-09-29
 
@@ -1790,7 +1782,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 5750077 linter/plugins: Fix file paths in snapshots (#14115) (overlookmotel)
 - 5c862f9 linter/plugins: Standardize test fixture structure (#14114) (overlookmotel)
 
-
 ## [1.18.0] - 2025-09-24
 
 ### 🐛 Bug Fixes
@@ -1812,7 +1803,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 2fd4b1e linter/plugins: Rename test (#14064) (overlookmotel)
 - f2b3934 linter/plugins: Test returning `false` from `before` hook skips visitation in ESLint (#14061) (overlookmotel)
 - b109419 linter/plugins: Align ESLint plugin with Oxlint (#14059) (overlookmotel)
-
 
 ## [1.17.0] - 2025-09-23
 
@@ -1868,7 +1858,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 0630d68 linter: Build `oxlint` locally with Mimalloc in release mode (#14034) (overlookmotel)
 
-
 ## [1.16.0] - 2025-09-16
 
 ### 🐛 Bug Fixes
@@ -1893,7 +1882,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 🧪 Testing
 
 - fb2d087 linter: Set CWD for tests (#13722) (overlookmotel)
-
 
 ## [1.15.0] - 2025-09-11
 
@@ -1920,7 +1908,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 58e6c94 oxlint: Add test for ignorePatterns whitelist (#13372) (Sysix)
 
-
 ## [1.14.0] - 2025-08-30
 
 ### 🚜 Refactor
@@ -1935,7 +1922,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 6eeeb67 oxlint: Add test for ignore patterns referenced by symlink file (#13356) (Sysix)
 
-
 ## [1.13.0] - 2025-08-26
 
 ### 💥 BREAKING CHANGES
@@ -1949,7 +1935,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 🚜 Refactor
 
 - c138fad linter: Avoid fs reads in `TsGoLintState` when `--silent` is used (#13199) (Sysix)
-
 
 ## [1.12.0] - 2025-08-17
 
@@ -1983,7 +1968,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 4f2cc96 linter: Add line break (#13061) (overlookmotel)
 
-
 ## [1.11.2] - 2025-08-12
 
 ### 🐛 Bug Fixes
@@ -2002,7 +1986,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - d59f3bb oxlint: Match `x.ys` when replacing var (#12990) (camc314)
 - d7cca12 linter: Add test for extended configs and overrides for tsgolint (#12924) (camchenry)
 
-
 ## [1.11.1] - 2025-08-09
 
 ### 🐛 Bug Fixes
@@ -2019,13 +2002,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 695fbdd oxlint: Fix `--type-aware` test on `big-endian` and skip for `windows` (#12910) (Sysix)
 - 38118ab oxlint: Fix `--type-aware` snapshot + add non tsgolint rule (#12909) (Sysix)
 
-
 ## [1.11.0] - 2025-08-07
 
 ### 🚀 Features
 
 - ac46347 oxlint: Add `tsgolint` integration (#12485) (camchenry)
-
 
 ## [1.10.0] - 2025-08-06
 
@@ -2054,7 +2035,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - d8ccff7 oxlint: Add `Tester::test_fix` mehod (#12754) (Sysix)
 
-
 ## [1.9.0] - 2025-07-29
 
 ### 🚜 Refactor
@@ -2070,13 +2050,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - d31adcf linter: Improve sorting diagnostics (#12504) (overlookmotel)
 
-
 ## [1.8.0] - 2025-07-22
 
 ### 🐛 Bug Fixes
 
 - 46e33d5 linter: Improve error handling in config file lookup (#12391) (camc314)
-
 
 ## [1.7.0] - 2025-07-16
 
@@ -2106,7 +2084,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - d1194e8 oxlint: Ignore test on windows (#12262) (camc314)
 
-
 ## [1.6.0] - 2025-07-07
 
 ### 🚀 Features
@@ -2122,13 +2099,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 2f7cbda linter: Move napi bindings out of oxc_linter (#12072) (camc314)
 - 9254252 linter: Move code (#12071) (overlookmotel)
 
-
 ## [1.5.0] - 2025-07-02
 
 ### 🐛 Bug Fixes
 
 - 4b2c658 oxlint: Make `--version` exit code be `0` (#11986) (camc314)
-
 
 ## [1.4.0] - 2025-06-30
 
@@ -2145,13 +2120,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 2cf9fa3 linter: Derive debug for `extensions` (#11938) (camc314)
 
-
 ## [1.3.0] - 2025-06-23
 
 ### 🚜 Refactor
 
 - b39d1fa linter: Output smaller spans for unused disable directives with multiple rules (#11781) (Sysix)
-
 
 ## [1.2.0] - 2025-06-19
 
@@ -2159,13 +2132,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 38dc614 oxc_linter: Reuse allocators (#11736) (camc314)
 
-
 ## [1.1.0] - 2025-06-12
 
 ### 🚀 Features
 
 - 1181018 linter: Add eslint/no-extra-bind rule (#11588) (yefan)
-
 
 ## [1.0.0] - 2025-06-10
 
@@ -2174,7 +2145,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - bd9dd88 linter: [**BREAKING**] Add more info to json reporter (#11524) (camc314)
 
 ### Features
-
 
 ### Bug Fixes
 
@@ -2354,7 +2324,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 ### Features
 
-
 ### Bug Fixes
 
 - 22f18ac linter: Improve `jsx-a11y/anchor-ambiguous-text` diagnostic message (#9789) (1zumii)
@@ -2509,7 +2478,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 ### Bug Fixes
 
-- 2b14a6f linter: Fix `ignorePattern` config for windows  (#8214) (Alexander S.)
+- 2b14a6f linter: Fix `ignorePattern` config for windows (#8214) (Alexander S.)
 
 ### Testing
 
@@ -2537,7 +2506,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 39b9c5d linter: [**BREAKING**] Remove unmaintained security plugin (#7773) (Boshen)
 
 ### Features
-
 
 ## [0.14.1] - 2024-12-06
 
@@ -2573,7 +2541,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 878189c parser,linter: [**BREAKING**] Add `ParserReturn::is_flow_language`; linter ignore flow error (#7373) (Boshen)
 
 ### Features
-
 
 ## [0.12.0] - 2024-11-20
 
@@ -2630,7 +2597,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 ### Features
 
-
 ## [0.9.10] - 2024-10-07
 
 ### Bug Fixes
@@ -2669,6 +2635,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 4473779 linter/node: Implement no-exports-assign (#5370) (dalaoshu)
 
 ### Styling
+
 - d8b29e7 Add trailing line breaks to JSON files (#5544) (overlookmotel)
 
 ## [0.9.0] - 2024-08-26
@@ -2676,7 +2643,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - b894d3b linter: [**BREAKING**] Make `no-unused-vars` correctness (#5081) (DonIsaac)
 
 ### Features
-
 
 ## [0.7.2] - 2024-08-15
 
@@ -2724,4 +2690,3 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### Refactor
 
 - 21505e8 cli: Move crates/oxc_cli to apps/oxlint (#3413) (Boshen)
-

@@ -7,7 +7,6 @@
     "bun-types": "^0.7.0",
     "jszip": "^3.10.1",
     "oclif": "^3.6.5"
-
   },
   "dependencies": {
     "aws4fetch": "^1.0.17"

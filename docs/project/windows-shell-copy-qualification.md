@@ -20,6 +20,6 @@ cp.rs diagnostics on Windows x64/ARM64 and GNU Linux x64/ARM64. GNU completes
 with zero whole-runtime errors; Windows retains 77 errors elsewhere.
 
 Receipts: tmp/shell-cp-native.log/.exit and
- tmp/shell-cp-<target>.jsonl/.stderr/.exit. The documented process-local Windows
+tmp/shell-cp-<target>.jsonl/.stderr/.exit. The documented process-local Windows
 Clippy cache opt-out remains limited to these checks. This batch does not
 establish release installation or production activation.

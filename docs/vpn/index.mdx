@@ -26,15 +26,15 @@ tracing logger.
 
 `src/bun_vpn` is the Bun-owned integration boundary:
 
-| Layer | Responsibility |
-| --- | --- |
-| `bun_vpn::VpnClient` | Native async client for status/connect/disconnect |
+| Layer                            | Responsibility                                                            |
+| -------------------------------- | ------------------------------------------------------------------------- |
+| `bun_vpn::VpnClient`             | Native async client for status/connect/disconnect                         |
 | `bun_vpn::start_embedded_daemon` | Build Mullvad paths, endpoint and detached logging, then start the daemon |
-| `bun_vpn::run_embedded_daemon` | Run the daemon event loop until shutdown |
-| `mullvad-management-interface` | Generated Prost/Tonic IPC types and proxy client |
-| `mullvad-daemon` | Tunnel lifecycle, routing, DNS, leak protection and platform policy |
-| `talpid-*`, `mullvad-*` | WireGuard, obfuscation, relay selection, API, paths and platform services |
-| `windows/winfw` | Native Windows Filtering Platform implementation |
+| `bun_vpn::run_embedded_daemon`   | Run the daemon event loop until shutdown                                  |
+| `mullvad-management-interface`   | Generated Prost/Tonic IPC types and proxy client                          |
+| `mullvad-daemon`                 | Tunnel lifecycle, routing, DNS, leak protection and platform policy       |
+| `talpid-*`, `mullvad-*`          | WireGuard, obfuscation, relay selection, API, paths and platform services |
+| `windows/winfw`                  | Native Windows Filtering Platform implementation                          |
 
 The embedded dependency uses the `embedded` feature with
 `default-features = false`. This keeps the daemon's tunnel and policy code but

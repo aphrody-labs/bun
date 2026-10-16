@@ -539,33 +539,30 @@ const pkgAMovedTexts = (texts: Record<string, string>) => ({
   "packages/pkg-a": texts["packages/pkg-a"].replace("~0.0.3", "~0.0.5"),
 });
 
-it.concurrent(
-  "named update -r --latest rewrites every workspace that declares the name, keeping each file's style",
-  async () => {
-    using ctx = await testContext();
-    const { texts } = await fanOutRepo(ctx);
-    const { out, err } = await runUpdate(ctx, ["baz", "-r", "--latest"]);
-    expect(err).toBe("Saved lockfile\n");
-    expect(out).toMatchInlineSnapshot(`
+it.concurrent("named update -r --latest rewrites every workspace that declares the name, keeping each file's style", async () => {
+  using ctx = await testContext();
+  const { texts } = await fanOutRepo(ctx);
+  const { out, err } = await runUpdate(ctx, ["baz", "-r", "--latest"]);
+  expect(err).toBe("Saved lockfile\n");
+  expect(out).toMatchInlineSnapshot(`
       "bun update <version> (<revision>)
 
       ^ baz 0.0.3 -> 0.0.5
 
       1 package installed"
     `);
-    await expectWorkspaces(ctx, {
-      ...PKG_A_MOVED,
-      "": { ...FAN_OUT[""], dependencies: { baz: "0.0.5" } },
-      "packages/pkg-b": { name: "pkg-b", devDependencies: { baz: "^0.0.5" } },
-    });
-    expect(await fanOutTexts(ctx)).toEqual({
-      "": texts[""].replace('"0.0.3"', '"0.0.5"'),
-      "packages/pkg-a": texts["packages/pkg-a"].replace("~0.0.3", "~0.0.5"),
-      "packages/pkg-b": texts["packages/pkg-b"].replace("^0.0.3", "^0.0.5"),
-      "packages/pkg-c": texts["packages/pkg-c"],
-    });
-  },
-);
+  await expectWorkspaces(ctx, {
+    ...PKG_A_MOVED,
+    "": { ...FAN_OUT[""], dependencies: { baz: "0.0.5" } },
+    "packages/pkg-b": { name: "pkg-b", devDependencies: { baz: "^0.0.5" } },
+  });
+  expect(await fanOutTexts(ctx)).toEqual({
+    "": texts[""].replace('"0.0.3"', '"0.0.5"'),
+    "packages/pkg-a": texts["packages/pkg-a"].replace("~0.0.3", "~0.0.5"),
+    "packages/pkg-b": texts["packages/pkg-b"].replace("^0.0.3", "^0.0.5"),
+    "packages/pkg-c": texts["packages/pkg-c"],
+  });
+});
 
 it.concurrent("named update --filter rewrites only the selected workspace", async () => {
   using ctx = await testContext();
@@ -836,20 +833,17 @@ it.concurrent("--filter with a scoped glob (@scope/*) targets only those members
 // https://github.com/oven-sh/bun/issues/23507
 // The override pins baz to 0.0.3; --latest must not resolve past it.
 for (const depLiteral of ["^0.0.3", "0.0.3"]) {
-  it.concurrent(
-    `--recursive --latest does not bypass a root overrides entry (member dep literal ${depLiteral})`,
-    async () => {
-      using ctx = await testContext();
-      const written = await setupWorkspaces(
-        ctx,
-        { overrides: { baz: "0.0.3" } },
-        { "pkg-a": { dependencies: { baz: depLiteral } } },
-      );
-      await runUpdate(ctx, ["--recursive", "--latest"]);
-      await expectWorkspaces(ctx, written);
-      expect(await installedBazVersion(ctx)).toBe("0.0.3");
-    },
-  );
+  it.concurrent(`--recursive --latest does not bypass a root overrides entry (member dep literal ${depLiteral})`, async () => {
+    using ctx = await testContext();
+    const written = await setupWorkspaces(
+      ctx,
+      { overrides: { baz: "0.0.3" } },
+      { "pkg-a": { dependencies: { baz: depLiteral } } },
+    );
+    await runUpdate(ctx, ["--recursive", "--latest"]);
+    await expectWorkspaces(ctx, written);
+    expect(await installedBazVersion(ctx)).toBe("0.0.3");
+  });
 }
 
 // https://github.com/oven-sh/bun/issues/23507
@@ -1151,52 +1145,46 @@ const installedShared = (ctx: TestContext, parent = ""): Promise<Json> =>
   file(join(ctx.package_dir, parent, "node_modules", "shared", "package.json")).json();
 
 // A named update only re-resolves the rows of the workspace it runs in; another workspace's own entry is left alone.
-it.concurrent(
-  "bun update <name> from the root leaves a member's own entry alone; running it inside the member moves it",
-  async () => {
-    using ctx = await testContext();
-    await perNameRegistry(ctx, { shared: { versions: { "1.0.0": {}, "1.1.0": {}, "2.0.0": {} }, latest: "2.0.0" } });
-    await writeFile(
-      join(ctx.package_dir, "package.json"),
-      JSON.stringify({ name: "root", workspaces: ["packages/*"], dependencies: { shared: "^2.0.0" } }),
-    );
-    const pkgOneJson = join(ctx.package_dir, "packages", "pkg-one", "package.json");
-    await mkdir(join(ctx.package_dir, "packages", "pkg-one"), { recursive: true });
-    await writeFile(
-      pkgOneJson,
-      JSON.stringify({ name: "pkg-one", version: "1.0.0", dependencies: { shared: "1.0.0" } }),
-    );
-    await runInstall(ctx);
+it.concurrent("bun update <name> from the root leaves a member's own entry alone; running it inside the member moves it", async () => {
+  using ctx = await testContext();
+  await perNameRegistry(ctx, { shared: { versions: { "1.0.0": {}, "1.1.0": {}, "2.0.0": {} }, latest: "2.0.0" } });
+  await writeFile(
+    join(ctx.package_dir, "package.json"),
+    JSON.stringify({ name: "root", workspaces: ["packages/*"], dependencies: { shared: "^2.0.0" } }),
+  );
+  const pkgOneJson = join(ctx.package_dir, "packages", "pkg-one", "package.json");
+  await mkdir(join(ctx.package_dir, "packages", "pkg-one"), { recursive: true });
+  await writeFile(pkgOneJson, JSON.stringify({ name: "pkg-one", version: "1.0.0", dependencies: { shared: "1.0.0" } }));
+  await runInstall(ctx);
 
-    // Widening the range keeps the stale 1.0.0 on a plain install, since it still satisfies the new range.
-    await writeFile(
-      pkgOneJson,
-      JSON.stringify({ name: "pkg-one", version: "1.0.0", dependencies: { shared: "^1.0.0" } }),
-    );
-    await runInstall(ctx);
-    expect(await lockedSharedResolutions(ctx)).toEqual(['"shared@1.0.0"', '"shared@2.0.0"']);
+  // Widening the range keeps the stale 1.0.0 on a plain install, since it still satisfies the new range.
+  await writeFile(
+    pkgOneJson,
+    JSON.stringify({ name: "pkg-one", version: "1.0.0", dependencies: { shared: "^1.0.0" } }),
+  );
+  await runInstall(ctx);
+  expect(await lockedSharedResolutions(ctx)).toEqual(['"shared@1.0.0"', '"shared@2.0.0"']);
 
-    expect((await runUpdate(ctx, ["shared"])).err).toBe("");
-    expect(await lockedSharedResolutions(ctx)).toStrictEqual(['"shared@1.0.0"', '"shared@2.0.0"']);
-    expect(await installedShared(ctx, "packages/pkg-one")).toMatchObject({ version: "1.0.0" });
+  expect((await runUpdate(ctx, ["shared"])).err).toBe("");
+  expect(await lockedSharedResolutions(ctx)).toStrictEqual(['"shared@1.0.0"', '"shared@2.0.0"']);
+  expect(await installedShared(ctx, "packages/pkg-one")).toMatchObject({ version: "1.0.0" });
 
-    const { out, err } = await runUpdate(ctx, ["shared"], "packages/pkg-one");
-    expect(err).toBe("Saved lockfile\n");
-    expect(out).toMatchInlineSnapshot(`
+  const { out, err } = await runUpdate(ctx, ["shared"], "packages/pkg-one");
+  expect(err).toBe("Saved lockfile\n");
+  expect(out).toMatchInlineSnapshot(`
       "bun update <version> (<revision>)
 
       ^ shared 1.0.0 -> 1.1.0 (v2.0.0 available)
 
       1 package installed"
     `);
-    expect(await lockedSharedResolutions(ctx)).toEqual(['"shared@1.1.0"', '"shared@2.0.0"']);
-    expect(await installedShared(ctx, "packages/pkg-one")).toMatchObject({ version: "1.1.0" });
+  expect(await lockedSharedResolutions(ctx)).toEqual(['"shared@1.1.0"', '"shared@2.0.0"']);
+  expect(await installedShared(ctx, "packages/pkg-one")).toMatchObject({ version: "1.1.0" });
 
-    expect((await runUpdate(ctx, ["shared"], "packages/pkg-one")).err).toBe("");
-    expect(await lockedSharedResolutions(ctx)).toStrictEqual(['"shared@1.1.0"', '"shared@2.0.0"']);
-    expect(await installedShared(ctx, "packages/pkg-one")).toMatchObject({ version: "1.1.0" });
-  },
-);
+  expect((await runUpdate(ctx, ["shared"], "packages/pkg-one")).err).toBe("");
+  expect(await lockedSharedResolutions(ctx)).toStrictEqual(['"shared@1.1.0"', '"shared@2.0.0"']);
+  expect(await installedShared(ctx, "packages/pkg-one")).toMatchObject({ version: "1.1.0" });
+});
 
 // The same invariant one level deeper: a dependency on `<name>` owned by a preserved parent package must also
 // re-enter the resolve queue.
@@ -1252,62 +1240,56 @@ it.concurrent("bun update <name> keeps a transitive row on the root's entry whil
   expect(await exists(join(ctx.package_dir, "node_modules", "dep-x", "node_modules"))).toBeFalse();
 });
 
-it.concurrent(
-  "bun update <name> --latest holds back only the root's entry; a transitive edge declared as a dist-tag keeps following it",
-  async () => {
-    using ctx = await testContext();
-    await perNameRegistry(ctx, {
-      shared: { versions: { "1.0.0": {}, "1.1.0": {} }, latest: "1.0.0" },
-      "dep-x": { versions: { "1.0.0": { dependencies: { shared: "latest" } } }, latest: "1.0.0" },
-    });
-    const packageJson = { name: "root", dependencies: { shared: "1.1.0", "dep-x": "1.0.0" } };
-    await writeFile(join(ctx.package_dir, "package.json"), JSON.stringify(packageJson));
-    await runInstall(ctx);
-    expect(await lockedSharedResolutions(ctx)).toStrictEqual(['"shared@1.0.0"', '"shared@1.1.0"']);
+it.concurrent("bun update <name> --latest holds back only the root's entry; a transitive edge declared as a dist-tag keeps following it", async () => {
+  using ctx = await testContext();
+  await perNameRegistry(ctx, {
+    shared: { versions: { "1.0.0": {}, "1.1.0": {} }, latest: "1.0.0" },
+    "dep-x": { versions: { "1.0.0": { dependencies: { shared: "latest" } } }, latest: "1.0.0" },
+  });
+  const packageJson = { name: "root", dependencies: { shared: "1.1.0", "dep-x": "1.0.0" } };
+  await writeFile(join(ctx.package_dir, "package.json"), JSON.stringify(packageJson));
+  await runInstall(ctx);
+  expect(await lockedSharedResolutions(ctx)).toStrictEqual(['"shared@1.0.0"', '"shared@1.1.0"']);
 
-    expect((await runUpdate(ctx, ["shared", "--latest"])).err).toBe("");
-    expect(await packageJsonOf(ctx)).toStrictEqual(packageJson);
-    expect(await lockedSharedResolutions(ctx)).toStrictEqual(['"shared@1.0.0"', '"shared@1.1.0"']);
-    expect(await installedShared(ctx, "node_modules/dep-x")).toMatchObject({ version: "1.0.0" });
-    expect(await installedShared(ctx)).toMatchObject({ version: "1.1.0" });
-  },
-);
+  expect((await runUpdate(ctx, ["shared", "--latest"])).err).toBe("");
+  expect(await packageJsonOf(ctx)).toStrictEqual(packageJson);
+  expect(await lockedSharedResolutions(ctx)).toStrictEqual(['"shared@1.0.0"', '"shared@1.1.0"']);
+  expect(await installedShared(ctx, "node_modules/dep-x")).toMatchObject({ version: "1.0.0" });
+  expect(await installedShared(ctx)).toMatchObject({ version: "1.1.0" });
+});
 
-it.concurrent(
-  "bun update <name> on a dist-tag entry follows the tag even when it moved backwards; --latest then writes that version",
-  async () => {
-    using ctx = await testContext();
-    const versions = { "1.0.0": {}, "1.1.0": {} };
-    const reserve = await perNameRegistry(ctx, { shared: { versions, latest: "1.1.0" } });
-    const packageJson = { name: "root", dependencies: { shared: "latest" } };
-    await writeFile(join(ctx.package_dir, "package.json"), JSON.stringify(packageJson));
-    await runInstall(ctx);
-    expect(await lockedSharedResolutions(ctx)).toStrictEqual(['"shared@1.1.0"']);
+it.concurrent("bun update <name> on a dist-tag entry follows the tag even when it moved backwards; --latest then writes that version", async () => {
+  using ctx = await testContext();
+  const versions = { "1.0.0": {}, "1.1.0": {} };
+  const reserve = await perNameRegistry(ctx, { shared: { versions, latest: "1.1.0" } });
+  const packageJson = { name: "root", dependencies: { shared: "latest" } };
+  await writeFile(join(ctx.package_dir, "package.json"), JSON.stringify(packageJson));
+  await runInstall(ctx);
+  expect(await lockedSharedResolutions(ctx)).toStrictEqual(['"shared@1.1.0"']);
 
-    reserve({ shared: { versions, latest: "1.0.0" } });
-    const followed = await runUpdate(ctx, ["shared"]);
-    expect(followed.err).toBe("Saved lockfile\n");
-    expect(followed.out).toMatchInlineSnapshot(`
+  reserve({ shared: { versions, latest: "1.0.0" } });
+  const followed = await runUpdate(ctx, ["shared"]);
+  expect(followed.err).toBe("Saved lockfile\n");
+  expect(followed.out).toMatchInlineSnapshot(`
       "bun update <version> (<revision>)
 
       ^ shared 1.1.0 -> 1.0.0
 
       1 package installed"
     `);
-    expect(await packageJsonOf(ctx)).toStrictEqual(packageJson);
-    expect(await lockedSharedResolutions(ctx)).toStrictEqual(['"shared@1.0.0"']);
-    expect(await installedShared(ctx)).toMatchObject({ version: "1.0.0" });
+  expect(await packageJsonOf(ctx)).toStrictEqual(packageJson);
+  expect(await lockedSharedResolutions(ctx)).toStrictEqual(['"shared@1.0.0"']);
+  expect(await installedShared(ctx)).toMatchObject({ version: "1.0.0" });
 
-    expect((await runUpdate(ctx, [])).err).toBe("");
-    expect(await packageJsonOf(ctx)).toStrictEqual(packageJson);
-    expect(await lockedSharedResolutions(ctx)).toStrictEqual(['"shared@1.0.0"']);
+  expect((await runUpdate(ctx, [])).err).toBe("");
+  expect(await packageJsonOf(ctx)).toStrictEqual(packageJson);
+  expect(await lockedSharedResolutions(ctx)).toStrictEqual(['"shared@1.0.0"']);
 
-    expect((await runUpdate(ctx, ["shared", "--latest"])).err).toBe("Saved lockfile\n");
-    expect(await packageJsonOf(ctx)).toStrictEqual({ ...packageJson, dependencies: { shared: "^1.0.0" } });
-    expect(await lockedSharedResolutions(ctx)).toStrictEqual(['"shared@1.0.0"']);
-    expect(await installedShared(ctx)).toMatchObject({ version: "1.0.0" });
-  },
-);
+  expect((await runUpdate(ctx, ["shared", "--latest"])).err).toBe("Saved lockfile\n");
+  expect(await packageJsonOf(ctx)).toStrictEqual({ ...packageJson, dependencies: { shared: "^1.0.0" } });
+  expect(await lockedSharedResolutions(ctx)).toStrictEqual(['"shared@1.0.0"']);
+  expect(await installedShared(ctx)).toMatchObject({ version: "1.0.0" });
+});
 
 // `shared` is only reachable through dep-x; the install below pins 1.0.0 before the registry starts serving 1.1.0.
 async function setupTransitiveOnlyShared(ctx: TestContext) {
@@ -1323,25 +1305,22 @@ async function setupTransitiveOnlyShared(ctx: TestContext) {
   return packageJson;
 }
 
-it.concurrent(
-  "bun update <name> updates a package that is only a transitive dependency without adding it to package.json",
-  async () => {
-    using ctx = await testContext();
-    const packageJson = await setupTransitiveOnlyShared(ctx);
-    const { out, err } = await runUpdate(ctx, ["shared"]);
-    expect(err).toBe("Saved lockfile\n");
-    expect(out).toMatchInlineSnapshot(`
+it.concurrent("bun update <name> updates a package that is only a transitive dependency without adding it to package.json", async () => {
+  using ctx = await testContext();
+  const packageJson = await setupTransitiveOnlyShared(ctx);
+  const { out, err } = await runUpdate(ctx, ["shared"]);
+  expect(err).toBe("Saved lockfile\n");
+  expect(out).toMatchInlineSnapshot(`
       "bun update <version> (<revision>)
 
       ^ shared 1.0.0 -> 1.1.0
 
       1 package installed"
     `);
-    expect(await packageJsonOf(ctx)).toStrictEqual(packageJson);
-    expect(await lockedSharedResolutions(ctx)).toStrictEqual(['"shared@1.1.0"']);
-    expect(await installedShared(ctx)).toMatchObject({ version: "1.1.0" });
-  },
-);
+  expect(await packageJsonOf(ctx)).toStrictEqual(packageJson);
+  expect(await lockedSharedResolutions(ctx)).toStrictEqual(['"shared@1.1.0"']);
+  expect(await installedShared(ctx)).toMatchObject({ version: "1.1.0" });
+});
 
 it.concurrent("bun update updates transitive dependencies", async () => {
   using ctx = await testContext();
@@ -1545,30 +1524,24 @@ describe("bun update <name> semantics", () => {
   });
 
   for (const args of [[], ["dep-with-tags"]]) {
-    it.concurrent(
-      `bun update ${[...args, "--latest"].join(" ")} replaces a dist-tag literal with the latest version`,
-      async () => {
-        const dir = await setup({ "dep-with-tags": "pre-2" });
-        expect(await installedVersion(dir, "dep-with-tags")).toBe("2.0.1");
-        await update(dir, ...args, "--latest");
-        await expectInSync(dir, { "dep-with-tags": "^3.0.0" });
-        expect(await lockedVersions(dir, "dep-with-tags")).toStrictEqual(["3.0.0"]);
-        expect(await installedVersion(dir, "dep-with-tags")).toBe("3.0.0");
-      },
-    );
+    it.concurrent(`bun update ${[...args, "--latest"].join(" ")} replaces a dist-tag literal with the latest version`, async () => {
+      const dir = await setup({ "dep-with-tags": "pre-2" });
+      expect(await installedVersion(dir, "dep-with-tags")).toBe("2.0.1");
+      await update(dir, ...args, "--latest");
+      await expectInSync(dir, { "dep-with-tags": "^3.0.0" });
+      expect(await lockedVersions(dir, "dep-with-tags")).toStrictEqual(["3.0.0"]);
+      expect(await installedVersion(dir, "dep-with-tags")).toBe("3.0.0");
+    });
 
-    it.concurrent(
-      `bun update ${[...args, "--latest"].join(" ")} does not take a dist-tag entry below the version its tag names`,
-      async () => {
-        // `pre-3` is 3.0.1 and `latest` is 3.0.0.
-        const dir = await setup({ "dep-with-tags": "pre-3" });
-        expect(await installedVersion(dir, "dep-with-tags")).toBe("3.0.1");
-        await update(dir, ...args, "--latest");
-        await expectInSync(dir, { "dep-with-tags": "^3.0.1" });
-        expect(await lockedVersions(dir, "dep-with-tags")).toStrictEqual(["3.0.1"]);
-        expect(await installedVersion(dir, "dep-with-tags")).toBe("3.0.1");
-      },
-    );
+    it.concurrent(`bun update ${[...args, "--latest"].join(" ")} does not take a dist-tag entry below the version its tag names`, async () => {
+      // `pre-3` is 3.0.1 and `latest` is 3.0.0.
+      const dir = await setup({ "dep-with-tags": "pre-3" });
+      expect(await installedVersion(dir, "dep-with-tags")).toBe("3.0.1");
+      await update(dir, ...args, "--latest");
+      await expectInSync(dir, { "dep-with-tags": "^3.0.1" });
+      expect(await lockedVersions(dir, "dep-with-tags")).toStrictEqual(["3.0.1"]);
+      expect(await installedVersion(dir, "dep-with-tags")).toBe("3.0.1");
+    });
   }
 
   it.concurrent("bun update --latest rewrites a dist-tag literal next to a range", async () => {
@@ -1655,20 +1628,17 @@ describe("bun update <name> semantics", () => {
     expect(await installedVersion(dir, "aliased")).toBe("1.0.1");
   });
 
-  it.concurrent(
-    "bun update <real name> moves the plain entry and the aliased entry, each within its own range",
-    async () => {
-      const dir = await stale(
-        { "no-deps": "1.0.0", aliased: "npm:no-deps@1.0.0" },
-        { "no-deps": "^1.0.0", aliased: "npm:no-deps@~1.0.0" },
-      );
-      await update(dir, "no-deps");
-      await expectInSync(dir, { "no-deps": "^1.1.0", aliased: "npm:no-deps@~1.0.1" });
-      expect(await lockedVersions(dir, "no-deps")).toStrictEqual(["1.0.1", "1.1.0"]);
-      expect(await installedVersion(dir, "no-deps")).toBe("1.1.0");
-      expect(await installedVersion(dir, "aliased")).toBe("1.0.1");
-    },
-  );
+  it.concurrent("bun update <real name> moves the plain entry and the aliased entry, each within its own range", async () => {
+    const dir = await stale(
+      { "no-deps": "1.0.0", aliased: "npm:no-deps@1.0.0" },
+      { "no-deps": "^1.0.0", aliased: "npm:no-deps@~1.0.0" },
+    );
+    await update(dir, "no-deps");
+    await expectInSync(dir, { "no-deps": "^1.1.0", aliased: "npm:no-deps@~1.0.1" });
+    expect(await lockedVersions(dir, "no-deps")).toStrictEqual(["1.0.1", "1.1.0"]);
+    expect(await installedVersion(dir, "no-deps")).toBe("1.1.0");
+    expect(await installedVersion(dir, "aliased")).toBe("1.0.1");
+  });
 
   it.concurrent("bun update <real name> --latest moves an aliased entry to latest in its pin style", async () => {
     const dir = await setup({ aliased: "npm:no-deps@~1.0.0" });
@@ -1769,19 +1739,16 @@ describe("bun update <name> semantics", () => {
     },
   );
 
-  it.concurrent(
-    "install.exact + --latest writes exact versions behind an alias and in place of a dist-tag",
-    async () => {
-      const dir = await setup({ tagged: "npm:dep-with-tags@pre-2", "no-deps": "latest", "a-dep": "^1.0.1" });
-      expect(await installedVersion(dir, "tagged")).toBe("2.0.1");
-      await appendFile(join(dir, "bunfig.toml"), "exact = true\n");
-      await update(dir, "--latest");
-      await expectInSync(dir, { tagged: "npm:dep-with-tags@3.0.0", "no-deps": "2.0.0", "a-dep": "1.0.10" });
-      expect(await lockedVersions(dir, "dep-with-tags")).toStrictEqual(["3.0.0"]);
-      expect(await installedVersion(dir, "tagged")).toBe("3.0.0");
-      expect(await installedVersion(dir, "no-deps")).toBe("2.0.0");
-    },
-  );
+  it.concurrent("install.exact + --latest writes exact versions behind an alias and in place of a dist-tag", async () => {
+    const dir = await setup({ tagged: "npm:dep-with-tags@pre-2", "no-deps": "latest", "a-dep": "^1.0.1" });
+    expect(await installedVersion(dir, "tagged")).toBe("2.0.1");
+    await appendFile(join(dir, "bunfig.toml"), "exact = true\n");
+    await update(dir, "--latest");
+    await expectInSync(dir, { tagged: "npm:dep-with-tags@3.0.0", "no-deps": "2.0.0", "a-dep": "1.0.10" });
+    expect(await lockedVersions(dir, "dep-with-tags")).toStrictEqual(["3.0.0"]);
+    expect(await installedVersion(dir, "tagged")).toBe("3.0.0");
+    expect(await installedVersion(dir, "no-deps")).toBe("2.0.0");
+  });
 
   it.concurrent("--exact on the command line writes exact versions like install.exact does", async () => {
     const dir = await setup({ "no-deps": "^1.0.0", tagged: "npm:dep-with-tags@pre-2" });
@@ -2205,28 +2172,25 @@ describe("bun update <name> semantics", () => {
       },
     );
 
-    it.concurrent(
-      "--latest with two filters leaves unselected workspaces' ranges in package.json and bun.lock",
-      async () => {
-        const { dir, before } = await fanOut();
-        await update(dir, "no-deps", "--latest", "--filter", "api", "--filter", "pkg-a");
-        expect((await packageJsonOf(dir, "packages/api")).dependencies).toStrictEqual({
-          "no-deps": "^2.0.0",
-          "a-dep": "^1.0.1",
-          aliased: "npm:no-deps@~2.0.0",
-        });
-        expect((await packageJsonOf(dir, "packages/pkg-a")).devDependencies).toStrictEqual({ "no-deps": "^2.0.0" });
-        expect(await packageJsonText(dir)).toBe(before[""]);
-        expect(await packageJsonText(dir, "packages/web")).toBe(before["packages/web"]);
-        expect(await packageJsonText(dir, "packages/pkg-b")).toBe(before["packages/pkg-b"]);
-        const { workspaces } = await lock(dir);
-        expect(workspaces[""].dependencies).toStrictEqual({ "no-deps": "^1.0.0" });
-        expect(workspaces["packages/web"].peerDependencies).toStrictEqual({ "no-deps": "~1.0.0" });
-        // 1.0.1 was only ever placed by api's alias row; web's peer entry is satisfied by whatever is hoisted.
-        expect(await lockedVersions(dir, "no-deps")).toStrictEqual(["1.1.0", "2.0.0"]);
-        await install(dir, "--frozen-lockfile");
-      },
-    );
+    it.concurrent("--latest with two filters leaves unselected workspaces' ranges in package.json and bun.lock", async () => {
+      const { dir, before } = await fanOut();
+      await update(dir, "no-deps", "--latest", "--filter", "api", "--filter", "pkg-a");
+      expect((await packageJsonOf(dir, "packages/api")).dependencies).toStrictEqual({
+        "no-deps": "^2.0.0",
+        "a-dep": "^1.0.1",
+        aliased: "npm:no-deps@~2.0.0",
+      });
+      expect((await packageJsonOf(dir, "packages/pkg-a")).devDependencies).toStrictEqual({ "no-deps": "^2.0.0" });
+      expect(await packageJsonText(dir)).toBe(before[""]);
+      expect(await packageJsonText(dir, "packages/web")).toBe(before["packages/web"]);
+      expect(await packageJsonText(dir, "packages/pkg-b")).toBe(before["packages/pkg-b"]);
+      const { workspaces } = await lock(dir);
+      expect(workspaces[""].dependencies).toStrictEqual({ "no-deps": "^1.0.0" });
+      expect(workspaces["packages/web"].peerDependencies).toStrictEqual({ "no-deps": "~1.0.0" });
+      // 1.0.1 was only ever placed by api's alias row; web's peer entry is satisfied by whatever is hoisted.
+      expect(await lockedVersions(dir, "no-deps")).toStrictEqual(["1.1.0", "2.0.0"]);
+      await install(dir, "--frozen-lockfile");
+    });
 
     it.concurrent("several names never add a name to a workspace that does not declare it", async () => {
       const { dir, before } = await fanOut();

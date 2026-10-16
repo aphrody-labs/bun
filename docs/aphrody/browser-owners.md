@@ -1,4 +1,5 @@
 <!-- SPDX-License-Identifier: Apache-2.0 -->
+
 # Browser command owners
 
 `bun run chrome` and `bun run obscura` share [browser.ts](../../scripts/aphrody/browser.ts).
@@ -27,12 +28,12 @@ Profile selection does not grant additional host capabilities to remote pages.
 
 Compilation has separate owners:
 
-| Command | Responsibility |
-| --- | --- |
-| `bun run gn` | Pinned GN bootstrap, graph generation and an existing project's Ninja build; [GN details](../chromium/gn.md) |
-| `bun run chromium` | Pinned Chromium/depot_tools source setup, synchronization, generation and complete Chrome target build |
-| `bun run chrome` | Connect to or launch an installed Chrome-compatible executable through `bun:chromium` |
-| `bun run obscura` | Connect to or launch the existing native headless owner through `bun:obscura` |
+| Command            | Responsibility                                                                                               |
+| ------------------ | ------------------------------------------------------------------------------------------------------------ |
+| `bun run gn`       | Pinned GN bootstrap, graph generation and an existing project's Ninja build; [GN details](../chromium/gn.md) |
+| `bun run chromium` | Pinned Chromium/depot_tools source setup, synchronization, generation and complete Chrome target build       |
+| `bun run chrome`   | Connect to or launch an installed Chrome-compatible executable through `bun:chromium`                        |
+| `bun run obscura`  | Connect to or launch the existing native headless owner through `bun:obscura`                                |
 
 GN generates build graphs; CDP controls running browsers. A successful GN build
 does not prove CDP readiness or WebGPU availability. CLI argument tests use fake

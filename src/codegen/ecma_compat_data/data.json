@@ -323,10 +323,7 @@
   {
     "name": "StickyRegex",
     "babel": "transform-sticky-regex",
-    "features": [
-      "RegExp \"y\" and \"u\" flags / \"y\" flag, lastIndex",
-      "RegExp \"y\" and \"u\" flags / \"y\" flag"
-    ],
+    "features": ["RegExp \"y\" and \"u\" flags / \"y\" flag, lastIndex", "RegExp \"y\" and \"u\" flags / \"y\" flag"],
     "es": "ES2015",
     "targets": {
       "chrome": "49",

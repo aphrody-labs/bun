@@ -16,7 +16,15 @@ decoding come from the browser DOM. Script elements remain inert. IDs belong to
 this result only; a subsequent call parses an independent document.
 
 ```json
-{"name":"html_parse","arguments":{"html":"<table><tr><td>A &amp; B</table>","selector":"table > tbody > tr > td","include_html":true,"limit":20}}
+{
+  "name": "html_parse",
+  "arguments": {
+    "html": "<table><tr><td>A &amp; B</table>",
+    "selector": "table > tbody > tr > td",
+    "include_html": true,
+    "limit": 20
+  }
+}
 ```
 
 `css_parse` calls `bun_css::browser::parse_stylesheet`, the shared Bun
@@ -25,7 +33,7 @@ bodies, including statement at-rules. It enables author-style error recovery
 without minification, CSS-module rewriting or URL resolution.
 
 ```json
-{"name":"css_parse","arguments":{"css":"@layer reset, app; .a { height: 7px }","limit":20}}
+{ "name": "css_parse", "arguments": { "css": "@layer reset, app; .a { height: 7px }", "limit": 20 } }
 ```
 
 ## Limits and errors

@@ -175,8 +175,7 @@ async function spawnCapped(options: Bun.SpawnOptions.SpawnOptions<"ignore", "pip
   const proc = Bun.spawn(options);
   proc.exited.finally(() => {
     const next = waiters.shift();
-    if (next)
-      next(); // hand the slot off directly; `live` stays as-is
+    if (next) next(); // hand the slot off directly; `live` stays as-is
     else live--;
   });
   return proc;

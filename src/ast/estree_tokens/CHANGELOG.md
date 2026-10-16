@@ -64,4 +64,3 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - b2b7a64 estree/tokens: Correct comment (#19873) (overlookmotel)
 - 0399311 estree/tokens: Improve comments (#19836) (overlookmotel)
-

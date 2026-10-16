@@ -1471,16 +1471,9 @@
   ],
   "adaptations": {
     "purpose": "Embed Just directly in Bun's native workspace without global CLI reparsing",
-    "defaultShell": [
-      "sh",
-      "-cu"
-    ],
+    "defaultShell": ["sh", "-cu"],
     "bunShellOptIn": "--bun-shell",
-    "bunShellArgs": [
-      "--no-env-file",
-      "exec",
-      "--nounset"
-    ],
+    "bunShellArgs": ["--no-env-file", "exec", "--nounset"],
     "configScope": "per invocation",
     "sourcePackage": "bun_just",
     "recursiveCommand": "just_command()"

@@ -969,38 +969,35 @@ describe("yarn berry migration", () => {
     );
   });
 
-  test.concurrent(
-    "__archiveUrl under the configured registry keeps its URL and gets the manifest's integrity",
-    async () => {
-      const { packageDir: dir } = await testRegistry.createTestDir({
-        bunfigOpts: { linker: "hoisted" },
-        files: {
-          "package.json": JSON.stringify({ name: "berry-registries", dependencies: { "a-dep": "^1.0.1" } }),
-          // the same registry bun is configured with; the scope is one the lockfile does not use
-          ".yarnrc.yml": `npmRegistryServer: "${testRegistry.registryUrl()}"\nnpmScopes:\n  unused:\n    npmRegistryServer: "\${UNUSED_REGISTRY}"\n`,
-          "yarn.lock": yarnLock({
-            "a-dep@npm:^1.0.1": [
-              `resolution: "a-dep@npm:1.0.2::__archiveUrl=${encodeURIComponent(`${testRegistry.registryUrl()}a-dep/-/a-dep-1.0.2.tgz`)}"`,
-            ],
-            "berry-registries@workspace:.": [
-              `resolution: "berry-registries@workspace:."`,
-              `dependencies:`,
-              `  a-dep: "npm:^1.0.1"`,
-            ],
-          }),
-        },
-      });
+  test.concurrent("__archiveUrl under the configured registry keeps its URL and gets the manifest's integrity", async () => {
+    const { packageDir: dir } = await testRegistry.createTestDir({
+      bunfigOpts: { linker: "hoisted" },
+      files: {
+        "package.json": JSON.stringify({ name: "berry-registries", dependencies: { "a-dep": "^1.0.1" } }),
+        // the same registry bun is configured with; the scope is one the lockfile does not use
+        ".yarnrc.yml": `npmRegistryServer: "${testRegistry.registryUrl()}"\nnpmScopes:\n  unused:\n    npmRegistryServer: "\${UNUSED_REGISTRY}"\n`,
+        "yarn.lock": yarnLock({
+          "a-dep@npm:^1.0.1": [
+            `resolution: "a-dep@npm:1.0.2::__archiveUrl=${encodeURIComponent(`${testRegistry.registryUrl()}a-dep/-/a-dep-1.0.2.tgz`)}"`,
+          ],
+          "berry-registries@workspace:.": [
+            `resolution: "berry-registries@workspace:."`,
+            `dependencies:`,
+            `  a-dep: "npm:^1.0.1"`,
+          ],
+        }),
+      },
+    });
 
-      const { stderr, exitCode } = await run(dir, "install");
-      expect(stderr).toContain("migrated lockfile from yarn.lock");
-      expect(stderr).not.toContain("error:");
-      expect(exitCode).toBe(0);
-      expect(await bunLockOf(dir)).toContain(
-        `["a-dep@1.0.2", "http://localhost:1234/a-dep/-/a-dep-1.0.2.tgz", {}, "sha512-786lp/Wqdz6jY9NOPFnU2OZAl/7wW/CWCHNn4I+0Or9NtA0F9I1TXtisuy8hMFw/6u6CYXwlzdwySiOdpJ94oQ=="]`,
-      );
-      await expectFrozenInstall(dir);
-    },
-  );
+    const { stderr, exitCode } = await run(dir, "install");
+    expect(stderr).toContain("migrated lockfile from yarn.lock");
+    expect(stderr).not.toContain("error:");
+    expect(exitCode).toBe(0);
+    expect(await bunLockOf(dir)).toContain(
+      `["a-dep@1.0.2", "http://localhost:1234/a-dep/-/a-dep-1.0.2.tgz", {}, "sha512-786lp/Wqdz6jY9NOPFnU2OZAl/7wW/CWCHNn4I+0Or9NtA0F9I1TXtisuy8hMFw/6u6CYXwlzdwySiOdpJ94oQ=="]`,
+    );
+    await expectFrozenInstall(dir);
+  });
 
   test.concurrent("yarn 2/3 lockfiles: bare ranges, and ranges YAML reads as numbers", async () => {
     const { packageDir: dir } = await testRegistry.createTestDir({
@@ -2037,21 +2034,19 @@ catalogs:
     ]);
   });
 
-  test.concurrent(
-    "what real lockfiles hold: a range that ends in a space, dev over prod, packageExtensions",
-    async () => {
-      const { packageDir: dir } = await testRegistry.createTestDir({
-        bunfigOpts: { linker: "hoisted" },
-        files: {
-          "package.json": JSON.stringify({
-            name: "berry-real",
-            // yarn installs the devDependencies range of a name both groups list; bun reads `dependencies`
-            dependencies: { "a-dep": "^1.0.1 || ^2.0.0", "one-range-dep": "^1.0.0" },
-            devDependencies: { "a-dep": "~1.0.2" },
-          }),
-          // yarn adds `one-fixed-dep` to `one-range-dep` when it installs; yarn.lock has the entry, not the edge
-          // (a second extension that matches adds nothing for a name the first one added)
-          ".yarnrc.yml": `packageExtensions:
+  test.concurrent("what real lockfiles hold: a range that ends in a space, dev over prod, packageExtensions", async () => {
+    const { packageDir: dir } = await testRegistry.createTestDir({
+      bunfigOpts: { linker: "hoisted" },
+      files: {
+        "package.json": JSON.stringify({
+          name: "berry-real",
+          // yarn installs the devDependencies range of a name both groups list; bun reads `dependencies`
+          dependencies: { "a-dep": "^1.0.1 || ^2.0.0", "one-range-dep": "^1.0.0" },
+          devDependencies: { "a-dep": "~1.0.2" },
+        }),
+        // yarn adds `one-fixed-dep` to `one-range-dep` when it installs; yarn.lock has the entry, not the edge
+        // (a second extension that matches adds nothing for a name the first one added)
+        ".yarnrc.yml": `packageExtensions:
   one-range-dep@1:
     dependencies:
       one-fixed-dep: 1.0.0
@@ -2067,70 +2062,69 @@ catalogs:
     dependencies:
       a-dep: 1.0.1
 `,
-          "yarn.lock": yarnLock({
-            "a-dep@npm:~1.0.2": [`version: 1.0.3`, `resolution: "a-dep@npm:1.0.3"`],
-            "berry-real@workspace:.": [
-              `resolution: "berry-real@workspace:."`,
-              `dependencies:`,
-              `  a-dep: "npm:~1.0.2"`,
-              `  one-range-dep: "npm:^1.0.0"`,
-            ],
-            // the package.json of one-range-dep spells its range with a space at the end
-            "no-deps@npm:1.0.0, no-deps@npm:^1.0.0 ": [`version: 1.0.0`, `resolution: "no-deps@npm:1.0.0"`],
-            "one-fixed-dep@npm:1.0.0": [
-              `version: 1.0.0`,
-              `resolution: "one-fixed-dep@npm:1.0.0"`,
-              `dependencies:`,
-              `  no-deps: "npm:1.0.0"`,
-            ],
-            "one-range-dep@npm:^1.0.0": [
-              `version: 1.0.0`,
-              `resolution: "one-range-dep@npm:1.0.0"`,
-              `dependencies:`,
-              `  no-deps: "npm:^1.0.0 "`,
-            ],
-          }),
-        },
-      });
+        "yarn.lock": yarnLock({
+          "a-dep@npm:~1.0.2": [`version: 1.0.3`, `resolution: "a-dep@npm:1.0.3"`],
+          "berry-real@workspace:.": [
+            `resolution: "berry-real@workspace:."`,
+            `dependencies:`,
+            `  a-dep: "npm:~1.0.2"`,
+            `  one-range-dep: "npm:^1.0.0"`,
+          ],
+          // the package.json of one-range-dep spells its range with a space at the end
+          "no-deps@npm:1.0.0, no-deps@npm:^1.0.0 ": [`version: 1.0.0`, `resolution: "no-deps@npm:1.0.0"`],
+          "one-fixed-dep@npm:1.0.0": [
+            `version: 1.0.0`,
+            `resolution: "one-fixed-dep@npm:1.0.0"`,
+            `dependencies:`,
+            `  no-deps: "npm:1.0.0"`,
+          ],
+          "one-range-dep@npm:^1.0.0": [
+            `version: 1.0.0`,
+            `resolution: "one-range-dep@npm:1.0.0"`,
+            `dependencies:`,
+            `  no-deps: "npm:^1.0.0 "`,
+          ],
+        }),
+      },
+    });
 
-      const { stderr, exitCode } = await run(dir, "pm", "migrate");
-      expect(stderr).toContain("migrated lockfile from yarn.lock");
-      expect(stderr).not.toContain("error:");
-      expect(exitCode).toBe(0);
+    const { stderr, exitCode } = await run(dir, "pm", "migrate");
+    expect(stderr).toContain("migrated lockfile from yarn.lock");
+    expect(stderr).not.toContain("error:");
+    expect(exitCode).toBe(0);
 
-      const bunLock = await bunLockOf(dir);
-      expect(lockedVersions(bunLock)).toEqual([
-        "a-dep@1.0.3",
-        "no-deps@1.0.0",
-        "one-fixed-dep@1.0.0",
-        "one-range-dep@1.0.0",
-      ]);
-      // both edges, as bun reads the package.json itself, so the next install has nothing to add
-      expect(bunLock).toContain(`"a-dep": "^1.0.1 || ^2.0.0",`);
-      expect(bunLock).toContain(`"devDependencies": {\n        "a-dep": "~1.0.2",\n      },`);
-      expect(bunLock).toContain(
-        `"one-range-dep@1.0.0", "http://localhost:1234/one-range-dep/-/one-range-dep-1.0.0.tgz", { "dependencies": { "no-deps": "^1.0.0 ", "one-fixed-dep": "1.0.0" }, "peerDependencies": { "a-dep": "*" }, "optionalPeers": ["a-dep"] }`,
-      );
-      // bun.lock says which edges an extension added, and the extensions go where bun reads them
-      expect(bunLock).toContain(
-        `  "packageExtensions": {\n    "one-range-dep@1.0.0": { "dependencies": ["one-fixed-dep"], "peerDependencies": ["a-dep"] },\n  },\n`,
-      );
-      expect(stderr).toContain("copied .yarnrc.yml packageExtensions to packageExtensions in package.json");
-      expect((await Bun.file(join(dir, "package.json")).json()).packageExtensions).toEqual({
-        "one-range-dep@1": {
-          dependencies: { "one-fixed-dep": "1.0.0" },
-          peerDependencies: { "a-dep": "*" },
-          peerDependenciesMeta: { "a-dep": { optional: true } },
-        },
-        "one-range-dep@*": { dependencies: { "one-fixed-dep": "2.0.0" } },
-        "one-range-dep@^2.0.0": { dependencies: { "a-dep": "1.0.1" } },
-      });
-      await expectFrozenInstall(dir);
-      const again = await run(dir, "install");
-      expect(again.stderr).not.toContain("Saved lockfile");
-      expect(await bunLockOf(dir)).toBe(bunLock);
-    },
-  );
+    const bunLock = await bunLockOf(dir);
+    expect(lockedVersions(bunLock)).toEqual([
+      "a-dep@1.0.3",
+      "no-deps@1.0.0",
+      "one-fixed-dep@1.0.0",
+      "one-range-dep@1.0.0",
+    ]);
+    // both edges, as bun reads the package.json itself, so the next install has nothing to add
+    expect(bunLock).toContain(`"a-dep": "^1.0.1 || ^2.0.0",`);
+    expect(bunLock).toContain(`"devDependencies": {\n        "a-dep": "~1.0.2",\n      },`);
+    expect(bunLock).toContain(
+      `"one-range-dep@1.0.0", "http://localhost:1234/one-range-dep/-/one-range-dep-1.0.0.tgz", { "dependencies": { "no-deps": "^1.0.0 ", "one-fixed-dep": "1.0.0" }, "peerDependencies": { "a-dep": "*" }, "optionalPeers": ["a-dep"] }`,
+    );
+    // bun.lock says which edges an extension added, and the extensions go where bun reads them
+    expect(bunLock).toContain(
+      `  "packageExtensions": {\n    "one-range-dep@1.0.0": { "dependencies": ["one-fixed-dep"], "peerDependencies": ["a-dep"] },\n  },\n`,
+    );
+    expect(stderr).toContain("copied .yarnrc.yml packageExtensions to packageExtensions in package.json");
+    expect((await Bun.file(join(dir, "package.json")).json()).packageExtensions).toEqual({
+      "one-range-dep@1": {
+        dependencies: { "one-fixed-dep": "1.0.0" },
+        peerDependencies: { "a-dep": "*" },
+        peerDependenciesMeta: { "a-dep": { optional: true } },
+      },
+      "one-range-dep@*": { dependencies: { "one-fixed-dep": "2.0.0" } },
+      "one-range-dep@^2.0.0": { dependencies: { "a-dep": "1.0.1" } },
+    });
+    await expectFrozenInstall(dir);
+    const again = await run(dir, "install");
+    expect(again.stderr).not.toContain("Saved lockfile");
+    expect(await bunLockOf(dir)).toBe(bunLock);
+  });
 
   test.concurrent("packageExtensions keep working after the migration", async () => {
     const { packageDir: dir } = await testRegistry.createTestDir({

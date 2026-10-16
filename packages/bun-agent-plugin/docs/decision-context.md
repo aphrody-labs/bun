@@ -10,7 +10,9 @@ availability or behavior.
 ```ts
 import type { Provider } from "bun:yolo";
 import { createContextSelector } from "bun-agent-plugin/decision";
-const selector = createContextSelector(await Bun.file("yolo/context-catalog.json").json());
+const selector = createContextSelector(
+  await Bun.file("yolo/context-catalog.json").json(),
+);
 export async function selectContext(provider: Provider) {
   return await selector.select({
     task: "Find callers of Bun.Video frame transforms",

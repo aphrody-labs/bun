@@ -160,16 +160,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - be94bfd semantic: Add scope tracking for `with` statements (#14652) (Boshen)
 
-
 ## [0.95.0] - 2025-10-15
 
 ### 🚀 Features
 
 - bc4f0a1 transformer: Add ES2020 export namespace from transformation (#14277) (Copilot)
-
-
-
-
 
 ## [0.91.0] - 2025-09-22
 
@@ -177,21 +172,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - fb347da crates: V0.91.0 (#13961) (Boshen)
 
-
-
-
-
-
 ## [0.87.0] - 2025-09-08
 
 ### 🐛 Bug Fixes
 
 - 34d3cde rust: Fix clippy issues (#13540) (Boshen)
-
-
-
-
-
 
 ## [0.82.3] - 2025-08-20
 
@@ -203,17 +188,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 72880a7 traverse: Fix lint errors in codegen (#13186) (overlookmotel)
 
-
-
-
-
 ## [0.81.0] - 2025-08-06
 
 ### 💥 BREAKING CHANGES
 
 - 2cc1001 ast: [**BREAKING**] Remove `ExportDefaultDeclaration` `exported` field (#12808) (overlookmotel)
 - 50b91ac ast: [**BREAKING**] Remove `IdentifierReference` from `qualifier` field of `TSImportType` (#12799) (camc314)
-
 
 ## [0.80.0] - 2025-08-03
 
@@ -226,15 +206,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - de1de35 rust: Add comprehensive README.md documentation for all Rust crates (#12706) (Copilot)
 
-
-
-
 ## [0.78.0] - 2025-07-24
 
 ### 🚀 Features
 
 - dee25f4 ast: Add `pife` field to `Function` (#12469) (sapphi-red)
-
 
 ## [0.77.3] - 2025-07-20
 
@@ -242,18 +218,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 0920e98 codegen: Keep arrow function PIFEs (#12353) (sapphi-red)
 
-
-
 ## [0.77.1] - 2025-07-16
 
 ### 🚀 Features
 
 - 9b14fbc ast: Add `ThisExpression` to `TSTypeName` (#12156) (Boshen)
-
-
-
-
-
 
 ## [0.74.0] - 2025-06-23
 
@@ -261,15 +230,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 8ef1be2 traverse: [**BREAKING**] Introduce `TraverseCtx<'a, State>` (#11770) (Boshen)
 
-
-
-
 ## [0.73.0] - 2025-06-13
 
 ### 💥 BREAKING CHANGES
 
 - f3eaefb ast: [**BREAKING**] Add `value` field to `BigIntLiteral` (#11564) (overlookmotel)
-
 
 # Changelog
 
@@ -293,7 +258,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 5d9344f rust: [**BREAKING**] Clippy avoid-breaking-exported-api = false (#11088) (Boshen)
 
 ### Refactor
-
 
 ## [0.69.0] - 2025-05-09
 
@@ -360,7 +324,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Refactor
 
-
 ## [0.64.0] - 2025-04-17
 
 - c538efa ast: [**BREAKING**] `ImportExpression` only allows one option argument (#10432) (Boshen)
@@ -412,20 +375,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Features
 
-
 ## [0.60.0] - 2025-03-18
 
 - b3ce925 data_structures: [**BREAKING**] Put all parts behind features (#9849) (overlookmotel)
 
 ### Features
 
-
 ## [0.59.0] - 2025-03-18
 
-- ce6808a parser: [**BREAKING**] Rename `type_parameters` to `type_arguments` where needed  (#9815) (hi-ogawa)
+- ce6808a parser: [**BREAKING**] Rename `type_parameters` to `type_arguments` where needed (#9815) (hi-ogawa)
 
 ### Bug Fixes
-
 
 ### Refactor
 
@@ -458,7 +418,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Refactor
 
-
 ## [0.56.3] - 2025-03-07
 
 ### Features
@@ -470,7 +429,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 48a0394 ast: [**BREAKING**] Add `scope_id` to `TSFunctionType` (#9559) (camc314)
 
 ### Features
-
 
 ## [0.54.0] - 2025-03-04
 
@@ -512,13 +470,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Features
 
-
 ## [0.50.0] - 2025-02-12
 
 - d9189f1 ast: [**BREAKING**] Remove `PrivateInExpression::operator` field (#9041) (overlookmotel)
 
 ### Refactor
-
 
 ## [0.49.0] - 2025-02-10
 
@@ -554,7 +510,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - e632a7b transformer: Remove typescript symbols after transform (#8069) (Boshen)
 
 ### Bug Fixes
-
 
 ## [0.43.0] - 2024-12-21
 
@@ -597,7 +552,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Refactor
 
-
 ## [0.40.0] - 2024-12-10
 
 - 5d6fa25 traverse: [**BREAKING**] Remove `TraverseCtx::is_static` (#7760) (overlookmotel)
@@ -612,7 +566,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Refactor
 
-
 ## [0.39.0] - 2024-12-04
 
 - f2f31a8 traverse: [**BREAKING**] Remove unsound APIs (#7514) (overlookmotel)
@@ -622,7 +575,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 9c9deae traverse: Add `generate_uid_in_current_hoist_scope` method (#7423) (Dunqing)
 
 ### Bug Fixes
-
 
 ### Documentation
 
@@ -661,7 +613,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Bug Fixes
 
-
 ### Documentation
 
 - 834c94d traverse: Tidy doc comments for `TraverseCtx::is_static` (#7267) (overlookmotel)
@@ -680,7 +631,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 843bce4 ast: [**BREAKING**] `IdentifierReference::reference_id` return `ReferenceId` (#7126) (overlookmotel)
 
 ### Features
-
 
 ### Refactor
 
@@ -790,7 +740,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Performance
 
-
 ### Refactor
 
 - cc0408b semantic: S/AstNodeId/NodeId (#5740) (Boshen)
@@ -820,7 +769,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Refactor
 
 - 2de6ea0 index, traverse: Remove unnecessary type annotations (#5650) (overlookmotel)
-- 19cdcc5 traverse: Revert changes to `walk.rs` (#5652) (overlookmotel)- 26d9235 Enable clippy::ref_as_ptr  (#5577) (夕舞八弦)
+- 19cdcc5 traverse: Revert changes to `walk.rs` (#5652) (overlookmotel)- 26d9235 Enable clippy::ref_as_ptr (#5577) (夕舞八弦)
 
 ### Styling
 
@@ -836,7 +785,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - cba93f5 ast: [**BREAKING**] Add `ThisExpression` variants to `JSXElementName` and `JSXMemberExpressionObject` (#5466) (overlookmotel)
 
 ### Features
-
 
 ### Bug Fixes
 
@@ -1016,7 +964,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Refactor
 
-
 ## [0.16.3] - 2024-07-02
 
 ### Refactor
@@ -1085,7 +1032,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 90743e2 traverse: Change visit order for `Function` (#3685) (overlookmotel)
 
 ### Refactor
-
 
 ## [0.14.0] - 2024-06-12
 
@@ -1168,4 +1114,3 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 762677e transform: `retag_stack` use `AncestorType` (#3173) (overlookmotel)
 - ec41dba traverse: Simplify build script (#3231) (overlookmotel)
 - 132db7d traverse: Do not expose `TraverseCtx::new` (#3226) (overlookmotel)
-

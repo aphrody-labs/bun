@@ -1345,44 +1345,41 @@ describe.concurrent("errors", () => {
     expect(await exists(join(String(dir), "bun.lock"))).toBeFalse();
   });
 
-  test.concurrent(
-    "a catalog: dependency inside a file: folder dependency fails to resolve, the same package as a workspace works",
-    async () => {
-      const localLib = JSON.stringify({ name: "local-lib", dependencies: { "no-deps": "catalog:" } });
-      const [folder, workspace] = await Promise.all([
-        registry.createTestDir({
-          bunfigOpts: { linker: "hoisted" },
-          files: {
-            "package.json": JSON.stringify({
-              name: "root",
-              workspaces: { catalog: { "no-deps": "^1.0.0" } },
-              dependencies: { "local-lib": "file:./local-lib" },
-            }),
-            "local-lib/package.json": localLib,
-          },
-        }),
-        registry.createTestDir({
-          bunfigOpts: { linker: "hoisted" },
-          files: {
-            "package.json": JSON.stringify({
-              name: "root",
-              workspaces: { packages: ["packages/*"], catalog: { "no-deps": "^1.0.0" } },
-            }),
-            "packages/local-lib/package.json": localLib,
-          },
-        }),
-      ]);
+  test.concurrent("a catalog: dependency inside a file: folder dependency fails to resolve, the same package as a workspace works", async () => {
+    const localLib = JSON.stringify({ name: "local-lib", dependencies: { "no-deps": "catalog:" } });
+    const [folder, workspace] = await Promise.all([
+      registry.createTestDir({
+        bunfigOpts: { linker: "hoisted" },
+        files: {
+          "package.json": JSON.stringify({
+            name: "root",
+            workspaces: { catalog: { "no-deps": "^1.0.0" } },
+            dependencies: { "local-lib": "file:./local-lib" },
+          }),
+          "local-lib/package.json": localLib,
+        },
+      }),
+      registry.createTestDir({
+        bunfigOpts: { linker: "hoisted" },
+        files: {
+          "package.json": JSON.stringify({
+            name: "root",
+            workspaces: { packages: ["packages/*"], catalog: { "no-deps": "^1.0.0" } },
+          }),
+          "packages/local-lib/package.json": localLib,
+        },
+      }),
+    ]);
 
-      const { err, exitCode } = await failingInstall(folder.packageDir);
-      expect(err).toContain("no-deps@catalog: failed to resolve");
-      expect(exitCode).not.toBe(0);
+    const { err, exitCode } = await failingInstall(folder.packageDir);
+    expect(err).toContain("no-deps@catalog: failed to resolve");
+    expect(exitCode).not.toBe(0);
 
-      await runBunInstall(installEnv(workspace.packageDir), workspace.packageDir);
-      expect((await file(join(workspace.packageDir, "node_modules", "no-deps", "package.json")).json()).version).toBe(
-        "1.1.0",
-      );
-    },
-  );
+    await runBunInstall(installEnv(workspace.packageDir), workspace.packageDir);
+    expect((await file(join(workspace.packageDir, "node_modules", "no-deps", "package.json")).json()).version).toBe(
+      "1.1.0",
+    );
+  });
 });
 
 describe("optionalDependencies", () => {
@@ -1772,29 +1769,26 @@ describe("peer dependencies", () => {
     });
 
     // pnpm: deps-installer/test/catalogs.ts "importer with different peers uses correct peer"
-    test.concurrent(
-      "two consumers providing different peer versions: catalog peer still equals inline peer",
-      async () => {
-        const twoConsumers = (peerSpec: string, catalog?: Record<string, string>) =>
-          makeRepo({
-            peerSpec,
-            catalog,
-            rootDependencies: {},
-            appDependencies: { "no-deps": "1.0.0", lib: "workspace:*" },
-            extraWorkspaces: { app2: { dependencies: { "no-deps": "2.0.0", lib: "workspace:*" } } },
-            linker,
-          });
-        const [catalogDir, inlineDir] = await Promise.all([
-          twoConsumers("catalog:", { "no-deps": ">=1.0.0" }),
-          twoConsumers(">=1.0.0"),
-        ]);
-        const [fromCatalog, fromInline] = await Promise.all([record(catalogDir, linker), record(inlineDir, linker)]);
-        expect(fromInline.keys).toStrictEqual(["app", "app2", "app2/no-deps", "lib", "no-deps"]);
-        expect(fromInline.keysAfterReload).toStrictEqual(fromInline.keys);
-        expect(fromInline.reloadSavedLockfile).toBeFalse();
-        expect(fromCatalog).toStrictEqual(fromInline);
-      },
-    );
+    test.concurrent("two consumers providing different peer versions: catalog peer still equals inline peer", async () => {
+      const twoConsumers = (peerSpec: string, catalog?: Record<string, string>) =>
+        makeRepo({
+          peerSpec,
+          catalog,
+          rootDependencies: {},
+          appDependencies: { "no-deps": "1.0.0", lib: "workspace:*" },
+          extraWorkspaces: { app2: { dependencies: { "no-deps": "2.0.0", lib: "workspace:*" } } },
+          linker,
+        });
+      const [catalogDir, inlineDir] = await Promise.all([
+        twoConsumers("catalog:", { "no-deps": ">=1.0.0" }),
+        twoConsumers(">=1.0.0"),
+      ]);
+      const [fromCatalog, fromInline] = await Promise.all([record(catalogDir, linker), record(inlineDir, linker)]);
+      expect(fromInline.keys).toStrictEqual(["app", "app2", "app2/no-deps", "lib", "no-deps"]);
+      expect(fromInline.keysAfterReload).toStrictEqual(fromInline.keys);
+      expect(fromInline.reloadSavedLockfile).toBeFalse();
+      expect(fromCatalog).toStrictEqual(fromInline);
+    });
 
     // pnpm: deps-installer/test/catalogs.ts "catalog resolutions should be consistent with peer dependencies"
     test.concurrent("warm install leaves bun.lock byte-identical and --frozen-lockfile passes", async () => {
@@ -2019,38 +2013,35 @@ describe("peer dependencies", () => {
     });
 
     // pnpm: resolving-deps-resolver walk.rs resolves_children_through_catalogs — only importers substitute catalogs.
-    test.concurrent(
-      "a registry package's catalog: peer ignores the root catalog and binds to the workspace's copy",
-      async () => {
-        const dir = await makeRepo({
-          rootDependencies: {},
-          catalog: { "no-deps": "^2.0.0" },
-          appDependencies: { "no-deps": "1.0.0", "catalog-peer": "1.0.0" },
-          peerSpec: "*",
-          linker,
-          registry: catalogRegistry.url.href,
-        });
-        const boundPeer = async () => {
-          if (linker === "isolated") {
-            const storeEntry = await realpath(join(dir, "packages", "app", "node_modules", "catalog-peer"));
-            return (await Bun.file(join(storeEntry, "..", "no-deps", "package.json")).json()).version;
-          }
-          return existsSync(join(dir, "node_modules", "catalog-peer", "node_modules")) ? "nested" : "hoisted";
-        };
-        const expected = linker === "isolated" ? "1.0.0" : "hoisted";
+    test.concurrent("a registry package's catalog: peer ignores the root catalog and binds to the workspace's copy", async () => {
+      const dir = await makeRepo({
+        rootDependencies: {},
+        catalog: { "no-deps": "^2.0.0" },
+        appDependencies: { "no-deps": "1.0.0", "catalog-peer": "1.0.0" },
+        peerSpec: "*",
+        linker,
+        registry: catalogRegistry.url.href,
+      });
+      const boundPeer = async () => {
+        if (linker === "isolated") {
+          const storeEntry = await realpath(join(dir, "packages", "app", "node_modules", "catalog-peer"));
+          return (await Bun.file(join(storeEntry, "..", "no-deps", "package.json")).json()).version;
+        }
+        return existsSync(join(dir, "node_modules", "catalog-peer", "node_modules")) ? "nested" : "hoisted";
+      };
+      const expected = linker === "isolated" ? "1.0.0" : "hoisted";
 
-        await install(dir, linker);
-        expect(await packageKeys(dir)).toStrictEqual(registryPeerKeys);
-        expect(await boundPeer()).toBe(expected);
+      await install(dir, linker);
+      expect(await packageKeys(dir)).toStrictEqual(registryPeerKeys);
+      expect(await boundPeer()).toBe(expected);
 
-        await rmNodeModules(dir);
-        const { err } = await install(dir, linker);
-        expect(err).not.toContain("Saved lockfile");
-        expect(await packageKeys(dir)).toStrictEqual(registryPeerKeys);
-        expect(await boundPeer()).toBe(expected);
-        expect(await Bun.file(join(dir, "bun.lock")).text()).not.toContain("no-deps@2.0.0");
-      },
-    );
+      await rmNodeModules(dir);
+      const { err } = await install(dir, linker);
+      expect(err).not.toContain("Saved lockfile");
+      expect(await packageKeys(dir)).toStrictEqual(registryPeerKeys);
+      expect(await boundPeer()).toBe(expected);
+      expect(await Bun.file(join(dir, "bun.lock")).text()).not.toContain("no-deps@2.0.0");
+    });
 
     // Overrides are root-owned: an override VALUE of `catalog:` still applies to a registry package's peer.
     test.concurrent("an override valued catalog: still applies to a registry package's peer", async () => {
@@ -2381,24 +2372,21 @@ describe("bun add --catalog advice for a failed catalog: dependency", () => {
       expect(exitCode).toBe(1);
     });
 
-    test.concurrent(
-      'a root that drops "workspaces" after an install gets the note, bun.lock still lists the catalog',
-      async () => {
-        const packageJson = { catalog: { "no-deps": "1.0.0" }, dependencies: { "no-deps": "catalog:" } };
-        using dir = soloRoot({ workspaces: [], ...packageJson });
-        await runBunInstall(installEnv(String(dir)), String(dir));
-        const lockfile = await file(join(String(dir), "bun.lock")).text();
-        expect(lockfile).toContain('"catalog": {\n    "no-deps": "1.0.0",\n  },');
-        await write(join(String(dir), "package.json"), JSON.stringify({ name: "solo", ...packageJson }));
+    test.concurrent('a root that drops "workspaces" after an install gets the note, bun.lock still lists the catalog', async () => {
+      const packageJson = { catalog: { "no-deps": "1.0.0" }, dependencies: { "no-deps": "catalog:" } };
+      using dir = soloRoot({ workspaces: [], ...packageJson });
+      await runBunInstall(installEnv(String(dir)), String(dir));
+      const lockfile = await file(join(String(dir), "bun.lock")).text();
+      expect(lockfile).toContain('"catalog": {\n    "no-deps": "1.0.0",\n  },');
+      await write(join(String(dir), "package.json"), JSON.stringify({ name: "solo", ...packageJson }));
 
-        for (const args of [["install"], ["install", "--frozen-lockfile"]]) {
-          const { err, exitCode } = await run(String(dir), args);
-          expect(err).toBe(`error: no-deps@catalog: failed to resolve\n${note}`);
-          expect(await file(join(String(dir), "bun.lock")).text()).toBe(lockfile);
-          expect(exitCode).toBe(1);
-        }
-      },
-    );
+      for (const args of [["install"], ["install", "--frozen-lockfile"]]) {
+        const { err, exitCode } = await run(String(dir), args);
+        expect(err).toBe(`error: no-deps@catalog: failed to resolve\n${note}`);
+        expect(await file(join(String(dir), "bun.lock")).text()).toBe(lockfile);
+        expect(exitCode).toBe(1);
+      }
+    });
 
     test.concurrent("a failed file: dependency gets no catalogs note", async () => {
       using dir = soloRoot({ dependencies: { z: "file:./missing" } });

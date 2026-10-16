@@ -28,28 +28,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - dc9c2e3 estree: Use `CodeBuffer::print_strs_array` to reduce bounds checks (#19766) (overlookmotel)
 - 845da35 estree: Use `CodeBuffer::print_indent` (#19727) (overlookmotel)
 
-
-
-
-
-
 ## [0.91.0] - 2025-09-22
 
 ### 💼 Other
 
 - fb347da crates: V0.91.0 (#13961) (Boshen)
 
-
-
-
-
 ## [0.88.0] - 2025-09-15
 
 ### 🚜 Refactor
 
 - 08cbd39 transformer, estree: Clarify code using `is_exhausted` stack methods (#13674) (overlookmotel)
-
-
 
 ## [0.86.0] - 2025-08-31
 
@@ -61,10 +50,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 5b139aa data_structures: Add `ptr` and `end_ptr` methods to `SliceIterExt` (#13435) (overlookmotel)
 
-
-
-
-
 ## [0.82.3] - 2025-08-20
 
 ### 🚜 Refactor
@@ -75,15 +60,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 792ae31 estree, allocator: Use `default` to create `ESTreeSerializer`s (#13211) (overlookmotel)
 
-
-
-
 ## [0.82.0] - 2025-08-12
 
 ### 💥 BREAKING CHANGES
 
 - 128b527 data_structures: [**BREAKING**] Remove `PointerExt` trait (#12903) (overlookmotel)
-
 
 ## [0.81.0] - 2025-08-06
 
@@ -95,27 +76,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 2c4369a syntax,codegen: Replace `ryu_js` with `dragonbox_ecma` for floating point formatting (#12821) (Copilot)
 
-
 ## [0.80.0] - 2025-08-03
 
 ### 📚 Documentation
 
 - de1de35 rust: Add comprehensive README.md documentation for all Rust crates (#12706) (Copilot)
 
-
-
-
-
-
-
 ## [0.77.1] - 2025-07-16
 
 ### 🚜 Refactor
 
 - 42abcd2 estree: Use `SliceIterExt` in string serializer (#12297) (overlookmotel)
-
-
-
 
 ## [0.75.1] - 2025-07-03
 
@@ -128,15 +99,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - c71529f ast/estree: Document `ranges` methods (#12011) (overlookmotel)
 
-
 ## [0.75.0] - 2025-06-25
 
 ### 💥 BREAKING CHANGES
 
 - 9a2548a napi/parser: [**BREAKING**] Add `range` option (#11728) (Bacary Bruno Bodian)
-
-
-
 
 ## [0.73.1] - 2025-06-17
 
@@ -147,8 +114,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 🧪 Testing
 
 - c53a7bd ast/estree: More tests for escaping strings in JSON (#11756) (overlookmotel)
-
-
 
 # Changelog
 
@@ -210,7 +175,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Features
 
-
 ## [0.54.0] - 2025-03-04
 
 ### Performance
@@ -239,7 +203,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Features
 
-
 ## [0.49.0] - 2025-02-10
 
 ### Bug Fixes
@@ -256,10 +219,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Bug Fixes
 
-
 ## [0.32.0] - 2024-10-19
 
 ### Features
 
 - e310e52 parser: Generate `Serialize` impls in ast_tools (#6404) (ottomated)
-

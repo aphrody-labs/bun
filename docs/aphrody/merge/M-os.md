@@ -4,23 +4,23 @@ Règle (LAYERS.md) : toute capacité système va dans le fork ; aphrody ne garde
 
 ## Lots livrés
 
-| Lot | Source | Destination | Commit fork | Qualification |
-|---|---|---|---|---|
-| apps-web lot 1 (bureau WebOS) | aphrody@fcb731e964 apps/web (59 fichiers) | packages/bun-webos (hors e2e/, desktop/ de G2, examples/m3-native-app de codex-winuim3) | 499dbd0b9f1 | `bun test ./test` 28 pass ; `bun run build` ; tsgo/oxlint propres (Windows 11) |
-| os-kernel, moteurs système | aphrody@5b36d40c6c crates/os/{ostd/proc,ostd/guard,kernel/libs/capture,kernel/libs/fsindex} | packages/bun-os (bun-proc, bun-guard, bun-capture, bun-fsindex ; workspace Cargo séparé) | 48b8fef810d | `cargo test --workspace` 59 ok + 3 doctests ; `cargo clippy --workspace --all-targets -D warnings` ok (Windows) ; `cargo check` linux-gnu (proc, guard, capture) et linux-musl (proc, guard) ok |
+| Lot                           | Source                                                                                      | Destination                                                                              | Commit fork | Qualification                                                                                                                                                                                   |
+| ----------------------------- | ------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| apps-web lot 1 (bureau WebOS) | aphrody@fcb731e964 apps/web (59 fichiers)                                                   | packages/bun-webos (hors e2e/, desktop/ de G2, examples/m3-native-app de codex-winuim3)  | 499dbd0b9f1 | `bun test ./test` 28 pass ; `bun run build` ; tsgo/oxlint propres (Windows 11)                                                                                                                  |
+| os-kernel, moteurs système    | aphrody@5b36d40c6c crates/os/{ostd/proc,ostd/guard,kernel/libs/capture,kernel/libs/fsindex} | packages/bun-os (bun-proc, bun-guard, bun-capture, bun-fsindex ; workspace Cargo séparé) | 48b8fef810d | `cargo test --workspace` 59 ok + 3 doctests ; `cargo clippy --workspace --all-targets -D warnings` ok (Windows) ; `cargo check` linux-gnu (proc, guard, capture) et linux-musl (proc, guard) ok |
 
 ## Tri du lot os-kernel (1 464 fichiers offerts)
 
-| Chemin aphrody | Décision | Raison |
-|---|---|---|
-| ostd/proc, ostd/guard, kernel/libs/capture, kernel/libs/fsindex | fork, packages/bun-os | moteurs système génériques |
-| kernel/comps/re | fork, packages/bun-re (G3, e4d57537cf3) | déjà absorbé |
-| kernel/comps/winclean | aphrody (outil produit, LAYERS) ; ses liaisons Win32 → `bun:windows` (W, M-winclean-bun-windows.md) | |
-| kernel/core (MCP, bus, skills), kernel/client, ostd/subsystem | aphrody | contrat MCP produit ; host_service_windows.rs, hvsock.rs, systemd/ sont candidats `bun:windows`/`bun:linux` ⏳ (W, G4) ; coreutils/compat → bunsh (MS, G1) |
-| comps/a2a-*, comps/jobs, comps/diagnostics, ostd/secrets | aphrody | produit (agents, file de travaux, doctor, configuration) |
-| ostd/backend | aphrody | miroir d'assets M3, reconnaissance DNS, cookies Chromium : produit |
-| comps/drive (Spacedrive) | aphrody | application ; l'explorateur visé est cosmic-files + WebOS (CW, OS) |
-| comps/cron, task-runner, telemetry, a2a-grpc | supprimés par G1 (a4a30c9c60) | sans consommateur, Bun.cron |
+| Chemin aphrody                                                  | Décision                                                                                            | Raison                                                                                                                                                     |
+| --------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| ostd/proc, ostd/guard, kernel/libs/capture, kernel/libs/fsindex | fork, packages/bun-os                                                                               | moteurs système génériques                                                                                                                                 |
+| kernel/comps/re                                                 | fork, packages/bun-re (G3, e4d57537cf3)                                                             | déjà absorbé                                                                                                                                               |
+| kernel/comps/winclean                                           | aphrody (outil produit, LAYERS) ; ses liaisons Win32 → `bun:windows` (W, M-winclean-bun-windows.md) |                                                                                                                                                            |
+| kernel/core (MCP, bus, skills), kernel/client, ostd/subsystem   | aphrody                                                                                             | contrat MCP produit ; host_service_windows.rs, hvsock.rs, systemd/ sont candidats `bun:windows`/`bun:linux` ⏳ (W, G4) ; coreutils/compat → bunsh (MS, G1) |
+| comps/a2a-*, comps/jobs, comps/diagnostics, ostd/secrets        | aphrody                                                                                             | produit (agents, file de travaux, doctor, configuration)                                                                                                   |
+| ostd/backend                                                    | aphrody                                                                                             | miroir d'assets M3, reconnaissance DNS, cookies Chromium : produit                                                                                         |
+| comps/drive (Spacedrive)                                        | aphrody                                                                                             | application ; l'explorateur visé est cosmic-files + WebOS (CW, OS)                                                                                         |
+| comps/cron, task-runner, telemetry, a2a-grpc                    | supprimés par G1 (a4a30c9c60)                                                                       | sans consommateur, Bun.cron                                                                                                                                |
 
 ## Limites Bun relevées (lots cœur)
 

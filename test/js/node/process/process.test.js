@@ -1705,7 +1705,8 @@ describe.concurrent(() => {
     if (!unified) return; // The pure native fixtures also exercise cgroup v1.
     const relative = unified.slice(3);
     if (relative.split("/").includes("..")) return;
-    const unescape = value => value.replace(/\\(040|011|012|134)/g, (_, octal) => String.fromCharCode(parseInt(octal, 8)));
+    const unescape = value =>
+      value.replace(/\\(040|011|012|134)/g, (_, octal) => String.fromCharCode(parseInt(octal, 8)));
     let ceiling = null;
     let found = false;
     for (const line of mountinfo.split("\n")) {

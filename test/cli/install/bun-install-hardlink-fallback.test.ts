@@ -189,33 +189,30 @@ int linkat(int olddirfd, const char *oldpath, int newdirfd, const char *newpath,
 
   // The first file of the folder is hardlinked, then `linkat` fails. The copy
   // that follows must not truncate the source through that hardlink.
-  test.concurrent(
-    "keeps the source files intact when the fallback to copyfile starts after a partial link",
-    async () => {
-      const files = {
-        "package.json": JSON.stringify({ name: "local", version: "1.2.3" }),
-        "index.js": "module.exports = require('./other.js') + ' from index';",
-        "other.js": "module.exports = 'other';",
-      };
-      using dir = tempDir("hardlink-partial-folder", {
-        "shim.c": shimC("calls == 2"),
-        "package.json": JSON.stringify({
-          name: "hardlink-partial-folder-test",
-          dependencies: { local: "file:./local" },
-        }),
-        ...Object.fromEntries(Object.entries(files).map(([name, content]) => [`local/${name}`, content])),
-      });
+  test.concurrent("keeps the source files intact when the fallback to copyfile starts after a partial link", async () => {
+    const files = {
+      "package.json": JSON.stringify({ name: "local", version: "1.2.3" }),
+      "index.js": "module.exports = require('./other.js') + ' from index';",
+      "other.js": "module.exports = 'other';",
+    };
+    using dir = tempDir("hardlink-partial-folder", {
+      "shim.c": shimC("calls == 2"),
+      "package.json": JSON.stringify({
+        name: "hardlink-partial-folder-test",
+        dependencies: { local: "file:./local" },
+      }),
+      ...Object.fromEntries(Object.entries(files).map(([name, content]) => [`local/${name}`, content])),
+    });
 
-      await installWithShim(String(dir), String(dir), "1 package installed");
+    await installWithShim(String(dir), String(dir), "1 package installed");
 
-      for (const [name, content] of Object.entries(files)) {
-        expect(await Bun.file(join(String(dir), "local", name)).text()).toBe(content);
-        const installed = join(String(dir), "node_modules", "local", name);
-        expect(await Bun.file(installed).text()).toBe(content);
-        expect(statSync(installed).nlink).toBe(1);
-      }
-    },
-  );
+    for (const [name, content] of Object.entries(files)) {
+      expect(await Bun.file(join(String(dir), "local", name)).text()).toBe(content);
+      const installed = join(String(dir), "node_modules", "local", name);
+      expect(await Bun.file(installed).text()).toBe(content);
+      expect(statSync(installed).nlink).toBe(1);
+    }
+  });
 });
 
 // What the kernel does for a filesystem without symlinks: the path is looked up first.

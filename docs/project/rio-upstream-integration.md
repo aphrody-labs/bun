@@ -39,15 +39,15 @@ the Rio source snapshot and is not redistributed here.
 
 ## Bun integration
 
-| Component | Source in this repository | Exposed by `bun:rio` |
-| --- | --- | --- |
+| Component                                          | Source in this repository                                 | Exposed by `bun:rio`                                                                   |
+| -------------------------------------------------- | --------------------------------------------------------- | -------------------------------------------------------------------------------------- |
 | VT parsing, Unicode graphemes, grid and scrollback | `rio-vt`, `rio-unicode`, `rio-grapheme-width`, `rio-grid` | Text, cell snapshots, resize, reset, cursor, title, alternate screen and query replies |
-| Selection, search and damage tracking | `rio-vt` | No JavaScript methods for these operations |
-| PTY and process management | `teletypewriter`, `corcovado`, `rio-vt` PTY feature | Use `Bun.Terminal` and `Bun.spawn` separately |
-| GPU rendering and font shaping | `sugarloaf`, `libsugarloaf`, `rio-fonts` | No renderer or window |
-| Native application and platform integration | `frontends`, `rio-backend`, `rio-window`, `rio-notifier` | No application, clipboard or window integration |
-| C and browser embedding | `librio`, `librio-wasm` | Bun uses Rust bindings directly; these separate ABIs are retained as source |
-| Image protocols | `rio-graphics`, `rio-vt` | No image-event or image-rendering API |
+| Selection, search and damage tracking              | `rio-vt`                                                  | No JavaScript methods for these operations                                             |
+| PTY and process management                         | `teletypewriter`, `corcovado`, `rio-vt` PTY feature       | Use `Bun.Terminal` and `Bun.spawn` separately                                          |
+| GPU rendering and font shaping                     | `sugarloaf`, `libsugarloaf`, `rio-fonts`                  | No renderer or window                                                                  |
+| Native application and platform integration        | `frontends`, `rio-backend`, `rio-window`, `rio-notifier`  | No application, clipboard or window integration                                        |
+| C and browser embedding                            | `librio`, `librio-wasm`                                   | Bun uses Rust bindings directly; these separate ABIs are retained as source            |
+| Image protocols                                    | `rio-graphics`, `rio-vt`                                  | No image-event or image-rendering API                                                  |
 
 These boundaries follow upstream's separation between the
 [`rio-vt` core](https://github.com/raphamorim/rio/tree/main/rio-vt),

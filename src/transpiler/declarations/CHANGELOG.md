@@ -58,7 +58,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 ### 🐛 Bug Fixes
 
-- a2ef382 isolated-declarations: Reject `window.Symbol`  as global symbol reference (#24689) (camc314)
+- a2ef382 isolated-declarations: Reject `window.Symbol` as global symbol reference (#24689) (camc314)
 
 ## [0.140.0] - 2026-07-13
 
@@ -184,25 +184,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 2c23e15 isolated-declarations: Incorrectly dropping namespace even if it is being referenced (#15123) (Copilot)
 
-
-
-
-
-
 ## [0.91.0] - 2025-09-22
 
 ### 💼 Other
 
 - fb347da crates: V0.91.0 (#13961) (Boshen)
-
-
-
-
-
-
-
-
-
 
 ## [0.83.0] - 2025-08-29
 
@@ -210,22 +196,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 66a5673 ecmascript: Add `ToUint32` trait (#13272) (sapphi-red)
 
-
 ## [0.82.3] - 2025-08-20
 
 ### 🐛 Bug Fixes
 
 - 8f533aa codegen: Correct `CRLF` handling in comment processing (#13169) (copilot-swe-agent)
 
-
-
-
 ## [0.82.0] - 2025-08-12
 
 ### 💥 BREAKING CHANGES
 
 - 306b023 isolated-declarations: [**BREAKING**] Rewrite `declare module X` to `declare namespace X` (#12845) (leaysgur)
-
 
 ## [0.81.0] - 2025-08-06
 
@@ -237,7 +218,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 3eed87a codegen: Wrap parens for `TSUnionType` (#12830) (Boshen)
 
-
 ## [0.80.0] - 2025-08-03
 
 ### 📚 Documentation
@@ -246,15 +226,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 45e2fe8 rust: Fix typos and grammar mistakes in Rust documentation comments (#12715) (Copilot)
 - de1de35 rust: Add comprehensive README.md documentation for all Rust crates (#12706) (Copilot)
 
-
-
 ## [0.79.0] - 2025-07-30
 
 ### 🐛 Bug Fixes
 
 - 3cdac4c isolated-declarations: Optional parameter property misses `undefined` type (#12579) (Dunqing)
 - 4f9cb0b isolated-declarations: Crash when transforming a class with a parameter property in a private constructor (#12578) (Dunqing)
-
 
 ## [0.78.0] - 2025-07-24
 
@@ -263,16 +240,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 9a9d78d isolated-declarations: Transformed parameter property has an incorrect type annotation (#12450) (Dunqing)
 - 89da027 isolated-declarations: Incorrect error when exported type is locally shadowed by an unexported variable (#12466) (Dunqing)
 
-
-
-
 ## [0.77.1] - 2025-07-16
 
 ### 🚀 Features
 
 - 9b14fbc ast: Add `ThisExpression` to `TSTypeName` (#12156) (Boshen)
-
-
 
 ## [0.76.0] - 2025-07-08
 
@@ -280,14 +252,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 8b30a5b codegen: [**BREAKING**] Introduce `CommentOptions` (#12114) (Boshen)
 
-
 ## [0.75.1] - 2025-07-03
 
 ### 🐛 Bug Fixes
 
 - 42976a8 isolated-declarations: Produce incorrect types when getter/setter with different types (#12046) (Dunqing)
-
-
 
 ## [0.74.0] - 2025-06-23
 
@@ -296,15 +265,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 957a3d5 isolated-declarations: Missing parameter properties of `constructor` overload (#11852) (Dunqing)
 - b8b3530 isolated-declarations: Don't transform constructor params if they don’t have accessbility (#11842) (Dunqing)
 
-
-
 ## [0.73.1] - 2025-06-17
 
 ### 🚜 Refactor
 
 - acc1b22 isolated-declarations: Shorten Span construction (#11688) (Ulrich Stark)
-
-
 
 # Changelog
 
@@ -353,7 +318,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 5d9344f rust: [**BREAKING**] Clippy avoid-breaking-exported-api = false (#11088) (Boshen)
 
 ### Refactor
-
 
 ## [0.70.0] - 2025-05-15
 
@@ -437,10 +401,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [0.59.0] - 2025-03-18
 
-- ce6808a parser: [**BREAKING**] Rename `type_parameters` to `type_arguments` where needed  (#9815) (hi-ogawa)
+- ce6808a parser: [**BREAKING**] Rename `type_parameters` to `type_arguments` where needed (#9815) (hi-ogawa)
 
 ### Bug Fixes
-
 
 ## [0.58.0] - 2025-03-13
 
@@ -454,13 +417,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Features
 
-
 ## [0.54.0] - 2025-03-04
 
 - a5cde10 visit_ast: [**BREAKING**] Add `oxc_visit_ast` crate (#9428) (Boshen)
 
 ### Features
-
 
 ### Performance
 
@@ -492,7 +453,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - bbb075d ast: [**BREAKING**] Name `AstBuilder` enum builders after variant name not type name (#8890) (overlookmotel)
 
 ### Refactor
-
 
 ### Styling
 
@@ -555,7 +515,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Refactor
 
-
 ## [0.40.0] - 2024-12-10
 
 - 72eab6c parser: [**BREAKING**] Stage 3 `import source` and `import defer` (#7706) (Boshen)
@@ -563,7 +522,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - ebc80f6 ast: [**BREAKING**] Change 'raw' from &str to Option<Atom> (#7547) (Song Gao)
 
 ### Features
-
 
 ### Refactor
 
@@ -574,7 +532,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - b0e1c03 ast: [**BREAKING**] Add `StringLiteral::raw` field (#7393) (Boshen)
 
 ### Features
-
 
 ## [0.38.0] - 2024-11-26
 
@@ -663,7 +620,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Refactor
 
-
 ## [0.30.3] - 2024-09-27
 
 ### Bug Fixes
@@ -741,7 +697,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Features
 
-
 ### Bug Fixes
 
 - b9bf544 isolated-declarations: False positive for setter method in `interface` (#5681) (Dunqing)
@@ -749,8 +704,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Performance
 
-
 ### Testing
+
 - dc92489 Add trailing line breaks to conformance fixtures (#5541) (overlookmotel)
 
 ## [0.26.0] - 2024-09-03
@@ -765,7 +720,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - c2fa725 ast,parser: Parse `TSTypeAnnotations` on `AccessorProperty` (#5179) (DonIsaac)
 
 ### Bug Fixes
-
 
 ### Refactor
 
@@ -815,6 +769,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 3d88f20 codegen: Print shorthand for all `{ x }` variants (#4374) (Boshen)
 
 ### Performance
+
 - a207923 Replace some CompactStr usages with Cows (#4377) (DonIsaac)
 
 ### Refactor
@@ -853,13 +808,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Refactor
 
-
 ## [0.18.0] - 2024-07-09
 
 - d347aed ast: [**BREAKING**] Generate `ast_builder.rs`. (#3890) (rzvxa)
 
 ### Features
-
 
 ### Bug Fixes
 
@@ -908,7 +861,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - da62839 isolated_declarations: Inferring literal types for readonly class fileds (#4027) (Egor Blinov)
 
 ### Refactor
-
 
 ## [0.16.2] - 2024-06-30
 
@@ -970,7 +922,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 2766594 codegen: Print type parameters for MethodDefinition (#3922) (Dunqing)
 - 27f0531 isolated-declarations: Private constructor reaching unreachable (#3921) (Dunqing)
 - 59ce38b isolated-declarations: Inferring of UnrayExpression incorrectly (#3920) (Dunqing)
-- 58e54f4 isolated-declarations: Report an error for parameters if they are  ObjectPattern or ArrayPattern without an explicit type (#3810) (Dunqing)
+- 58e54f4 isolated-declarations: Report an error for parameters if they are ObjectPattern or ArrayPattern without an explicit type (#3810) (Dunqing)
 - cb8a272 isolated-declarations: Cannot infer nested `as const` (#3807) (Dunqing)
 - d8ecce5 isolated-declarations: Infer BigInt number as `bigint` type (#3806) (Dunqing)
 - 4e241fc isolated-declarations: Missing `const` after transformed const enum (#3805) (Dunqing)
@@ -981,6 +933,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - bf1c250 isolated-declarations: False positives for non-exported binding elements (#3751) (Dunqing)
 
 ### Performance
+
 - 4f7ff7e Do not pass `&Atom` to functions (#3818) (overlookmotel)
 
 ### Refactor
@@ -1008,4 +961,3 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - 3c59735 isolated-declarations: Remove `TransformDtsCtx` (#3719) (Boshen)
 - 815260e isolated-declarations: Decouple codegen (#3715) (Boshen)
-

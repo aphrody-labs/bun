@@ -177,7 +177,12 @@ Elle ne doit pas être lancée avec stdout hérité ou journalisation du jeton :
 ```ts
 async function credentialProvider(): Promise<string> {
   const child = Bun.spawn(
-    ["gcloud", "--configuration=aphrody-bun-google-automation", "auth", "print-access-token"],
+    [
+      "gcloud",
+      "--configuration=aphrody-bun-google-automation",
+      "auth",
+      "print-access-token",
+    ],
     { stdout: "pipe", stderr: "pipe" },
   );
   const [output, , code] = await Promise.all([
@@ -186,7 +191,8 @@ async function credentialProvider(): Promise<string> {
     child.exited,
   ]);
   const token = output.trim();
-  if (code !== 0 || !token) throw new Error("Google Cloud credential unavailable");
+  if (code !== 0 || !token)
+    throw new Error("Google Cloud credential unavailable");
   return token;
 }
 ```

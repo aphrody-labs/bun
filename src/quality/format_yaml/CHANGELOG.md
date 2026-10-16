@@ -91,4 +91,3 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 📚 Documentation
 
 - 69126a0 formatter_css,fomatter_graphql,formatter_yaml: Update AGENTS.md (#24821) (leaysgur)
-

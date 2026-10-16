@@ -16,8 +16,8 @@ Updated 2026-10-13. Claude, Codex, Antigravity, Gemini, OpenCode and local-model
 | Runtime build and toolchain                                   | bun-build                           |
 | Rust crate ownership and interop                              | bun-crates                          |
 | Runtime APIs                                                  | bun-runtime                         |
-| Native video metadata, Image frame transforms and MP4 remux    | bun-video                           |
-| Compositions, HLS/DASH, browser capture and bounded WebGPU     | bun-video; relevant package guide   |
+| Native video metadata, Image frame transforms and MP4 remux   | bun-video                           |
+| Compositions, HLS/DASH, browser capture and bounded WebGPU    | bun-video; relevant package guide   |
 | Test harness and changed-binary proof                         | bun-tests, verify                   |
 | Documentation lookup                                          | bun-docs                            |
 | Source graph and bounded indexing                             | bun-graph, bun-aphrody-graph-memory |

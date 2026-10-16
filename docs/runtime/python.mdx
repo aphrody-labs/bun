@@ -18,13 +18,13 @@ bun python -c "print('hi')"  # the python CLI: -c, -m, - (stdin)
 
 Python dispatch is enabled only when `BUN_PYTHON_HOST_LIBRARY` is set. Without it, `.py` files go through the normal Bun resolution and JavaScript keeps its usual startup.
 
-| Variable                                       | Purpose                                                                                                         |
-| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `BUN_PYTHON_HOST_LIBRARY`                      | Path to the `bun_python_host` shared library. Required. Its `bun_py_abi_version()` must return `1`.            |
-| `BUN_PYTHON_LIBPYTHON`                         | Path to the CPython shared library (`libpython3.x.so`, `.dylib` or `python3x.dll`). Required for `.py` dispatch. |
-| `BUN_PYTHON_EXECUTABLE`                        | Explicit `sys.executable`. Takes precedence over the two below.                                                 |
-| `VIRTUAL_ENV`                                  | An activated virtual environment: `bin/python` (`Scripts/python.exe` on Windows) becomes `sys.executable`.      |
-| `BUV_RUNTIME`                                  | A CPython prefix (`bin/python3`, or `python.exe` on Windows). On Linux and macOS it is otherwise derived from the `lib/` directory of `BUN_PYTHON_LIBPYTHON`. |
+| Variable                  | Purpose                                                                                                                                                       |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BUN_PYTHON_HOST_LIBRARY` | Path to the `bun_python_host` shared library. Required. Its `bun_py_abi_version()` must return `1`.                                                           |
+| `BUN_PYTHON_LIBPYTHON`    | Path to the CPython shared library (`libpython3.x.so`, `.dylib` or `python3x.dll`). Required for `.py` dispatch.                                              |
+| `BUN_PYTHON_EXECUTABLE`   | Explicit `sys.executable`. Takes precedence over the two below.                                                                                               |
+| `VIRTUAL_ENV`             | An activated virtual environment: `bin/python` (`Scripts/python.exe` on Windows) becomes `sys.executable`.                                                    |
+| `BUV_RUNTIME`             | A CPython prefix (`bin/python3`, or `python.exe` on Windows). On Linux and macOS it is otherwise derived from the `lib/` directory of `BUN_PYTHON_LIBPYTHON`. |
 
 On Windows, set `BUV_RUNTIME` or `BUN_PYTHON_EXECUTABLE`, or activate a virtual environment: the prefix cannot be derived from the DLL path.
 
@@ -68,17 +68,17 @@ try {
 }
 ```
 
-| Method                       | Description                                                                                                          |
-| ---------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| Method                       | Description                                                                                                                |
+| ---------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
 | `Python.open(options?)`      | Loads the host and initialises the interpreter, or attaches to a running one. `started` tells whether this handle owns it. |
-| `run(code)`, ``exec`code` `` | Runs statements in `__main__`. The tagged template takes raw source and refuses interpolation.                      |
-| `eval(expression)`           | Evaluates an expression and returns `str(result)`.                                                                   |
-| `evalJSON(expression)`       | Evaluates an expression, serialises it with Python's `json` module and parses it in JavaScript.                     |
-| `evalBatch(expressions)`     | Evaluates up to 1024 expressions in one GIL/FFI crossing and returns their string forms.                          |
-| `call(module, fn, arg?)`     | Calls `module.fn(arg)` (without an argument when `arg` is omitted) and returns `str(result)`.                       |
-| `buffer(expression)`         | Pins a contiguous writable Python buffer and returns a zero-copy `ArrayBuffer`; its GC releases the native lease. |
-| `version()`                  | `Py_GetVersion()`.                                                                                                   |
-| `close()` / `using`          | Releases this client lease; the last client finalises an interpreter started by the host, then closes its library handle. |
+| `run(code)`, ``exec`code` `` | Runs statements in `__main__`. The tagged template takes raw source and refuses interpolation.                             |
+| `eval(expression)`           | Evaluates an expression and returns `str(result)`.                                                                         |
+| `evalJSON(expression)`       | Evaluates an expression, serialises it with Python's `json` module and parses it in JavaScript.                            |
+| `evalBatch(expressions)`     | Evaluates up to 1024 expressions in one GIL/FFI crossing and returns their string forms.                                   |
+| `call(module, fn, arg?)`     | Calls `module.fn(arg)` (without an argument when `arg` is omitted) and returns `str(result)`.                              |
+| `buffer(expression)`         | Pins a contiguous writable Python buffer and returns a zero-copy `ArrayBuffer`; its GC releases the native lease.          |
+| `version()`                  | `Py_GetVersion()`.                                                                                                         |
+| `close()` / `using`          | Releases this client lease; the last client finalises an interpreter started by the host, then closes its library handle.  |
 
 `Python.open()` options:
 
@@ -93,15 +93,15 @@ The helpers `pythonHostLibraryPath()`, `buvLibpython()` and `libpythonIn(directo
 
 Every failure throws a `PythonError` with a `status` from `PyStatus`:
 
-| `PyStatus`    | Value | Meaning                                                   |
-| ------------- | ----- | --------------------------------------------------------- |
-| `Ok`          | `0`   | success                                                   |
-| `Arg`         | `-1`  | invalid argument (for example a NUL character)            |
-| `Load`        | `-2`  | the host or libpython could not be loaded                 |
-| `State`       | `-3`  | closed handle or interpreter state error                  |
-| `Python`      | `-4`  | a Python exception; the message carries it                |
-| `Panic`       | `-5`  | a panic inside the host                                   |
-| `Unsupported` | `-6`  | host ABI mismatch or unsupported operation                |
+| `PyStatus`    | Value | Meaning                                        |
+| ------------- | ----- | ---------------------------------------------- |
+| `Ok`          | `0`   | success                                        |
+| `Arg`         | `-1`  | invalid argument (for example a NUL character) |
+| `Load`        | `-2`  | the host or libpython could not be loaded      |
+| `State`       | `-3`  | closed handle or interpreter state error       |
+| `Python`      | `-4`  | a Python exception; the message carries it     |
+| `Panic`       | `-5`  | a panic inside the host                        |
+| `Unsupported` | `-6`  | host ABI mismatch or unsupported operation     |
 
 ### Asynchronous calls
 
@@ -128,17 +128,17 @@ bun compile app.py --zipapp                         # executable archive
 bun compile --help
 ```
 
-| Flag                           | Description                                                          |
-| ------------------------------ | -------------------------------------------------------------------- |
-| `--format exe\|shared\|wasm`   | Product kind. `shared` exports the `PyInit_*` extension ABI.         |
-| `--outfile <path>`             | Output path. An existing product is kept unless `--force` is given.  |
-| `--backend cython\|nuitka`     | Native compiler (default Cython).                                    |
-| `--module-name <name>`         | Import name of the extension and of its `PyInit_*` symbol.           |
-| `--onefile`                    | Nuitka standalone executable in a single file.                       |
-| `--target native\|wasm`        | Cross-platform products require a qualified host.                    |
-| `--bytecode`, `--zipapp`       | Bytecode or executable-archive products.                             |
-| `--db <bun_python.sqlite>`     | Record compilation receipts.                                         |
-| `--offline`                    | Resolve compiler packages from the UV cache only.                    |
+| Flag                         | Description                                                         |
+| ---------------------------- | ------------------------------------------------------------------- |
+| `--format exe\|shared\|wasm` | Product kind. `shared` exports the `PyInit_*` extension ABI.        |
+| `--outfile <path>`           | Output path. An existing product is kept unless `--force` is given. |
+| `--backend cython\|nuitka`   | Native compiler (default Cython).                                   |
+| `--module-name <name>`       | Import name of the extension and of its `PyInit_*` symbol.          |
+| `--onefile`                  | Nuitka standalone executable in a single file.                      |
+| `--target native\|wasm`      | Cross-platform products require a qualified host.                   |
+| `--bytecode`, `--zipapp`     | Bytecode or executable-archive products.                            |
+| `--db <bun_python.sqlite>`   | Record compilation receipts.                                        |
+| `--offline`                  | Resolve compiler packages from the UV cache only.                   |
 
 `bun build app.py` with the same flags takes the same path.
 
@@ -159,11 +159,11 @@ console.log(value);
 
 `scripts/aphrody/vllm-cpu.ts` builds and launches the `aphrody` branch of `aphrody-labs/vllm` (a fork of vllm-project/vllm) on the CPU backend, in a virtualenv created by UV with the embedded CPython.
 
-| Command | Effect |
-| --- | --- |
-| `bun scripts/aphrody/vllm-cpu.ts env` | Prints the tuned environment: `OMP_NUM_THREADS` = physical cores, `OMP_PROC_BIND=close`, `OMP_PLACES=cores`, `VLLM_CPU_OMP_THREADS_BIND=auto`, `LD_PRELOAD` of tcmalloc or jemalloc when installed, `BUN_PYTHON_EXECUTABLE` of the virtualenv. |
-| `bun scripts/aphrody/vllm-cpu.ts run <args>` | Runs the OpenAI-compatible server with that environment. |
-| `bun scripts/aphrody/vllm-cpu.ts update` | Fetches `upstream/main`, rebases `aphrody` on it, rebuilds only when the sha differs from `built.sha`, replacing the previous virtualenv. A lock directory keeps a single build in the queue; the build runs under `nice -n 15` with half the cores. |
-| `bun scripts/aphrody/vllm-cpu.ts bench <model>` | Reports tokens/s with the default environment, then the tuned one. |
+| Command                                         | Effect                                                                                                                                                                                                                                               |
+| ----------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `bun scripts/aphrody/vllm-cpu.ts env`           | Prints the tuned environment: `OMP_NUM_THREADS` = physical cores, `OMP_PROC_BIND=close`, `OMP_PLACES=cores`, `VLLM_CPU_OMP_THREADS_BIND=auto`, `LD_PRELOAD` of tcmalloc or jemalloc when installed, `BUN_PYTHON_EXECUTABLE` of the virtualenv.       |
+| `bun scripts/aphrody/vllm-cpu.ts run <args>`    | Runs the OpenAI-compatible server with that environment.                                                                                                                                                                                             |
+| `bun scripts/aphrody/vllm-cpu.ts update`        | Fetches `upstream/main`, rebases `aphrody` on it, rebuilds only when the sha differs from `built.sha`, replacing the previous virtualenv. A lock directory keeps a single build in the queue; the build runs under `nice -n 15` with half the cores. |
+| `bun scripts/aphrody/vllm-cpu.ts bench <model>` | Reports tokens/s with the default environment, then the tuned one.                                                                                                                                                                                   |
 
 The vLLM CPU backend compiles an AVX2 kernel set (`cmake/cpu_extension.cmake`) next to the AVX-512 and AMX sets, so an AVX2-only host (Haswell) works with the default build. The kernels are selected at build time from the host flags; build on the machine that serves, or on one with the same ISA. Run `update` from a timer on the build host only; the serving host receives the virtualenv, never builds. Tokens/s figures are not recorded yet.

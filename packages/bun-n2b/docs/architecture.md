@@ -4,13 +4,13 @@ Bun owns one internal Rust package, `bun_migrate`, under `src/migrate`. Its doma
 report schema, rule registry, scanning engine and CLI are modules of the same crate. The runtime
 and the Node-API adapter in `packages/bun-n2b/crates/napi` link this owner directly.
 
-| Module | Canonical source | Role |
-| --- | --- | --- |
-| Domain types | `src/migrate/types.rs` | Findings, modes and run options |
-| Report schema | `src/migrate/schema` | Versioned JSON schema and generated Rust report types |
-| Registry | `src/migrate/registry` | Rule data, imports and compatibility tables |
-| Engine | `src/migrate/engine` | Walkers, scanners, rewrites and reports |
-| CLI | `src/migrate/cli` | Public `bun n2b` and `bun migrate` commands |
+| Module        | Canonical source       | Role                                                  |
+| ------------- | ---------------------- | ----------------------------------------------------- |
+| Domain types  | `src/migrate/types.rs` | Findings, modes and run options                       |
+| Report schema | `src/migrate/schema`   | Versioned JSON schema and generated Rust report types |
+| Registry      | `src/migrate/registry` | Rule data, imports and compatibility tables           |
+| Engine        | `src/migrate/engine`   | Walkers, scanners, rewrites and reports               |
+| CLI           | `src/migrate/cli`      | Public `bun n2b` and `bun migrate` commands           |
 
 ## Scan pipeline
 
@@ -49,11 +49,11 @@ Only `src/migrate/cli/commands/migrate.rs` runs side effects: `bun install`, riv
 These surfaces change only as a deliberate breaking change with regenerated baselines. Add a new
 rule or flag instead.
 
-| Surface                   | Source of truth                                                        |
-| ------------------------- | ---------------------------------------------------------------------- |
-| CLI flags and subcommands | `src/migrate/cli/cli/args.rs`                                           |
-| Exit codes                | `src/migrate/cli/commands/scan.rs`, `src/migrate/bin/n2b.rs`            |
-| JSON report v2            | `src/migrate/schema/v2.json`                                      |
+| Surface                   | Source of truth                                                    |
+| ------------------------- | ------------------------------------------------------------------ |
+| CLI flags and subcommands | `src/migrate/cli/cli/args.rs`                                      |
+| Exit codes                | `src/migrate/cli/commands/scan.rs`, `src/migrate/bin/n2b.rs`       |
+| JSON report v2            | `src/migrate/schema/v2.json`                                       |
 | Rule IDs                  | `src/migrate/registry/data/*.toml`, `src/migrate/engine/scanners/` |
 
 ## Tests

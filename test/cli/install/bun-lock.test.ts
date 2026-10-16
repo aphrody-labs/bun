@@ -3077,34 +3077,31 @@ describe.each(["hoisted", "isolated"] as const)(
 
 // Handed the root's x@1.2.0 on load, x@2.0.0 nested a copy of it that hid x@2.0.0 from the peer of
 // the y@3.0.0 below, so the two nested inside each other without end and bun.lock was refused.
-it.concurrent(
-  "bun.lock loads back when two packages that peer on each other have an unmet optional dependency",
-  async () => {
-    using registry = await serveRegistry({
-      x: { "1.2.0": {}, "2.0.0": { optionalDependencies: { x: "~1.0.0" }, peerDependencies: { y: "~2.1.0" } } },
-      y: {
-        "1.0.0": {},
-        "1.1.0": { dependencies: { y: "latest" } },
-        "3.0.0": { peerDependencies: { x: "^3.0.0", y: "1.0.0" } },
-      },
-      app: { "1.0.0": { dependencies: { x: "^1.1.0", y1: "npm:y@~1.1.0", x2: "npm:x@latest" } } },
-    });
-    using dir = tempDir("unmet-optional-peer-cycle-", {
-      "package.json": JSON.stringify({ name: "root", dependencies: { y: "~1.0.0", app: "1.0.0" } }),
-      "bunfig.toml": Bun.TOML.stringify({ install: { registry: registry.url } }),
-    });
-    const lockfilePath = join(String(dir), "bun.lock");
+it.concurrent("bun.lock loads back when two packages that peer on each other have an unmet optional dependency", async () => {
+  using registry = await serveRegistry({
+    x: { "1.2.0": {}, "2.0.0": { optionalDependencies: { x: "~1.0.0" }, peerDependencies: { y: "~2.1.0" } } },
+    y: {
+      "1.0.0": {},
+      "1.1.0": { dependencies: { y: "latest" } },
+      "3.0.0": { peerDependencies: { x: "^3.0.0", y: "1.0.0" } },
+    },
+    app: { "1.0.0": { dependencies: { x: "^1.1.0", y1: "npm:y@~1.1.0", x2: "npm:x@latest" } } },
+  });
+  using dir = tempDir("unmet-optional-peer-cycle-", {
+    "package.json": JSON.stringify({ name: "root", dependencies: { y: "~1.0.0", app: "1.0.0" } }),
+    "bunfig.toml": Bun.TOML.stringify({ install: { registry: registry.url } }),
+  });
+  const lockfilePath = join(String(dir), "bun.lock");
 
-    await installWithOwnCache(String(dir));
-    const lockfile = await file(lockfilePath).text();
+  await installWithOwnCache(String(dir));
+  const lockfile = await file(lockfilePath).text();
 
-    const { out } = await installWithOwnCache(String(dir));
-    expect(out).toContain("(no changes)");
+  const { out } = await installWithOwnCache(String(dir));
+  expect(out).toContain("(no changes)");
 
-    await installWithOwnCache(String(dir), "--frozen-lockfile");
-    expect(await file(lockfilePath).text()).toBe(lockfile);
-  },
-);
+  await installWithOwnCache(String(dir), "--frozen-lockfile");
+  expect(await file(lockfilePath).text()).toBe(lockfile);
+});
 
 // p2@2.1.0 is in bun.lock for p1 only, and the root's own range refuses it.
 it.concurrent("the isolated linker never links an unmet optional dependency of the root", async () => {
@@ -4504,8 +4501,7 @@ it.todo("a fresh install writes the same bun.lock whichever manifest arrives las
       ],
     },
     z: { "z": "z@1.5.0", "k/z": "z@1.0.9" },
-  }),
-);
+  }));
 
 it("an install that only adds packages leaves the versions bun.lock already has where they are", async () => {
   using server = (

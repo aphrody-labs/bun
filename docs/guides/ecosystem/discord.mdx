@@ -18,7 +18,7 @@ Each row below was run on Bun against a fake gateway, a fake voice server and a 
 | REST (`@discordjs/rest`, `undici`)        | Works. Both resolve to Bun's `fetch`.                                                                                               |
 | `WorkerShardingStrategy`                  | Works. The shard worker is a `worker_threads` `Worker`.                                                                             |
 | Gateway `compress=zlib-stream`            | Works. `zlib-sync` is built in (see below).                                                                                         |
-| ETF payloads (`erlpack`)                  | Built in. discord.js 14 and `@discordjs/ws` 1.2 only speak JSON; Eris and older libraries use ETF.                                |
+| ETF payloads (`erlpack`)                  | Built in. discord.js 14 and `@discordjs/ws` 1.2 only speak JSON; Eris and older libraries use ETF.                                  |
 | Voice: gateway, UDP IP discovery, RTP     | Works. `node:dgram` carries the packets.                                                                                            |
 | Voice encryption                          | `aead_aes256_gcm_rtpsize` through `node:crypto`; `aead_xchacha20_poly1305_rtpsize` through `sodium-native` or `libsodium-wrappers`. |
 | Voice DAVE (end-to-end encryption)        | `@snazzah/davey` loads (Node-API).                                                                                                  |
@@ -78,18 +78,18 @@ Bun cannot see across files whether `ArgsOf` is a type, so a plain `import { Arg
 
 `@discordjs/voice` picks its libraries from what is installed. These choices work on Bun:
 
-| Need                  | Package                                                    | Note                                                                                              |
-| --------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| Encryption            | none for AES-256-GCM; `sodium-native` for XChaCha20        | `libsodium-wrappers` or `@noble/ciphers` also work, and need no native binary.                    |
-| Opus encoding         | `opusscript` (WASM, no install script) or `@discordjs/opus` | Native Opus is about 5.7 times faster, see below.                                                 |
-| Audio from a file     | `ffmpeg` on `PATH`                                         | `prism-media` also tries `ffmpeg-static`, which is optional.                                      |
+| Need              | Package                                                     | Note                                                                           |
+| ----------------- | ----------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| Encryption        | none for AES-256-GCM; `sodium-native` for XChaCha20         | `libsodium-wrappers` or `@noble/ciphers` also work, and need no native binary. |
+| Opus encoding     | `opusscript` (WASM, no install script) or `@discordjs/opus` | Native Opus is about 5.7 times faster, see below.                              |
+| Audio from a file | `ffmpeg` on `PATH`                                          | `prism-media` also tries `ffmpeg-static`, which is optional.                   |
 
 Measured on one core, encoding a stereo 48 kHz 20 ms frame:
 
-| Encoder          | Time per frame | Share of one core per live stream |
-| ---------------- | -------------- | --------------------------------- |
-| `opusscript`     | 1.10 ms        | 5.5%                                |
-| `@discordjs/opus` | 0.19 ms        | 1.0%                                |
+| Encoder           | Time per frame | Share of one core per live stream |
+| ----------------- | -------------- | --------------------------------- |
+| `opusscript`      | 1.10 ms        | 5.5%                              |
+| `@discordjs/opus` | 0.19 ms        | 1.0%                              |
 
 A bot that plays to a handful of channels is fine with `opusscript`. Beyond about ten simultaneous streams use `@discordjs/opus`.
 
@@ -118,11 +118,11 @@ Put in `--external` every optional package that is not installed. `prism-media` 
 
 Measured with the Windows x64 build of Bun 1.4.3-aphrody.3 on the bot used for the table above. Each run connects to a fake gateway, receives a message, sends a reply and exits, so the time includes the whole round trip. Median of 5 runs:
 
-| Bot                           | `bun file.ts`          | `bun build --compile` |
-| ----------------------------- | ---------------------- | --------------------- |
-| discord.js client             | 382 ms, 60 MiB peak    | 251 ms, 55 MiB peak   |
-| discord.js + discordx         | 385 ms, 64 MiB peak    | 338 ms, 56 MiB peak   |
-| discord.js + voice + playback | not measured           | 501 ms, 68 MiB peak   |
+| Bot                           | `bun file.ts`       | `bun build --compile` |
+| ----------------------------- | ------------------- | --------------------- |
+| discord.js client             | 382 ms, 60 MiB peak | 251 ms, 55 MiB peak   |
+| discord.js + discordx         | 385 ms, 64 MiB peak | 338 ms, 56 MiB peak   |
+| discord.js + voice + playback | not measured        | 501 ms, 68 MiB peak   |
 
 The executable is about 147 MB, nearly all of it the Bun runtime.
 

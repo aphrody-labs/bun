@@ -777,7 +777,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - a6808a0 oxfmt: Use `AllocatorPool` to reuse allocator between threads (#15412) (leaysgur)
 
-
 ## [0.10.0] - 2025-11-04
 
 ### 🚀 Features
@@ -794,7 +793,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 27b4f36 diagnostic: Remove `path` from sender (#15130) (camc314)
 
-
 ## [0.9.0] - 2025-10-30
 
 ### 🚜 Refactor
@@ -805,14 +803,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - aceff66 oxfmt: V0.9.0 (#15088) (Boshen)
 
-
-
 ## [0.8.0] - 2025-10-22
 
 ### 🚀 Features
 
 - 006708d oxfmt: Support `ignorePatterns` in oxfmtrc (#14875) (leaysgur)
-
 
 ## [0.7.0] - 2025-10-21
 
@@ -827,7 +822,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 🚜 Refactor
 
 - 6fa7420 oxfmt: Use custom ignore builder (#14850) (leaysgur)
-
 
 ## [0.6.0] - 2025-10-20
 
@@ -855,7 +849,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 7c42ea0 oxfmt: Remove args from snapshot file name (#14800) (leaysgur)
 
-
 ## [0.5.0] - 2025-10-14
 
 ### 🚀 Features
@@ -865,8 +858,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 🐛 Bug Fixes
 
 - 0f19be0 oxfmt: Normalize path delimiter on Windows (#14463) (leaysgur)
-
-
 
 ## [0.3.0] - 2025-09-19
 
@@ -878,7 +869,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 59db021 oxfmt: Walk and format at the same time (#13838) (leaysgur)
 
-
 ## [0.2.0] - 2025-09-16
 
 ### 💥 BREAKING CHANGES
@@ -889,7 +879,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - afa2297 oxfmt: Fix failing tests on Windows (#13801) (leaysgur)
 - 5fbffcf oxfmt: Enable changing `cwd` during tests (#13797) (leaysgur)
-
 
 ## [0.1.0] - 2025-09-12
 
@@ -910,6 +899,3 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 83d735b oxfmt: Use normalized path separator (#13726) (leaysgur)
 - 289ef9b oxfmt: Add tests setup (#13684) (leaysgur)
-
-
-

@@ -59,24 +59,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 ### 🐛 Bug Fixes
 
-- 7958b56 linter: Fix syntax error reporting in some output formatters.  (#19590) (connorshea)
+- 7958b56 linter: Fix syntax error reporting in some output formatters. (#19590) (connorshea)
 
 ## [0.107.0] - 2026-01-05
 
 ### 🚀 Features
 
-- 659c23e linter: Init note field boilerplate  (#17589) (Shrey Sudhir)
-
-
-
+- 659c23e linter: Init note field boilerplate (#17589) (Shrey Sudhir)
 
 ## [0.93.0] - 2025-09-28
 
 ### ⚡ Performance
 
 - c2f7459 language_server: Avoid cloning on message conversion (#14058) (Sysix)
-
-
 
 ## [0.91.0] - 2025-09-22
 
@@ -92,32 +87,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - fb347da crates: V0.91.0 (#13961) (Boshen)
 
-
 ## [0.91.0] - 2025-09-21
 
 ### 🚀 Features
 
 - a14aa79 npm/oxlint: Convert to ES modules (#13876) (Boshen)
 
-
 ## [0.90.0] - 2025-09-18
 
 ### 🐛 Bug Fixes
 
 - fa866b3 linter: Sort optimized/unoptimized diagnostics before comparison (#13850) (camc314)
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 ## [0.80.0] - 2025-08-03
 
@@ -129,8 +109,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - de1de35 rust: Add comprehensive README.md documentation for all Rust crates (#12706) (Copilot)
 
-
-
 ## [0.79.0] - 2025-07-30
 
 ### 🚜 Refactor
@@ -141,18 +119,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - ce5d074 diagnostics: `Info::new` trim string in place (#12506) (overlookmotel)
 
-
 ## [0.78.0] - 2025-07-24
 
 ### 🚜 Refactor
 
 - 7a0da04 diagnostics: Remove Option wrapper from MPSC channel and sender field (#12467) (camc314)
-
-
-
-
-
-
 
 ## [0.75.1] - 2025-07-03
 
@@ -165,17 +136,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 626d028 linter: Fix windows uri tests (#11943) (Sysix)
 
-
-
-
-
-
 ## [0.73.0] - 2025-06-13
 
 ### 💥 BREAKING CHANGES
 
 - bd9dd88 linter: [**BREAKING**] Add more info to json reporter (#11524) (camc314)
-
 
 # Changelog
 
@@ -316,6 +281,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ## [0.22.0] - 2024-07-23
 
 ### Features
+
 - 6068e6b Add error codes to OxcDiagnostic (#4334) (DonIsaac)
 
 ### Refactor
@@ -392,6 +358,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ## [0.10.0] - 2024-03-14
 
 ### Features
+
 - 265b2fb Miette v7 (#2465) (Boshen)
 
 ## [0.8.0] - 2024-02-26
@@ -404,6 +371,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ## [0.6.0] - 2024-02-03
 
 ### Refactor
+
 - 87b9978 Move all miette usages to `oxc_diagnostics` (Boshen)
 
 ## [0.5.0] - 2024-01-12
@@ -429,4 +397,3 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - 2751240 cli,diagnostics: Implement DiagnosticService (#762) (Boshen)
 - a9a6bb8 cli,linter: Move path processing logic from cli to linter (#766) (Boshen)
-

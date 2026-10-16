@@ -27,4 +27,3 @@ installation and archive consumption need separate gates on their actual
 target. A target listed in the matrix is not a qualified release asset.
 
 Related: `bun-os-runtime`, `bun-build-commands`, `bun-build-deps-vendor`.
-

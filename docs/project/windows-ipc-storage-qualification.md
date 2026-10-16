@@ -24,6 +24,6 @@ and diff checks pass. The existing documented process-local Windows Clippy cache
 opt-out is retained without global configuration changes.
 
 Receipts: tmp/ipc-storage-native-final.log/.exit and
- tmp/ipc-storage-final-<target>.jsonl/.stderr/.exit. This is scoped source and
+tmp/ipc-storage-final-<target>.jsonl/.stderr/.exit. This is scoped source and
 Windows runtime qualification; complete fork/release/production gates remain
 separate requirements.

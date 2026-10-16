@@ -37,4 +37,3 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 🐛 Bug Fixes
 
 - 5e893d7 jsdoc: Parse tags after interval notation in descriptions (#20046) (camc314)
-

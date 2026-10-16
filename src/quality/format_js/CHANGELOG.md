@@ -765,7 +765,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 ### 🐛 Bug Fixes
 
-- 4817486 formatter: Revert  `FormatElement::BestFitting` printing logic (#16028) (Dunqing)
+- 4817486 formatter: Revert `FormatElement::BestFitting` printing logic (#16028) (Dunqing)
 - 5562dd6 formatter: Incorrect formatting method chain with trailing comments (#16027) (Dunqing)
 - 6d14c8b formatter: Comments in export class decorators are printing incorrectly (#15897) (Dunqing)
 - 683c764 formatter: Correct a few minor mismatched typescript tests (#15894) (Dunqing)
@@ -828,7 +828,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - f913543 formatter: Avoid allocation for `SyntaxTokenCowSlice` (#15366) (Dunqing)
 - 98c9234 formatter: Optimize `FormatElement::Token` printing (#15365) (Dunqing)
 
-
 ## [0.10.0] - 2025-11-04
 
 ### 🚀 Features
@@ -857,7 +856,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 🧪 Testing
 
 - 9d5b34b formatter/sort-imports: Refactor sort_imports tests (#15188) (leaysgur)
-
 
 ## [0.9.0] - 2025-10-30
 
@@ -902,8 +900,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - aceff66 oxfmt: V0.9.0 (#15088) (Boshen)
 
-
-
 ## [0.8.0] - 2025-10-22
 
 ### 🚀 Features
@@ -926,7 +922,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 868ff99 formatter: Fix tests using TS syntax with `.js` (#14880) (leaysgur)
 
-
 ## [0.7.0] - 2025-10-21
 
 ### 🚀 Features
@@ -943,7 +938,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 9d914a3 formatter: Improve comments handling (#14816) (Dunqing)
 - f52863d formatter: Improve handling of type cast node (#14815) (Dunqing)
-
 
 ## [0.6.0] - 2025-10-20
 
@@ -998,7 +992,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 42d8c62 formatter: Add tests for sort-imports (#14685) (leaysgur)
 
-
 ## [0.5.0] - 2025-10-14
 
 ### 🚀 Features
@@ -1042,7 +1035,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - bb43dc5 formatter: Add snapshot-based test infrastructure (#14400) (Dunqing)
 
-
 ## [0.4.0] - 2025-10-09
 
 ### 🚀 Features
@@ -1084,7 +1076,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 70bd141 formatter: Improve formatting of `Function` and `ArrowFunctionExpression` with types (#14070) (Dunqing)
 
-
 ## [0.3.0] - 2025-09-19
 
 ### 🚀 Features
@@ -1105,7 +1096,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 7879f85 formatter: Add parentheses inside `UpdateExpression` (#13825) (Noel Kim (김민혁))
 - 7371bad formatter: Add parentheses inside `TSIntersectionType` (#13821) (Noel Kim (김민혁))
 
-
 ## [0.2.0] - 2025-09-16
 
 ### 🚀 Features
@@ -1125,7 +1115,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 0b047e8 formatter: Add parentheses for `TSFunctionType` inside `TSUnionType` (#13746) (Sysix)
 - f5f37c4 formatter: Add space after `extends` in `TSInterfaceDeclaration` (#13741) (Sysix)
 
-
 ## [0.1.0] - 2025-09-12
 
 ### 🚀 Features
@@ -1144,6 +1133,3 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - d7ff3d9 formatter: Introduce `SourceText` with utility methods (#13650) (Dunqing)
 - 6b74078 formatter: Move `is_supported_source_type` to `oxc_formatter` crate (#13702) (Sysix)
-
-
-

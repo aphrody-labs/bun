@@ -27,13 +27,13 @@ JSC-only selection that still reaches V8 produce `unsupported`.
 
 ## Linux, Windows and macOS
 
-| Combination | Source path | Qualification needed on each target |
-| --- | --- | --- |
-| Native HTML and CSS | `bun_runtime`, `bun_css`, `bun_browser_dom` | Complete Bun/JSC native link; candidate HTML/CSS and MCP parser tests |
-| Portable paint | `bun_browser_render/paint` | Pinned font/text/image libraries; deterministic screenshots |
-| Shared CSS and paint | `bun_browser_render/paint,bun_browser_render/bun-css` | Bun native symbols plus renderer cascade/layout/screenshots |
-| Page render and stealth | browser/CDP/MCP/service `render,stealth`, renderer `bun-css` | Page engine migration and full browser behavior; pinned TLS stack |
-| Coreutils | `bun_runtime/coreutils` | Runtime build-planner unit graph, native applet/platform tests |
+| Combination             | Source path                                                  | Qualification needed on each target                                   |
+| ----------------------- | ------------------------------------------------------------ | --------------------------------------------------------------------- |
+| Native HTML and CSS     | `bun_runtime`, `bun_css`, `bun_browser_dom`                  | Complete Bun/JSC native link; candidate HTML/CSS and MCP parser tests |
+| Portable paint          | `bun_browser_render/paint`                                   | Pinned font/text/image libraries; deterministic screenshots           |
+| Shared CSS and paint    | `bun_browser_render/paint,bun_browser_render/bun-css`        | Bun native symbols plus renderer cascade/layout/screenshots           |
+| Page render and stealth | browser/CDP/MCP/service `render,stealth`, renderer `bun-css` | Page engine migration and full browser behavior; pinned TLS stack     |
+| Coreutils               | `bun_runtime/coreutils`                                      | Runtime build-planner unit graph, native applet/platform tests        |
 
 The page engine's current `bun_browser_js` manifest depends on `deno_core`
 in both normal and build dependencies. Activating `render` or `stealth` does

@@ -102,20 +102,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 3dc24b5 linter,minifier: Always refer as "ES Modules" instead of "ES6 Modules" (#15409) (sapphi-red)
 
-
-
-
-
-
 ## [0.91.0] - 2025-09-22
 
 ### 💼 Other
 
 - fb347da crates: V0.91.0 (#13961) (Boshen)
-
-
-
-
 
 ## [0.88.0] - 2025-09-15
 
@@ -127,17 +118,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - babbaca all: Remove `pub` from modules with no exports (#13618) (overlookmotel)
 
-
-
-
-
-
-
-
-
-
-
-
 ## [0.80.0] - 2025-08-03
 
 ### 🚀 Features
@@ -148,20 +128,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - de1de35 rust: Add comprehensive README.md documentation for all Rust crates (#12706) (Copilot)
 
-
-
-
-
-
 ## [0.77.2] - 2025-07-17
 
 ### 🐛 Bug Fixes
 
 - dac4db9 linter/exhaustive-deps: Better diagnostics for missing dependencies (#12337) (Don Isaac)
-
-
-
-
 
 ## [0.75.1] - 2025-07-03
 
@@ -172,12 +143,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 🚜 Refactor
 
 - 016634f ast/estree: Introduce `serialize_span` method (#12013) (overlookmotel)
-
-
-
-
-
-
 
 # Changelog
 
@@ -213,13 +178,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Refactor
 
-
 ## [0.70.0] - 2025-05-15
 
 - 4e5c73b span: [**BREAKING**] `SourceType::from_path(".js")` return js instead of jsx (#11038) (Boshen)
 
 ### Bug Fixes
-
 
 ### Performance
 
@@ -360,7 +323,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 7066d1c ast, span, syntax, regular_expression: [**BREAKING**] Remove `ContentHash` (#8512) (overlookmotel)
 
 ### Features
-
 
 ### Performance
 
@@ -581,7 +543,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Performance
 
-- 6ff200d linter: Change react rules and utils to use `Cow` and `CompactStr` instead of `String`  (#4603) (DonIsaac)
+- 6ff200d linter: Change react rules and utils to use `Cow` and `CompactStr` instead of `String` (#4603) (DonIsaac)
 
 ### Refactor
 
@@ -595,7 +557,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Performance
 
-- 6ff200d linter: Change react rules and utils to use `Cow` and `CompactStr` instead of `String`  (#4603) (DonIsaac)
+- 6ff200d linter: Change react rules and utils to use `Cow` and `CompactStr` instead of `String` (#4603) (DonIsaac)
 
 ## [0.22.1] - 2024-07-27
 
@@ -606,9 +568,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ## [0.22.0] - 2024-07-23
 
 ### Bug Fixes
+
 - ea33f94 Impl PartialEq<str> for CompactStr (#4352) (DonIsaac)
 
 ### Performance
+
 - a207923 Replace some CompactStr usages with Cows (#4377) (DonIsaac)
 
 ## [0.18.0] - 2024-07-09
@@ -733,5 +697,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 027a67d minifier: Constant addition expression folding (#882) (Don Isaac)
 
 ### Refactor
-- fdf288c Improve code coverage in various places (#721) (Boshen)
 
+- fdf288c Improve code coverage in various places (#721) (Boshen)

@@ -17,7 +17,9 @@ These assumptions are held regardless of the options.
 Array.prototype.push = function () {
   console.log("hijacked!");
 };
-Object.defineProperty(Number.prototype, "toString", { value: () => "hijacked!" });
+Object.defineProperty(Number.prototype, "toString", {
+  value: () => "hijacked!",
+});
 ```
 
 ### No `document.all` Usage
@@ -179,8 +181,8 @@ o.x = 1; // dropped — would have logged
 Code does not depend on [`Function.prototype.toString()`](https://tc39.es/ecma262/multipage/fundamental-objects.html#sec-function.prototype.tostring) returning specific source text. Minification renames variables and parameters, simplifies expressions (`true` → `!0`), restructures statements (fusing with the comma operator, converting `while` to `for`), removes whitespace, and may eliminate function bodies entirely (e.g. IIFE inlining). All of these change the string returned by `.toString()`.
 
 ```javascript
-const serialize = (fn) => fn.toString();
-serialize((x) => {
+const serialize = fn => fn.toString();
+serialize(x => {
   return x * 2;
 }); // Relied on to contain "return"
 ```

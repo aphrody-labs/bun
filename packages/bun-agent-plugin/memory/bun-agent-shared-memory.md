@@ -44,4 +44,3 @@ concurrent checkouts, active artifacts and protected stores; an ignored path
 is not a cleanup authorization.
 
 Related: `bun-os-runtime`, `bun-skills-catalog`, `bun-graph-structure`.
-

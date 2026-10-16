@@ -10,10 +10,10 @@ every upstream release target: Linux x64 and arm64 with GNU and musl, Windows
 x64 and arm64, and macOS x64 and arm64. Both use the native release build owner,
 pinned toolchain and sysroots, ThinLTO by default, and at most six build jobs.
 
-| Flavor | Compiled coreutils | Release asset names |
-| --- | --- | --- |
-| `perf` | Disabled | Upstream-compatible `bun-<platform>.zip` |
-| `full` | Enabled | `bun-<platform>-full.zip` |
+| Flavor | Compiled coreutils | Release asset names                      |
+| ------ | ------------------ | ---------------------------------------- |
+| `perf` | Disabled           | Upstream-compatible `bun-<platform>.zip` |
+| `full` | Enabled            | `bun-<platform>-full.zip`                |
 
 The performance flavor removes the optional applet dispatcher. The full flavor
 adds the existing uutils owner to the same Bun executable. Each archive includes

@@ -5,14 +5,14 @@ These decoders perform no network, filesystem, process or trust operation.
 preserves the original document. Projected `PackageVersion` edges are not a
 complete installer plan; consumers must interpret source-specific raw fields.
 
-| Source | Implemented | Remaining |
-| --- | --- | --- |
-| npm | Full/abbreviated packument, normal/optional edges with optional override, dist URL/integrity, retained peer/platform/engine metadata; native node-semver compare/ranges | Peer placement, package aliases/git/workspace dependencies and dist-tag resolution belong to resolver |
-| Cargo | Sparse JSON lines, checksum, yanked, renamed dependency identity, optional/target, retained kinds/features/default-features/registry | Feature unification and cfg evaluation belong to resolver; Cargo native range adapter not supplied here |
-| NuGet | Flat-container versions, four-part comparison, case-insensitive prerelease labels, exact/minimum/interval constraints | Nuspec dependency/framework metadata, content URLs/hash fetch, floating ranges (explicit error) |
-| vcpkg | Version tables preserving scheme, port revision, git-tree; default baseline | Port manifest dependencies/features/platform expressions and scheme-aware comparison; no semver fallback |
-| PyPI | PEP 691 simple JSON preserving each file, hashes, relative URL, requires-python, yanked reason, core-metadata | PEP 503 HTML, filename-to-distribution/release mapping, PEP 508 dependencies, resolver prerelease/environment policy |
-| Python versions | Native PEP 440 comparison and specifier membership | Specifier membership alone does not decide contextual prerelease eligibility |
+| Source          | Implemented                                                                                                                                                             | Remaining                                                                                                            |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
+| npm             | Full/abbreviated packument, normal/optional edges with optional override, dist URL/integrity, retained peer/platform/engine metadata; native node-semver compare/ranges | Peer placement, package aliases/git/workspace dependencies and dist-tag resolution belong to resolver                |
+| Cargo           | Sparse JSON lines, checksum, yanked, renamed dependency identity, optional/target, retained kinds/features/default-features/registry                                    | Feature unification and cfg evaluation belong to resolver; Cargo native range adapter not supplied here              |
+| NuGet           | Flat-container versions, four-part comparison, case-insensitive prerelease labels, exact/minimum/interval constraints                                                   | Nuspec dependency/framework metadata, content URLs/hash fetch, floating ranges (explicit error)                      |
+| vcpkg           | Version tables preserving scheme, port revision, git-tree; default baseline                                                                                             | Port manifest dependencies/features/platform expressions and scheme-aware comparison; no semver fallback             |
+| PyPI            | PEP 691 simple JSON preserving each file, hashes, relative URL, requires-python, yanked reason, core-metadata                                                           | PEP 503 HTML, filename-to-distribution/release mapping, PEP 508 dependencies, resolver prerelease/environment policy |
+| Python versions | Native PEP 440 comparison and specifier membership                                                                                                                      | Specifier membership alone does not decide contextual prerelease eligibility                                         |
 
 No absent hash is reported as verified. No dependency metadata is invented from
 a flat-container or version table. Unsupported comparison returns an error.

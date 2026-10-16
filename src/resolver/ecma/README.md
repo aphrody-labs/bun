@@ -56,11 +56,17 @@ import path from "path";
 import resolve, { ResolverFactory } from "./index.js";
 
 // `resolve`
-assert(resolve.sync(process.cwd(), "./index.js").path, path.join(cwd, "index.js"));
+assert(
+  resolve.sync(process.cwd(), "./index.js").path,
+  path.join(cwd, "index.js"),
+);
 
 // `ResolverFactory`
 const resolver = new ResolverFactory();
-assert(resolver.sync(process.cwd(), "./index.js").path, path.join(cwd, "index.js"));
+assert(
+  resolver.sync(process.cwd(), "./index.js").path,
+  path.join(cwd, "index.js"),
+);
 ```
 
 #### File-based Resolution

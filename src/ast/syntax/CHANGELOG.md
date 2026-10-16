@@ -105,8 +105,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 699406a napi/parser: Move `ExportEntry::module_request` field to first (#16412) (overlookmotel)
 - 12bd794 napi/parser: Move `ExportEntry::module_request` field to last (#16403) (overlookmotel)
 
-
-
 ## [0.94.0] - 2025-10-06
 
 ### 🚀 Features
@@ -115,7 +113,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 6374065 napi/parser: Raw transfer support `range` field (#14319) (overlookmotel)
 - 3656908 rust: Oxc-index-vec v4.0 (#14254) (Boshen)
 
-
 ## [0.93.0] - 2025-09-28
 
 ### 🚜 Refactor
@@ -123,17 +120,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 7e42b0a syntax: Use allocator HashMap in ModuleRecord fields (#14141) (Boshen)
 - 0a9473d syntax: Remove unnecessary `#[estree(field_order)]` attr (#14142) (overlookmotel)
 
-
-
 ## [0.91.0] - 2025-09-22
 
 ### 💼 Other
 
 - fb347da crates: V0.91.0 (#13961) (Boshen)
-
-
-
-
 
 ## [0.88.0] - 2025-09-15
 
@@ -145,28 +136,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - babbaca all: Remove `pub` from modules with no exports (#13618) (overlookmotel)
 
-
-
-
-
-
-
-
-
-
 ## [0.82.0] - 2025-08-12
 
 ### 🚀 Features
 
 - 33c0e9f ecmascript: Add global `isNaN`, `isFinite`, `parseFloat`, `parseInt` functions support to constant evaluation (#12954) (Copilot)
 
-
 ## [0.81.0] - 2025-08-06
 
 ### ⚡ Performance
 
 - 2c4369a syntax,codegen: Replace `ryu_js` with `dragonbox_ecma` for floating point formatting (#12821) (Copilot)
-
 
 ## [0.80.0] - 2025-08-03
 
@@ -175,26 +155,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 45e2fe8 rust: Fix typos and grammar mistakes in Rust documentation comments (#12715) (Copilot)
 - de1de35 rust: Add comprehensive README.md documentation for all Rust crates (#12706) (Copilot)
 
-
-
-
 ## [0.78.0] - 2025-07-24
 
 ### 💥 BREAKING CHANGES
 
 - ccbcf3e transformer, minifier, syntax: [**BREAKING**] Remove `ESTarget::ES5` (#12448) (Dunqing)
 
-
-
-
-
 ## [0.77.0] - 2025-07-12
 
 ### 🚜 Refactor
 
 - 228cff5 semantic,linter: Assert that Program is always the first node (#12123) (Ulrich Stark)
-
-
 
 ## [0.75.1] - 2025-07-03
 
@@ -204,17 +175,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 754f01d ast/estree: Move `start` and `end` fields to last (#12012) (overlookmotel)
 - 4597311 ast/estree: Remove temp vars for `ranges` from serializer (#12007) (overlookmotel)
 
-
 ## [0.75.0] - 2025-06-25
 
 ### 💥 BREAKING CHANGES
 
 - 9a2548a napi/parser: [**BREAKING**] Add `range` option (#11728) (Bacary Bruno Bodian)
-
-
-
-
-
 
 # Changelog
 
@@ -244,7 +209,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 2b0a69f ast: Re-order struct fields to reduce padding (#11056) (overlookmotel)
 
 ### Refactor
-
 
 ## [0.69.0] - 2025-05-09
 
@@ -445,7 +409,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Features
 
-
 ## [0.45.0] - 2025-01-11
 
 ### Features
@@ -534,7 +497,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Bug Fixes
 
-
 ### Refactor
 
 - d7d0735 semantic: Remove `SymbolFlags::TypeLiteral` (#7415) (Dunqing)
@@ -617,7 +579,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Bug Fixes
 
-- 933a743 semantic: Add interfaces and functions to `SymbolFlags::ClassExcludes`  (#6057) (DonIsaac)
+- 933a743 semantic: Add interfaces and functions to `SymbolFlags::ClassExcludes` (#6057) (DonIsaac)
 
 ## [0.30.2] - 2024-09-27
 
@@ -635,7 +597,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - e04841c syntax: Add ModuleRecord documentation (#5818) (DonIsaac)
 
 ### Refactor
-
 
 ## [0.29.0] - 2024-09-13
 
@@ -670,7 +631,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - d262a58 syntax: [**BREAKING**] Rename `ReferenceFlag` to `ReferenceFlags` (#5023) (overlookmotel)
 
 ### Refactor
-
 
 ## [0.24.3] - 2024-08-18
 
@@ -957,5 +917,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 6628fc8 linter: Reduce mallocs (#654) (Don Isaac)
 
 ### Refactor
-- 12798e0 Improve code coverage a little bit (Boshen)- fdf288c Improve code coverage in various places (#721) (Boshen)
 
+- 12798e0 Improve code coverage a little bit (Boshen)- fdf288c Improve code coverage in various places (#721) (Boshen)

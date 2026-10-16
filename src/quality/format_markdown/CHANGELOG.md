@@ -55,4 +55,3 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 📚 Documentation
 
 - 11ff089 formatter_markdown: Follow updated DIVERGENCES policy (#26776) (leaysgur)
-

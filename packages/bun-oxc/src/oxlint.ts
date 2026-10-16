@@ -27,4 +27,3 @@ export const defineRule = <T extends OxlintRule>(rule: T): T => rule;
 
 /** Identity helper, as `defineConfig` from `oxlint`. */
 export const defineConfig = <T extends OxlintConfig>(config: T): T => config;
-

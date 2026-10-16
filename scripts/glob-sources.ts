@@ -64,11 +64,7 @@ const patterns = {
   bakeRuntime: {
     // dev_server/mod.rs is read by bake-codegen.ts to derive the
     // MessageId/IncomingMessageId const-enums in generated.ts.
-    paths: [
-      "src/runtime/bake/*.ts",
-      "src/runtime/bake/*/*.{ts,css}",
-      "src/runtime/bake/dev_server/mod.rs",
-    ],
+    paths: ["src/runtime/bake/*.ts", "src/runtime/bake/*/*.{ts,css}", "src/runtime/bake/dev_server/mod.rs"],
     exclude: ["src/runtime/bake/generated.ts"],
   },
   /** bindgen input */
@@ -160,7 +156,7 @@ export function globAllSources(): Sources {
       for (const rel of globSync(pattern, { cwd: root })) {
         const normalized = normalize(rel);
         if (excludeExact.has(normalized)) continue;
-        if (excludePrefix.some((p) => normalized.startsWith(p))) continue;
+        if (excludePrefix.some(p => normalized.startsWith(p))) continue;
         files.push(resolve(root, normalized));
       }
     }

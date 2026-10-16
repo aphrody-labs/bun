@@ -119,11 +119,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - be94bfd semantic: Add scope tracking for `with` statements (#14652) (Boshen)
 
-
-
-
-
-
 ## [0.91.0] - 2025-09-22
 
 ### 🚀 Features
@@ -134,20 +129,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - fb347da crates: V0.91.0 (#13961) (Boshen)
 
-
 ## [0.91.0] - 2025-09-21
 
 ### 🚀 Features
 
 - a14aa79 npm/oxlint: Convert to ES modules (#13876) (Boshen)
-
-
-
-
-
-
-
-
 
 ## [0.83.0] - 2025-08-29
 
@@ -164,10 +150,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - cd5a9ca ast_visit: `Utf8ToUtf16` record end offset of multi-byte chars (#13339) (overlookmotel)
 
-
-
-
-
 ## [0.82.0] - 2025-08-12
 
 ### 💥 BREAKING CHANGES
@@ -178,14 +160,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - c072e01 all: Add missing lifetimes in function return types (#12895) (overlookmotel)
 
-
 ## [0.81.0] - 2025-08-06
 
 ### 💥 BREAKING CHANGES
 
 - 2cc1001 ast: [**BREAKING**] Remove `ExportDefaultDeclaration` `exported` field (#12808) (overlookmotel)
 - 50b91ac ast: [**BREAKING**] Remove `IdentifierReference` from `qualifier` field of `TSImportType` (#12799) (camc314)
-
 
 ## [0.80.0] - 2025-08-03
 
@@ -197,17 +177,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - de1de35 rust: Add comprehensive README.md documentation for all Rust crates (#12706) (Copilot)
 
-
-
 ## [0.79.0] - 2025-07-30
 
 ### 🚜 Refactor
 
 - a696227 linter: Remove AstKind for SimpleAssignmentTarget (#12401) (Tyler Earls)
-
-
-
-
 
 ## [0.77.1] - 2025-07-16
 
@@ -220,20 +194,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - ee761de ast: Remove `AstKind` for `AssignmentTarget` (#12252) (Tyler Earls)
 - c025868 ast: Remove `AstKind` for `TSFunctionType` (#12287) (camc314)
 
-
 ## [0.77.0] - 2025-07-12
 
 ### 🚜 Refactor
 
 - 8814c53 ast: Remove `AstKind` for `PropertyKey` (#12108) (camchenry)
 
-
 ## [0.76.0] - 2025-07-08
 
 ### 🚜 Refactor
 
 - e8e2a25 ast: Remove `AstKind` for `AssignmentTargetPattern` (#12105) (camchenry)
-
 
 ## [0.75.1] - 2025-07-03
 
@@ -249,16 +220,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 03bce3f ast: Add `AstKind` for `TSConstructorType` (#11965) (camc314)
 - 0cef370 ast: Add `AstKind::TemplateElement` (#11955) (camchenry)
 
-
 ## [0.75.0] - 2025-06-25
 
 ### 🚜 Refactor
 
 - 87b8496 ast: Remove `AstKind` for `MemberExpression` and replace with `StaticMemberExpression` and `PrivateFieldExpression` (#11767) (camchenry)
 - 190e390 ast: Add `AstKind` for `ComputedMemberExpression` (#11766) (camchenry)
-
-
-
 
 ## [0.73.1] - 2025-06-17
 
@@ -282,7 +249,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 4fbe4b1 ast: Remove AstKind from `TSModuleReference` node (#11732) (therewillbecode)
 - 219adcc ast: Don't generate AstKind for ArrayExpressionElement (#11684) (Ulrich Stark)
 
-
 ## [0.73.0] - 2025-06-13
 
 ### 🚜 Refactor
@@ -290,7 +256,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 8e30c5f ast: Don't generate AstKind for ForStatementInit (#11617) (Ulrich Stark)
 - 9136685 ast: Create AstKinds for jsdoc types (#11597) (Ulrich Stark)
 - d41fb13 ast: Get jsx types out of AstKind exceptions (#11535) (Ulrich Stark)
-
 
 # Changelog
 
@@ -360,7 +325,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Refactor
 
-
 ## [0.64.0] - 2025-04-17
 
 - c538efa ast: [**BREAKING**] `ImportExpression` only allows one option argument (#10432) (Boshen)
@@ -374,7 +338,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 49732ff ast: [**BREAKING**] Re-introduce `TSEnumBody` AST node (#10284) (Yuji Sugiura)
 
 ### Features
-
 
 ### Bug Fixes
 
@@ -391,13 +354,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Features
 
-
 ## [0.59.0] - 2025-03-18
 
-- ce6808a parser: [**BREAKING**] Rename `type_parameters` to `type_arguments` where needed  (#9815) (hi-ogawa)
+- ce6808a parser: [**BREAKING**] Rename `type_parameters` to `type_arguments` where needed (#9815) (hi-ogawa)
 
 ### Bug Fixes
-
 
 ## [0.58.0] - 2025-03-13
 
@@ -425,7 +386,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Features
 
-
 ### Bug Fixes
 
 - bbb4f98 semantic: Insert binding into correct scope for TSInferType (#9567) (camc314)
@@ -443,4 +403,3 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Features
 
 - 2a08b14 parser: Support V8 intrinsics (#9379) (injuly)
-

@@ -24,15 +24,15 @@ A namespace exposes its runtime classes and enums.
 - `get_X` methods with no arguments can also be read as `X` properties.
 - Overloaded methods keep their ABI name, for example `GetFilesAsyncOverloadDefaultOptionsStartAndCount`.
 
-| WinRT type                         | JavaScript                     |
-| ---------------------------------- | ------------------------------ |
-| `String`                           | `string`                       |
-| `Boolean`, integers up to 32 bits  | `boolean`, `number`            |
-| `Int64`, `UInt64`                  | `bigint`                       |
-| enum                               | `number`                       |
+| WinRT type                           | JavaScript                         |
+| ------------------------------------ | ---------------------------------- |
+| `String`                             | `string`                           |
+| `Boolean`, integers up to 32 bits    | `boolean`, `number`                |
+| `Int64`, `UInt64`                    | `bigint`                           |
+| enum                                 | `number`                           |
 | `IAsyncAction`, `IAsyncOperation<T>` | `Promise<undefined>`, `Promise<T>` |
-| `IVector<T>`, `IVectorView<T>`     | iterable object                |
-| interface or class                 | object                         |
+| `IVector<T>`, `IVectorView<T>`       | iterable object                    |
+| interface or class                   | object                             |
 
 A failing `HRESULT` throws an error with code `ERR_WINRT_HRESULT`. Objects release their reference when they are garbage collected.
 

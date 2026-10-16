@@ -359,8 +359,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - ed0e023 allocator/address: Improve docs for `Address::from_ptr` (#15311) (overlookmotel)
 
-
-
 ## [0.94.0] - 2025-10-06
 
 ### 🚀 Features
@@ -372,14 +370,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 0c14e50 allocator/hashmap: Add comments to `HashMap::from_iter_in` (#14329) (overlookmotel)
 
-
 ## [0.93.0] - 2025-09-28
 
 ### 🚜 Refactor
 
 - 7e42b0a syntax: Use allocator HashMap in ModuleRecord fields (#14141) (Boshen)
-
-
 
 ## [0.91.0] - 2025-09-22
 
@@ -395,7 +390,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - fb347da crates: V0.91.0 (#13961) (Boshen)
 
-
 ## [0.91.0] - 2025-09-21
 
 ### 🚀 Features
@@ -405,9 +399,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 🐛 Bug Fixes
 
 - 91c88e2 allocator: Fix lint warning building WASM (#13897) (overlookmotel)
-
-
-
 
 ## [0.88.0] - 2025-09-15
 
@@ -428,7 +419,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - a0d7389 allocator/pool: Move `AllocatorPool` into own directory (#13619) (overlookmotel)
 - babbaca all: Remove `pub` from modules with no exports (#13618) (overlookmotel)
 
-
 ## [0.87.0] - 2025-09-08
 
 ### 🚀 Features
@@ -440,7 +430,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### ⚡ Performance
 
 - 6fce49d allocator: Remove bounds checks in `CloneIn` for `Vec` (#13506) (overlookmotel)
-
 
 ## [0.86.0] - 2025-08-31
 
@@ -459,15 +448,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - f5a742f allocator/bitset: Initialize `BitSet` with `memset` (#13451) (overlookmotel)
 - cdfa48d allocator/bitset: Store bits as `usize`s (#13450) (overlookmotel)
 
-
-
 ## [0.84.0] - 2025-08-30
 
 ### 💥 BREAKING CHANGES
 
 - df8e639 allocator: [**BREAKING**] Put `AllocatorPool` behind `pool` feature (#13373) (overlookmotel)
-
-
 
 ## [0.82.3] - 2025-08-20
 
@@ -488,7 +473,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 792ae31 estree, allocator: Use `default` to create `ESTreeSerializer`s (#13211) (overlookmotel)
 
-
 ## [0.82.2] - 2025-08-17
 
 ### 🚀 Features
@@ -506,8 +490,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 3048302 allocator: Document all cargo features (#13104) (overlookmotel)
 
-
-
 ## [0.82.0] - 2025-08-12
 
 ### 💥 BREAKING CHANGES
@@ -520,13 +502,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - ff1d93b allocator: Do not make `Allocator::bump` field public (#12936) (overlookmotel)
 - c072e01 all: Add missing lifetimes in function return types (#12895) (overlookmotel)
 
-
 ## [0.81.0] - 2025-08-06
 
 ### 🧪 Testing
 
 - d79f4ec parser: Track number of allocations (#12555) (camchenry)
-
 
 ## [0.80.0] - 2025-08-03
 
@@ -535,9 +515,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 45e2fe8 rust: Fix typos and grammar mistakes in Rust documentation comments (#12715) (Copilot)
 - de1de35 rust: Add comprehensive README.md documentation for all Rust crates (#12706) (Copilot)
 
-
-
-
 ## [0.78.0] - 2025-07-24
 
 ### 🚜 Refactor
@@ -545,7 +522,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 124d376 allocator: Remove unnecessary `Send` impl for `FixedSizeAllocator` (#12426) (overlookmotel)
 - c375981 napi/oxlint: Simplify atomic operations (#12425) (overlookmotel)
 - c1b2f48 napi/oxlint: Prevent lint warning in release mode (#12408) (overlookmotel)
-
 
 ## [0.77.3] - 2025-07-20
 
@@ -561,8 +537,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 319fc3b allocator/fixed-size: Store `alloc_ptr` in the memory block backing the allocator (#12380) (overlookmotel)
 - 8fe1aec ast_tools, allocator, napi/parser: Rename vars (#12379) (overlookmotel)
 - dfe54b4 allocator: Move all fixed size allocator code into 1 file (#12309) (overlookmotel)
-
-
 
 ## [0.77.1] - 2025-07-16
 
@@ -580,7 +554,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### ⚡ Performance
 
 - cc1e9fc napi/parser: Raw transfer: reduce size of buffer by 16 bytes (#12277) (overlookmotel)
-
 
 ## [0.77.0] - 2025-07-12
 
@@ -604,7 +577,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - b3a076b allocator: Extend doc comments for `Vec` and `RawVec` (#12205) (overlookmotel)
 
-
 ## [0.76.0] - 2025-07-08
 
 ### 💥 BREAKING CHANGES
@@ -619,13 +591,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - d732e85 allocator: `Allocator::from_raw_parts` get offset of chunk footer field as const (#12080) (overlookmotel)
 
-
 ## [0.75.1] - 2025-07-03
 
 ### 📚 Documentation
 
 - ff1d42f allocator: Update comments about `bumpalo` version (#12033) (overlookmotel)
-
 
 ## [0.75.0] - 2025-06-25
 
@@ -633,15 +603,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 9a2548a napi/parser: [**BREAKING**] Add `range` option (#11728) (Bacary Bruno Bodian)
 
-
 ## [0.74.0] - 2025-06-23
 
 ### 🚀 Features
 
 - f2ce5ad allocator: Add `Allocator::alloc_slice_copy` method (#11822) (overlookmotel)
 - 4ba5258 allocator: Add `Allocator::alloc_layout` method (#11821) (overlookmotel)
-
-
 
 ## [0.73.1] - 2025-06-17
 
@@ -661,8 +628,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 2641030 allocator: Reduce operations while `Mutex` lock is held in `AllocatorPool` (#11761) (overlookmotel)
 - f539f64 allocator: Remove `Arc` from `AllocatorPool` (#11760) (overlookmotel)
-
-
 
 # Changelog
 
@@ -874,7 +839,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Features
 
-
 ### Documentation
 
 - 3414824 oxc: Enable `clippy::too_long_first_doc_paragraph` (#9237) (Boshen)
@@ -990,7 +954,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - e1c2d30 allocator: [**BREAKING**] Make `Vec` non-drop (#6623) (overlookmotel)
 
 ### Bug Fixes
-
 
 ### Refactor
 
@@ -1117,5 +1080,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ## [0.2.0] - 2023-09-14
 
 ### Refactor
-- 12798e0 Improve code coverage a little bit (Boshen)- fdf288c Improve code coverage in various places (#721) (Boshen)
 
+- 12798e0 Improve code coverage a little bit (Boshen)- fdf288c Improve code coverage in various places (#721) (Boshen)

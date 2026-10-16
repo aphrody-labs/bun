@@ -26,16 +26,16 @@ bun dotnet setup --runtime aspnetcore --channel STS
 bun dotnet setup --install-dir ./.dotnet --arch arm64 --dry-run --json
 ```
 
-| Flag            | Values                                                | Default                                                                |
-| --------------- | ----------------------------------------------------- | ---------------------------------------------------------------------- |
-| `--channel`     | `A.B`, `A.B.Cxx`, `LTS`, `STS`, `latest`              | `A.B` of `--version`, else `LTS`                                       |
-| `--version`     | an exact version from the channel                     | the newest release of the channel                                      |
-| `--runtime`     | `dotnet`, `aspnetcore`, `windowsdesktop`              | the SDK                                                                |
-| `--install-dir` | a directory                                           | `%LOCALAPPDATA%\Microsoft\dotnet` on Windows, `~/.dotnet` elsewhere    |
-| `--arch`        | `x64`, `x86`, `arm64`                                 | the machine's architecture (musl Linux gets the `linux-musl-*` builds) |
-| `--force`       | overwrite files that already exist                    | existing files are kept, like `dotnet-install`                         |
-| `--dry-run`     | print the archive that would be installed             |                                                                        |
-| `--json`        | print `{ product, version, rid, name, url, sha512, installDir, status }` |                                                     |
+| Flag            | Values                                                                   | Default                                                                |
+| --------------- | ------------------------------------------------------------------------ | ---------------------------------------------------------------------- |
+| `--channel`     | `A.B`, `A.B.Cxx`, `LTS`, `STS`, `latest`                                 | `A.B` of `--version`, else `LTS`                                       |
+| `--version`     | an exact version from the channel                                        | the newest release of the channel                                      |
+| `--runtime`     | `dotnet`, `aspnetcore`, `windowsdesktop`                                 | the SDK                                                                |
+| `--install-dir` | a directory                                                              | `%LOCALAPPDATA%\Microsoft\dotnet` on Windows, `~/.dotnet` elsewhere    |
+| `--arch`        | `x64`, `x86`, `arm64`                                                    | the machine's architecture (musl Linux gets the `linux-musl-*` builds) |
+| `--force`       | overwrite files that already exist                                       | existing files are kept, like `dotnet-install`                         |
+| `--dry-run`     | print the archive that would be installed                                |                                                                        |
+| `--json`        | print `{ product, version, rid, name, url, sha512, installDir, status }` |                                                                        |
 
 If the version is already installed, `bun dotnet setup` prints `already installed` and downloads nothing. Set `BUN_DOTNET_FEED` (or pass `--feed`) to read the release metadata from a mirror.
 

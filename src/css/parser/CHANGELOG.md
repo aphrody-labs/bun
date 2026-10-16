@@ -11,68 +11,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- *(parser)* add `block_contents` option to parse the root as a block's contents in css-in-md ([#179](https://github.com/oxc-project/oxc-css-parser/pull/179))
+- _(parser)_ add `block_contents` option to parse the root as a block's contents in css-in-md ([#179](https://github.com/oxc-project/oxc-css-parser/pull/179))
 
 ## [0.0.15](https://github.com/oxc-project/oxc-css-parser/compare/oxc-css-parser-v0.0.14...oxc-css-parser-v0.0.15) - 2026-09-10
 
 ### Fixed
 
-- *(tokenizer,parser)* misc fixes for less-test-suite ([#170](https://github.com/oxc-project/oxc-css-parser/pull/170))
+- _(tokenizer,parser)_ misc fixes for less-test-suite ([#170](https://github.com/oxc-project/oxc-css-parser/pull/170))
 
 ## [0.0.14](https://github.com/oxc-project/oxc-css-parser/compare/oxc-css-parser-v0.0.13...oxc-css-parser-v0.0.14) - 2026-09-07
 
 ### Fixed
 
-- *(parser)* keep declarations and raw-prelude rules whole in CSS/Scss ([#166](https://github.com/oxc-project/oxc-css-parser/pull/166))
+- _(parser)_ keep declarations and raw-prelude rules whole in CSS/Scss ([#166](https://github.com/oxc-project/oxc-css-parser/pull/166))
 
 ## [0.0.13](https://github.com/oxc-project/oxc-css-parser/compare/oxc-css-parser-v0.0.12...oxc-css-parser-v0.0.13) - 2026-08-31
 
 ### Added
 
-- *(parser)* accept declaration-shaped raw-prelude qualified rules in CSS ([#162](https://github.com/oxc-project/oxc-css-parser/pull/162))
+- _(parser)_ accept declaration-shaped raw-prelude qualified rules in CSS ([#162](https://github.com/oxc-project/oxc-css-parser/pull/162))
 
 ### Fixed
 
-- *(parser)* accept case-insensitive dash-digit An+B forms (2N-1) ([#161](https://github.com/oxc-project/oxc-css-parser/pull/161))
+- _(parser)_ accept case-insensitive dash-digit An+B forms (2N-1) ([#161](https://github.com/oxc-project/oxc-css-parser/pull/161))
 
 ## [0.0.12](https://github.com/oxc-project/oxc-css-parser/compare/oxc-css-parser-v0.0.11...oxc-css-parser-v0.0.12) - 2026-08-27
 
 ### Fixed
 
-- *(parser)* correct signed-value handling in Less operations and Sass calculations ([#158](https://github.com/oxc-project/oxc-css-parser/pull/158))
+- _(parser)_ correct signed-value handling in Less operations and Sass calculations ([#158](https://github.com/oxc-project/oxc-css-parser/pull/158))
 
 ## [0.0.11](https://github.com/oxc-project/oxc-css-parser/compare/oxc-css-parser-v0.0.10...oxc-css-parser-v0.0.11) - 2026-08-04
 
 ### Fixed
 
-- *(parser)* fallback to raw tokens when unknown at prelude ([#146](https://github.com/oxc-project/oxc-css-parser/pull/146))
+- _(parser)_ fallback to raw tokens when unknown at prelude ([#146](https://github.com/oxc-project/oxc-css-parser/pull/146))
 
 ## [0.0.10](https://github.com/oxc-project/oxc-css-parser/compare/oxc-css-parser-v0.0.9...oxc-css-parser-v0.0.10) - 2026-07-30
 
 ### Fixed
 
-- *(parser)* stop leaking the internal error ([#140](https://github.com/oxc-project/oxc-css-parser/pull/140))
-- *(parser)* accept substituted container ([#139](https://github.com/oxc-project/oxc-css-parser/pull/139))
+- _(parser)_ stop leaking the internal error ([#140](https://github.com/oxc-project/oxc-css-parser/pull/140))
+- _(parser)_ accept substituted container ([#139](https://github.com/oxc-project/oxc-css-parser/pull/139))
 
 ### Other
 
-- *(ast)* box the fat `SimpleSelector`, `MediaFeature` and `MediaQuery` variants ([#138](https://github.com/oxc-project/oxc-css-parser/pull/138))
+- _(ast)_ box the fat `SimpleSelector`, `MediaFeature` and `MediaQuery` variants ([#138](https://github.com/oxc-project/oxc-css-parser/pull/138))
 
 ## [0.0.9](https://github.com/oxc-project/oxc-css-parser/compare/oxc-css-parser-v0.0.8...oxc-css-parser-v0.0.9) - 2026-07-21
 
 ### Fixed
 
-- *(parser)* parse `:host` and `:host-context` args as selector list ([#130](https://github.com/oxc-project/oxc-css-parser/pull/130))
+- _(parser)_ parse `:host` and `:host-context` args as selector list ([#130](https://github.com/oxc-project/oxc-css-parser/pull/130))
 
 ### Other
 
-- *(ast)* [**breaking**] remove unused `PseudoClassSelectorArgKind::CompoundSelector` ([#131](https://github.com/oxc-project/oxc-css-parser/pull/131))
+- _(ast)_ [**breaking**] remove unused `PseudoClassSelectorArgKind::CompoundSelector` ([#131](https://github.com/oxc-project/oxc-css-parser/pull/131))
 
 ## [0.0.8](https://github.com/oxc-project/oxc-css-parser/compare/oxc-css-parser-v0.0.7...oxc-css-parser-v0.0.8) - 2026-07-20
 
 ### Fixed
 
-- *(parser)* keep a newline-separated colon out of a statement-position placeholder declaration ([#129](https://github.com/oxc-project/oxc-css-parser/pull/129))
+- _(parser)_ keep a newline-separated colon out of a statement-position placeholder declaration ([#129](https://github.com/oxc-project/oxc-css-parser/pull/129))
 
 ### Other
 
@@ -82,15 +82,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- *(parser)* accept functional pseudo-pages (@page::slot()) ([#121](https://github.com/oxc-project/oxc-css-parser/pull/121))
-- *(parser)* allow multiple idents in ::part() ([#119](https://github.com/oxc-project/oxc-css-parser/pull/119))
-- *(parser)* support scroll-driven keyframe timeline-range selectors ([#118](https://github.com/oxc-project/oxc-css-parser/pull/118))
-- *(parser)* accept empty @scope () roots and limits ([#117](https://github.com/oxc-project/oxc-css-parser/pull/117))
-- *(parser)* support name-only and general-enclosed @container queries ([#116](https://github.com/oxc-project/oxc-css-parser/pull/116))
+- _(parser)_ accept functional pseudo-pages (@page::slot()) ([#121](https://github.com/oxc-project/oxc-css-parser/pull/121))
+- _(parser)_ allow multiple idents in ::part() ([#119](https://github.com/oxc-project/oxc-css-parser/pull/119))
+- _(parser)_ support scroll-driven keyframe timeline-range selectors ([#118](https://github.com/oxc-project/oxc-css-parser/pull/118))
+- _(parser)_ accept empty @scope () roots and limits ([#117](https://github.com/oxc-project/oxc-css-parser/pull/117))
+- _(parser)_ support name-only and general-enclosed @container queries ([#116](https://github.com/oxc-project/oxc-css-parser/pull/116))
 
 ### Fixed
 
-- *(parser)* don't report an error for @color-profile device-cmyk ([#120](https://github.com/oxc-project/oxc-css-parser/pull/120))
+- _(parser)_ don't report an error for @color-profile device-cmyk ([#120](https://github.com/oxc-project/oxc-css-parser/pull/120))
 
 ### Other
 
@@ -102,13 +102,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- *(parser)* report spec parse errors via recoverable_errors ([#94](https://github.com/oxc-project/oxc-css-parser/pull/94))
+- _(parser)_ report spec parse errors via recoverable_errors ([#94](https://github.com/oxc-project/oxc-css-parser/pull/94))
 
 ### Other
 
 - mention raffia fork ([#106](https://github.com/oxc-project/oxc-css-parser/pull/106))
 - remove redundant clones on Copy types ([#100](https://github.com/oxc-project/oxc-css-parser/pull/100))
-- *(parser)* compact CSS token data ([#98](https://github.com/oxc-project/oxc-css-parser/pull/98))
+- _(parser)_ compact CSS token data ([#98](https://github.com/oxc-project/oxc-css-parser/pull/98))
 - import ast_generated as a module instead of include! ([#97](https://github.com/oxc-project/oxc-css-parser/pull/97))
 - place span first in ast structs ([#96](https://github.com/oxc-project/oxc-css-parser/pull/96))
 - tokenize over bytes instead of CharIndices ([#95](https://github.com/oxc-project/oxc-css-parser/pull/95))

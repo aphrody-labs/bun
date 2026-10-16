@@ -24,16 +24,16 @@ same positive mapped-loader evidence for musl. Missing or contradictory evidence
 fails before installed-library selection. Windows Python uses its compiled
 `sysconfig` platform, including ARM64, rather than an emulated kernel's machine.
 
-| Release target | Native Rust target |
-| --- | --- |
-| Linux x64 GNU | `x86_64-unknown-linux-gnu` |
-| Linux ARM64 GNU | `aarch64-unknown-linux-gnu` |
-| Linux x64 musl | `x86_64-unknown-linux-musl` |
+| Release target   | Native Rust target           |
+| ---------------- | ---------------------------- |
+| Linux x64 GNU    | `x86_64-unknown-linux-gnu`   |
+| Linux ARM64 GNU  | `aarch64-unknown-linux-gnu`  |
+| Linux x64 musl   | `x86_64-unknown-linux-musl`  |
 | Linux ARM64 musl | `aarch64-unknown-linux-musl` |
-| Darwin x64 | `x86_64-apple-darwin` |
-| Darwin ARM64 | `aarch64-apple-darwin` |
-| Windows x64 | `x86_64-pc-windows-msvc` |
-| Windows ARM64 | `aarch64-pc-windows-msvc` |
+| Darwin x64       | `x86_64-apple-darwin`        |
+| Darwin ARM64     | `aarch64-apple-darwin`       |
+| Windows x64      | `x86_64-pc-windows-msvc`     |
+| Windows ARM64    | `aarch64-pc-windows-msvc`    |
 
 `hostTargetInfo()` exports only target/platform/architecture and reduced libc
 evidence: ABI, observed GNU version or musl loader path, and probe source. It

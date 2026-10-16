@@ -16,16 +16,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - a1cda35 semantic/cfg: Add documentation for `EdgeType` (#14859) (camc314)
 
-
-
 ## [0.94.0] - 2025-10-06
 
 ### 🚀 Features
 
 - 3656908 rust: Oxc-index-vec v4.0 (#14254) (Boshen)
-
-
-
 
 ## [0.91.0] - 2025-09-22
 
@@ -33,47 +28,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - fb347da crates: V0.91.0 (#13961) (Boshen)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 ## [0.82.0] - 2025-08-12
 
 ### 🚜 Refactor
 
 - 1cb8e1b cfg, formatter: Remove unnecessary `return` statements (#12896) (overlookmotel)
 
-
-
 ## [0.80.0] - 2025-08-03
 
 ### 📚 Documentation
 
 - de1de35 rust: Add comprehensive README.md documentation for all Rust crates (#12706) (Copilot)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 # Changelog
 
@@ -165,4 +130,3 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Refactor
 
 - d8ad321 semantic: Make control flow generation optional. (#3737) (rzvxa)
-

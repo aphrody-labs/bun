@@ -165,14 +165,14 @@ bun create aphrody/react+desktop my-app
 bun create aphrody/hono my-api
 ```
 
-| Template  | Adds                                                        | Group     |
-| --------- | ----------------------------------------------------------- | --------- |
-| `base`    | Bun server, runtime SDK, SQLite, SSE, dev loop, tests       | always    |
-| `web`     | HTML-bundle frontend served by the same server              | frontend  |
-| `react`   | React 19 and Material 3 web components on the HTML bundler  | frontend  |
-| `desktop` | Tauri 3 desktop shell                                       |           |
-| `hono`    | Hono HTTP surface                                           | framework |
-| `elysia`  | Elysia HTTP surface                                         | framework |
+| Template  | Adds                                                       | Group     |
+| --------- | ---------------------------------------------------------- | --------- |
+| `base`    | Bun server, runtime SDK, SQLite, SSE, dev loop, tests      | always    |
+| `web`     | HTML-bundle frontend served by the same server             | frontend  |
+| `react`   | React 19 and Material 3 web components on the HTML bundler | frontend  |
+| `desktop` | Tauri 3 desktop shell                                      |           |
+| `hono`    | Hono HTTP surface                                          | framework |
+| `elysia`  | Elysia HTTP surface                                        | framework |
 
 Pick at most one template of each group. `bun create aphrody --list` prints the templates.
 
@@ -184,12 +184,12 @@ The templates live in `m3/templates` of an Aphrody checkout, described by its `s
 4. `m3/templates` in the working directory or one of its parents
 5. `$BUN_CREATE_DIR/aphrody`, then `~/.bun-create/aphrody`
 
-| Flag                | Description                                                        |
-| ------------------- | ------------------------------------------------------------------ |
-| `--name=<name>`     | Package name. Defaults to the directory name                       |
-| `--templates=<dir>` | Directory containing `stack.toml`                                  |
+| Flag                | Description                                                                      |
+| ------------------- | -------------------------------------------------------------------------------- |
+| `--name=<name>`     | Package name. Defaults to the directory name                                     |
+| `--templates=<dir>` | Directory containing `stack.toml`                                                |
 | `--aphrody=<dir>`   | Aphrody checkout the project links to. Defaults to the one holding the templates |
-| `--list`            | List the templates                                                 |
+| `--list`            | List the templates                                                               |
 
 ## From a local template
 

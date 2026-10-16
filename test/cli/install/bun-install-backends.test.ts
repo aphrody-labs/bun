@@ -393,49 +393,46 @@ describe("file: folder dependencies with the hoisted linker", () => {
 
   // A module resolves `require()` from the realpath of its file. Behind one symlink per file
   // that is a path outside the project, from where the project's node_modules is not found.
-  test.concurrent(
-    "a folder outside the project resolves its dependencies from the project's node_modules",
-    async () => {
-      using dir = tempDir("folder-dep-outside", {
-        "plugin/package.json": JSON.stringify({
-          name: "plugin",
-          version: "1.0.0",
-          main: "index.js",
-          // `tool` is hoisted to the project's node_modules. `helper` is a folder
-          // dependency, so it is nested under node_modules/plugin/node_modules.
-          dependencies: { tool: "file:./tool.tgz", helper: "file:../project/vendor/helper" },
-        }),
-        "plugin/index.js": `
+  test.concurrent("a folder outside the project resolves its dependencies from the project's node_modules", async () => {
+    using dir = tempDir("folder-dep-outside", {
+      "plugin/package.json": JSON.stringify({
+        name: "plugin",
+        version: "1.0.0",
+        main: "index.js",
+        // `tool` is hoisted to the project's node_modules. `helper` is a folder
+        // dependency, so it is nested under node_modules/plugin/node_modules.
+        dependencies: { tool: "file:./tool.tgz", helper: "file:../project/vendor/helper" },
+      }),
+      "plugin/index.js": `
         const tool = require("tool/package.json");
         module.exports = tool.name + "@" + tool.version + " " + require("helper");
       `,
-        "plugin/tool.tgz": readFileSync(join(import.meta.dir, "bar-0.0.2.tgz")),
-        "project/package.json": JSON.stringify({
-          name: "my-app",
-          version: "1.0.0",
-          dependencies: { plugin: "file:../plugin" },
-        }),
-        "project/vendor/helper/package.json": JSON.stringify({ name: "helper", version: "1.0.0", main: "index.js" }),
-        "project/vendor/helper/index.js": `module.exports = "helper";`,
-      });
-      const projectDir = join(String(dir), "project");
+      "plugin/tool.tgz": readFileSync(join(import.meta.dir, "bar-0.0.2.tgz")),
+      "project/package.json": JSON.stringify({
+        name: "my-app",
+        version: "1.0.0",
+        dependencies: { plugin: "file:../plugin" },
+      }),
+      "project/vendor/helper/package.json": JSON.stringify({ name: "helper", version: "1.0.0", main: "index.js" }),
+      "project/vendor/helper/index.js": `module.exports = "helper";`,
+    });
+    const projectDir = join(String(dir), "project");
 
-      for (const args of [[], ["--frozen-lockfile"]]) {
-        const out = await freshInstall(projectDir, join(String(dir), ".bun-cache"), args);
-        expect(out).toContain("3 packages installed");
+    for (const args of [[], ["--frozen-lockfile"]]) {
+      const out = await freshInstall(projectDir, join(String(dir), ".bun-cache"), args);
+      expect(out).toContain("3 packages installed");
 
-        expect(await run(projectDir, `console.log(require("plugin"))`)).toBe("bar@0.0.2 helper");
+      expect(await run(projectDir, `console.log(require("plugin"))`)).toBe("bar@0.0.2 helper");
 
-        const pluginDir = join(projectDir, "node_modules", "plugin");
-        expect(lstatSync(join(pluginDir, "index.js")).isSymbolicLink()).toBe(false);
-        expect(await readdirSorted(pluginDir)).toEqual(["index.js", "node_modules", "package.json", "tool.tgz"]);
-        expect(await readdirSorted(join(pluginDir, "node_modules"))).toEqual(["helper"]);
-        expect(existsSync(join(projectDir, "node_modules", "tool", "package.json"))).toBe(true);
-        // Nothing is written into the folder the dependency was installed from.
-        expect(await readdirSorted(join(String(dir), "plugin"))).toEqual(["index.js", "package.json", "tool.tgz"]);
-      }
-    },
-  );
+      const pluginDir = join(projectDir, "node_modules", "plugin");
+      expect(lstatSync(join(pluginDir, "index.js")).isSymbolicLink()).toBe(false);
+      expect(await readdirSorted(pluginDir)).toEqual(["index.js", "node_modules", "package.json", "tool.tgz"]);
+      expect(await readdirSorted(join(pluginDir, "node_modules"))).toEqual(["helper"]);
+      expect(existsSync(join(projectDir, "node_modules", "tool", "package.json"))).toBe(true);
+      // Nothing is written into the folder the dependency was installed from.
+      expect(await readdirSorted(join(String(dir), "plugin"))).toEqual(["index.js", "package.json", "tool.tgz"]);
+    }
+  });
 
   test.concurrent("a transitive folder resolves the other transitive folders next to it", async () => {
     // `b` and `c` are installed nested under node_modules/a/node_modules.
@@ -560,48 +557,45 @@ describe("file: folder dependencies with the hoisted linker", () => {
   }
 
   for (const backend of [null, "hardlink", "copyfile"]) {
-    test.concurrent(
-      `a folder that contains the workspace member depending on it${backend ? ` (--backend ${backend})` : ""}`,
-      async () => {
-        // packages/ is itself a package ("x") and member packages/a depends on it
-        // via `file:../`, while the root depends on a different "x", so the
-        // member's copy cannot hoist and installs at node_modules/a/node_modules/x.
-        // node_modules/a is a symlink to packages/a, so the destination physically
-        // lives inside the source.
-        using dir = tempDir("file-dep-ws-ancestor", {
-          "package.json": JSON.stringify({
-            name: "root",
-            version: "1.0.0",
-            workspaces: ["packages/*"],
-            dependencies: { x: "file:./other-x" },
-          }),
-          "other-x/package.json": JSON.stringify({ name: "x", version: "2.0.0" }),
-          "other-x/index.js": "module.exports = 'other-x';",
-          "packages/package.json": JSON.stringify({ name: "x", version: "1.0.0" }),
-          "packages/index.js": "module.exports = 'packages-x';",
-          "packages/a/package.json": JSON.stringify({
-            name: "a",
-            version: "1.0.0",
-            dependencies: { x: "file:../" },
-          }),
+    test.concurrent(`a folder that contains the workspace member depending on it${backend ? ` (--backend ${backend})` : ""}`, async () => {
+      // packages/ is itself a package ("x") and member packages/a depends on it
+      // via `file:../`, while the root depends on a different "x", so the
+      // member's copy cannot hoist and installs at node_modules/a/node_modules/x.
+      // node_modules/a is a symlink to packages/a, so the destination physically
+      // lives inside the source.
+      using dir = tempDir("file-dep-ws-ancestor", {
+        "package.json": JSON.stringify({
+          name: "root",
+          version: "1.0.0",
+          workspaces: ["packages/*"],
+          dependencies: { x: "file:./other-x" },
+        }),
+        "other-x/package.json": JSON.stringify({ name: "x", version: "2.0.0" }),
+        "other-x/index.js": "module.exports = 'other-x';",
+        "packages/package.json": JSON.stringify({ name: "x", version: "1.0.0" }),
+        "packages/index.js": "module.exports = 'packages-x';",
+        "packages/a/package.json": JSON.stringify({
+          name: "a",
+          version: "1.0.0",
+          dependencies: { x: "file:../" },
+        }),
+      });
+
+      for (let i = 0; i < 2; i++) {
+        const { stdout, stderr, exitCode } = await install(String(dir), backend);
+        expect(stderr).not.toContain("ENOENT");
+        expect(stdout).not.toContain("Failed to install");
+        expect(exitCode).toBe(0);
+
+        const nested = join(String(dir), "node_modules", "a", "node_modules", "x");
+        expect(JSON.parse(readFileSync(join(nested, "package.json"), "utf8"))).toEqual({
+          name: "x",
+          version: "1.0.0",
         });
-
-        for (let i = 0; i < 2; i++) {
-          const { stdout, stderr, exitCode } = await install(String(dir), backend);
-          expect(stderr).not.toContain("ENOENT");
-          expect(stdout).not.toContain("Failed to install");
-          expect(exitCode).toBe(0);
-
-          const nested = join(String(dir), "node_modules", "a", "node_modules", "x");
-          expect(JSON.parse(readFileSync(join(nested, "package.json"), "utf8"))).toEqual({
-            name: "x",
-            version: "1.0.0",
-          });
-          // Never a copy of the member's own node_modules.
-          expect(existsSync(join(nested, "a", "node_modules"))).toBe(false);
-        }
-      },
-    );
+        // Never a copy of the member's own node_modules.
+        expect(existsSync(join(nested, "a", "node_modules"))).toBe(false);
+      }
+    });
   }
 
   // What says that a folder is installed is the folder: every file in node_modules is still a

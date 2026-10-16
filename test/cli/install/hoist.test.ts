@@ -688,40 +688,36 @@ test.concurrent("warns when a workspace member's peer is served by a root depend
   expect(await hasOwnNodeModules(packageDir, "pkg1")).toBe(false);
 });
 
-test.concurrent(
-  "the install that resolves it warns when a dependency's peer is served by a root dependency outside its range",
-  async () => {
-    const { packageDir } = await registry.createTestDir({
-      bunfigOpts: { linker: "hoisted" },
-      files: {
-        "package.json": JSON.stringify({
-          name: "root",
-          dependencies: {
-            // peer-deps-fixed@1.0.0 has a peer on no-deps@^1.0.0.
-            // provides-peer-deps-1-0-0 depends on no-deps@1.0.0, which the
-            // resolver binds that peer to, so the resolver itself has nothing
-            // to warn about.
-            "peer-deps-fixed": "1.0.0",
-            "no-deps": "2.0.0",
-            "provides-peer-deps-1-0-0": "1.0.0",
-          },
-        }),
-      },
-    });
-    const expected =
-      'warn: incorrect peer dependency "no-deps@2.0.0": "peer-deps-fixed@1.0.0" requires "no-deps@^1.0.0"';
+test.concurrent("the install that resolves it warns when a dependency's peer is served by a root dependency outside its range", async () => {
+  const { packageDir } = await registry.createTestDir({
+    bunfigOpts: { linker: "hoisted" },
+    files: {
+      "package.json": JSON.stringify({
+        name: "root",
+        dependencies: {
+          // peer-deps-fixed@1.0.0 has a peer on no-deps@^1.0.0.
+          // provides-peer-deps-1-0-0 depends on no-deps@1.0.0, which the
+          // resolver binds that peer to, so the resolver itself has nothing
+          // to warn about.
+          "peer-deps-fixed": "1.0.0",
+          "no-deps": "2.0.0",
+          "provides-peer-deps-1-0-0": "1.0.0",
+        },
+      }),
+    },
+  });
+  const expected = 'warn: incorrect peer dependency "no-deps@2.0.0": "peer-deps-fixed@1.0.0" requires "no-deps@^1.0.0"';
 
-    const fresh = await runBunInstall(installEnv(packageDir), packageDir, { allowWarnings: true, verbose: true });
-    expect(peerWarnings(fresh.err)).toEqual([expected]);
-    expect(await installedVersion(packageDir, "no-deps")).toBe("2.0.0");
-    expect(await installedVersion(packageDir, "provides-peer-deps-1-0-0", "node_modules", "no-deps")).toBe("1.0.0");
-    expect(await hasOwnNodeModules(packageDir, "peer-deps-fixed")).toBe(false);
+  const fresh = await runBunInstall(installEnv(packageDir), packageDir, { allowWarnings: true, verbose: true });
+  expect(peerWarnings(fresh.err)).toEqual([expected]);
+  expect(await installedVersion(packageDir, "no-deps")).toBe("2.0.0");
+  expect(await installedVersion(packageDir, "provides-peer-deps-1-0-0", "node_modules", "no-deps")).toBe("1.0.0");
+  expect(await hasOwnNodeModules(packageDir, "peer-deps-fixed")).toBe(false);
 
-    // An install that has nothing to resolve does not repeat it.
-    const again = await runBunInstall(installEnv(packageDir), packageDir, { savesLockfile: false, verbose: true });
-    expect(peerWarnings(again.err)).toEqual([]);
-  },
-);
+  // An install that has nothing to resolve does not repeat it.
+  const again = await runBunInstall(installEnv(packageDir), packageDir, { savesLockfile: false, verbose: true });
+  expect(peerWarnings(again.err)).toEqual([]);
+});
 
 // The root provides no-deps as something other than a registry package. A
 // workspace is checked through its own version; a copy with no version in the
@@ -2160,85 +2156,82 @@ describe.concurrent("a workspace switches between a member and the registry pack
 });
 
 // bun.lock records no edges: a load binds each peer again, and has to end where the resolver did.
-describe.concurrent(
-  "bun.lock with a member and the published package of its name loads back as it was resolved",
-  () => {
-    const member = (json: object) => JSON.stringify(json);
-    const shapes: [string, Record<string, Record<string, object>>, object, Record<string, object>][] = [
-      [
-        "the root's peer links the member, next to an alias of the published version",
-        { lib: { "3.0.0": {} } },
-        { peerDependencies: { lib: ">=1.1.0" }, devDependencies: { published: "npm:lib@^3.0.0" } },
-        { lib: { name: "lib", version: "1.1.0" } },
-      ],
-      [
-        "the root's peer links the member, and another member depends on the published version",
-        { lib: { "3.0.0": {} } },
-        { peerDependencies: { lib: ">=1.1.0" } },
-        { lib: { name: "lib", version: "1.1.0" }, app: { name: "app", dependencies: { lib: "^3.0.0" } } },
-      ],
-      [
-        "a registry package's peer links the member, and its dependent has the published version",
-        {
-          core: { "1.0.0": {} },
-          plugin: { "1.2.0": { peerDependencies: { core: ">=1.0.0" } } },
-          host: { "2.1.0": { dependencies: { core: "1.0.0", plugin: "*" } } },
-          user: { "2.1.0": { dependencies: { plugin: "^1" } } },
-        },
-        {},
-        {
-          core: { name: "core", version: "5.0.0" },
-          app: { name: "app", dependencies: { host: "2.1.0", user: "2.1.0" } },
-        },
-      ],
-      [
-        "a registry package's optional peer finds the member from one place and the published version from another",
-        {
-          core: { "2.1.0": { dependencies: { util: "^2" } } },
-          util: { "2.0.0": { peerDependencies: { core: "*" }, peerDependenciesMeta: { core: { optional: true } } } },
-        },
-        {},
-        {
-          core: { name: "core", dependencies: { core: "~2.1.0" } },
-          util: { name: "util", optionalDependencies: { "util-published": "npm:util@~2.0.0" } },
-        },
-      ],
-      [
-        "the member depends on the project",
-        { lib: { "1.0.0": {} } },
-        { version: "1.0.0", dependencies: { lib: "^1.0.0" } },
-        { lib: { name: "lib", version: "5.0.0", dependencies: { root: "workspace:*" } } },
-      ],
-      [
-        "the member depends on the project, which uses the published package of its own name too",
-        { lib: { "1.0.0": {} }, d: { "2.0.0": {} } },
-        { name: "d", version: "9.0.0", dependencies: { lib: "^1.0.0", d: "^2.0.0" } },
-        { lib: { name: "lib", version: "5.0.0", dependencies: { d: "workspace:*" } } },
-      ],
-    ];
-
-    test.each(shapes.flatMap(shape => (["hoisted", "isolated"] as const).map(linker => [linker, ...shape] as const)))(
-      "%s: %s",
-      async (linker, _, graph, root, members) => {
-        using server = await serveGraph(graph);
-        using tmp = tempDir("hoist-member-and-published", {
-          "bunfig.toml": `[install]\nregistry = "${server.url}"\nlinker = "${linker}"\n`,
-          "package.json": JSON.stringify({ name: "root", workspaces: ["pk/*"], ...root }),
-          ...Object.fromEntries(Object.entries(members).map(([dir, json]) => [`pk/${dir}/package.json`, member(json)])),
-        });
-        const dir = String(tmp);
-        const lockfile = () => file(join(dir, "bun.lock")).text();
-
-        await run(dir, "install");
-        const fresh = await lockfile();
-        await run(dir, "install", "--frozen-lockfile");
-        expect(await run(dir, "install")).toContain("(no changes)");
-        await run(dir, "install", "--lockfile-only");
-        expect(await lockfile()).toBe(fresh);
+describe.concurrent("bun.lock with a member and the published package of its name loads back as it was resolved", () => {
+  const member = (json: object) => JSON.stringify(json);
+  const shapes: [string, Record<string, Record<string, object>>, object, Record<string, object>][] = [
+    [
+      "the root's peer links the member, next to an alias of the published version",
+      { lib: { "3.0.0": {} } },
+      { peerDependencies: { lib: ">=1.1.0" }, devDependencies: { published: "npm:lib@^3.0.0" } },
+      { lib: { name: "lib", version: "1.1.0" } },
+    ],
+    [
+      "the root's peer links the member, and another member depends on the published version",
+      { lib: { "3.0.0": {} } },
+      { peerDependencies: { lib: ">=1.1.0" } },
+      { lib: { name: "lib", version: "1.1.0" }, app: { name: "app", dependencies: { lib: "^3.0.0" } } },
+    ],
+    [
+      "a registry package's peer links the member, and its dependent has the published version",
+      {
+        core: { "1.0.0": {} },
+        plugin: { "1.2.0": { peerDependencies: { core: ">=1.0.0" } } },
+        host: { "2.1.0": { dependencies: { core: "1.0.0", plugin: "*" } } },
+        user: { "2.1.0": { dependencies: { plugin: "^1" } } },
       },
-    );
-  },
-);
+      {},
+      {
+        core: { name: "core", version: "5.0.0" },
+        app: { name: "app", dependencies: { host: "2.1.0", user: "2.1.0" } },
+      },
+    ],
+    [
+      "a registry package's optional peer finds the member from one place and the published version from another",
+      {
+        core: { "2.1.0": { dependencies: { util: "^2" } } },
+        util: { "2.0.0": { peerDependencies: { core: "*" }, peerDependenciesMeta: { core: { optional: true } } } },
+      },
+      {},
+      {
+        core: { name: "core", dependencies: { core: "~2.1.0" } },
+        util: { name: "util", optionalDependencies: { "util-published": "npm:util@~2.0.0" } },
+      },
+    ],
+    [
+      "the member depends on the project",
+      { lib: { "1.0.0": {} } },
+      { version: "1.0.0", dependencies: { lib: "^1.0.0" } },
+      { lib: { name: "lib", version: "5.0.0", dependencies: { root: "workspace:*" } } },
+    ],
+    [
+      "the member depends on the project, which uses the published package of its own name too",
+      { lib: { "1.0.0": {} }, d: { "2.0.0": {} } },
+      { name: "d", version: "9.0.0", dependencies: { lib: "^1.0.0", d: "^2.0.0" } },
+      { lib: { name: "lib", version: "5.0.0", dependencies: { d: "workspace:*" } } },
+    ],
+  ];
+
+  test.each(shapes.flatMap(shape => (["hoisted", "isolated"] as const).map(linker => [linker, ...shape] as const)))(
+    "%s: %s",
+    async (linker, _, graph, root, members) => {
+      using server = await serveGraph(graph);
+      using tmp = tempDir("hoist-member-and-published", {
+        "bunfig.toml": `[install]\nregistry = "${server.url}"\nlinker = "${linker}"\n`,
+        "package.json": JSON.stringify({ name: "root", workspaces: ["pk/*"], ...root }),
+        ...Object.fromEntries(Object.entries(members).map(([dir, json]) => [`pk/${dir}/package.json`, member(json)])),
+      });
+      const dir = String(tmp);
+      const lockfile = () => file(join(dir, "bun.lock")).text();
+
+      await run(dir, "install");
+      const fresh = await lockfile();
+      await run(dir, "install", "--frozen-lockfile");
+      expect(await run(dir, "install")).toContain("(no changes)");
+      await run(dir, "install", "--lockfile-only");
+      expect(await lockfile()).toBe(fresh);
+    },
+  );
+});
 
 // The root asks for no-deps@1.0.1, and a member is called no-deps too (2.0.0: not accepted).
 test.concurrent.each(["hoisted", "isolated"] as const)(

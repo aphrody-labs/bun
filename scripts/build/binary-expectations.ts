@@ -176,9 +176,8 @@ export function versionScriptGlobals(path: string): {
 /** A version script's `global:` block in the form lld's `--export-dynamic-symbol-list` reads. */
 export function exportList(versionScript: string): string {
   const { patterns, demangledPatterns } = versionScriptGlobals(versionScript);
-  const lines = patterns.map((p) => `  ${p};`);
-  if (demangledPatterns.length > 0)
-    lines.push('  extern "C++" {', ...demangledPatterns.map((p) => `    ${p};`), "  };");
+  const lines = patterns.map(p => `  ${p};`);
+  if (demangledPatterns.length > 0) lines.push('  extern "C++" {', ...demangledPatterns.map(p => `    ${p};`), "  };");
   return `{\n${lines.join("\n")}\n};\n`;
 }
 
@@ -186,14 +185,9 @@ export function exportList(versionScript: string): string {
 export function symbolList(path: string): string[] {
   return readFileSync(path, "utf8")
     .split("\n")
-    .map((l) => l.trim())
+    .map(l => l.trim())
     .filter(
-      (l) =>
-        l.length > 0 &&
-        !l.startsWith("#") &&
-        !l.startsWith(";") &&
-        l !== "EXPORTS" &&
-        !l.startsWith("LIBRARY"),
+      l => l.length > 0 && !l.startsWith("#") && !l.startsWith(";") && l !== "EXPORTS" && !l.startsWith("LIBRARY"),
     );
 }
 
@@ -424,8 +418,7 @@ export function binaryExpectations(cfg: Config): BinaryExpectations {
         // bun otherwise takes from the loader (__tls_get_addr); on aarch64 the stack-protector
         // guard (__stack_chk_guard) is a loader export too, so the loader stays.
         if (cfg.asan) neededLibs.push("libresolv.so.2", "librt.so.1");
-        if (!cfg.asan || cfg.arm64)
-          neededLibs.push(cfg.x64 ? "ld-linux-x86-64.so.2" : "ld-linux-aarch64.so.1");
+        if (!cfg.asan || cfg.arm64) neededLibs.push(cfg.x64 ? "ld-linux-x86-64.so.2" : "ld-linux-aarch64.so.1");
         // glibc 2.17 = RHEL 7 / Amazon Linux 2, the oldest distro generation
         // bun runs on.
         maxSymbolVersions = { GLIBC: "2.17" };
@@ -441,16 +434,7 @@ export function binaryExpectations(cfg: Config): BinaryExpectations {
         maxSymbolVersions = {};
         // API 28 (Android 9): bionic's libc nodes up to P, and liblog's up to
         // O for when -llog is live (allowedLibs above).
-        versionNames = [
-          "LIBC",
-          "LIBC_N",
-          "LIBC_O",
-          "LIBC_P",
-          "LIBLOG",
-          "LIBLOG_L",
-          "LIBLOG_M",
-          "LIBLOG_O",
-        ];
+        versionNames = ["LIBC", "LIBC_N", "LIBC_O", "LIBC_P", "LIBLOG", "LIBLOG_L", "LIBLOG_M", "LIBLOG_O"];
       } else {
         // FreeBSD 13's libc is FBSD_1.7; its libc++/libcxxrt carry
         // GLIBCXX_3.4 / CXXABI_1.3 tags for the libstdc++-compatible subset.
@@ -567,12 +551,7 @@ export function binaryExpectations(cfg: Config): BinaryExpectations {
         forbiddenImports: forbiddenImports(cfg),
         // No initializer audit: PE has no symbol table to name .CRT$XCU entries by.
         pe: {
-          dllCharacteristics: [
-            "DYNAMIC_BASE",
-            "HIGH_ENTROPY_VA",
-            "NX_COMPAT",
-            "TERMINAL_SERVER_AWARE",
-          ],
+          dllCharacteristics: ["DYNAMIC_BASE", "HIGH_ENTROPY_VA", "NX_COMPAT", "TERMINAL_SERVER_AWARE"],
           subsystem: "IMAGE_SUBSYSTEM_WINDOWS_CUI",
         },
       };

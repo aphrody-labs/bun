@@ -9,7 +9,7 @@ Admission reasons and rules: see `src/quality/format_core/FORMATTER_POLICY.md` "
 
 ```js
 // input
-const a = [1, , /* c */];
+const a = [1, ,/* c */];
 
 // ours
 const a = [1, ,/* c */];
@@ -27,8 +27,8 @@ Prettier's attachment relocates the comment backward across the commas (user con
 
 ```ts
 // input
-export type T = string /* c */;
-type U = string /* c */;
+export type T = string; /* c */
+type U = string; /* c */
 
 // ours
 export type T = string; /* c */
@@ -36,7 +36,7 @@ type U = string; /* c */
 
 // prettier
 export type T = string; /* c */
-type U = string /* c */;
+type U = string; /* c */
 ```
 
 Prettier's attachment moves the comment behind the `;` only in the exported form; one uniform move-behind-the-terminator rule instead of emulating the asymmetry.
@@ -49,8 +49,7 @@ Prettier's attachment moves the comment behind the `;` only in the exported form
 ```js
 // input
 !(
-  a &&
-  b // B
+  a && b // B
 );
 
 // ours
@@ -60,8 +59,7 @@ Prettier's attachment moves the comment behind the `;` only in the exported form
 
 // prettier
 !(
-  a &&
-  b // B
+  a && b // B
 );
 ```
 
@@ -78,23 +76,25 @@ Conditions are a separate shared rule (logical operands always break).
 
 ```js
 // input
-y = aaaaaaaaaaaaaaaaaaaaaa && bbbbbbbbbbbbbbbbbbbbbbbb && // same line
-// own line comment
-cccccccccccccccccccccccccc;
+y =
+  aaaaaaaaaaaaaaaaaaaaaa &&
+  bbbbbbbbbbbbbbbbbbbbbbbb && // same line
+  // own line comment
+  cccccccccccccccccccccccccc;
 
 // ours
 y =
-  aaaaaaaaaaaaaaaaaaaaaa
-  && bbbbbbbbbbbbbbbbbbbbbbbb // same line
+  aaaaaaaaaaaaaaaaaaaaaa &&
+  bbbbbbbbbbbbbbbbbbbbbbbb && // same line
   // own line comment
-  && cccccccccccccccccccccccccc;
+  cccccccccccccccccccccccccc;
 
 // prettier ("bbbb  //": two spaces)
 y =
-  aaaaaaaaaaaaaaaaaaaaaa
-  && bbbbbbbbbbbbbbbbbbbbbbbb  // same line
+  aaaaaaaaaaaaaaaaaaaaaa &&
+  bbbbbbbbbbbbbbbbbbbbbbbb && // same line
   // own line comment
-  && cccccccccccccccccccccccccc;
+  cccccccccccccccccccccccccc;
 ```
 
 An artifact of Prettier's comment-extraction doc surgery: an unconditional separator space that its end-of-line trimming can only remove when no line-suffix comment flushes behind it.
@@ -114,14 +114,12 @@ type WithComment = SerializedProps &
   { cause: unknown };
 
 // ours
-type WithComment = SerializedProps
+type WithComment = SerializedProps &
   // own line comment
-  & { cause: unknown };
+  { cause: unknown };
 
 // prettier
-type WithComment = SerializedProps
-  & // own line comment
-  { cause: unknown };
+type WithComment = SerializedProps & { cause: unknown }; // own line comment
 ```
 
 Prettier's output changes line (own-line to same-line, behind `& `) and is not a fixpoint (the second pass inlines the type with the comment behind `;`).
@@ -165,21 +163,22 @@ Prettier gives it to the member and re-lays out the rest.
 
 ```ts
 // input
-type T = (
-  | Aaaa<X,Y>
+type T = (| Aaaa<X,Y>
   | Bbbb<X,Y> // prettier-ignore
-) & C;
+) &
+  C;
 
 // ours (the verbatim range starts at the union's `|`)
 type T = (| Aaaa<X,Y>
   | Bbbb<X,Y> // prettier-ignore
-) & C;
+) &
+  C;
 
 // prettier
-type T = (
-  | Aaaa<X, Y>
+type T = (| Aaaa<X, Y>
   | Bbbb<X,Y> // prettier-ignore
-) & C;
+) &
+  C;
 ```
 
 ## union-added-paren-comment-side
@@ -220,10 +219,9 @@ const v1 = // c
   1;
 const v2 = /* c */ // d
   1;
-const v3 // c
-  = 1;
-const v4 /* c */
-  = 1;
+const v3 = // c
+  1;
+const v4 /* c */ = 1;
 const v5 = // c
   { a: 1 };
 type Alias = // c
@@ -301,13 +299,10 @@ A union's leading comments normalize to behind the leading `|` (`| /* c */ A`) w
 
 ```ts
 // input
-type NestedParens = | (
-  /* c */ | (
-    | A
-    // force break
-    | AmemberLongEnoughToMakeTheUnionTypeBreakIntoMultipleLines
-  )
-);
+type NestedParens =
+  | /* c */ A
+  // force break
+  | AmemberLongEnoughToMakeTheUnionTypeBreakIntoMultipleLines;
 
 // ours
 type NestedParens =
@@ -317,7 +312,7 @@ type NestedParens =
 
 // prettier (comment kept before the `|`)
 type NestedParens =
-  /* c */ | A
+  | /* c */ A
   // force break
   | AmemberLongEnoughToMakeTheUnionTypeBreakIntoMultipleLines;
 ```
@@ -333,8 +328,8 @@ An own-line comment deferred across a statement terminator (printed behind the p
 
 ```ts
 // input
-bar = 2
-/* own line */;
+bar = 2;
+/* own line */
 
 quux();
 
@@ -361,28 +356,28 @@ Comment placements printing Prettier's second-pass fixpoint directly, where the 
 
 ```js
 // input
-assigned = (a = c /* c1 */);
-((/* c2 */ a), b);
-chained = (a) => ((b) => {
+assigned = a = c; /* c1 */
+/* c2 */ (a, b);
+chained = a => b => {
   c();
-} /* c3 */)
-asiLeaf = (someValue /* c4 */)
+}; /* c3 */
+asiLeaf = someValue; /* c4 */
 
 // ours
 assigned = a = c; /* c1 */
 /* c2 */ (a, b);
-chained = (a) => (b) => {
+chained = a => b => {
   c();
 }; /* c3 */
 asiLeaf = someValue; /* c4 */
 
 // prettier (first pass; its second pass produces ours)
-assigned = a = c /* c1 */;
-(/* c2 */ a, b);
-chained = (a) => (b) => {
+assigned = a = c; /* c1 */
+/* c2 */ (a, b);
+chained = a => b => {
   c();
-} /* c3 */;
-asiLeaf = someValue /* c4 */;
+}; /* c3 */
+asiLeaf = someValue; /* c4 */
 ```
 
 - A trailing comment inside a statement's dropped parentheses moves behind the `;`, including the chain-leaf shapes prettier/prettier#19893 left out
@@ -412,12 +407,11 @@ Comments around the operator keep their source side and their line-start side â€
 const t1 = {
   prop1: 1,
 } satisfies
-// Comment
-Record<string, number>;
+  // Comment
+  Record<string, number>;
 const eolLine = 1 as // c
-Foo;
-const eolBlock = {} satisfies /* c */
-{};
+  Foo;
+const eolBlock = {} satisfies /* c */ {};
 
 // ours
 const t1 = {
@@ -435,7 +429,7 @@ const eolBlock = {} satisfies /* c */ {};
 const t1 = {
   prop1: 1,
 } satisfies // Comment
-Record<string, number>;
+  Record<string, number>;
 const eolLine = 1 as Foo; // c
 const eolBlock = {} /* c */ satisfies {};
 ```
@@ -529,15 +523,16 @@ ours deliberately matches Prettier 3.8's output for this construct.
 
 ```js
 /* input (printWidth 80) */
-const exactlyFillsThePrintWidthEightySignatureLinePaddedToLength = (x) => (y) => cond ? longlonglong : shortshort;
+const exactlyFillsThePrintWidthEightySignatureLinePaddedToLength = x => y =>
+  cond ? longlonglong : shortshort;
 
 /* ours */
-const exactlyFillsThePrintWidthEightySignatureLinePaddedToLength = (x) => (y) =>
+const exactlyFillsThePrintWidthEightySignatureLinePaddedToLength = x => y =>
   cond ? longlonglong : shortshort;
 
 /* prettier */
-const exactlyFillsThePrintWidthEightySignatureLinePaddedToLength =
-  (x) => (y) => (cond ? longlonglong : shortshort);
+const exactlyFillsThePrintWidthEightySignatureLinePaddedToLength = x => y =>
+  cond ? longlonglong : shortshort;
 ```
 
 An arrow chain with a parens-adding conditional body keeps a signature line that EXACTLY fills the print width (the signature alone is measured; both idempotent).
@@ -614,16 +609,16 @@ let x = 1;
 (sourceParen).sort();
 
 // ours
-let x = 1
+let x = 1;
 
 // prettier-ignore
-;(sourceParen).sort()
+(sourceParen).sort();
 
 // prettier
 let x = 1
 
 // prettier-ignore
-(sourceParen).sort()
+(sourceParen).sort();
 ```
 
 A suppressed expression statement prints its source text, which keeps parens the reprint would drop, so the line starts with `(` and needs the `semi: false` ASI guard.
@@ -642,11 +637,11 @@ We check the verbatim range's first byte instead and print the guard.
 
 // ours
 // prettier-ignore
-;/** @type {string[]} */ (cast).sort()
+/** @type {string[]} */ (cast).sort();
 
 // prettier
 // prettier-ignore
-/** @type {string[]} */ ;(cast).sort()
+/** @type {string[]} */ (cast).sort();
 ```
 
 A cast comment types its parenthesized expression only when directly adjacent:
@@ -663,13 +658,13 @@ we reuse the reprint path's split (`write_leading_comments_with_asi_guard`, call
 
 ```js
 // input
-var target = x ? y : /** @type {Document} */ (root).head ?? fallback;
+var target = x ? y : (/** @type {Document} */ (root).head ?? fallback);
 
 // ours
 var target = x ? y : (/** @type {Document} */ (root).head ?? fallback);
 
 // prettier
-var target = x ? y : /** @type {Document} */ ((root).head ?? fallback);
+var target = x ? y : /** @type {Document} */ (root.head ?? fallback);
 ```
 
 A cast comment types the parenthesized expression directly after it.
@@ -714,11 +709,14 @@ Type cast comments already follow the rule, in Prettier too.
 
 ```js
 // input
-test("x", () => {
-  run();
-}, // first
-// second
-60000);
+test(
+  "x",
+  () => {
+    run();
+  }, // first
+  // second
+  60000,
+);
 
 // ours
 test(
@@ -731,10 +729,13 @@ test(
 );
 
 // prettier
-test("x", () => {
-  run();
-}, // second // first
-60000);
+test(
+  "x",
+  () => {
+    run();
+  }, // second // first
+  60000,
+);
 ```
 
 Prettier's compact test call layout merges and reverses the comments, and is not a fixpoint.
@@ -751,7 +752,7 @@ A call's `(` and `<` are delimiters (see AGENTS.md "Head-body and operator gaps 
 
 ```js
 // input
-foo /* c */ (a);
+foo /* c */(a);
 foo
 // c
 (a);

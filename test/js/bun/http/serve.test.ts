@@ -3350,101 +3350,93 @@ it.concurrent.each([
   15_000,
 );
 
-it.concurrent(
-  "should allow use of custom timeout",
-  async () => {
-    using server = Bun.serve({
-      port: 0,
-      idleTimeout: 8, // uws precision is in seconds, and lower than 4 seconds is not reliable its timer is not that accurate
-      async fetch(req) {
-        const url = new URL(req.url);
-        return new Response(
-          new ReadableStream({
-            async pull(controller) {
-              controller.enqueue("Hello,");
-              if (url.pathname === "/timeout") {
-                await Bun.sleep(10000);
-              } else {
-                await Bun.sleep(10);
-              }
-              controller.enqueue(" World!");
+it.concurrent("should allow use of custom timeout", async () => {
+  using server = Bun.serve({
+    port: 0,
+    idleTimeout: 8, // uws precision is in seconds, and lower than 4 seconds is not reliable its timer is not that accurate
+    async fetch(req) {
+      const url = new URL(req.url);
+      return new Response(
+        new ReadableStream({
+          async pull(controller) {
+            controller.enqueue("Hello,");
+            if (url.pathname === "/timeout") {
+              await Bun.sleep(10000);
+            } else {
+              await Bun.sleep(10);
+            }
+            controller.enqueue(" World!");
 
-              controller.close();
-            },
-          }),
-          { headers: { "Content-Type": "text/plain" } },
-        );
-      },
-    });
-    async function testTimeout(pathname: string, success: boolean) {
-      const res = await fetch(new URL(pathname, server.url.origin));
-      expect(res.status).toBe(200);
-      if (success) {
-        await expect(res.text()).resolves.toBe("Hello, World!");
-      } else {
-        await expect(res.text()).rejects.toThrow(/The socket connection was closed unexpectedly./);
-      }
-    }
-    await Promise.all([testTimeout("/ok", true), testTimeout("/timeout", false)]);
-  },
-  15_000,
-);
-
-it.concurrent(
-  "should reset timeout after writes",
-  async () => {
-    // the default is 10s so we send 15
-    // this test should take 15s at most
-    const CHUNKS = 15;
-    const payload = Buffer.from(`data: ${Date.now()}\n\n`);
-    using server = Bun.serve({
-      idleTimeout: 5,
-      port: 0,
-      fetch(request, server) {
-        let controller!: ReadableStreamDefaultController;
-        let count = CHUNKS;
-        let interval = setInterval(() => {
-          controller.enqueue(payload);
-          count--;
-          if (count == 0) {
-            clearInterval(interval);
-            interval = null as any;
             controller.close();
-            return;
-          }
-        }, 1000);
-        return new Response(
-          new ReadableStream({
-            start(_controller) {
-              controller = _controller;
-            },
-            cancel(controller) {
-              if (interval) clearInterval(interval);
-            },
-          }),
-          {
-            headers: {
-              "Content-Type": "text/event-stream",
-              "Cache-Control": "no-cache",
-            },
           },
-        );
-      },
-    });
-    let received = 0;
-    const response = await fetch(server.url);
-    const stream = response.body!.getReader();
-    const decoder = new TextDecoder();
-    while (true) {
-      const { done, value } = await stream.read();
-      received += value?.length || 0;
-      if (done) break;
+        }),
+        { headers: { "Content-Type": "text/plain" } },
+      );
+    },
+  });
+  async function testTimeout(pathname: string, success: boolean) {
+    const res = await fetch(new URL(pathname, server.url.origin));
+    expect(res.status).toBe(200);
+    if (success) {
+      await expect(res.text()).resolves.toBe("Hello, World!");
+    } else {
+      await expect(res.text()).rejects.toThrow(/The socket connection was closed unexpectedly./);
     }
+  }
+  await Promise.all([testTimeout("/ok", true), testTimeout("/timeout", false)]);
+}, 15_000);
 
-    expect(received).toBe(CHUNKS * payload.byteLength);
-  },
-  20_000,
-);
+it.concurrent("should reset timeout after writes", async () => {
+  // the default is 10s so we send 15
+  // this test should take 15s at most
+  const CHUNKS = 15;
+  const payload = Buffer.from(`data: ${Date.now()}\n\n`);
+  using server = Bun.serve({
+    idleTimeout: 5,
+    port: 0,
+    fetch(request, server) {
+      let controller!: ReadableStreamDefaultController;
+      let count = CHUNKS;
+      let interval = setInterval(() => {
+        controller.enqueue(payload);
+        count--;
+        if (count == 0) {
+          clearInterval(interval);
+          interval = null as any;
+          controller.close();
+          return;
+        }
+      }, 1000);
+      return new Response(
+        new ReadableStream({
+          start(_controller) {
+            controller = _controller;
+          },
+          cancel(controller) {
+            if (interval) clearInterval(interval);
+          },
+        }),
+        {
+          headers: {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+          },
+        },
+      );
+    },
+  });
+  let received = 0;
+  const response = await fetch(server.url);
+  const stream = response.body!.getReader();
+  const decoder = new TextDecoder();
+  while (true) {
+    const { done, value } = await stream.read();
+    received += value?.length || 0;
+    if (done) break;
+  }
+
+  expect(received).toBe(CHUNKS * payload.byteLength);
+}, 20_000);
 
 it.concurrent("allow requestIP after async operation", async () => {
   using server = Bun.serve({
@@ -3462,45 +3454,37 @@ it.concurrent("allow requestIP after async operation", async () => {
   expect(ip.family).toBeString();
 });
 
-it.concurrent(
-  "allow custom timeout per request",
-  async () => {
-    using server = Bun.serve({
-      idleTimeout: 1,
-      port: 0,
-      async fetch(req, server) {
-        server.timeout(req, 60);
-        await Bun.sleep(10000); //uWS precision is not great
+it.concurrent("allow custom timeout per request", async () => {
+  using server = Bun.serve({
+    idleTimeout: 1,
+    port: 0,
+    async fetch(req, server) {
+      server.timeout(req, 60);
+      await Bun.sleep(10000); //uWS precision is not great
 
-        return new Response("Hello, World!");
-      },
-    });
-    expect(server.timeout).toBeFunction();
-    const res = await fetch(new URL("/long-timeout", server.url.origin));
-    expect(res.status).toBe(200);
-    await expect(res.text()).resolves.toBe("Hello, World!");
-  },
-  20_000,
-);
+      return new Response("Hello, World!");
+    },
+  });
+  expect(server.timeout).toBeFunction();
+  const res = await fetch(new URL("/long-timeout", server.url.origin));
+  expect(res.status).toBe(200);
+  await expect(res.text()).resolves.toBe("Hello, World!");
+}, 20_000);
 
-it.concurrent(
-  "TLS: reaps every zero-byte pre-handshake connection in a burst",
-  async () => {
-    const result = await bunRun(join(import.meta.dirname, "serve-tls-prehandshake-reap-fixture.ts"), {
-      TLS_CERT: tls.cert,
-      TLS_KEY: tls.key,
-      N: "300",
-      DEADLINE_MS: "22000",
-    });
-    expect(result).toSpawn();
-    const { opened, held } = JSON.parse(result.stdout);
-    // Windows' accept backlog may drop part of the burst; the invariant is
-    // that every connection that did complete is reaped.
-    expect(opened).toBeGreaterThanOrEqual(100);
-    expect(held).toBe(0);
-  },
-  40_000,
-);
+it.concurrent("TLS: reaps every zero-byte pre-handshake connection in a burst", async () => {
+  const result = await bunRun(join(import.meta.dirname, "serve-tls-prehandshake-reap-fixture.ts"), {
+    TLS_CERT: tls.cert,
+    TLS_KEY: tls.key,
+    N: "300",
+    DEADLINE_MS: "22000",
+  });
+  expect(result).toSpawn();
+  const { opened, held } = JSON.parse(result.stdout);
+  // Windows' accept backlog may drop part of the burst; the invariant is
+  // that every connection that did complete is reaped.
+  expect(opened).toBeGreaterThanOrEqual(100);
+  expect(held).toBe(0);
+}, 40_000);
 
 it.concurrent("#6462", async () => {
   let headers: [string, string | null][] = [];

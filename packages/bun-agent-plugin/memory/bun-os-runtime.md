@@ -49,4 +49,3 @@ performance from module declarations, a generated bundle or one passing target.
 Historical receipts retain their recorded runtime, source, host and workload.
 
 Related: `bun-build-commands`, `bun-review-rules`, `bun-agent-shared-memory`.
-

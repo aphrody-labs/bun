@@ -24,18 +24,18 @@ bun msvc setup --dry-run         # what the Visual Studio Installer (or winget) 
 bun msvc msi                     # orphaned MSI products that make the installer fail (1714, 1612)
 ```
 
-| Command                    | Output                                                                                                                   |
-| -------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| `doctor` (default)         | One line per component. The exit code is `1` when `cl`, `link`, `lib`, `rc`, the SDK or the UCRT is missing              |
+| Command                    | Output                                                                                                                                  |
+| -------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| `doctor` (default)         | One line per component. The exit code is `1` when `cl`, `link`, `lib`, `rc`, the SDK or the UCRT is missing                             |
 | `info`                     | JSON: `error`, `instances`, `sdks`, `netfxSdks`, `instance`, `msvc`, `sdk`, `ucrt`, `netfx`, `llvm`, `scripts`, `tools`, `env`, `paths` |
-| `list [--json]`            | Instances (sources, toolsets with their aliases and host/target pairs, LLVM), Windows SDKs, .NET Framework SDKs          |
-| `env [--format <f>]`       | `json` (default, also `--json`), `pwsh`, `cmd`, `sh` (MSYS2/Git Bash, `PATH` in `/c/...` form), `github`                |
-| `which <tool>...`          | Absolute path of `cl`, `link`, `lib`, `dumpbin`, `ml64`, `rc`, `midl`, `mt`, `signtool`, `clang-cl`, `cmake`, `ninja`, ... |
-| `exec [--] <tool> [args]`  | Runs the tool with the computed environment and exits with its exit code                                                 |
-| `vcpkg [args...]`           | Runs the pinned `vendor/vcpkg` checkout with MSVC, the target triplet, CMake toolchain and Bun binary cache              |
-| `sync [--check] [--force]` | Writes the environment cache and prints its directory. `--check` exits with `1` when the cache is missing or stale       |
-| `setup`                    | Installs or completes the C++ tools, the Windows SDK and the requested toolset                                           |
-| `msi [--fix]`              | Lists the Visual Studio and Windows SDK MSI products whose cached package is gone, and removes their registration        |
+| `list [--json]`            | Instances (sources, toolsets with their aliases and host/target pairs, LLVM), Windows SDKs, .NET Framework SDKs                         |
+| `env [--format <f>]`       | `json` (default, also `--json`), `pwsh`, `cmd`, `sh` (MSYS2/Git Bash, `PATH` in `/c/...` form), `github`                                |
+| `which <tool>...`          | Absolute path of `cl`, `link`, `lib`, `dumpbin`, `ml64`, `rc`, `midl`, `mt`, `signtool`, `clang-cl`, `cmake`, `ninja`, ...              |
+| `exec [--] <tool> [args]`  | Runs the tool with the computed environment and exits with its exit code                                                                |
+| `vcpkg [args...]`          | Runs the pinned `vendor/vcpkg` checkout with MSVC, the target triplet, CMake toolchain and Bun binary cache                             |
+| `sync [--check] [--force]` | Writes the environment cache and prints its directory. `--check` exits with `1` when the cache is missing or stale                      |
+| `setup`                    | Installs or completes the C++ tools, the Windows SDK and the requested toolset                                                          |
+| `msi [--fix]`              | Lists the Visual Studio and Windows SDK MSI products whose cached package is gone, and removes their registration                       |
 
 ### Resolution
 
@@ -49,14 +49,14 @@ bun msvc msi                     # orphaned MSI products that make the installer
 
 This covers Visual Studio 2017 to 2026 (18.x) in every edition (Community, Professional, Enterprise, Build Tools, Preview), wherever it is installed. `bun msvc` never runs `vswhere.exe` or a `.bat` file, so `NoDefaultCurrentDirectoryInExePath` and a broken `VsDevCmd.bat` have no effect on it.
 
-| Option           | Selects                                                                                                         |
-| ---------------- | --------------------------------------------------------------------------------------------------------------- |
-| `--arch <arch>`  | The target: `x64`, `x86`, `arm64`, `arm64ec` or `arm`. `x86_64`, `amd64` and `aarch64` work too. Default: the host |
-| `--host <arch>`  | The host architecture of the tools. Default: native, then the x64 tools under emulation, then x86              |
-| `--instance <q>` | An instance by id, path, product (`BuildTools`), year (`2026`) or version prefix (`17.14`). Default: the newest  |
+| Option           | Selects                                                                                                              |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------- |
+| `--arch <arch>`  | The target: `x64`, `x86`, `arm64`, `arm64ec` or `arm`. `x86_64`, `amd64` and `aarch64` work too. Default: the host   |
+| `--host <arch>`  | The host architecture of the tools. Default: native, then the x64 tools under emulation, then x86                    |
+| `--instance <q>` | An instance by id, path, product (`BuildTools`), year (`2026`) or version prefix (`17.14`). Default: the newest      |
 | `--toolset <v>`  | An MSVC toolset, exact (`14.44.35207`), by prefix (`14.44`) or by alias (`v143`, `14.44.17.14`). Also `--vcvars-ver` |
-| `--sdk <v>`      | A Windows SDK by version or prefix (`10.0.26100`). Default: the newest complete one                              |
-| `--spectre`      | The Spectre-mitigated libraries (`-vcvars_spectre_libs=spectre`)                                                |
+| `--sdk <v>`      | A Windows SDK by version or prefix (`10.0.26100`). Default: the newest complete one                                  |
+| `--spectre`      | The Spectre-mitigated libraries (`-vcvars_spectre_libs=spectre`)                                                     |
 
 Without `--toolset`, `VCToolsVersion` decides, then the instance's `Microsoft.VCToolsVersion.default.txt`, as in `vcvarsall`. Without `--sdk`, `WindowsSDKVersion` decides, then the newest SDK that has `Windows.h` and the `um` libraries.
 
@@ -159,34 +159,34 @@ Windows file names are case-insensitive, but Linux file names are not. So `setup
 
 The `crt` and `sdk` links keep spaces out of the flags, because cargo and `cc` split `CFLAGS` and `RUSTFLAGS` on spaces.
 
-| Command                   | Output                                                                                                            |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `doctor` (default)        | The sysroot, `clang-cl`, `lld-link`, `llvm-lib`, the optional LLVM tools, and the installed rustup targets        |
-| `setup [--dry-run]`       | Downloads and lays out the sysroot, then prints its directory. `--dry-run` lists the downloads instead            |
-| `sync [--check]`          | Sets up the sysroot when it is missing and rewrites `env.sh` and `env.json`. `--check` exits with `1` instead     |
-| `env [--shell <f>]`       | `sh` (default), `json`, `pwsh`, `cmd` or `github`. `--format` is an alias                                         |
-| `which <tool>...`         | Path of `clang-cl`, `lld-link`, `llvm-lib`, `llvm-rc`, `llvm-mt` or `llvm-dlltool`                                |
-| `list [--json]`, `info`   | The installed sysroots; everything as JSON                                                                        |
+| Command                 | Output                                                                                                        |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `doctor` (default)      | The sysroot, `clang-cl`, `lld-link`, `llvm-lib`, the optional LLVM tools, and the installed rustup targets    |
+| `setup [--dry-run]`     | Downloads and lays out the sysroot, then prints its directory. `--dry-run` lists the downloads instead        |
+| `sync [--check]`        | Sets up the sysroot when it is missing and rewrites `env.sh` and `env.json`. `--check` exits with `1` instead |
+| `env [--shell <f>]`     | `sh` (default), `json`, `pwsh`, `cmd` or `github`. `--format` is an alias                                     |
+| `which <tool>...`       | Path of `clang-cl`, `lld-link`, `llvm-lib`, `llvm-rc`, `llvm-mt` or `llvm-dlltool`                            |
+| `list [--json]`, `info` | The installed sysroots; everything as JSON                                                                    |
 
-| Option                    | Meaning                                                                                                           |
-| ------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `--arch <arch>`           | `x64`, `arm64` or `x86`, repeated or comma-separated. Default: `x64,arm64`                                        |
-| `--toolset <v>`           | A CRT version or prefix: `14.44`, `14.44.17.14` or `14.44.35220`                                                  |
-| `--sdk <v>`               | A Windows SDK version or prefix: `10.0.26100`                                                                     |
-| `--spectre`               | Also the Spectre-mitigated CRT libraries                                                                          |
-| `--manifest <url\|path>`  | Another channel or installer manifest, such as a local mirror. Relative payload URLs resolve against it           |
-| `--cache-dir <dir>`       | Default: `$XDG_CACHE_HOME/bun/msvc` (`~/.cache/bun/msvc`), or `%LOCALAPPDATA%\bun\msvc\cross` on Windows          |
-| `--accept-license`        | Required by `setup` and `sync`, as is `BUN_MSVC_ACCEPT_LICENSE=1`. Microsoft licenses the CRT and the SDK         |
+| Option                   | Meaning                                                                                                   |
+| ------------------------ | --------------------------------------------------------------------------------------------------------- |
+| `--arch <arch>`          | `x64`, `arm64` or `x86`, repeated or comma-separated. Default: `x64,arm64`                                |
+| `--toolset <v>`          | A CRT version or prefix: `14.44`, `14.44.17.14` or `14.44.35220`                                          |
+| `--sdk <v>`              | A Windows SDK version or prefix: `10.0.26100`                                                             |
+| `--spectre`              | Also the Spectre-mitigated CRT libraries                                                                  |
+| `--manifest <url\|path>` | Another channel or installer manifest, such as a local mirror. Relative payload URLs resolve against it   |
+| `--cache-dir <dir>`      | Default: `$XDG_CACHE_HOME/bun/msvc` (`~/.cache/bun/msvc`), or `%LOCALAPPDATA%\bun\msvc\cross` on Windows  |
+| `--accept-license`       | Required by `setup` and `sync`, as is `BUN_MSVC_ACCEPT_LICENSE=1`. Microsoft licenses the CRT and the SDK |
 
 For each architecture of the sysroot, `env` sets these variables, where `T` is the Rust target triple:
 
-| Variable                                         | Value                                                                                   |
-| ------------------------------------------------ | --------------------------------------------------------------------------------------- |
-| `CC_T`, `CXX_T` (`CC_x86_64_pc_windows_msvc`)    | `clang-cl`                                                                              |
-| `AR_T`                                           | `llvm-lib`                                                                              |
-| `CFLAGS_T`, `CXXFLAGS_T`                         | `--target=T`, and `/imsvc` for the CRT and the SDK `ucrt`, `um`, `shared`, `winrt`, `cppwinrt` |
-| `CARGO_TARGET_T_LINKER`                          | `lld-link`                                                                              |
-| `CARGO_TARGET_T_RUSTFLAGS`                       | `-Lnative=` for the CRT, SDK `um` and SDK `ucrt` libraries                              |
+| Variable                                      | Value                                                                                          |
+| --------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `CC_T`, `CXX_T` (`CC_x86_64_pc_windows_msvc`) | `clang-cl`                                                                                     |
+| `AR_T`                                        | `llvm-lib`                                                                                     |
+| `CFLAGS_T`, `CXXFLAGS_T`                      | `--target=T`, and `/imsvc` for the CRT and the SDK `ucrt`, `um`, `shared`, `winrt`, `cppwinrt` |
+| `CARGO_TARGET_T_LINKER`                       | `lld-link`                                                                                     |
+| `CARGO_TARGET_T_RUSTFLAGS`                    | `-Lnative=` for the CRT, SDK `um` and SDK `ucrt` libraries                                     |
 
 It also sets `BUN_MSVC_SYSROOT`, `BUN_MSVC_VERSION` and `BUN_MSVC_SDK_VERSION`. The LLVM tools are looked up on `PATH`, then in the newest `/usr/lib/llvm-<n>/bin` (Debian, Ubuntu) or `/usr/lib/llvm<n>/bin` (Alpine), then as `<tool>-<n>` on `PATH`. Install them with `apt install clang lld llvm` or `apk add clang lld llvm`.
 
@@ -223,12 +223,12 @@ bun winmd inputs                                                                
 
 `--lang rust|ts|json` follows the extension of `--out`: `.ts`, `.mts` or `.js` give `ts`, `.json` gives `json`, and any other extension gives `rust`. The filter grammar is the one windows-bindgen uses. It accepts namespaces, types, functions, `Type::Member`, and `!` to exclude.
 
-| Input                  | Metadata                                                                                                    |
-| ---------------------- | ----------------------------------------------------------------------------------------------------------- |
-| none / `--in default`  | `Windows.Win32.winmd` (flattened `Windows.Win32` namespace) and `Windows.winmd` from windows-rs, embedded   |
-| `--in win32`           | The `Microsoft.Windows.SDK.Win32Metadata` NuGet package: full namespaces, enums, `SetLastError`             |
-| `--in sdk`             | `UnionMetadata\<version>\Windows.winmd` of the installed Windows SDK (WinRT)                                |
-| `--in <file or dir>`   | Any `.winmd` file, or a directory of them                                                                    |
+| Input                 | Metadata                                                                                                  |
+| --------------------- | --------------------------------------------------------------------------------------------------------- |
+| none / `--in default` | `Windows.Win32.winmd` (flattened `Windows.Win32` namespace) and `Windows.winmd` from windows-rs, embedded |
+| `--in win32`          | The `Microsoft.Windows.SDK.Win32Metadata` NuGet package: full namespaces, enums, `SetLastError`           |
+| `--in sdk`            | `UnionMetadata\<version>\Windows.winmd` of the installed Windows SDK (WinRT)                              |
+| `--in <file or dir>`  | Any `.winmd` file, or a directory of them                                                                 |
 
 Rust-only options are passed to windows-bindgen: `--sys`, `--extern`, `--flat`, `--package`, `--minimal`, `--derive`, `--implement`, `--compose`, `--dead-code` and `--rustfmt`. The output is formatted when `rustfmt` is on `PATH`.
 

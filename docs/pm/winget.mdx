@@ -41,12 +41,12 @@ The result is pinned in the `"system"` block of `bun.lock` (or `bun.lockb`). Eac
 
 On Windows, `bun install` picks the installer that best matches the host architecture, the requested scope and the locale. Before running anything, it checks the installer against the manifest's `InstallerSha256`.
 
-| Installer type                           | What Bun does                                                                                     |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `portable`, `zip`                        | Extracts into `node_modules/.system/winget/<id>` and creates `node_modules/.bin/<command>` shims  |
-| `msi`, `wix`, `burn`, `inno`, `nullsoft` | Runs the installer silently with the manifest's switches                                          |
-| `exe`                                    | Runs the installer only if the manifest provides a `Silent` switch                                |
-| `msix`, `appx`                           | Runs `Add-AppxPackage`                                                                            |
+| Installer type                           | What Bun does                                                                                    |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `portable`, `zip`                        | Extracts into `node_modules/.system/winget/<id>` and creates `node_modules/.bin/<command>` shims |
+| `msi`, `wix`, `burn`, `inno`, `nullsoft` | Runs the installer silently with the manifest's switches                                         |
+| `exe`                                    | Runs the installer only if the manifest provides a `Silent` switch                               |
+| `msix`, `appx`                           | Runs `Add-AppxPackage`                                                                           |
 
 Some installers need administrator rights: those with `ElevationRequirement`, machine-scoped ones, and msi, inno or burn installers with no scope. Bun refuses to run these unless the shell is already elevated or `BUN_SYSTEM_ELEVATE=1` is set.
 
@@ -56,14 +56,14 @@ On other platforms, winget packages are still resolved and locked, but installin
 
 ## Environment variables
 
-| Variable             | Effect                                                                                        |
-| -------------------- | --------------------------------------------------------------------------------------------- |
-| `BUN_WINGET_SOURCE`  | Base URL of the winget source. Default: `https://cdn.winget.microsoft.com/cache`              |
-| `BUN_SYSTEM_ROOT`    | Install into this directory instead of `node_modules/.system`. Shims go to `<root>/bin`       |
-| `BUN_SYSTEM_ELEVATE` | Set to `1` to allow installers that need administrator rights                                 |
-| `BUN_SYSTEM_ARCH`    | Override the host architecture: `x64`, `arm64` or `x86`                                       |
-| `BUN_SYSTEM_SCOPE`   | Prefer `user` or `machine` installers                                                         |
-| `BUN_SYSTEM_LOCALE`  | Preferred installer locale, for example `en-US`                                               |
-| `BUN_SYSTEM_REFRESH` | Set to `1` to download the index again even if the cached copy is less than an hour old      |
+| Variable             | Effect                                                                                  |
+| -------------------- | --------------------------------------------------------------------------------------- |
+| `BUN_WINGET_SOURCE`  | Base URL of the winget source. Default: `https://cdn.winget.microsoft.com/cache`        |
+| `BUN_SYSTEM_ROOT`    | Install into this directory instead of `node_modules/.system`. Shims go to `<root>/bin` |
+| `BUN_SYSTEM_ELEVATE` | Set to `1` to allow installers that need administrator rights                           |
+| `BUN_SYSTEM_ARCH`    | Override the host architecture: `x64`, `arm64` or `x86`                                 |
+| `BUN_SYSTEM_SCOPE`   | Prefer `user` or `machine` installers                                                   |
+| `BUN_SYSTEM_LOCALE`  | Preferred installer locale, for example `en-US`                                         |
+| `BUN_SYSTEM_REFRESH` | Set to `1` to download the index again even if the cached copy is less than an hour old |
 
 Downloaded indexes, manifests and installers are cached under `<install cache>/system/winget`.

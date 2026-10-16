@@ -262,7 +262,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 7d3c178 minifier: Remove unreachable recursive functions (#24125) (Dunqing)
 - 3acf4c1 minifier: Expand switch optimiation to remove empty cases (#24520) (Armano)
 - 4d0c601 minifier: Fold arithmetic over undefined and null operands (#24485) (Dunqing)
-- 91541dd minifier: Drop empty switch statements  (#24527) (Armano)
+- 91541dd minifier: Drop empty switch statements (#24527) (Armano)
 
 ### 🐛 Bug Fixes
 
@@ -655,7 +655,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 ### 🐛 Bug Fixes
 
-- 47b4c2f minifier/docs: Correct hyperlink path in OPTIMIZATIONS.md  (#16986) (GRK)
+- 47b4c2f minifier/docs: Correct hyperlink path in OPTIMIZATIONS.md (#16986) (GRK)
 
 ## [0.103.0] - 2025-12-15
 
@@ -711,7 +711,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - c51c036 minifier: Handle direct eval calls (#15067) (sapphi-red)
 - d09c7ee minifier: Add `drop_labels` feature (#14634) (sapphi-red)
 
-
 ## [0.95.0] - 2025-10-15
 
 ### 🚀 Features
@@ -721,7 +720,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 🐛 Bug Fixes
 
 - 1bf83eb minifier: Bail out `arguments` copy loop substitution if the temporary variables are referenced outside the for loop (#14613) (sapphi-red)
-
 
 ## [0.94.0] - 2025-10-06
 
@@ -742,7 +740,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 11dd63b minifier: Use `oxc_ast::NONE` (#14322) (sapphi-red)
 
-
 ## [0.93.0] - 2025-09-28
 
 ### 🚀 Features
@@ -755,7 +752,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 358f2fc minifier: Remove continue in for-in / for-of (#14151) (夕舞八弦)
 - d02d750 mangler: Mangle non top-level `exports` variable (#14169) (sapphi-red)
 
-
 ## [0.92.0] - 2025-09-24
 
 ### 🚀 Features
@@ -766,7 +762,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### ⚡ Performance
 
 - c0ef5f3 minifier: Use oxc_data_structures::stack::Stack for ClassSymbolsStack (#14029) (sapphi-red)
-
 
 ## [0.91.0] - 2025-09-22
 
@@ -782,7 +777,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 ### 🐛 Bug Fixes
 
-- 5198a01 minifier: Handle __proto__ when inlining single-use variables (#13926) (sapphi-red)
+- 5198a01 minifier: Handle **proto** when inlining single-use variables (#13926) (sapphi-red)
 
 ### 📚 Documentation
 
@@ -792,7 +787,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 💼 Other
 
 - fb347da crates: V0.91.0 (#13961) (Boshen)
-
 
 ## [0.91.0] - 2025-09-21
 
@@ -808,14 +802,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 ### 🐛 Bug Fixes
 
-- 5198a01 minifier: Handle __proto__ when inlining single-use variables (#13926) (sapphi-red)
+- 5198a01 minifier: Handle **proto** when inlining single-use variables (#13926) (sapphi-red)
 
 ### 📚 Documentation
 
 - 4817021 minifier: Clarify assumptions (#13950) (sapphi-red)
 - f1862c4 minifier: Add comprehensive documentation for oxc_minifier (#13938) (Boshen)
-
-
 
 ## [0.89.0] - 2025-09-15
 
@@ -826,7 +818,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 🧪 Testing
 
 - fcc3663 minifier: Merge variable declarations into for statement initializers (#13770) (sapphi-red)
-
 
 ## [0.88.0] - 2025-09-15
 
@@ -840,7 +831,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 3d895cf minifier: Remove unused long array expressions (#13752) (sapphi-red)
 - f9fd65b minifier: Disallow merging assignments to let declarations when TDZ error would be introduced (#13635) (sapphi-red)
-
 
 ## [0.87.0] - 2025-09-08
 
@@ -862,7 +852,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 60dd9c9 minifier: Prealloc template exprs vec (#13410) (camchenry)
 
-
 ## [0.86.0] - 2025-08-31
 
 ### 🚀 Features
@@ -880,8 +869,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 46fc83d minifier: Use `.reference_id()` instead of `.reference_id` (#13443) (sapphi-red)
 
-
-
 ## [0.84.0] - 2025-08-30
 
 ### 🚀 Features
@@ -893,7 +880,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 🐛 Bug Fixes
 
 - 3e902a0 minifier: Keep argument spread side effects against empty functions (#13401) (sapphi-red)
-
 
 ## [0.83.0] - 2025-08-29
 
@@ -935,14 +921,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - d0f1d63 minifier: Share test helper functions between unit tests and integration tests (#13360) (sapphi-red)
 
-
 ## [0.82.3] - 2025-08-20
 
 ### 🐛 Bug Fixes
 
 - d27a04b ecmascript: Skip array length evaluation if there are any spread elements (#13162) (Monad)
 - f10ac33 codegen: Remove end sourcemaps for `}`, `]`, `)` (#13180) (Boshen)
-
 
 ## [0.82.2] - 2025-08-17
 
@@ -969,7 +953,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 2625bdf minifier: No need to collect references if AST is not changed (#13078) (Boshen)
 
-
 ## [0.82.1] - 2025-08-13
 
 ### 🚀 Features
@@ -982,7 +965,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 53c51f9 minifier: Remove clippy allow directives and fix needless_pass_by_ref_mut warnings in oxc_minifier (#13030) (Copilot)
 - 3a8a3ce minifier: Remove clippy::unused_self allow directive by converting methods to associated functions (#13029) (Copilot)
 - 7223686 minifier: Use the original vec in-place in `minimize_statements` (#13028) (Boshen)
-
 
 ## [0.82.0] - 2025-08-12
 
@@ -1027,14 +1009,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 2c06eda minifier: Add comprehensive test coverage for unary plus removal (#12860) (Copilot)
 
-
 ## [0.81.0] - 2025-08-06
 
 ### 🐛 Bug Fixes
 
 - 44b37f7 minifier: Keep classes with static properties + side effect initializer (#12848) (Boshen)
 - 00fda91 minifier: Fix `KATAKANA MIDDLE DOT` syntax error for unicode 4.1 to 15 (#12829) (Boshen)
-
 
 ## [0.80.0] - 2025-08-03
 
@@ -1058,7 +1038,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 16312d7 minifier: Add more tests (#12722) (Copilot)
 
-
 ## [0.79.1] - 2025-07-31
 
 ### 🚀 Features
@@ -1072,7 +1051,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 08a7379 minifier: Do not read constant value from for loop init (#12654) (Boshen)
 - 5642b29 minifier: Initialize constant value in DCE (#12610) (Boshen)
 
-
 ## [0.79.0] - 2025-07-30
 
 ### 🚀 Features
@@ -1083,7 +1061,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 🐛 Bug Fixes
 
 - fe9c8e1 minifier: Do not remove non-plain empty functions (#12573) (Boshen)
-
 
 ## [0.78.0] - 2025-07-24
 
@@ -1097,7 +1074,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 6838948 minifier: Remove change detection based on function changes (#12429) (Boshen)
 - 1cf08c0 minifier: Make DCE remove more code to align with rollup (#12427) (Boshen)
 
-
 ## [0.77.3] - 2025-07-20
 
 ### 🚀 Features
@@ -1108,7 +1084,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### ⚡ Performance
 
 - 8bae417 codegen: Remove the useless tokens generated by some expressions (#12394) (Boshen)
-
 
 ## [0.77.2] - 2025-07-17
 
@@ -1122,7 +1097,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - cc3bea4 minifier: Do not remove unused assignment expression yet (#12367) (Boshen)
 - eb12132 minifier: Unify access `CompressOptions` through `ctx.state` (#12346) (Boshen)
 - 7aea02c minifier: Move `State` to a separate file (#12322) (Boshen)
-
 
 ## [0.77.1] - 2025-07-16
 
@@ -1138,8 +1112,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 30e8690 minifier: Move tests around (#12237) (Boshen)
 
-
-
 ## [0.76.0] - 2025-07-08
 
 ### 💥 BREAKING CHANGES
@@ -1149,7 +1121,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 🚀 Features
 
 - 35c6d48 minifier: Implement `Number` known methods (#12078) (Ethan Wu)
-
 
 ## [0.75.1] - 2025-07-03
 
@@ -1161,13 +1132,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 50fd11e minifier: Always escape `$` when concatenating template literals (#12029) (Boshen)
 
-
 ## [0.75.0] - 2025-06-25
 
 ### 🚀 Features
 
 - 1b3f909 minifier: Apply `TreeShakeOptions::annotations` (#11856) (Boshen)
-
 
 ## [0.74.0] - 2025-06-23
 
@@ -1186,9 +1155,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 5a46641 ecmascript: Move `get_constant_value_for_reference_id` to `IsGlobalReference` trait (#11810) (Boshen)
 - d5a8f18 minifier: Make `Ctx` take `&mut TraverseCtx` (#11771) (Boshen)
 
-
-
-
 ## [0.73.0] - 2025-06-13
 
 ### 💥 BREAKING CHANGES
@@ -1198,7 +1164,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 🚀 Features
 
 - 40ac186 minifier: Annotate more pure constructors (#11555) (Boshen)
-
 
 # Changelog
 
@@ -1235,7 +1200,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Performance
 
-
 ## [0.70.0] - 2025-05-15
 
 ### Refactor
@@ -1246,7 +1210,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Features
 
-- d04ab1f minifier: Inline object literal including __proto__ with spread operator (#10795) (sapphi-red)
+- d04ab1f minifier: Inline object literal including **proto** with spread operator (#10795) (sapphi-red)
 - 41c928f minifier: Remove function expressions passed to object spreads (#10794) (sapphi-red)
 - 54840d5 minifier: Inline nested spread object literals (#10792) (sapphi-red)
 
@@ -1270,7 +1234,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Refactor
 
-
 ## [0.64.0] - 2025-04-17
 
 - 7284135 ast: [**BREAKING**] Remove `trailing_commas` from `ArrayExpression` and `ObjectExpression` (#10431) (Boshen)
@@ -1284,7 +1247,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 8db9dc5 minifier/minimize_statements: Reduce allocations of `Vec` (#10435) (Dunqing)
 
 ### Refactor
-
 
 ## [0.63.0] - 2025-04-08
 
@@ -1332,7 +1294,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Refactor
 
-
 ## [0.61.2] - 2025-03-23
 
 ### Features
@@ -1358,13 +1319,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Refactor
 
-
 ## [0.60.0] - 2025-03-18
 
 - b3ce925 data_structures: [**BREAKING**] Put all parts behind features (#9849) (overlookmotel)
 
 ### Features
-
 
 ## [0.59.0] - 2025-03-18
 
@@ -1375,7 +1334,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - f707d1f parser: Set kind of var_declarator correctly for using decl (#9753) (camc314)
 
 ### Refactor
-
 
 ## [0.58.0] - 2025-03-13
 
@@ -1397,7 +1355,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 047fb01 minifier: Place `void 0` on right hand side if possible (#9606) (sapphi-red)
 - 36f8703 minifier: Compress `[] + string` to `string` (#9602) (sapphi-red)
 - 554c4ce minifier: Compress constant integer index access (#9604) (sapphi-red)
-- e3c2015 minifier: Allow compressing computed __proto__ more precisely (#9595) (sapphi-red)
+- e3c2015 minifier: Allow compressing computed **proto** more precisely (#9595) (sapphi-red)
 - 6a57198 minifier: Allow compressing computed constructor/prototype keys precisely (#9594) (sapphi-red)
 
 ### Bug Fixes
@@ -1406,7 +1364,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 24d9261 minifier: Remove names from functions / classes in normal pass to make the minifier idempotent (#9608) (sapphi-red)
 
 ### Refactor
-
 
 ## [0.56.2] - 2025-03-07
 
@@ -1858,7 +1815,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 6afc590 minifier: Compress typeof addition string (#8301) (camc314)
 - ecc789f minifier: Fold `if(x >> y == 0){}` -> `if(!(x >> y)){}` (#8277) (Boshen)
 - 0e3b79a minifier: Fold `String()` -> `''`, `Number()` -> `false` (#8274) (Boshen)
-- c9cf593 minifier: Compress  property key `{[1]: _}`  -> {1: _} (#8272) (Boshen)
+- c9cf593 minifier: Compress property key `{[1]: _}` -> {1: _} (#8272) (Boshen)
 - b92b2ab minifier: Fold `BigInt(1n)` -> `1n` (#8270) (Boshen)
 - a4df387 minifier: Compress loose equals undefined (#8268) (camc314)
 - f000596 minifier: Minify call expressionsto `Number` (#8267) (camc314)
@@ -2014,7 +1971,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - ebc80f6 ast: [**BREAKING**] Change 'raw' from &str to Option<Atom> (#7547) (Song Gao)
 
 ### Refactor
-
 
 ## [0.39.0] - 2024-12-04
 
@@ -2280,7 +2236,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Performance
 
-
 ### Refactor
 
 - 067f9b5 semantic: Introduce `IsGlobalReference` trait (#5672) (Boshen)
@@ -2429,7 +2384,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Refactor
 
-
 ## [0.18.0] - 2024-07-09
 
 - d347aed ast: [**BREAKING**] Generate `ast_builder.rs`. (#3890) (rzvxa)
@@ -2452,7 +2406,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Bug Fixes
 
-- aaac2d8 codegen: Preserve parentheses from AST instead calculating from  operator precedence (#4055) (Boshen)
+- aaac2d8 codegen: Preserve parentheses from AST instead calculating from operator precedence (#4055) (Boshen)
 
 ### Refactor
 
@@ -2474,7 +2428,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - f3c3970 minifier: Add skeleton for RemoveDeadCode ast pass (#3802) (Boshen)
 
 ### Bug Fixes
-
 
 ### Refactor
 
@@ -2539,6 +2492,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 4f9dd98 span: Remove `From<String>` and `From<Cow>` API because they create memory leak (#2628) (Boshen)
 
 ### Refactor
+
 - cbc2f5f Remove unused dependencies (#2718) (Boshen)- 8001b2f Make `CompactStr` immutable (#2620) (overlookmotel)- 0646bf3 Rename `CompactString` to `CompactStr` (#2619) (overlookmotel)
 
 ## [0.9.0] - 2024-03-05
@@ -2623,4 +2577,3 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Refactor
 
 - 3516759 ast: Use `atom` for `Directive` and `Hashbang` (#701) (Yunfei He)
-

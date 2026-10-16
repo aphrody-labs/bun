@@ -117,26 +117,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - bec7a7d semantic: Add scope to `TSConstructorType` (#14676) (camc314)
 
-
-
-
-
-
 ## [0.91.0] - 2025-09-22
 
 ### 💼 Other
 
 - fb347da crates: V0.91.0 (#13961) (Boshen)
-
-
-
-
-
-
-
-
-
-
 
 ## [0.82.3] - 2025-08-20
 
@@ -144,22 +129,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - d676e04 ast_macros: Do not panic in macro (#13102) (overlookmotel)
 
-
 ## [0.82.2] - 2025-08-17
 
 ### 🚜 Refactor
 
 - c63c944 ast_macros: Simplify code (#13101) (overlookmotel)
 
-
-
-
 ## [0.81.0] - 2025-08-06
 
 ### 💥 BREAKING CHANGES
 
 - 50b91ac ast: [**BREAKING**] Remove `IdentifierReference` from `qualifier` field of `TSImportType` (#12799) (camc314)
-
 
 ## [0.80.0] - 2025-08-03
 
@@ -171,21 +151,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - de1de35 rust: Add comprehensive README.md documentation for all Rust crates (#12706) (Copilot)
 
-
-
 ## [0.79.0] - 2025-07-30
 
 ### 🚜 Refactor
 
 - f0b1f0d napi/oxlint, napi/parser: Remove source length from `RawTransferMetadata` (#12483) (overlookmotel)
 
-
 ## [0.78.0] - 2025-07-24
 
 ### 🚀 Features
 
 - dee25f4 ast: Add `pife` field to `Function` (#12469) (sapphi-red)
-
 
 ## [0.77.3] - 2025-07-20
 
@@ -201,22 +177,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 5e3b415 linter: Duplicate `RawTransferMetadata` in `oxc_linter` crate (#12382) (overlookmotel)
 - 319fc3b allocator/fixed-size: Store `alloc_ptr` in the memory block backing the allocator (#12380) (overlookmotel)
 
-
-
 ## [0.77.1] - 2025-07-16
 
 ### 🚜 Refactor
 
 - 5fba91c napi/parser: Raw transfer: introduce metadata struct (#12269) (overlookmotel)
-
-
-
-
-
-
-
-
-
 
 # Changelog
 
@@ -305,7 +270,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 7066d1c ast, span, syntax, regular_expression: [**BREAKING**] Remove `ContentHash` (#8512) (overlookmotel)
 
 ### Features
-
 
 ## [0.38.0] - 2024-11-26
 
@@ -435,4 +399,3 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Features
 
 - be87ca8 transform: `oxc_traverse` crate (#3169) (overlookmotel)
-

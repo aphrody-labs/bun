@@ -432,19 +432,16 @@ it.concurrent("bun remove drops the list when the removed package is its only (d
   expect(exitCode).toBe(0);
 });
 
-it.concurrent(
-  "bun remove rejects a dependency list that is not an object and leaves package.json untouched",
-  async () => {
-    const pkg = JSON.stringify({ name: "x", dependencies: ["foo"], devDependencies: { bar: "file:./bar" } });
-    using dir = tempDir("bun-remove-malformed", { ...local("bar"), "package.json": pkg });
+it.concurrent("bun remove rejects a dependency list that is not an object and leaves package.json untouched", async () => {
+  const pkg = JSON.stringify({ name: "x", dependencies: ["foo"], devDependencies: { bar: "file:./bar" } });
+  using dir = tempDir("bun-remove-malformed", { ...local("bar"), "package.json": pkg });
 
-    const { stderr, exitCode } = await remove(String(dir), "bar");
+  const { stderr, exitCode } = await remove(String(dir), "bar");
 
-    expect(stderr).toContain("dependencies expects a map of specifiers");
-    expect(await file(join(String(dir), "package.json")).text()).toBe(pkg);
-    expect(exitCode).toBe(1);
-  },
-);
+  expect(stderr).toContain("dependencies expects a map of specifiers");
+  expect(await file(join(String(dir), "package.json")).text()).toBe(pkg);
+  expect(exitCode).toBe(1);
+});
 
 for (const linker of ["hoisted", "isolated"] as const) {
   it.concurrent(`bun remove unlinks only the removed package's .bin entry (${linker})`, async () => {
@@ -829,32 +826,29 @@ function serveAnyPackage(extra: Record<string, object> = {}) {
 }
 
 for (const linker of ["hoisted", "isolated"] as const) {
-  it.concurrent(
-    `bun remove keeps the folder another workspace has under that name for an alias (${linker})`,
-    async () => {
-      await using registry = serveAnyPackage();
-      using dir = tempDir(`bun-remove-alias-${linker}`, {
-        "bunfig.toml": `[install]\nregistry = "${registry.url}"\nlinker = "${linker}"\n`,
-        "package.json": JSON.stringify({ name: "root", workspaces: ["packages/*"] }),
-        "packages/a/package.json": JSON.stringify({ name: "a", dependencies: { foo: "npm:bar@1" } }),
-        "packages/b/package.json": JSON.stringify({ name: "b", dependencies: { foo: "^1" } }),
-      });
-      // What `import "foo"` in packages/a finds.
-      const fooOfA = async () => {
-        for (const from of [join(String(dir), "packages", "a"), String(dir)]) {
-          const manifest = file(join(from, "node_modules", "foo", "package.json"));
-          if (await manifest.exists()) return (await manifest.json()).name;
-        }
-      };
-      expect(await run(String(dir), "install")).toMatchObject({ exitCode: 0 });
-      expect(await fooOfA()).toBe("bar");
+  it.concurrent(`bun remove keeps the folder another workspace has under that name for an alias (${linker})`, async () => {
+    await using registry = serveAnyPackage();
+    using dir = tempDir(`bun-remove-alias-${linker}`, {
+      "bunfig.toml": `[install]\nregistry = "${registry.url}"\nlinker = "${linker}"\n`,
+      "package.json": JSON.stringify({ name: "root", workspaces: ["packages/*"] }),
+      "packages/a/package.json": JSON.stringify({ name: "a", dependencies: { foo: "npm:bar@1" } }),
+      "packages/b/package.json": JSON.stringify({ name: "b", dependencies: { foo: "^1" } }),
+    });
+    // What `import "foo"` in packages/a finds.
+    const fooOfA = async () => {
+      for (const from of [join(String(dir), "packages", "a"), String(dir)]) {
+        const manifest = file(join(from, "node_modules", "foo", "package.json"));
+        if (await manifest.exists()) return (await manifest.json()).name;
+      }
+    };
+    expect(await run(String(dir), "install")).toMatchObject({ exitCode: 0 });
+    expect(await fooOfA()).toBe("bar");
 
-      const { stderr, exitCode } = await remove(join(String(dir), "packages", "b"), "foo");
-      expect(stderr).not.toContain("error:");
-      expect(await fooOfA()).toBe("bar");
-      expect(exitCode).toBe(0);
-    },
-  );
+    const { stderr, exitCode } = await remove(join(String(dir), "packages", "b"), "foo");
+    expect(stderr).not.toContain("error:");
+    expect(await fooOfA()).toBe("bar");
+    expect(exitCode).toBe(0);
+  });
 
   it.concurrent(`bun remove deletes the folder of a package that is still an optional peer (${linker})`, async () => {
     await using registry = serveAnyPackage({

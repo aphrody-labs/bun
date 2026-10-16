@@ -36,15 +36,15 @@ const cached = Engine.deserialize(await Bun.file("engine.dat").bytes());
 
 `check(url, sourceUrl?, requestType?, method?)` returns:
 
-| Field          | Meaning                                                                       |
-| -------------- | ----------------------------------------------------------------------------- |
-| `matched`      | A blocking rule matched                                                       |
+| Field          | Meaning                                                                      |
+| -------------- | ---------------------------------------------------------------------------- |
+| `matched`      | A blocking rule matched                                                      |
 | `blocked`      | The request must be blocked (`important`, or `matched` without an exception) |
-| `important`    | An `$important` rule matched; exceptions do not apply                         |
-| `filter`       | The matched blocking rule (raw text with `debug: true`)                       |
-| `exception`    | The matched exception rule (raw text with `debug: true`)                      |
-| `redirect`     | `data:` URL of a `$redirect` resource, when `resources` provides it           |
-| `rewrittenUrl` | The URL after `$removeparam` rules                                            |
+| `important`    | An `$important` rule matched; exceptions do not apply                        |
+| `filter`       | The matched blocking rule (raw text with `debug: true`)                      |
+| `exception`    | The matched exception rule (raw text with `debug: true`)                     |
+| `redirect`     | `data:` URL of a `$redirect` resource, when `resources` provides it          |
+| `rewrittenUrl` | The URL after `$removeparam` rules                                           |
 
 `sourceUrl` defaults to `url` (a first-party request); `requestType` is one of `document`, `subdocument`, `script`, `stylesheet`, `image`, `font`, `media`, `object`, `xmlhttprequest`, `websocket`, `ping` or `other` (the default).
 

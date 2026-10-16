@@ -9,15 +9,13 @@ const option = (name: string) => {
 const root = resolve(import.meta.dir, "../../..");
 const monorepo = resolve(import.meta.dir, "..");
 const samples = Number(option("--samples") ?? 7);
-if (!Number.isInteger(samples) || samples < 3 || samples > 100)
-  throw new Error("--samples must be 3..100");
+if (!Number.isInteger(samples) || samples < 3 || samples > 100) throw new Error("--samples must be 3..100");
 const output = resolve(option("--out") ?? `${root}/tmp/video-benchmark/results.json`);
 const projects = ["remotion", "hyperframes"] as const;
 const results: Record<string, unknown> = {};
 for (const project of projects) {
   const upstream = option(`--${project}-upstream`);
-  if (!upstream)
-    throw new Error(`Missing --${project}-upstream (checkout of pinned UPSTREAM.json revision)`);
+  if (!upstream) throw new Error(`Missing --${project}-upstream (checkout of pinned UPSTREAM.json revision)`);
   const baseline = resolve(upstream);
   const provenance = await Bun.file(`${monorepo}/${project}/UPSTREAM.json`).json();
   const sha = Bun.spawnSync(["git", "-C", baseline, "rev-parse", "HEAD"]);
@@ -47,17 +45,15 @@ for (const project of projects) {
     }
   }
   const all = [...rows.upstream, ...rows.migrated];
-  if (all.some((row) => row.digest !== all[0].digest || row.checksum !== all[0].checksum))
+  if (all.some(row => row.digest !== all[0].digest || row.checksum !== all[0].checksum))
     throw new Error(`${project}: upstream/migration output mismatch`);
   const stats = (rows: any[]) => {
-    const timings = rows.map((row) => row.elapsedMs).sort((a, b) => a - b);
+    const timings = rows.map(row => row.elapsedMs).sort((a, b) => a - b);
     return {
       medianMs: timings[Math.floor(timings.length / 2)],
       minMs: timings[0],
       maxMs: timings.at(-1),
-      medianRssBytes: rows.map((row) => row.rssBytes).sort((a, b) => a - b)[
-        Math.floor(rows.length / 2)
-      ],
+      medianRssBytes: rows.map(row => row.rssBytes).sort((a, b) => a - b)[Math.floor(rows.length / 2)],
     };
   };
   const upstreamStats = stats(rows.upstream),
@@ -76,7 +72,7 @@ for (const project of projects) {
   };
 }
 const fullStack = option("--aphrody-root")
-  ? await import("./stack.ts").then((mod) =>
+  ? await import("./stack.ts").then(mod =>
       mod.measureStack(resolve(option("--aphrody-root")!), root, option("--native-library")),
     )
   : {

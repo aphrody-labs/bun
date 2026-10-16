@@ -11,9 +11,12 @@ import { launch } from "bun:obscura";
 
 const browser = await launch({ workers: 1 });
 try {
-  const { targetId } = await browser.connection.send<{ targetId: string }>("Target.createTarget", {
-    url: "about:blank",
-  });
+  const { targetId } = await browser.connection.send<{ targetId: string }>(
+    "Target.createTarget",
+    {
+      url: "about:blank",
+    },
+  );
   const { sessionId } = await browser.connection.send<{ sessionId: string }>(
     "Target.attachToTarget",
     {

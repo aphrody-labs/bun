@@ -49,13 +49,13 @@ If no runtime is installed, it throws an error with `code: "ERR_WINUI_RUNTIME_NO
 
 `winui.start(options)` starts XAML on the current thread. It makes the thread a single-threaded apartment, creates a `DispatcherQueue`, the XAML `Application` (with the WinUI controls metadata provider) and `XamlControlsResources`, the Fluent styles of the controls. There is one application per process: later calls return the same one.
 
-| Option                   | Default         | Description                                             |
-| ------------------------ | --------------- | ------------------------------------------------------- |
-| `version`                | newest          | Windows App SDK release, such as `"1.8"`                |
-| `theme`                  | system          | `"light"` or `"dark"`                                   |
-| `resources`              | `true`          | load `XamlControlsResources`; XAML strings are merged after it |
-| `exitOnLastWindowClosed` | `true`          | call `app.exit()` when the last window closes           |
-| `winrt`                  | `bun:winrt`     | WinRT core to use instead of `bun:winrt`                |
+| Option                   | Default     | Description                                                    |
+| ------------------------ | ----------- | -------------------------------------------------------------- |
+| `version`                | newest      | Windows App SDK release, such as `"1.8"`                       |
+| `theme`                  | system      | `"light"` or `"dark"`                                          |
+| `resources`              | `true`      | load `XamlControlsResources`; XAML strings are merged after it |
+| `exitOnLastWindowClosed` | `true`      | call `app.exit()` when the last window closes                  |
+| `winrt`                  | `bun:winrt` | WinRT core to use instead of `bun:winrt`                       |
 
 `app.createWindow({ title, width, height, content, activate })` creates a `Microsoft.UI.Xaml.Window`. The size is in device-independent pixels. `content` is either XAML markup or an element. The window exposes `hwnd`, `title`, `content`, `find(name)`, `resize()`, `activate()`, `close()` and the `closed` promise.
 

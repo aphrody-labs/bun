@@ -167,7 +167,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - e412cf2 linter: Clamp invalid JS plugin locations (#26144) (camc314)
 - d86c113 linter: Normalize reversed JS plugin locations (#26138) (camc314)
 - 73c09b2 linter/eslint/no-use-before-define: Run on JS, JSX files (#26114) (camc314)
-- 03ef0f2 linter/unicorn/no-useless-spread: Treat typed arrays as a distinct value hint (#26067) (Aadharsh  Pannirselvam)
+- 03ef0f2 linter/unicorn/no-useless-spread: Treat typed arrays as a distinct value hint (#26067) (Aadharsh Pannirselvam)
 - bd15905 linter/react/no-unstable-nested-components: Check nested component object property names (#26101) (camc314)
 - 3910e2b linter/eslint/no-unassigned-vars: Skip Svelte and Vue files (#26042) (Hamody We)
 - 047f7ca linter/plugins: Fix interaction between JS plugins and Vue rules (#26080) (overlookmotel)
@@ -324,7 +324,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 8f784f3 linter: Reduce rule config dispatch size (#25461) (Boshen)
 - 2de4ec2 linter: Reduce visitor code size (#25441) (Boshen)
 - 6fb7f47 linter/unicorn/prefer-export-from: Narrow `ExportFromDeclaration` lookup (#25381) (camc314)
-- e3f6263 linter/unicorn/prefer-default-parameters: Avoid reference allocation  (#25379) (camc314)
+- e3f6263 linter/unicorn/prefer-default-parameters: Avoid reference allocation (#25379) (camc314)
 - d863473 linter/vue/max-props: Narrow AST dispatch (#25372) (camc314)
 - 273d867 linter: Avoid diagnostic sorting after applying fixes (#25079) (Sysix)
 - 4ec9189 oxlint/lsp: Avoid second lock for getting/removing unused directives (#25350) (Sysix)
@@ -580,7 +580,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - cd5204e linter/typescript/no-unsafe-declaration-merging: Use keyed binding lookup (#23894) (Marius Schulz)
 - e948498 linter/eslint/prefer-named-capture-group: Only dispatch for relevant node types (#23868) (Connor Shea)
 - 4ac7a8e linter/eslint/max-depth: Derive node types (#23896) (Connor Shea)
-- daeed09 linter/eslint/no-restricted-globals: Only scan unresolved references  (#23890) (camc314)
+- daeed09 linter/eslint/no-restricted-globals: Only scan unresolved references (#23890) (camc314)
 - e808514 linter/jest-vitest: Speed up no-standalone-expect (#23883) (camc314)
 - 8b165e5 linter/react/exhaustive-deps: Skip non-reactive calls early (#23882) (camc314)
 - 54005e7 linter/eslint/no-unused-vars: Precompute exported bindings (#23881) (camc314)
@@ -1221,7 +1221,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - d122877 linter/no-extra-non-null-assertions: Add fixer (#21744) (yyh)
 - 37f0731 linter: `with_plugin_vitest(true)` working realiable in test mode (#21769) (Said Atrahouch)
 - e42e6a6 linter/role-supports-aria-props: False positive with `combobox` and `haspopup` (#21725) (Leonabcd123)
-- e24324f linter: Iframe-has-title false positive for template literals  (#21714) (Leonabcd123)
+- e24324f linter: Iframe-has-title false positive for template literals (#21714) (Leonabcd123)
 - 41a6510 linter/vitest/hoisted-apis-on-top: Only check first member (#20068) (Sidharth Vinod)
 - 98ed888 linter: Check initializer for allowConstantExport in only-export-components (#20608) (Eyüp Can Akman)
 - 1946e8b linter: Avoid applying override plugin categories to eslint rules (#21521) (bab)
@@ -1352,7 +1352,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 9cfe57e linter/unicorn: Implement prefer-import-meta-properties rule (#20662) (Irfan - ئىرفان)
 - 1edb391 linter/eslint: Implement `no-restricted-exports` rule (#20592) (Nicolas Le Cam)
-- 0f12bcd linter/react: Implement  `hook-use-state` rule (#20986) (Khaled Labeb)
+- 0f12bcd linter/react: Implement `hook-use-state` rule (#20986) (Khaled Labeb)
 - 7fdf722 linter/unicorn: Implement `no-useless-iterator-to-array` rule (#20945) (Mikhail Baev)
 - 39c8f2c linter/jest: Implement padding-around-after-all-blocks (#21034) (Sapphire)
 - ac39e51 linter/eslint-vitest-plugin: Prefer importing vitest globals (#20960) (Said Atrahouch)
@@ -1585,7 +1585,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - eb928ee linter/no-dynamic-delete: Add help messages to missing diagnostics (#19768) (Daniel Osmond)
 - a985666 linter/no-empty-interface: Add help messages to missing diagnostics (#19769) (Daniel Osmond)
 - 2dc0ceb linter/no-extra-non-null-assertion: Add help messages to missing diagnostics (#19770) (Daniel Osmond)
-- 95d5d66 linter/no-dupe-keys: Handle `__proto__` proto setters in  (#19762) (camc314)
+- 95d5d66 linter/no-dupe-keys: Handle `__proto__` proto setters in (#19762) (camc314)
 - 24ff0db linter/exhaustive-deps: False positive for member expressions in IIFEs (#19751) (Dennis Chen)
 - 7243a58 linter/no-use-before-define: Honor `ignoreTypeReferences` when value and type name collisions (#19747) (Dimava)
 - eefd818 linter/explicit-module-boundary-types: Add help messages to missing diagnostics (#19736) (Daniel Osmond)
@@ -1737,7 +1737,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - ebb80b3 ast: Add `node_id` field to all AST struct nodes (#18138) (Boshen)
 - 2879fc5 linter: Implement fixer for unicorn/prefer-math-trunc (#19275) (camc314)
 - a204eda linter: Implement fixer for unicorn/no-typeof-undefined (#19274) (camc314)
-- ab46d9c linter: Implement  typescript/class-literal-property-style (#19252) (Vincent R)
+- ab46d9c linter: Implement typescript/class-literal-property-style (#19252) (Vincent R)
 - 1a61f58 linter: Implement typescript/no-invalid-void-type (#19242) (Vincent R)
 
 ### 🐛 Bug Fixes
@@ -1782,7 +1782,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 3184f36 linter: Ban relative js plugin specifiers in js extends config (#18944) (camc314)
 - b270739 linter: Support extends in oxlint.config.ts (#18942) (camc314)
 - 6024ddf linter: Implement suggestion for `unicorn/prefer-reflect-apply` (#18932) (Mikhail Baev)
-- b06b3a9 linter: Implement `typescript/consistent-type-assertions`  (#18869) (Bazyli Brzóska)
+- b06b3a9 linter: Implement `typescript/consistent-type-assertions` (#18869) (Bazyli Brzóska)
 - 5ee7b2f linter/vitest: Implements `prefer-expect-type-of` rule (#17957) (Said Atrahouch)
 - a7b360a linter/unicorn: Implement `unicorn/relative-url-style` rule (#18857) (Mikhail Baev)
 
@@ -1807,7 +1807,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 6067a49 linter/jsdoc: False positive in `check-tag-names` for `@` in email addresses and npm scopes (#19021) (Boshen)
 - 6d46ed9 linter/capitalized-comments: Ignore prettier and oxfmt directives (#19008) (Artyom Alekseevich)
 - a46c878 linter/react/no-array-index-key: Look for keys in expressions (#18997) (camc314)
-- 7d61704 linter/prefer-at: Skip autofix for `arguments`  (#18991) (camc314)
+- 7d61704 linter/prefer-at: Skip autofix for `arguments` (#18991) (camc314)
 - 3ebae53 linter/preserve-caught-error: Skip traversing into nested try/catch stmts (#18990) (camc314)
 - e94d37e linter/react/no-unknown-property: Add missing `popover` related props (#18953) (Christoph Nakazawa)
 - 04b0d99 linter: Normalize relative paths with `./` prefix in overrides. (#18954) (connorshea)
@@ -1880,7 +1880,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - dd1a653 linter: Fix doc comment for ignoreStateless config option. (#18808) (connorshea)
 - 5909085 linter/plugins: Add doc comments (#18753) (overlookmotel)
 - b82faec linter: Glob for any css module for no-unassigned-import (#18713) (Ben Stickley)
-- cd86347 linter: Mark some react rules as unsupported, misc docs improvements  (#18617) (connorshea)
+- cd86347 linter: Mark some react rules as unsupported, misc docs improvements (#18617) (connorshea)
 - 23401d8 linter: Update fixes and suggestions status for tsgolint rules (#18619) (camchenry)
 
 ## [1.42.0] - 2026-01-26
@@ -2045,14 +2045,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 ### 🚀 Features
 
-- 659c23e linter: Init note field boilerplate  (#17589) (Shrey Sudhir)
+- 659c23e linter: Init note field boilerplate (#17589) (Shrey Sudhir)
 - 6870b64 parser: Add TS1363 error code (#17609) (Sysix)
 - 6154c8c linter/eslint-plugin-vitest: Implemented vitest/warn-todo rule (#17228) (Said Atrahouch)
 - 0043cd6 linter/eslint-plugin-vitest: Implement consistent-vitest-vi rule (#17389) (Said Atrahouch)
 - a6d773d linter: Add full TS support to eslint/no-useless-constructor (#17592) (camc314)
 - f02c0e7 linter/eslint: Implement complexity (#17569) (Nguyen Tran)
 - bc7aae7 linter/no-unused-vars: Add fixer to remove unused catch bindings (#17567) (Don Isaac)
-- 9e8ec78 linter/only-throw-error rule: Add `allowRethrowing` option for  (#17554) (camc314)
+- 9e8ec78 linter/only-throw-error rule: Add `allowRethrowing` option for (#17554) (camc314)
 - b67e819 linter: Add fixer for `unicorn/prefer-response-static-json` rule (#17559) (Mikhail Baev)
 - 44b0361 linter/vue: Implement no-this-in-before-route-enter (#17525) (yefan)
 - ee34716 linter/react: Implement no-will-update-set-state (#17530) (Kenzo Wada)
@@ -2564,7 +2564,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 70bf817 linter/no-unused-private-class-members: Add edge case tests for conditional expressions (#15320) (camc314)
 
-
 ## [1.25.0] - 2025-10-30
 
 ### 💥 BREAKING CHANGES
@@ -2650,7 +2649,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - bf898e5 linter: Increase stability of tsgolint test cases (#15063) (camc314)
 - 49da411 linter/no-standalone-expect: Fix tests (#14901) (camc314)
-
 
 ## [1.24.0] - 2025-10-22
 
@@ -2747,7 +2745,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 1fcf56c linter/no-fallthrough: Add test for switch with logical operators + break (#14811) (camc314)
 - cd9ef3e linter: Add test case with function params in no-const-assign (#14674) (camc314)
 
-
 ## [1.23.0] - 2025-10-13
 
 ### 🚀 Features
@@ -2792,13 +2789,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 4440516 linter: Refactor rules to take advantage of node type skipping (#14519) (camchenry)
 - 78261d6 linter: Refactor `no-invalid-fetch-options` to be more easily analyzed (#14458) (camchenry)
 
-
 ## [1.22.0] - 2025-10-08
 
 ### 🚀 Features
 
 - 9f9d25f linter/oxc: Implement `branches-sharing-code` (#14440) (camc314)
-
 
 ## [1.21.0] - 2025-10-08
 
@@ -2819,7 +2814,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 3374b8e linter/language_server: Move all lsp relevant code to `oxc_language_server` crate (#14430) (Sysix)
 - d24b74e linter/language_server: `oxc_linter::TsgoLinter::run_source` returns `Message` (#14429) (Sysix)
 - e5b7fb2 linter/language_server: `oxc_linter::Runtime::run_source` returns `Message` (#14428) (Sysix)
-
 
 ## [1.20.0] - 2025-10-06
 
@@ -2862,7 +2856,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 55ebb8b linter: Add test for `disable_for_this_section` fix (#14240) (Sysix)
 - a7e8662 linter: Port unicorn test cases to no-named-default (#14239) (camc314)
-
 
 ## [1.19.0] - 2025-09-29
 
@@ -2911,7 +2904,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - b6d2546 linter: Reduce string cloning in tsgo fixes (#14092) (overlookmotel)
 - c94c5dc linter: Remove allocation in `CompositeFix::merge_fixes` (#14090) (overlookmotel)
 
-
 ## [1.18.0] - 2025-09-24
 
 ### 🐛 Bug Fixes
@@ -2922,7 +2914,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### ⚡ Performance
 
 - c2f7459 language_server: Avoid cloning on message conversion (#14058) (Sysix)
-
 
 ## [1.17.0] - 2025-09-23
 
@@ -2956,7 +2947,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 4d04c6e linter/plugins: Flatten `LintFileResult` fields (#14033) (overlookmotel)
 - 06363e0 linter: Add node type codegen support for `match node.kind()` (#13736) (camchenry)
 - b53292d linter: Use unstable sort where possible (#13818) (sapphi-red)
-
 
 ## [1.16.0] - 2025-09-16
 
@@ -3000,7 +2990,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 18a1145 linter: Add debug assertions for skipping rules (#13724) (camc314)
 - cb080de linter/no-unused-vars: Add test for non ASCII chars in JSX components (#13820) (camc314)
 - b6eba27 linter/no-undef: Add more test cases for `arguments` (#13764) (camc314)
-
 
 ## [1.15.0] - 2025-09-11
 
@@ -3065,7 +3054,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - e110476 linter: Reformat code (#13573) (overlookmotel)
 
-
 ## [1.14.0] - 2025-08-30
 
 ### 💥 BREAKING CHANGES
@@ -3101,7 +3089,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 13470b2 oxc_linter: Run `from_tsgo_lint_diagnostic` tests only with lsp feature flag (#13396) (Sysix)
 
-
 ## [1.13.0] - 2025-08-26
 
 ### 🚀 Features
@@ -3136,7 +3123,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 🧪 Testing
 
 - 30c54a3 linter: Add test for `Message::from_tsgo_lint_diagnostic` (#13254) (Sysix)
-
 
 ## [1.12.0] - 2025-08-17
 
@@ -3178,7 +3164,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 0b61338 linter/jsx-curly-brace-presence: Iter over chars rather than using regex (#13094) (Copilot)
 - 74fb6c9 linter: Reduce repeated code (#13070) (overlookmotel)
 
-
 ## [1.11.2] - 2025-08-12
 
 ### 🐛 Bug Fixes
@@ -3195,7 +3180,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 🧪 Testing
 
 - 6b054b6 linter/expect-expect: Add test case for calling expect as return arg (#12983) (camc314)
-
 
 ## [1.11.1] - 2025-08-09
 
@@ -3223,7 +3207,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 281f939 linter/expect-expect: Add test case for `expect` call in for loop (#12907) (camc314)
 
-
 ## [1.11.0] - 2025-08-07
 
 ### 🚀 Features
@@ -3242,7 +3225,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 🧪 Testing
 
 - e15093c linter/new-cap: Add tests for `Intl.DateTimeFormat` (#12878) (camc314)
-
 
 ## [1.10.0] - 2025-08-06
 
@@ -3320,7 +3302,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - c6bfb8a linter: Add rule configuration consistency test (#12744) (camc314)
 - 2ceb835 linter: Fix offset for partical source texts (#12594) (Sysix)
 
-
 ## [1.9.0] - 2025-07-29
 
 ### 💥 BREAKING CHANGES
@@ -3364,7 +3345,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 56468c7 linter/no-unused-private-class-members: Add more test cases (#12569) (camc314)
 - 191a164 linter/no-unused-private-class-members: Add more test cases (#12563) (camc314)
 
-
 ## [1.8.0] - 2025-07-22
 
 ### 🚀 Features
@@ -3401,7 +3381,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 📚 Documentation
 
 - 3c21d94 linter: Correct comment on `RawTransferMetadata2` type (#12428) (overlookmotel)
-
 
 ## [1.7.0] - 2025-07-16
 
@@ -3459,7 +3438,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 514d40c linter: Do not create `Resolver` unless required (#12142) (overlookmotel)
 - 7103527 linter/no-constructor-return: Optimize loop (#12138) (overlookmotel)
 
-
 ## [1.6.0] - 2025-07-07
 
 ### 🚀 Features
@@ -3502,7 +3480,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 00a9fd9 linter: Check for filename before running `nextjs/no-head-import-in-document` rule (#12060) (Sysix)
 - 62a3ce0 linter: Replace `unicode-segmentation` crate with `icu_segmenter` (#12063) (Sysix)
 
-
 ## [1.5.0] - 2025-07-02
 
 ### 🚀 Features
@@ -3519,7 +3496,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - cfa52c2 ast: Add `AstKind` for `AssignmentTargetRest` (#11984) (camc314)
 - 3f91f24 linter: Remove `RulesCache` (#11981) (camc314)
 - 54582cb ast: Add `AstKind` for `BindingProperty` (#11974) (camc314)
-
 
 ## [1.4.0] - 2025-06-30
 
@@ -3577,7 +3553,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 168f776 linter/no-console: Add more tests (#11878) (overlookmotel)
 
-
 ## [1.3.0] - 2025-06-23
 
 ### 🚀 Features
@@ -3597,7 +3572,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 📚 Documentation
 
 - faab3ee linter: Improve docs for typescript/no-this-alias (#11845) (camc314)
-
 
 ## [1.2.0] - 2025-06-19
 
@@ -3630,7 +3604,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 5ca3d04 ast: Add `TSArrayType` as `AstKind` (#11745) (camchenry)
 - 219adcc ast: Don't generate AstKind for ArrayExpressionElement (#11684) (Ulrich Stark)
 - c1be6b8 linter: Shorten Span construction (#11686) (Ulrich Stark)
-- 4ca659c linter: Cleanup typescript/prefer-function-type  (#11672) (Brad Dunbar)
+- 4ca659c linter: Cleanup typescript/prefer-function-type (#11672) (Brad Dunbar)
 - 8e30c5f ast: Don't generate AstKind for ForStatementInit (#11617) (Ulrich Stark)
 
 ### 📚 Documentation
@@ -3649,7 +3623,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 🧪 Testing
 
 - 44a9df8 linter: Update testsuite for `no-undef` (#11706) (Sysix)
-
 
 ## [1.1.0] - 2025-06-12
 
@@ -3672,7 +3645,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - b7b0dc3 parser: Improve `TSModuleDeclaration` parsing (#11605) (Boshen)
 - d29bbb2 linter: Simplify implementation of `eslint/no-lonely-if` (#11550) (Ulrich Stark)
 - d41fb13 ast: Get jsx types out of AstKind exceptions (#11535) (Ulrich Stark)
-
 
 ## [1.0.0] - 2025-06-10
 
@@ -3774,7 +3746,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - eaa605e linter: Avoid some `Arc::clone` in linter runtime (#11388) (Boshen)
 - 1cd8b9c linter: Fixes in `react/forward-ref-uses-ref` are suggestions (#11376) (Sysix)
 - 50ef691 linter: Add `diagnostics_with_multiple_fixes` to `LintContext` (#11357) (Sysix)
-- 606bb34 linter: Accept `PossibleFixes`  instead of `Fix` for `Messages` (#11295) (Sysix)
+- 606bb34 linter: Accept `PossibleFixes` instead of `Fix` for `Messages` (#11295) (Sysix)
 - 042a3f3 linter: Use `PossibleFixes` instead of `Option<Fix>` (#11284) (Sysix)
 - ffcfb46 linter: Improve `unicorn/throw-new-error` (#11364) (shulaoda)
 - 8fb55c3 linter: Cleanup docs and simplify code of `eslint/no-fallthrough` (#11331) (Ulrich Stark)
@@ -3984,7 +3956,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 ### Refactor
 
-
 ## [0.16.8] - 2025-04-27
 
 ### Features
@@ -4048,7 +4019,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 5d1dfb5 linter: Fix wording in the eqeqeq docs (#10401) (Connor Pearson)
 
 ### Refactor
-
 
 ## [0.16.6] - 2025-04-14
 
@@ -4190,7 +4160,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 ## [0.16.1] - 2025-03-20
 
-- ce6808a parser: [**BREAKING**] Rename `type_parameters` to `type_arguments` where needed  (#9815) (hi-ogawa)
+- ce6808a parser: [**BREAKING**] Rename `type_parameters` to `type_arguments` where needed (#9815) (hi-ogawa)
 
 ### Features
 
@@ -4592,11 +4562,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 0e168b8 linter: Catch more cases in const-comparisons (#8215) (Cameron)
 - bde44a3 linter: Add `statement_span` to `ModuleRecord/ImportEntry` (#8195) (Alexander S.)
-- ccaa9f7 linter: Implement `eslint/new-cap`  (#8146) (Alexander S.)
+- ccaa9f7 linter: Implement `eslint/new-cap` (#8146) (Alexander S.)
 
 ### Bug Fixes
 
-- 2b14a6f linter: Fix `ignorePattern` config for windows  (#8214) (Alexander S.)
+- 2b14a6f linter: Fix `ignorePattern` config for windows (#8214) (Alexander S.)
 
 ## [0.15.4] - 2024-12-30
 
@@ -4606,7 +4576,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 47cea9a linter: Implement `eslint/no-extra-label` (#8181) (Anson Heung)
 - ef76e28 linter: Implement `eslint/no-multi-assign` (#8158) (Anson Heung)
-- 384858b linter: Implement `jsx-a11y/no-noninteractive-tabindex`  (#8167) (Tyler Earls)
+- 384858b linter: Implement `jsx-a11y/no-noninteractive-tabindex` (#8167) (Tyler Earls)
 - afc21a6 linter: Implement `eslint/vars-on-top` (#8157) (Yuichiro Yamashita)
 - 65796c4 linter: Implement `eslint/prefer-rest-params` (#8155) (Yuichiro Yamashita)
 - 5234d96 linter: Implement `eslint/no-nested-ternary` (#8150) (Yuichiro Yamashita)
@@ -4879,7 +4849,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### Features
 
 - 1d9f528 linter: Implement `unicorn/prefer-string-raw` lint rule (#7335) (Ryan Walker)
-- d445e0f linter: Implement `unicorn/consistent-existence-index-check`  (#7262) (Ryan Walker)
+- d445e0f linter: Implement `unicorn/consistent-existence-index-check` (#7262) (Ryan Walker)
 - 01ddf37 linter: Add `allowReject` option to `no-useless-promise-resolve-reject` (#7274) (no-yan)
 - 755a31b linter: Support bind function case for compatibility with `promise/no-return-wrap` (#7232) (no-yan)
 - 428770e linter: Add `import/no-namespace` rule (#7229) (Dmitry Zakharov)
@@ -5002,7 +4972,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 619d06f linter: Fix suggestion for `eslint:no_empty_static_block` rule (#6732) (Tapan Prakash)
 
 ### Bug Fixes
-
 
 ### Performance
 
@@ -5273,7 +5242,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - f942485 linter: Remove all* remaining "Disallow <foo>" messages (#5812) (DonIsaac)
 - b5ad518 linter: Improve diagnostic messages for various lint rules (#5808) (DonIsaac)
 - 858f7af linter: Plugin prefix name for eslint-plugin-node (#5807) (DonIsaac)
-- 737ba1d linter: Fix some cases on ```AssignmentExpression``` for ```unicorn/consistent-function-scoping``` (#5675) (Arian94)
+- 737ba1d linter: Fix some cases on `AssignmentExpression` for `unicorn/consistent-function-scoping` (#5675) (Arian94)
 - 148c7a8 linter: Replace bitwise AND (&) with logical AND (&&) in explici… (#5780) (kaykdm)
 - b4ed564 linter/no-unused-vars: Writes to members triggering false positive (#5744) (Dunqing)
 - e9c084a linter/no-unused-vars: False positive when a variable used as a computed member property (#5722) (Dunqing)
@@ -5311,7 +5280,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 ### Features
 
-- 9ca2593 linter: Eslint/sort-keys  (#4845) (Na'aman Hirschfeld)
+- 9ca2593 linter: Eslint/sort-keys (#4845) (Na'aman Hirschfeld)
 - 023c160 linter: Impl `Serialize` for `OxlintConfig` (#5594) (DonIsaac)
 - 24d6a47 linter: Implement `eslint/no-invalid-regexp` (#5443) (Boshen)
 - c6bbf94 minifier: Constant fold unary expression (#5669) (Boshen)
@@ -5351,7 +5320,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 4e748b5 linter: Replace ast "compare by hash" to "compare by content" (#5602) (dalaoshu)
 - bac03e3 linter: Make fields of `LintServiceOptions` private (#5593) (DonIsaac)
 - 2661d8b linter: Jest prefer_strict_equal (#5588) (IWANABETHATGUY)
-- 067f9b5 semantic: Introduce `IsGlobalReference` trait (#5672) (Boshen)- 26d9235 Enable clippy::ref_as_ptr  (#5577) (夕舞八弦)
+- 067f9b5 semantic: Introduce `IsGlobalReference` trait (#5672) (Boshen)- 26d9235 Enable clippy::ref_as_ptr (#5577) (夕舞八弦)
 
 ### Testing
 
@@ -5513,13 +5482,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 8ff6f2c linter/no-unused-vars: Panic on UsingDeclarations (#5206) (DonIsaac)
 - d29042e linter/no-unused-vars: Function expression in implicit arrow function return (#5155) (DonIsaac)
 - 36e4a28 linter/no-unused-vars: Panic in variable declarator usage checks (#5160) (DonIsaac)
-- ba62a71 linter/react: Fixed false positive with missing key inside React.Children.toArray() for fragments  (#5133) (Earl Chase)
+- ba62a71 linter/react: Fixed false positive with missing key inside React.Children.toArray() for fragments (#5133) (Earl Chase)
 - fd1031a linter/unicorn: Breaking fixer in case statements for `no-null` (#5176) (DonIsaac)
 - 7b86ed6 linter/unicorn: Handle type casts and parens in `no-null` (#5175) (Don Isaac)
 - b629e16 linter/unicorn: Improve diagnostic message for `no-null` (#5172) (DonIsaac)
 
 ### Performance
-- ce454cf Use simdutf8 to validate UTF-8 when reading files  (#5196) (dalaoshu)
+
+- ce454cf Use simdutf8 to validate UTF-8 when reading files (#5196) (dalaoshu)
 
 ### Refactor
 
@@ -5716,7 +5686,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 ### Performance
 
-- 6ff200d linter: Change react rules and utils to use `Cow` and `CompactStr` instead of `String`  (#4603) (DonIsaac)
+- 6ff200d linter: Change react rules and utils to use `Cow` and `CompactStr` instead of `String` (#4603) (DonIsaac)
 - f259df0 linter: Make img-redundant-alt only build a regex once (#4604) (DonIsaac)
 - 7585e16 linter: Remove allocations for string comparisons (#4570) (DonIsaac)
 - b60bdf1 linter: `no_shadow_restricted_names` only look up name in hashmap once (#4472) (overlookmotel)
@@ -5830,7 +5800,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 432d6d9 linter: Find disabled directives using the message's `Span`. (#4010) (rzvxa)
 - dbbb6fc linter: Global variable check should always check builtin variables (#3973) (Boshen)
 
-
 ## [0.5.1] - 2024-06-29
 
 ### Features
@@ -5891,6 +5860,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - abd6ac8 semantic/cfg: Discrete finalization path after `NewFunction`s. (#3671) (rzvxa)
 
 ### Performance
+
 - 4f7ff7e Do not pass `&Atom` to functions (#3818) (overlookmotel)
 
 ### Refactor
@@ -6210,7 +6180,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 59869d0 linter/tree-shaking: Check `this` in different environment (#2901) (Wang Wenzhe)
 - ce34829 linter/tree-shaking: Support ThisExpression and NewExpression (#2890) (Wang Wenzhe)
 - 15d08f6 linter/tree-shaking: Support ArrowFunctionExpression (#2883) (Wang Wenzhe)
-- 4a86dcb linter/tree-shaking: Support `ArrayExpression` and `ArrayPattern`  (#2882) (Wang Wenzhe)
+- 4a86dcb linter/tree-shaking: Support `ArrayExpression` and `ArrayPattern` (#2882) (Wang Wenzhe)
 
 ### Bug Fixes
 
@@ -6274,7 +6244,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - e86cd62 linter/import: Support check reexport binding in namespace (#2678) (Dunqing)
 - 4947809 linter/jest: Add new property for `parse_jest_fn` (#2715) (cinchen)
 - 2ef4762 linter/tree-shaking: Add cache for checking mutating identifiers (#2743) (Wang Wenzhe)
-- 11219d4 linter/tree_shaking: Check assignment of identifier  (#2697) (Wang Wenzhe)
+- 11219d4 linter/tree_shaking: Check assignment of identifier (#2697) (Wang Wenzhe)
 - 57ce737 semantic: Move redeclare varaibles to symbol table (#2614) (Dunqing)
 - 8b3de77 span: `impl<'a> PartialEq<str> for Atom<'a>` (#2649) (Boshen)
 - 4f9dd98 span: Remove `From<String>` and `From<Cow>` API because they create memory leak (#2628) (Boshen)
@@ -6513,7 +6483,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 198f0e5 linter: Eslint-plugin-jsx-a11y aria-activedescendant-has-tabindex (#2012) (keita hino)
 - a356918 linter: Eslint-plugin-next: no-document-import-in-page (#1997) (kaykdm)
 - c70a065 linter: Eslint-plugin-next: no-head-element (#2006) (kaykdm)
-- 8f0f824 linter: Eslint-plugin-next:  no-typos (#1978) (kaykdm)
+- 8f0f824 linter: Eslint-plugin-next: no-typos (#1978) (kaykdm)
 - 04540f7 linter: Eslint-plugin-jsx-a11y click-events-have-key-events (#1976) (Yuji Sugiura)
 
 ### Bug Fixes
@@ -6661,9 +6631,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 ### Features
 
-- 621a943 linter: Eslint-plugin-jsx-a11y no-access-key (correctness) for  (#1708) (yoshi2no)
+- 621a943 linter: Eslint-plugin-jsx-a11y no-access-key (correctness) for (#1708) (yoshi2no)
 - 774a257 linter: Eslint-plugin-unicorn no-null(style) (#1705) (Ken-HH24)
-- 6a90cd4 linter: Add  jsx-a11y settings (#1668) (msdlisper)
+- 6a90cd4 linter: Add jsx-a11y settings (#1668) (msdlisper)
 - cf0793b linter: `tabindex-no-positive` for eslint-plugin-jsx-a11y (#1677) (yoshi2no)
 - c9589b5 linter: Eslint-plugin-unicorn/prefer-prototype-methods (#1660) (Hao Cheng)
 - 90524c8 linter: Add eslint-plugin-import(export) rule (#1654) (Wenzhe Wang)
@@ -6702,7 +6672,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 ### Features
 
-- d88f4f4 linter: Eslint-plugin-jsx-a11y no-autofocus  (#1641) (msdlisper)
+- d88f4f4 linter: Eslint-plugin-jsx-a11y no-autofocus (#1641) (msdlisper)
 - ddb3c62 linter: Eslint-plugin-jsx-a11y scope rule (correctness) (#1609) (Shinobu Hayashi)
 - 795db7c linter: Cxc: no accumulating spread (#1607) (Don Isaac)
 - c8e2ef6 linter: Eslint-plugin-unicorn: explicit-length-check (#1617) (RiESAEX)
@@ -6711,7 +6681,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - b573036 linter: Eslint-plugin-jsx-a11y iframe-has-title rule (correctness) (#1589) (Shinobu Hayashi)
 - 967aa35 linter: Eslint-plugin-unicorn require-array-join-separator(style) (#1608) (Ken-HH24)
 - ba5b13d linter: Eslint-plugin-unicorn no-unreadable-array-destructuring (style) (#1594) (Ken-HH24)
-- a614255 linter: Eslint-plugin-jsx-a11y  img-redundant-alt (correctness) (#1571) (Shinobu Hayashi)
+- a614255 linter: Eslint-plugin-jsx-a11y img-redundant-alt (correctness) (#1571) (Shinobu Hayashi)
 - 8bef1f1 linter: Eslint-plugin-unicorn numeric-separators-style (style) (#1490) (Jon Surrell)
 - 72dd72b linter: Eslint-plugin-unicorn/no-unreadable-iife (#1572) (Hao Cheng)
 - 3b2b6a0 linter: Eslint-plugin-unicorn no-await-expression-member (style) (#1569) (Ken-HH24)
@@ -6729,6 +6699,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - b973261 linter: Improve the key span for jsx-key (Boshen)
 
 ### Refactor
+
 - b5f8a65 Improve pattern match of prefer-reflect-apply (#1630) (IWANABETHATGUY)
 
 ## [0.0.18] - 2023-11-22
@@ -6780,7 +6751,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 033a112 linter: Support eslint(default-case-last) (#1156) (Yiming Pan)
 - a5b87c4 linter: Eslint-plugin-unicorn no-object-as-default-parameter (#1162) (Cameron)
 - 85651af linter: Jest/prefer-todo rule (#1065) (cin)
-- 1aa4b4e linter: Add  rule `eslint-plugin-jsx-a11y(alt-text)` (#1126) (Trevor Manz)- 4e9260e Basic enable plugin (#1154) (Wenzhe Wang)
+- 1aa4b4e linter: Add rule `eslint-plugin-jsx-a11y(alt-text)` (#1126) (Trevor Manz)- 4e9260e Basic enable plugin (#1154) (Wenzhe Wang)
 
 ### Bug Fixes
 
@@ -6799,7 +6770,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 8b11592 linter: Demote prefer_array_flat_map to style (#1108) (Boshen)
 - d4c05ff linter: Support unicorn/prefer-query-selector (#1068) (Dunqing)
 - 0a0e93b linter: Eslint-plugin-unicorn require-number-to-fixed-digits-argument (#1073) (Mariusz Antas)
-- 162c720 linter: Eslint-plugin-unicorn  switch-case-braces (#1054) (Mariusz Antas)
+- 162c720 linter: Eslint-plugin-unicorn switch-case-braces (#1054) (Mariusz Antas)
 - 47837e5 linter: Support react/no-string-refs (#1055) (Dunqing)
 - db83f66 linter: Eslint-plugin-unicorn - no-empty-file (#1052) (Cameron)
 - ebab50e linter: Eslint-plugin-react no-string-refs (#1053) (Trevor Manz)
@@ -7062,4 +7033,3 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 32bffa3 linter: Fix disable directives not working for no_func_assign (Boshen)
 - 715698f linter: S/no_function_assign/no_func_assign per eslint (Boshen)
 - 072abcc linter: Fix no_empty_pattern broken on rest elements (Boshen)
-

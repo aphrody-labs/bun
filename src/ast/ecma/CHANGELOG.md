@@ -472,7 +472,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 3029dfb linter/plugins: Reorder code (#14725) (overlookmotel)
 
-
 ## [0.95.0] - 2025-10-15
 
 ### 🚀 Features
@@ -483,7 +482,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 🐛 Bug Fixes
 
 - a86ca0b ast: Skip `source_text` and `comments` fields in `ContentEq` for `Program` (#14370) (overlookmotel)
-
 
 ## [0.94.0] - 2025-10-06
 
@@ -504,14 +502,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - e75d42d napi/parser, linter/plugins: Remove runtime `preserveParens` option from raw transfer deserializers (#14338) (overlookmotel)
 
-
 ## [0.93.0] - 2025-09-28
 
 ### 🚜 Refactor
 
 - 6fffdf9 ast: Remove unneccesary `#[estree(field_order)]` attrs (#14143) (overlookmotel)
-
-
 
 ## [0.91.0] - 2025-09-22
 
@@ -535,21 +530,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - fb347da crates: V0.91.0 (#13961) (Boshen)
 
-
 ## [0.91.0] - 2025-09-21
 
 ### 🚀 Features
 
 - a14aa79 npm/oxlint: Convert to ES modules (#13876) (Boshen)
 
-
 ## [0.90.0] - 2025-09-18
 
 ### 🚀 Features
 
 - 24a21b3 napi/parser: `preserveParens` option for raw transfer (#13855) (overlookmotel)
-
-
 
 ## [0.88.0] - 2025-09-15
 
@@ -560,7 +551,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 🚜 Refactor
 
 - babbaca all: Remove `pub` from modules with no exports (#13618) (overlookmotel)
-
 
 ## [0.87.0] - 2025-09-08
 
@@ -576,23 +566,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 14c40fd ast: Implement `RegExpLiteral::parse_pattern` (#13467) (sapphi-red)
 
-
 ## [0.86.0] - 2025-08-31
 
 ### 🐛 Bug Fixes
 
 - e3f953d mangler: Keep names for parenthesized functions and classes (#13421) (sapphi-red)
 
-
-
-
 ## [0.83.0] - 2025-08-29
 
 ### 🚀 Features
 
 - 53f55a4 minifier: Remove unnecessary parenthesis from nested optional chaining (#13268) (sapphi-red)
-
-
 
 ## [0.82.2] - 2025-08-17
 
@@ -604,8 +588,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 7b86340 ast: Shorten serialize code using let chains (#13100) (overlookmotel)
 
-
-
 ## [0.82.0] - 2025-08-12
 
 ### 🚜 Refactor
@@ -613,7 +595,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - bf9ae3b ast/estree: Remove custom serializer for `TSImportTypeQualifier` (#12961) (overlookmotel)
 - e5e2496 minifier: Clean up `try_compress_typeof_undefined` (#12958) (Boshen)
 - c072e01 all: Add missing lifetimes in function return types (#12895) (overlookmotel)
-
 
 ## [0.81.0] - 2025-08-06
 
@@ -625,7 +606,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 🐛 Bug Fixes
 
 - 47e2c59 estree: Fix serialization of `TSImportTypeQualifier` (#12801) (camc314)
-
 
 ## [0.80.0] - 2025-08-03
 
@@ -640,8 +620,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - eb22805 ast: Fix JavaScript/TypeScript code snippets to use proper backticks in documentation (#12729) (Copilot)
 - 45e2fe8 rust: Fix typos and grammar mistakes in Rust documentation comments (#12715) (Copilot)
 - de1de35 rust: Add comprehensive README.md documentation for all Rust crates (#12706) (Copilot)
-
-
 
 ## [0.79.0] - 2025-07-30
 
@@ -661,13 +639,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - a696227 linter: Remove AstKind for SimpleAssignmentTarget (#12401) (Tyler Earls)
 
-
 ## [0.78.0] - 2025-07-24
 
 ### 🚀 Features
 
 - dee25f4 ast: Add `pife` field to `Function` (#12469) (sapphi-red)
-
 
 ## [0.77.3] - 2025-07-20
 
@@ -675,14 +651,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 0920e98 codegen: Keep arrow function PIFEs (#12353) (sapphi-red)
 
-
 ## [0.77.2] - 2025-07-17
 
 ### 🚀 Features
 
 - 37be46c ast: Introduce `NewExpression::arguments_span` (#12368) (camc314)
 - 6b8f77d ast: Introduce `CallExpression::arguments_span` (#12321) (camc314)
-
 
 ## [0.77.1] - 2025-07-16
 
@@ -697,7 +671,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - c68b607 ast: Rename `TemplateLiteral::quasi` to `TemplateLiteral::single_quasi` (#12266) (Dunqing)
 - 32c32af ast: Check whether there is a single `quasi` in `TemplateLiteral::quasi` (#12265) (Dunqing)
 
-
 ## [0.77.0] - 2025-07-12
 
 ### 🚜 Refactor
@@ -708,7 +681,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 4c35f4a napi/parser: Optimize raw transfer deserializer for `TSClassImplements` (#12158) (overlookmotel)
 
-
 ## [0.76.0] - 2025-07-08
 
 ### 💥 BREAKING CHANGES
@@ -718,7 +690,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 🚜 Refactor
 
 - e8e2a25 ast: Remove `AstKind` for `AssignmentTargetPattern` (#12105) (camchenry)
-
 
 ## [0.75.1] - 2025-07-03
 
@@ -760,7 +731,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 735c0d3 ast: Call `Expression::without_parentheses` only once (#12056) (overlookmotel)
 
-
 ## [0.75.0] - 2025-06-25
 
 ### 💥 BREAKING CHANGES
@@ -780,7 +750,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 5500d2d ast: Remove redundant checks from `MemberExpression::static_property_info` and `ComputedMemberExpression::static_property_name` (#11882) (overlookmotel)
 
-
 ## [0.74.0] - 2025-06-23
 
 ### 🐛 Bug Fixes
@@ -790,8 +759,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 🚜 Refactor
 
 - 08e666f ast/estree: Add `#[estree]` attrs to `RegExpFlagsAlias` (#11794) (overlookmotel)
-
-
 
 ## [0.73.1] - 2025-06-17
 
@@ -820,7 +787,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 4fbe4b1 ast: Remove AstKind from `TSModuleReference` node (#11732) (therewillbecode)
 - 219adcc ast: Don't generate AstKind for ArrayExpressionElement (#11684) (Ulrich Stark)
 
-
 ## [0.73.0] - 2025-06-13
 
 ### 💥 BREAKING CHANGES
@@ -840,7 +806,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### ⚡ Performance
 
 - d5866e8 ast/estree: Convert `NumericLiteral` `raw` field to JSON without escaping (#11562) (overlookmotel)
-
 
 # Changelog
 
@@ -919,7 +884,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 9e90e00 ast_tools: Introduce `#[js_only]` attr for struct fields and converters (#11160) (overlookmotel)
 
 ### Bug Fixes
-
 
 ### Performance
 
@@ -1215,7 +1179,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - 89cb368 ast/estree: Add decorators field to `AssignmentPattern` (#9967) (therewillbecode)
 - 4980b73 ast/estree: Add missing estree fields to `TSIndexSignature` and `TSIndexSignatureName` (#9968) (therewillbecode)
-- b9f80b9 ast/estree: Fix `TSFunctionType` and `TSCallSignatureDeclaration`  (#9959) (therewillbecode)
+- b9f80b9 ast/estree: Fix `TSFunctionType` and `TSCallSignatureDeclaration` (#9959) (therewillbecode)
 - 0cdeedd ast/estree: Fix `ArrayPattern` (#9956) (therewillbecode)
 - 6fcd342 ast/estree: Fix `FormalParameter` (#9954) (therewillbecode)
 - 9d1035e ast/estree: Fix TS type def for `TSThisParameter` (#9942) (overlookmotel)
@@ -1263,7 +1227,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Features
 
-
 ### Bug Fixes
 
 - bc8bc08 semantic: Use correct scope flags for using declarations (#9751) (camc314)
@@ -1276,7 +1239,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - 3d17860 ast: [**BREAKING**] Reorder fields of `TemplateElement` (#9821) (overlookmotel)
 
-- ce6808a parser: [**BREAKING**] Rename `type_parameters` to `type_arguments` where needed  (#9815) (hi-ogawa)
+- ce6808a parser: [**BREAKING**] Rename `type_parameters` to `type_arguments` where needed (#9815) (hi-ogawa)
 
 ### Features
 
@@ -1290,7 +1253,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Refactor
 
-
 ## [0.58.1] - 2025-03-13
 
 ### Bug Fixes
@@ -1303,7 +1265,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 842edd8 ast: [**BREAKING**] Add `raw` property to `JSXText` node (#9641) (Yuji Sugiura)
 
 ### Features
-
 
 ### Bug Fixes
 
@@ -1339,7 +1300,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 48a0394 ast: [**BREAKING**] Add `scope_id` to `TSFunctionType` (#9559) (camc314)
 
 ### Features
-
 
 ### Bug Fixes
 
@@ -1426,7 +1386,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Features
 
-
 ### Bug Fixes
 
 - 72bab88 ast/estree: Remove unused TS type def for `WithClause` (#9250) (overlookmotel)
@@ -1450,7 +1409,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 9091387 ast: [**BREAKING**] Remove `TSType::TSQualifiedName` (#9051) (Dunqing)
 
 ### Features
-
 
 ### Bug Fixes
 
@@ -1579,7 +1537,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Documentation
 
 - 57b7ca8 ast: Add documentation for all remaining JS AST methods (#8820) (Cam McHenry)
-- b00b8c8 ast: Correct documentation for `JSXExpression::EmptyExpression`  (#8816) (Dunqing)
+- b00b8c8 ast: Correct documentation for `JSXExpression::EmptyExpression` (#8816) (Dunqing)
 - c63291a ast: Add more docs for JS expressions, declarations, and module AST types (#8800) (Cam McHenry)
 - fb5b1fa ast: Reformat `AstBuilder` doc comments (#8774) (overlookmotel)
 
@@ -1639,7 +1597,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Features
 
-
 ## [0.45.0] - 2025-01-11
 
 - 7f69561 ast: [**BREAKING**] `oxc_ast` do not export `BigUint` (#8428) (overlookmotel)
@@ -1680,7 +1637,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - c2daa20 ast: Add `Expression::into_inner_expression` (#8048) (overlookmotel)
 
 ### Bug Fixes
-
 
 ## [0.43.0] - 2024-12-21
 
@@ -1738,7 +1694,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Refactor
 
-
 ## [0.40.0] - 2024-12-10
 
 - 72eab6c parser: [**BREAKING**] Stage 3 `import source` and `import defer` (#7706) (Boshen)
@@ -1772,7 +1727,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Features
 
-
 ## [0.38.0] - 2024-11-26
 
 ### Features
@@ -1795,7 +1749,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 885e37f transformer: Optional Chaining (#6990) (Boshen)
 
 ### Bug Fixes
-
 
 ### Performance
 
@@ -1834,7 +1787,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 9d6cc9d estree: ESTree compatibility for all literals (#7152) (ottomated)
 
 ### Bug Fixes
-
 
 ### Refactor
 
@@ -2052,7 +2004,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Performance
 
-
 ## [0.28.0] - 2024-09-11
 
 - afc4548 ast: [**BREAKING**] Educe byte size of `TaggedTemplateExpression::quasi` by `Boxing` it (#5679) (Boshen)
@@ -2074,11 +2025,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Performance
 
-
 ### Refactor
 
 - 14ee086 ast: Inline `AstKind::as_*` methods (#5547) (overlookmotel)
-- 2da42ef regular_expression: Improve AST docs with refactoring may_contain_strings (#5665) (leaysgur)- 26d9235 Enable clippy::ref_as_ptr  (#5577) (夕舞八弦)
+- 2da42ef regular_expression: Improve AST docs with refactoring may_contain_strings (#5665) (leaysgur)- 26d9235 Enable clippy::ref_as_ptr (#5577) (夕舞八弦)
 
 ## [0.27.0] - 2024-09-06
 
@@ -2344,6 +2294,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - aece1df ast: Visit `Program`s `hashbang` field first (#4368) (overlookmotel)
 
 ### Performance
+
 - a207923 Replace some CompactStr usages with Cows (#4377) (DonIsaac)
 
 ### Refactor
@@ -2394,7 +2345,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Refactor
 
-
 ## [0.19.0] - 2024-07-09
 
 - b936162 ast/ast_builder: [**BREAKING**] Shorter allocator utility method names. (#4122) (rzvxa)
@@ -2404,7 +2354,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 485c871 ast: Allow conversion from `Expression` into `Statement` with `FromIn` trait. (#4124) (rzvxa)
 
 ### Refactor
-
 
 ## [0.18.0] - 2024-07-09
 
@@ -2518,6 +2467,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - aea3e9a transformer: Correct spans for TS annotations transform (#3782) (overlookmotel)
 
 ### Performance
+
 - 4f7ff7e Do not pass `&Atom` to functions (#3818) (overlookmotel)
 
 ### Refactor
@@ -2883,7 +2833,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 1bd1c5b prettier: Check parens for `(let)[a] = 1` (#1585) (Boshen)
 - c50fcec prettier: Wrap return statements with parentheses (#1583) (Boshen)
 - e55fdc6 prettier: Add parens to conditional and arrow expr (#1530) (Boshen)
-- 78c6fcd prettier: Improve format of ExportDefaultDeclaration  (#1520) (Boshen)
+- 78c6fcd prettier: Improve format of ExportDefaultDeclaration (#1520) (Boshen)
 - 064353c prettier: Turn off preserve_parens and start working on need-parens (#1487) (Boshen)
 - 0bf3dbf prettier: Add infra for need_parens (#1450) (Boshen)
 - 9a21d1a prettier: Print `ExportAllDeclaration` (#1381) (Boshen)
@@ -2966,4 +2916,3 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Refactor
 
 - 3516759 ast: Use `atom` for `Directive` and `Hashbang` (#701) (Yunfei He)- fdf288c Improve code coverage in various places (#721) (Boshen)
-

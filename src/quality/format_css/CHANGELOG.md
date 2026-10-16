@@ -180,4 +180,3 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 📚 Documentation
 
 - b4d0dc9 oxfmt,formatter,formatter_css,formatter_core: Update AGENTS.md (#23814) (leaysgur)
-

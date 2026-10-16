@@ -1771,24 +1771,21 @@ importers:
       expect(install.exitCode).toBe(0);
     });
 
-    test.concurrent(
-      "pruned lockfile with a peer-suffixed packages key and a directory-typed registry key",
-      async () => {
-        // ported from pnpm11/installing/deps-restorer/test/fixtures/peer-variant-missing-resolution
-        using dir = fixture("v9-peer-variant-missing-resolution");
+    test.concurrent("pruned lockfile with a peer-suffixed packages key and a directory-typed registry key", async () => {
+      // ported from pnpm11/installing/deps-restorer/test/fixtures/peer-variant-missing-resolution
+      using dir = fixture("v9-peer-variant-missing-resolution");
 
-        const { stderr, exitCode } = await migrate(String(dir));
+      const { stderr, exitCode } = await migrate(String(dir));
 
-        expect(stderr).toContain("migrated lockfile from pnpm-lock.yaml");
-        expect(exitCode).toBe(0);
+      expect(stderr).toContain("migrated lockfile from pnpm-lock.yaml");
+      expect(exitCode).toBe(0);
 
-        const bunLock = await bunLockOf(String(dir));
-        expect(bunLock).toContain(`"pkg-a": ["pkg-a@workspace:packages/pkg-a"]`);
-        expect(bunLock).toContain(`"peer": ["peer@workspace:packages/peer"]`);
-        expect(bunLock).not.toContain("pkg-a@file:");
-        expect(bunLock).not.toContain("peer@1.0.0");
-      },
-    );
+      const bunLock = await bunLockOf(String(dir));
+      expect(bunLock).toContain(`"pkg-a": ["pkg-a@workspace:packages/pkg-a"]`);
+      expect(bunLock).toContain(`"peer": ["peer@workspace:packages/peer"]`);
+      expect(bunLock).not.toContain("pkg-a@file:");
+      expect(bunLock).not.toContain("peer@1.0.0");
+    });
   });
 
   describe("pruned snapshots", () => {
@@ -3425,13 +3422,11 @@ snapshots:
     expect(bunLock).not.toContain("linked");
   });
 
-  test.concurrent(
-    "excludeLinksFromLockfile omissions name the workspace importer and its devDependencies",
-    async () => {
-      using dir = tempDir("pnpm-v9-exclude-links-workspace", {
-        "package.json": JSON.stringify({ name: "exclude-links-workspace", workspaces: ["packages/*"] }),
-        "packages/a/package.json": JSON.stringify({ name: "a", devDependencies: { x: "link:../x" } }),
-        "pnpm-lock.yaml": `lockfileVersion: '9.0'
+  test.concurrent("excludeLinksFromLockfile omissions name the workspace importer and its devDependencies", async () => {
+    using dir = tempDir("pnpm-v9-exclude-links-workspace", {
+      "package.json": JSON.stringify({ name: "exclude-links-workspace", workspaces: ["packages/*"] }),
+      "packages/a/package.json": JSON.stringify({ name: "a", devDependencies: { x: "link:../x" } }),
+      "pnpm-lock.yaml": `lockfileVersion: '9.0'
 
 settings:
   excludeLinksFromLockfile: true
@@ -3442,24 +3437,23 @@ importers:
 
   packages/a: {}
 `,
-      });
+    });
 
-      const { stderr, exitCode } = await migrate(String(dir), "--verbose");
+    const { stderr, exitCode } = await migrate(String(dir), "--verbose");
 
-      expect(stderr).toContain(
-        'warn: skipping "x" from workspace "packages/a": excluded from pnpm-lock.yaml by excludeLinksFromLockfile',
-      );
-      expect(stderr).not.toContain("from the root package");
-      expect(stderr).toContain("migrated lockfile from pnpm-lock.yaml");
-      expect(exitCode).toBe(0);
+    expect(stderr).toContain(
+      'warn: skipping "x" from workspace "packages/a": excluded from pnpm-lock.yaml by excludeLinksFromLockfile',
+    );
+    expect(stderr).not.toContain("from the root package");
+    expect(stderr).toContain("migrated lockfile from pnpm-lock.yaml");
+    expect(exitCode).toBe(0);
 
-      const bunLock = await bunLockOf(String(dir));
-      expect(workspaceBlock(bunLock, "packages/a")).toBe(
-        [`    "packages/a": {`, `      "name": "a",`, `    },`].join("\n"),
-      );
-      expect(bunLock).not.toContain(`"x"`);
-    },
-  );
+    const bunLock = await bunLockOf(String(dir));
+    expect(workspaceBlock(bunLock, "packages/a")).toBe(
+      [`    "packages/a": {`, `      "name": "a",`, `    },`].join("\n"),
+    );
+    expect(bunLock).not.toContain(`"x"`);
+  });
 
   test.concurrent("git resolution whose repo already carries the git+ prefix is not prefixed twice", async () => {
     const commit = "cccccccccccccccccccccccccccccccccccccccc";

@@ -107,67 +107,63 @@ describe.concurrent("a retry after a timeout is announced at once", () => {
   }, 60_000);
 });
 
-test.concurrent(
-  "bun install times out when the registry accepts TCP but never completes the TLS handshake",
-  async () => {
-    // Raw TCP listener: accepts the connection, reads (and discards) the
-    // ClientHello, and never writes a single byte back. From the client's
-    // point of view the socket is ESTABLISHED but the handshake stalls forever.
-    const sockets = new Set<net.Socket>();
-    const server = net.createServer(socket => {
-      sockets.add(socket);
-      socket.on("data", () => {});
-      socket.on("close", () => sockets.delete(socket));
-      socket.on("error", () => {});
-    });
-    await new Promise<void>(resolve => server.listen(0, "127.0.0.1", resolve));
-    const port = (server.address() as net.AddressInfo).port;
+test.concurrent("bun install times out when the registry accepts TCP but never completes the TLS handshake", async () => {
+  // Raw TCP listener: accepts the connection, reads (and discards) the
+  // ClientHello, and never writes a single byte back. From the client's
+  // point of view the socket is ESTABLISHED but the handshake stalls forever.
+  const sockets = new Set<net.Socket>();
+  const server = net.createServer(socket => {
+    sockets.add(socket);
+    socket.on("data", () => {});
+    socket.on("close", () => sockets.delete(socket));
+    socket.on("error", () => {});
+  });
+  await new Promise<void>(resolve => server.listen(0, "127.0.0.1", resolve));
+  const port = (server.address() as net.AddressInfo).port;
 
-    try {
-      using dir = tempDir("install-handshake-stall", {
-        "package.json": JSON.stringify({
-          name: "stall-repro",
-          version: "1.0.0",
-          dependencies: { lodash: "4.17.21" },
-        }),
-        "bunfig.toml": Bun.TOML.stringify({
-          install: {
-            registry: `https://127.0.0.1:${port}/`,
-          },
-        }),
-      });
-
-      await using proc = Bun.spawn({
-        cmd: [bunExe(), "install"],
-        env: {
-          ...bunEnv,
-          // Trip the idle timer after a few seconds instead of 5 minutes.
-          BUN_CONFIG_HTTP_IDLE_TIMEOUT: "3",
-          // Don't spin through 5 retries (each its own timeout) — one is enough
-          // to prove the request completed with an error rather than hanging.
-          BUN_CONFIG_HTTP_RETRY_COUNT: "0",
-          // Keep the self-signed / hostname-mismatch check from short-circuiting
-          // the handshake with a different error before the stall is observed.
-          NODE_TLS_REJECT_UNAUTHORIZED: "0",
+  try {
+    using dir = tempDir("install-handshake-stall", {
+      "package.json": JSON.stringify({
+        name: "stall-repro",
+        version: "1.0.0",
+        dependencies: { lodash: "4.17.21" },
+      }),
+      "bunfig.toml": Bun.TOML.stringify({
+        install: {
+          registry: `https://127.0.0.1:${port}/`,
         },
-        cwd: String(dir),
-        stdout: "pipe",
-        stderr: "pipe",
-      });
+      }),
+    });
 
-      const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    await using proc = Bun.spawn({
+      cmd: [bunExe(), "install"],
+      env: {
+        ...bunEnv,
+        // Trip the idle timer after a few seconds instead of 5 minutes.
+        BUN_CONFIG_HTTP_IDLE_TIMEOUT: "3",
+        // Don't spin through 5 retries (each its own timeout) — one is enough
+        // to prove the request completed with an error rather than hanging.
+        BUN_CONFIG_HTTP_RETRY_COUNT: "0",
+        // Keep the self-signed / hostname-mismatch check from short-circuiting
+        // the handshake with a different error before the stall is observed.
+        NODE_TLS_REJECT_UNAUTHORIZED: "0",
+      },
+      cwd: String(dir),
+      stdout: "pipe",
+      stderr: "pipe",
+    });
 
-      const combined = stdout + stderr;
-      // The manifest GET should have failed with the idle-timeout error. Exact
-      // wording differs between paths ("Timeout", "timed out"), so accept either.
-      expect(combined.toLowerCase()).toMatch(/time.?out|timed out/);
-      // Must have actually exited — a hang would never reach here, and a
-      // successful install (somehow) would be wrong.
-      expect(exitCode).not.toBe(0);
-    } finally {
-      for (const s of sockets) s.destroy();
-      await new Promise<void>(resolve => server.close(() => resolve()));
-    }
-  },
-  60_000,
-);
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+
+    const combined = stdout + stderr;
+    // The manifest GET should have failed with the idle-timeout error. Exact
+    // wording differs between paths ("Timeout", "timed out"), so accept either.
+    expect(combined.toLowerCase()).toMatch(/time.?out|timed out/);
+    // Must have actually exited — a hang would never reach here, and a
+    // successful install (somehow) would be wrong.
+    expect(exitCode).not.toBe(0);
+  } finally {
+    for (const s of sockets) s.destroy();
+    await new Promise<void>(resolve => server.close(() => resolve()));
+  }
+}, 60_000);

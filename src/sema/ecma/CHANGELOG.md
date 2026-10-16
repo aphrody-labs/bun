@@ -532,13 +532,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 109f452 semantic: Eliminate manual current_node_ix manipulation in try statements (#14858) (camc314)
 
-
 ## [0.95.0] - 2025-10-15
 
 ### 🐛 Bug Fixes
 
 - baab7eb semantic: Fix quote handling in jsdoc parser(#13776) (#14561) (Li Wei)
-
 
 ## [0.94.0] - 2025-10-06
 
@@ -549,7 +547,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 🐛 Bug Fixes
 
 - 81a28d4 parser: Forbid abstract class members with implementation in parser instead of semantic (#14325) (Ulrich Stark)
-
 
 ## [0.93.0] - 2025-09-28
 
@@ -569,8 +566,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 497236e semantic: Move AstNode::cfg_id to struct of arrays in AstNodes (#14137) (Boshen)
 - 5ba765c semantic: Move AstNode::flags to struct of arrays in AstNodes (#14136) (Boshen)
 
-
-
 ## [0.91.0] - 2025-09-22
 
 ### 🚀 Features
@@ -585,7 +580,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - fb347da crates: V0.91.0 (#13961) (Boshen)
 
-
 ## [0.91.0] - 2025-09-21
 
 ### 🚀 Features
@@ -595,9 +589,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 🐛 Bug Fixes
 
 - f067159 parser: Forbid readonly in parser instead of semantic (#13905) (Ulrich Stark)
-
-
-
 
 ## [0.88.0] - 2025-09-15
 
@@ -614,7 +605,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 08c05df semantic: Make CFG construction a compile-time feature (#13678) (Boshen)
 
-
 ## [0.87.0] - 2025-09-08
 
 ### 🚀 Features
@@ -630,9 +620,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 5648b31 semantic: Speed up `Scoping::clone_in_with_semantic_ids_with_another_arena` (#13563) (overlookmotel)
 
-
-
-
 ## [0.84.0] - 2025-08-30
 
 ### 🐛 Bug Fixes
@@ -642,7 +629,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 🚜 Refactor
 
 - 84a584c semantic: Clarify logic when checking `super` (#13324) (overlookmotel)
-
 
 ## [0.83.0] - 2025-08-29
 
@@ -658,15 +644,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - d787517 semantic: Store comments as a slice instead of `&Vec` (#13336) (overlookmotel)
 
-
 ## [0.82.3] - 2025-08-20
 
 ### 🚜 Refactor
 
 - cc067c2 semantic: Implement `Send` and `Sync` for `ScopingCell` (#13042) (overlookmotel)
-
-
-
 
 ## [0.82.0] - 2025-08-12
 
@@ -677,7 +659,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 🚜 Refactor
 
 - c072e01 all: Add missing lifetimes in function return types (#12895) (overlookmotel)
-
 
 ## [0.81.0] - 2025-08-06
 
@@ -693,7 +674,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### ⚡ Performance
 
 - 09ae2a9 linter: Eliminate unnecessary Iterator::collect() allocations (#12776) (Copilot)
-
 
 ## [0.80.0] - 2025-08-03
 
@@ -730,13 +710,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 2aa65b9 semantic: Remove unnecessary clone (#12667) (overlookmotel)
 
-
 ## [0.79.1] - 2025-07-31
 
 ### 🚜 Refactor
 
 - f12e3a0 semantic: Remove unnecessary lifetime extension (#12649) (overlookmotel)
-
 
 ## [0.79.0] - 2025-07-30
 
@@ -750,14 +728,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 8912134 semantic: Remove `AstNodes` `program` field (#12516) (overlookmotel)
 - 89d747a semantic: Correct comment (#12512) (overlookmotel)
 
-
 ## [0.78.0] - 2025-07-24
 
 ### 🚜 Refactor
 
 - 2874ec4 semantic: Remove redundant default implementation for `Binder::binder` (#12447) (Dunqing)
-
-
 
 ## [0.77.2] - 2025-07-17
 
@@ -768,7 +743,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### ⚡ Performance
 
 - b60d63b semantic: Reduce match arms in `check_binding_identifier` (#12304) (overlookmotel)
-
 
 ## [0.77.1] - 2025-07-16
 
@@ -795,7 +769,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 6f58abc semantic: Inline `SemanticBuilder::pop_ast_node` (#12280) (Boshen)
 
-
 ## [0.77.0] - 2025-07-12
 
 ### 🐛 Bug Fixes
@@ -814,7 +787,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - c7889c3 semantic,linter: Simplify implementation and uses of ancestors iterators (#12164) (Ulrich Stark)
 - 6cfcb7e semantic: Dereference `parent_id`s to slice only once (#12137) (overlookmotel)
 
-
 ## [0.76.0] - 2025-07-08
 
 ### 🚜 Refactor
@@ -825,7 +797,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### ⚡ Performance
 
 - 2bf1d7e semantic: Implement `FusedIterator` for `AstNodeParentIter` (#12094) (overlookmotel)
-
 
 ## [0.75.1] - 2025-07-03
 
@@ -857,7 +828,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 5845a24 semantic: Add docs for `JSDocTagTypePart` (#11998) (camc314)
 - 1a612ad semantic: Add docs for `JSDoctagTypeNamePart` (#11997) (camc314)
 
-
 ## [0.75.0] - 2025-06-25
 
 ### 🚜 Refactor
@@ -865,13 +835,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 87b8496 ast: Remove `AstKind` for `MemberExpression` and replace with `StaticMemberExpression` and `PrivateFieldExpression` (#11767) (camchenry)
 - 190e390 ast: Add `AstKind` for `ComputedMemberExpression` (#11766) (camchenry)
 
-
 ## [0.74.0] - 2025-06-23
 
 ### 💥 BREAKING CHANGES
 
 - e81be6e semantic: [**BREAKING**] Rename `symbol_is_used` to `symbol_is_unused` (#11802) (Boshen)
-
 
 ## [0.73.2] - 2025-06-18
 
@@ -882,7 +850,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 🚜 Refactor
 
 - eccac91 semantic: Rename function params (#11775) (overlookmotel)
-
 
 ## [0.73.1] - 2025-06-17
 
@@ -902,7 +869,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 219adcc ast: Don't generate AstKind for ArrayExpressionElement (#11684) (Ulrich Stark)
 - b0a1561 parser: Move empty ts type parameter checks to parser (#11696) (Don Isaac)
 - ff19684 semantic: Shorten Span construction (#11687) (Ulrich Stark)
-
 
 ## [0.73.0] - 2025-06-13
 
@@ -925,7 +891,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 🎨 Styling
 
 - 24fd4bc ast: Import `Span` at top level (#11635) (overlookmotel)
-
 
 # Changelog
 
@@ -950,7 +915,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 5d9344f rust: [**BREAKING**] Clippy avoid-breaking-exported-api = false (#11088) (Boshen)
 
 ### Performance
-
 
 ### Refactor
 
@@ -998,7 +962,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Features
 
-
 ### Performance
 
 - 075d4b5 semantic: Optimize `Scoping::rename_symbol` method (#10612) (Dunqing)
@@ -1020,7 +983,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 588da69 parser: A rest parameter cannot have an initializer (#10467) (Boshen)
 
 ### Refactor
-
 
 ## [0.64.0] - 2025-04-17
 
@@ -1107,7 +1069,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Features
 
-
 ### Bug Fixes
 
 - bc8bc08 semantic: Use correct scope flags for using declarations (#9751) (camc314)
@@ -1122,10 +1083,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [0.59.0] - 2025-03-18
 
-- ce6808a parser: [**BREAKING**] Rename `type_parameters` to `type_arguments` where needed  (#9815) (hi-ogawa)
+- ce6808a parser: [**BREAKING**] Rename `type_parameters` to `type_arguments` where needed (#9815) (hi-ogawa)
 
 ### Bug Fixes
-
 
 ## [0.57.0] - 2025-03-11
 
@@ -1140,7 +1100,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 23738bf semantic: [**BREAKING**] Introduce `Scoping` (#9611) (Boshen)
 
 ### Bug Fixes
-
 
 ### Refactor
 
@@ -1165,7 +1124,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Features
 
-
 ### Bug Fixes
 
 - bbb4f98 semantic: Insert binding into correct scope for TSInferType (#9567) (camc314)
@@ -1184,9 +1142,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Features
 
-
 ### Performance
-
 
 ## [0.53.0] - 2025-02-26
 
@@ -1257,7 +1213,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 4ce6329 semantic: [**BREAKING**] Ensure program outlives semantic (#8455) (Valentinas Janeiko)
 
 ### Bug Fixes
-
 
 ### Performance
 
@@ -1382,7 +1337,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Refactor
 
-
 ## [0.39.0] - 2024-12-04
 
 - 0be5233 semantic: [**BREAKING**] Remove `ModuleRecord` from `Semantic` (#7548) (Boshen)
@@ -1416,9 +1370,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Bug Fixes
 
-
 ### Refactor
-
 
 ## [0.37.0] - 2024-11-21
 
@@ -1452,7 +1404,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Features
 
-
 ### Refactor
 
 - c5485ae semantic: Add `ancestor_kinds` iterator function (#7217) (camchenry)
@@ -1468,7 +1419,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - da199c7 ecmascript: Allow getting PropName for object methods (#6967) (camchenry)
 
 ### Refactor
-
 
 ## [0.34.0] - 2024-10-26
 
@@ -1490,9 +1440,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Bug Fixes
 
-
 ### Refactor
-
 
 ## [0.32.0] - 2024-10-19
 
@@ -1549,7 +1497,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Bug Fixes
 
-- 933a743 semantic: Add interfaces and functions to `SymbolFlags::ClassExcludes`  (#6057) (DonIsaac)
+- 933a743 semantic: Add interfaces and functions to `SymbolFlags::ClassExcludes` (#6057) (DonIsaac)
 
 ## [0.30.2] - 2024-09-27
 
@@ -1588,7 +1536,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Features
 
-- a111bb6 oxc_wasm: Add `verbse` option to `debug_dot`  (#5879) (IWANABETHATGUY)
+- a111bb6 oxc_wasm: Add `verbse` option to `debug_dot` (#5879) (IWANABETHATGUY)
 - 74d8714 semantic: Add help message for invalid `let x?: number` (#5969) (DonIsaac)
 - 3230ae5 semantic: Add `SemanticBuilder::with_excess_capacity` (#5762) (overlookmotel)
 - a07f03a transformer: Sync `Program::source_type` after transform (#5887) (Boshen)
@@ -1673,6 +1621,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - d22a9b7 semantic: `SymbolTable::is_empty` use `is_empty` (#5622) (overlookmotel)
 
 ### Testing
+
 - dc92489 Add trailing line breaks to conformance fixtures (#5541) (overlookmotel)
 
 ## [0.27.0] - 2024-09-06
@@ -2040,7 +1989,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - c98d8aa ast: [**BREAKING**] Rename `visit_arrow_expression` to `visit_arrow_function_expression`. (#3995) (rzvxa)
 
 ### Refactor
-
 
 ## [0.16.3] - 2024-07-02
 
@@ -2489,4 +2437,3 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Testing
 
 - 38fb4c2 semantic: Test harness (#679) (Don Isaac)
-

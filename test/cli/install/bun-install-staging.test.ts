@@ -406,66 +406,63 @@ test("isolated linker: a package whose replacement was interrupted is installed 
 // the next one finds again. Any other uses names of its own and leaves the rest alone.
 describe.skipIf(!shimDir)("what a killed install left in a staging directory", () => {
   for (const [linker, packageDir] of Object.entries(packageDirs)) {
-    test.concurrent(
-      `${linker} linker: is left alone while another install is linking, removed afterwards`,
-      async () => {
-        const tgz = await new Bun.Archive(archiveEntries, { compress: "gzip" }).bytes();
-        using registry = serveRegistry({ "many-files": { tgz } });
-        using dir = tempDir(`staging-lock-${linker}`, {
-          "package.json": JSON.stringify({ name: "app", dependencies: { "many-files": "1.0.0" } }),
-          "bunfig.toml": ({ root }) =>
-            Bun.TOML.stringify({ install: { registry: registry.url.href, cache: join(root, ".bun-cache"), linker } }),
+    test.concurrent(`${linker} linker: is left alone while another install is linking, removed afterwards`, async () => {
+      const tgz = await new Bun.Archive(archiveEntries, { compress: "gzip" }).bytes();
+      using registry = serveRegistry({ "many-files": { tgz } });
+      using dir = tempDir(`staging-lock-${linker}`, {
+        "package.json": JSON.stringify({ name: "app", dependencies: { "many-files": "1.0.0" } }),
+        "bunfig.toml": ({ root }) =>
+          Bun.TOML.stringify({ install: { registry: registry.url.href, cache: join(root, ".bun-cache"), linker } }),
+      });
+      const root = String(dir);
+      const installed = packageDir(root);
+      const installedParent = join(installed, "..");
+
+      const warm = await install(root);
+      expect(warm.stderr).not.toContain("error");
+      expect(warm.exitCode).toBe(0);
+      const finishedParentListing = readdirSync(installedParent).sort();
+
+      rmSync(join(root, "node_modules"), { recursive: true });
+      expect(await installAndKill(root, [], { syscall: "linkat", after: FILE_COUNT - 10 }, () => false)).toBe(true);
+      const left = stagingDirs(installedParent);
+      expect(left).toHaveLength(1);
+      const leftEntries = readdirSync(left[0], { recursive: true }).length;
+
+      {
+        await using holder = Bun.spawn({
+          cmd: [join(String(shimDir), "lock-holder"), join(root, "node_modules")],
+          stdin: "pipe",
+          stdout: "pipe",
+          stderr: "inherit",
         });
-        const root = String(dir);
-        const installed = packageDir(root);
-        const installedParent = join(installed, "..");
+        const reader = holder.stdout.getReader();
+        expect(new TextDecoder().decode((await reader.read()).value)).toBe("locked");
+        reader.releaseLock();
 
-        const warm = await install(root);
-        expect(warm.stderr).not.toContain("error");
-        expect(warm.exitCode).toBe(0);
-        const finishedParentListing = readdirSync(installedParent).sort();
-
-        rmSync(join(root, "node_modules"), { recursive: true });
-        expect(await installAndKill(root, [], { syscall: "linkat", after: FILE_COUNT - 10 }, () => false)).toBe(true);
-        const left = stagingDirs(installedParent);
-        expect(left).toHaveLength(1);
-        const leftEntries = readdirSync(left[0], { recursive: true }).length;
-
-        {
-          await using holder = Bun.spawn({
-            cmd: [join(String(shimDir), "lock-holder"), join(root, "node_modules")],
-            stdin: "pipe",
-            stdout: "pipe",
-            stderr: "inherit",
-          });
-          const reader = holder.stdout.getReader();
-          expect(new TextDecoder().decode((await reader.read()).value)).toBe("locked");
-          reader.releaseLock();
-
-          const beside = await install(root);
-          expect(beside.stderr).not.toContain("error");
-          expect(beside.exitCode).toBe(0);
-          expect(compareWithExpectedTree(installed)).toEqual(completeTree);
-          const prune = await bun(root, ["prune"]);
-          expect(prune.stderr).not.toContain("error");
-          expect(prune.exitCode).toBe(0);
-          expect({
-            left: stagingDirs(installedParent),
-            leftEntries: readdirSync(left[0], { recursive: true }).length,
-          }).toEqual({ left, leftEntries });
-
-          holder.stdin.end();
-          expect(await holder.exited).toBe(0);
-        }
-
-        rmSync(installed, { recursive: true });
-        const alone = await install(root);
-        expect(alone.stderr).not.toContain("error");
-        expect(alone.exitCode).toBe(0);
+        const beside = await install(root);
+        expect(beside.stderr).not.toContain("error");
+        expect(beside.exitCode).toBe(0);
         expect(compareWithExpectedTree(installed)).toEqual(completeTree);
-        expect(readdirSync(installedParent).sort()).toEqual(finishedParentListing);
-      },
-    );
+        const prune = await bun(root, ["prune"]);
+        expect(prune.stderr).not.toContain("error");
+        expect(prune.exitCode).toBe(0);
+        expect({
+          left: stagingDirs(installedParent),
+          leftEntries: readdirSync(left[0], { recursive: true }).length,
+        }).toEqual({ left, leftEntries });
+
+        holder.stdin.end();
+        expect(await holder.exited).toBe(0);
+      }
+
+      rmSync(installed, { recursive: true });
+      const alone = await install(root);
+      expect(alone.stderr).not.toContain("error");
+      expect(alone.exitCode).toBe(0);
+      expect(compareWithExpectedTree(installed)).toEqual(completeTree);
+      expect(readdirSync(installedParent).sort()).toEqual(finishedParentListing);
+    });
 
     test.concurrent(`${linker} linker: a symlink in its place is removed, not followed`, async () => {
       const tgz = await new Bun.Archive(archiveEntries, { compress: "gzip" }).bytes();
@@ -658,53 +655,50 @@ const aliasLinkDirs = {
 };
 
 for (const [linker, aliasLinkDir] of Object.entries(aliasLinkDirs)) {
-  test.concurrent(
-    `${linker} linker: a package reached through two workspace aliases is installed under both`,
-    async () => {
-      const depTarball = await new Bun.Archive(
-        {
-          "package/package.json": JSON.stringify({ name: "dep", version: "1.0.0" }),
-          "package/index.js": "module.exports = 1;\n",
-        },
-        { compress: "gzip" },
-      ).bytes();
-      using dir = tempDir(`staging-alias-${linker}`, {
-        // The root's own `dep` keeps inner's `dep` from being hoisted out of inner.
-        "package.json": JSON.stringify({
-          name: "app",
-          workspaces: ["packages/*"],
-          dependencies: { dep: "file:./dep-root" },
-        }),
-        "dep-root/package.json": JSON.stringify({ name: "dep", version: "2.0.0" }),
-        "dep-1.0.0.tgz": Buffer.from(depTarball),
-        "packages/inner/package.json": JSON.stringify({
-          name: "inner",
-          version: "1.0.0",
-          dependencies: { dep: "file:../../dep-1.0.0.tgz" },
-        }),
-        "packages/second/package.json": JSON.stringify({
-          name: "second",
-          version: "1.0.0",
-          dependencies: { "inner-alias": "workspace:inner@*" },
-        }),
-        "bunfig.toml": ({ root }) => Bun.TOML.stringify({ install: { cache: join(root, ".bun-cache"), linker } }),
-      });
-      const root = String(dir);
+  test.concurrent(`${linker} linker: a package reached through two workspace aliases is installed under both`, async () => {
+    const depTarball = await new Bun.Archive(
+      {
+        "package/package.json": JSON.stringify({ name: "dep", version: "1.0.0" }),
+        "package/index.js": "module.exports = 1;\n",
+      },
+      { compress: "gzip" },
+    ).bytes();
+    using dir = tempDir(`staging-alias-${linker}`, {
+      // The root's own `dep` keeps inner's `dep` from being hoisted out of inner.
+      "package.json": JSON.stringify({
+        name: "app",
+        workspaces: ["packages/*"],
+        dependencies: { dep: "file:./dep-root" },
+      }),
+      "dep-root/package.json": JSON.stringify({ name: "dep", version: "2.0.0" }),
+      "dep-1.0.0.tgz": Buffer.from(depTarball),
+      "packages/inner/package.json": JSON.stringify({
+        name: "inner",
+        version: "1.0.0",
+        dependencies: { dep: "file:../../dep-1.0.0.tgz" },
+      }),
+      "packages/second/package.json": JSON.stringify({
+        name: "second",
+        version: "1.0.0",
+        dependencies: { "inner-alias": "workspace:inner@*" },
+      }),
+      "bunfig.toml": ({ root }) => Bun.TOML.stringify({ install: { cache: join(root, ".bun-cache"), linker } }),
+    });
+    const root = String(dir);
 
-      const { stderr, exitCode } = await install(root);
-      expect(stderr).not.toContain("error");
-      expect(exitCode).toBe(0);
+    const { stderr, exitCode } = await install(root);
+    expect(stderr).not.toContain("error");
+    expect(exitCode).toBe(0);
 
-      const version = (packageDir: string) =>
-        JSON.parse(readFileSync(join(root, packageDir, "package.json"), "utf8")).version;
-      expect({
-        rootDep: version("node_modules/dep"),
-        innerDep: version("packages/inner/node_modules/dep"),
-        aliasedInnerDep: version(join(aliasLinkDir, "node_modules/dep")),
-        innerNodeModules: readdirSync(join(root, "packages/inner/node_modules")),
-      }).toEqual({ rootDep: "2.0.0", innerDep: "1.0.0", aliasedInnerDep: "1.0.0", innerNodeModules: ["dep"] });
-    },
-  );
+    const version = (packageDir: string) =>
+      JSON.parse(readFileSync(join(root, packageDir, "package.json"), "utf8")).version;
+    expect({
+      rootDep: version("node_modules/dep"),
+      innerDep: version("packages/inner/node_modules/dep"),
+      aliasedInnerDep: version(join(aliasLinkDir, "node_modules/dep")),
+      innerNodeModules: readdirSync(join(root, "packages/inner/node_modules")),
+    }).toEqual({ rootDep: "2.0.0", innerDep: "1.0.0", aliasedInnerDep: "1.0.0", innerNodeModules: ["dep"] });
+  });
 }
 
 // In that layout a lifecycle script of the nested package starts as soon as the
@@ -827,42 +821,39 @@ for (const linker of ["hoisted", "isolated"]) {
 // staging directory behind either.
 describe.skipIf(!shimDir)("a link that runs out of space midway", () => {
   for (const [linker, packageDir] of Object.entries(packageDirs)) {
-    test.concurrent(
-      `${linker} linker: leaves nothing at the package's path and the next install succeeds`,
-      async () => {
-        const tgz = await new Bun.Archive(archiveEntries, { compress: "gzip" }).bytes();
-        using registry = serveRegistry({ "many-files": { tgz } });
-        using dir = tempDir(`staging-enospc-${linker}`, {
-          "package.json": JSON.stringify({ name: "app", dependencies: { "many-files": "1.0.0" } }),
-          "bunfig.toml": ({ root }) =>
-            Bun.TOML.stringify({ install: { registry: registry.url.href, cache: join(root, ".bun-cache"), linker } }),
-        });
-        const root = String(dir);
-        const installed = packageDir(root);
-        const installedParent = join(installed, "..");
+    test.concurrent(`${linker} linker: leaves nothing at the package's path and the next install succeeds`, async () => {
+      const tgz = await new Bun.Archive(archiveEntries, { compress: "gzip" }).bytes();
+      using registry = serveRegistry({ "many-files": { tgz } });
+      using dir = tempDir(`staging-enospc-${linker}`, {
+        "package.json": JSON.stringify({ name: "app", dependencies: { "many-files": "1.0.0" } }),
+        "bunfig.toml": ({ root }) =>
+          Bun.TOML.stringify({ install: { registry: registry.url.href, cache: join(root, ".bun-cache"), linker } }),
+      });
+      const root = String(dir);
+      const installed = packageDir(root);
+      const installedParent = join(installed, "..");
 
-        // Warm the cache so the next install only links.
-        const warm = await install(root);
-        expect(warm.stderr).not.toContain("error");
-        expect(warm.exitCode).toBe(0);
-        rmSync(join(root, "node_modules"), { recursive: true });
+      // Warm the cache so the next install only links.
+      const warm = await install(root);
+      expect(warm.stderr).not.toContain("error");
+      expect(warm.exitCode).toBe(0);
+      rmSync(join(root, "node_modules"), { recursive: true });
 
-        // No PATH: a debug build that finds llvm-symbolizer there spends seconds on a stack
-        // trace when the hoisted linker fails. Nothing in this install looks anything up.
-        const failing = await install(root, [], { ...shimEnv({ syscall: "linkat", after: 300 }, false), PATH: "" });
-        expect(failing.stderr).toContain("ENOSPC");
-        expect(failing.exitCode).toBe(1);
-        expect({
-          installed: existsSync(installed),
-          leftInParent: existsSync(installedParent) ? readdirSync(installedParent) : [],
-        }).toEqual({ installed: false, leftInParent: [] });
+      // No PATH: a debug build that finds llvm-symbolizer there spends seconds on a stack
+      // trace when the hoisted linker fails. Nothing in this install looks anything up.
+      const failing = await install(root, [], { ...shimEnv({ syscall: "linkat", after: 300 }, false), PATH: "" });
+      expect(failing.stderr).toContain("ENOSPC");
+      expect(failing.exitCode).toBe(1);
+      expect({
+        installed: existsSync(installed),
+        leftInParent: existsSync(installedParent) ? readdirSync(installedParent) : [],
+      }).toEqual({ installed: false, leftInParent: [] });
 
-        const repaired = await install(root);
-        expect(repaired.stderr).not.toContain("error");
-        expect(repaired.exitCode).toBe(0);
-        expect(compareWithExpectedTree(installed)).toEqual(completeTree);
-      },
-    );
+      const repaired = await install(root);
+      expect(repaired.stderr).not.toContain("error");
+      expect(repaired.exitCode).toBe(0);
+      expect(compareWithExpectedTree(installed)).toEqual(completeTree);
+    });
   }
 });
 

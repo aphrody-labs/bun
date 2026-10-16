@@ -14,22 +14,22 @@ size, owner path and disposition. Generate with
 `bun run scripts/aphrody/vendor-omar.ts --write`; verify with the same command
 without `--write`. It checks the pinned clean snapshot, owner presence and hashes.
 
-| Capability | Public owner |
-| --- | --- |
-| Service commands, Windows Jobs, restarts, health, status | `@aphrody/supervisor/services` |
-| Caller-reviewed NSSM installation plan | `@aphrody/supervisor/windows-service-plan` |
-| MFT baseline and transactional USN replay | `@aphrody/bun-tools/indexing` |
-| PE scans, imports/API sets and hardlink coverage | `@aphrody/bun-tools/indexing` |
-| Explicit SQLite metadata publication to Redis | `@aphrody/bun-tools/indexing` |
-| Source domain indexing and resource metadata | `@aphrody/bun-tools/indexing`, native `bun:graph` |
-| Checked independent legacy index conversion | `@aphrody/bun-tools/indexing` |
-| Bounded periodic task service | `@aphrody/bun-tools/task-service` |
-| Configurable SOCKS5-to-CONNECT proxy | `@aphrody/bun-tools/connect-proxy` |
-| Windows snapshot/event stream | `@aphrody/bun-tools/system-stream` |
-| Metadata explorer, cache/services diagnostics, assistant | `@aphrody/bun-webos` |
-| Tailwind/M3, desktop examples and existing applications | Existing WebOS/Tailwind packages |
-| Native inventory, guarded VFS writes and MCP | Existing Bun host/VFS/MCP owners |
-| Engine builds, installer, release and plugin setup | Existing build/release/plugin workflows |
+| Capability                                               | Public owner                                      |
+| -------------------------------------------------------- | ------------------------------------------------- |
+| Service commands, Windows Jobs, restarts, health, status | `@aphrody/supervisor/services`                    |
+| Caller-reviewed NSSM installation plan                   | `@aphrody/supervisor/windows-service-plan`        |
+| MFT baseline and transactional USN replay                | `@aphrody/bun-tools/indexing`                     |
+| PE scans, imports/API sets and hardlink coverage         | `@aphrody/bun-tools/indexing`                     |
+| Explicit SQLite metadata publication to Redis            | `@aphrody/bun-tools/indexing`                     |
+| Source domain indexing and resource metadata             | `@aphrody/bun-tools/indexing`, native `bun:graph` |
+| Checked independent legacy index conversion              | `@aphrody/bun-tools/indexing`                     |
+| Bounded periodic task service                            | `@aphrody/bun-tools/task-service`                 |
+| Configurable SOCKS5-to-CONNECT proxy                     | `@aphrody/bun-tools/connect-proxy`                |
+| Windows snapshot/event stream                            | `@aphrody/bun-tools/system-stream`                |
+| Metadata explorer, cache/services diagnostics, assistant | `@aphrody/bun-webos`                              |
+| Tailwind/M3, desktop examples and existing applications  | Existing WebOS/Tailwind packages                  |
+| Native inventory, guarded VFS writes and MCP             | Existing Bun host/VFS/MCP owners                  |
+| Engine builds, installer, release and plugin setup       | Existing build/release/plugin workflows           |
 
 The migration removes operational dependence on the Omar snapshot. Imported
 modules read no personal Redis configuration, service catalog, browser profile,

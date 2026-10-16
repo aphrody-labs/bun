@@ -139,7 +139,9 @@ $shortcutLink.Save()
     {
       BUN_SITE_APP_RUNTIME: installedBun,
       BUN_SITE_APP_SCRIPT: launcher,
-      BUN_SITE_APP_WORKDIR: Bun.isStandaloneExecutable ? win32.dirname(installedBun) : resolve(import.meta.dir, "../.."),
+      BUN_SITE_APP_WORKDIR: Bun.isStandaloneExecutable
+        ? win32.dirname(installedBun)
+        : resolve(import.meta.dir, "../.."),
       BUN_SITE_APP_CHROME: profile.executable,
       BUN_SITE_APP_STANDALONE: Bun.isStandaloneExecutable ? "1" : "0",
     },

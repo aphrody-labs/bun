@@ -6,14 +6,14 @@ et `bun-distribution` restent sous leurs propriétaires respectifs.
 
 ## Source et fusions locales
 
-| Commit | Résultat |
-| --- | --- |
+| Commit        | Résultat                                                                                                                  |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------- |
 | `a1908164033` | 2 471 chemins de travail intégrés : runtime vidéo/Image/JSC/types, navigateur/CEF, CLI, packages, tests et documentation. |
-| `b502f5e31bf` | Changements de publication non committés du checkout de qualification conservés. |
-| `dabbd9ad6de` | 179 chemins non committés du checkout Obscura conservés dans l'historique. |
-| `5c4b5a54fbd` | Bun-OS main fusionné : namespaces et surfaces du graphe, M3 desktop, WASI et workflows. |
-| `9dc65bb1cb2` | Qualification npm fusionnée en conservant le propriétaire de publication actuel, plus avancé. |
-| `96b08b29286` | Historique Obscura fusionné sous les propriétaires canoniques actuels. |
+| `b502f5e31bf` | Changements de publication non committés du checkout de qualification conservés.                                          |
+| `dabbd9ad6de` | 179 chemins non committés du checkout Obscura conservés dans l'historique.                                                |
+| `5c4b5a54fbd` | Bun-OS main fusionné : namespaces et surfaces du graphe, M3 desktop, WASI et workflows.                                   |
+| `9dc65bb1cb2` | Qualification npm fusionnée en conservant le propriétaire de publication actuel, plus avancé.                             |
+| `96b08b29286` | Historique Obscura fusionné sous les propriétaires canoniques actuels.                                                    |
 
 La fusion textuelle Obscura produisait 471 conflits, principalement des anciens
 déplacements de fichiers. L'audit a vérifié 836 états : 793 identiques, 43
@@ -55,19 +55,19 @@ Le binaire Windows debug reconstruit porte la révision `96b08b29286`.
 Les changements suivants de clôture concernent uniquement le budget d'une
 fixture de test et ce rapport ; aucun code runtime supplémentaire n'est ajouté.
 
-| Gate | Résultat |
-| --- | --- |
-| Graphe natif : snapshots, namespaces, surfaces, données protégées et junctions | 6 tests, 41 assertions PASS |
-| Bun.Video/Image, y compris H264 réel, RGBA, séquence, WAV, GIF et GC | 15 tests, 217 assertions PASS ; 1 scénario « provider absent » ignoré puisque le provider est présent |
-| Stress GC vidéo | 2 048 opérations de métadonnées avec buffers détachés et GC |
-| Déclarations Bun | 22 tests, 65 assertions PASS |
-| Serveur desktop | 30 tests, 91 assertions PASS |
-| Outillage Rust et configuration de build | 22 tests, 110 assertions PASS |
-| Watchlist, SSH, R2 et livraison Shenron | 26 tests, 149 assertions PASS ; intake live non configuré ignoré |
-| Types du package Bun Video | PASS |
-| Format/lint des modifications du graphe et diff de clôture | PASS |
-| Cargo root et crate vidéo, metadata complète Windows locked/offline | PASS ; 1 534 / 195 packages |
-| WASM natif `wasm32-wasip1-threads` | Compilation PASS ; semver ordre/satisfaction, parseur shell et Markdown exécutés avec succès |
+| Gate                                                                           | Résultat                                                                                              |
+| ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| Graphe natif : snapshots, namespaces, surfaces, données protégées et junctions | 6 tests, 41 assertions PASS                                                                           |
+| Bun.Video/Image, y compris H264 réel, RGBA, séquence, WAV, GIF et GC           | 15 tests, 217 assertions PASS ; 1 scénario « provider absent » ignoré puisque le provider est présent |
+| Stress GC vidéo                                                                | 2 048 opérations de métadonnées avec buffers détachés et GC                                           |
+| Déclarations Bun                                                               | 22 tests, 65 assertions PASS                                                                          |
+| Serveur desktop                                                                | 30 tests, 91 assertions PASS                                                                          |
+| Outillage Rust et configuration de build                                       | 22 tests, 110 assertions PASS                                                                         |
+| Watchlist, SSH, R2 et livraison Shenron                                        | 26 tests, 149 assertions PASS ; intake live non configuré ignoré                                      |
+| Types du package Bun Video                                                     | PASS                                                                                                  |
+| Format/lint des modifications du graphe et diff de clôture                     | PASS                                                                                                  |
+| Cargo root et crate vidéo, metadata complète Windows locked/offline            | PASS ; 1 534 / 195 packages                                                                           |
+| WASM natif `wasm32-wasip1-threads`                                             | Compilation PASS ; semver ordre/satisfaction, parseur shell et Markdown exécutés avec succès          |
 
 La première fixture graphe a désormais un délai local de 15 secondes : elle
 hash le binaire natif de 593 353 216 octets avant ses opérations de snapshots.

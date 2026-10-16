@@ -775,52 +775,49 @@ describe.each(["bun.lock", "bun.lockb"] as const)("%s", lockfile => {
 // `changeset version` and similar tools bump a workspace's version together with the ranges its dependents declare on
 // it. The old and the new range both link the workspace, so a frozen install accepts the edit. bun.lock records the range
 // as written, and the `bun install` that follows records the new one.
-describe.concurrent(
-  "a workspace version bump is accepted by --frozen-lockfile and recorded by one install, with the range",
-  () => {
-    test.each([
-      ["1.0.0", "1.0.1"],
-      ["^1.0.0", "^1.0.1"],
-      ["workspace:*", "workspace:^"],
-    ])("%s rewritten to %s", async (before, after) => {
-      const files = (libVersion: string, range: string) =>
-        monorepo({ app: { version: "1.0.0", dependencies: { lib: range } }, lib: { version: libVersion } });
-      const writeAll = (dir: string, tree: Record<string, PackageJson>) =>
-        Promise.all(Object.entries(tree).map(([path, json]) => write(join(dir, path), JSON.stringify(json))));
-      const appEntry = (lock: string) => lock.slice(lock.indexOf('"packages/app"'), lock.indexOf('"packages/lib"'));
+describe.concurrent("a workspace version bump is accepted by --frozen-lockfile and recorded by one install, with the range", () => {
+  test.each([
+    ["1.0.0", "1.0.1"],
+    ["^1.0.0", "^1.0.1"],
+    ["workspace:*", "workspace:^"],
+  ])("%s rewritten to %s", async (before, after) => {
+    const files = (libVersion: string, range: string) =>
+      monorepo({ app: { version: "1.0.0", dependencies: { lib: range } }, lib: { version: libVersion } });
+    const writeAll = (dir: string, tree: Record<string, PackageJson>) =>
+      Promise.all(Object.entries(tree).map(([path, json]) => write(join(dir, path), JSON.stringify(json))));
+    const appEntry = (lock: string) => lock.slice(lock.indexOf('"packages/app"'), lock.indexOf('"packages/lib"'));
 
-      const { packageDir } = await registry.createTestDir({ bunfigOpts: { linker: "hoisted" }, files: {} });
-      await writeAll(packageDir, files("1.0.0", before));
-      const first = await bun(packageDir, "install");
-      expect(first.stderr).toContain("Saved lockfile");
-      expect(first.exitCode).toBe(0);
-      expect(appEntry(await lockText(packageDir))).toContain(`"lib": "${before}"`);
+    const { packageDir } = await registry.createTestDir({ bunfigOpts: { linker: "hoisted" }, files: {} });
+    await writeAll(packageDir, files("1.0.0", before));
+    const first = await bun(packageDir, "install");
+    expect(first.stderr).toContain("Saved lockfile");
+    expect(first.exitCode).toBe(0);
+    expect(appEntry(await lockText(packageDir))).toContain(`"lib": "${before}"`);
 
-      await writeAll(packageDir, files("1.0.1", after));
-      const early = await bun(packageDir, "install", "--frozen-lockfile");
+    await writeAll(packageDir, files("1.0.1", after));
+    const early = await bun(packageDir, "install", "--frozen-lockfile");
 
-      expect(early.stderr).not.toContain("error:");
-      expect(early.exitCode).toBe(0);
+    expect(early.stderr).not.toContain("error:");
+    expect(early.exitCode).toBe(0);
 
-      const plain = await bun(packageDir, "install");
-      const lock = await lockText(packageDir);
+    const plain = await bun(packageDir, "install");
+    const lock = await lockText(packageDir);
 
-      expect(plain.stderr).toContain("Saved lockfile");
-      expect(appEntry(lock)).toContain(`"lib": "${after}"`);
-      expect(lock).toContain('"version": "1.0.1"');
-      expect(plain.exitCode).toBe(0);
+    expect(plain.stderr).toContain("Saved lockfile");
+    expect(appEntry(lock)).toContain(`"lib": "${after}"`);
+    expect(lock).toContain('"version": "1.0.1"');
+    expect(plain.exitCode).toBe(0);
 
-      await rm(join(packageDir, "node_modules"), { recursive: true, force: true });
-      const ci = await bun(packageDir, "ci");
+    await rm(join(packageDir, "node_modules"), { recursive: true, force: true });
+    const ci = await bun(packageDir, "ci");
 
-      expect(ci.stderr).not.toContain("error:");
-      expect(ci.exitCode).toBe(0);
+    expect(ci.stderr).not.toContain("error:");
+    expect(ci.exitCode).toBe(0);
 
-      const again = await bun(packageDir, "install");
+    const again = await bun(packageDir, "install");
 
-      expect(again.stderr).not.toContain("Saved lockfile");
-      expect(await lockText(packageDir)).toBe(lock);
-      expect(again.exitCode).toBe(0);
-    });
-  },
-);
+    expect(again.stderr).not.toContain("Saved lockfile");
+    expect(await lockText(packageDir)).toBe(lock);
+    expect(again.exitCode).toBe(0);
+  });
+});

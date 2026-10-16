@@ -209,22 +209,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 8b14ec9 minifier: Handle `{ __proto__: null } instanceof Object` correctly (#15217) (sapphi-red)
 
-
-
-
-
-
 ## [0.91.0] - 2025-09-22
 
 ### 💼 Other
 
 - fb347da crates: V0.91.0 (#13961) (Boshen)
-
-
-
-
-
-
 
 ## [0.86.0] - 2025-08-31
 
@@ -232,15 +221,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - f97283b ecmascript: Support more cases for IsLiteralValue with `include_functions` (#13425) (sapphi-red)
 
-
-
 ## [0.84.0] - 2025-08-30
 
 ### 🚀 Features
 
 - 95d4311 ecmascript: Check side effects inside static blocks (#13404) (sapphi-red)
 - c557854 ecmascript: Support MayHaveSideEffects for Statements (#13402) (sapphi-red)
-
 
 ## [0.83.0] - 2025-08-29
 
@@ -262,13 +248,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 66a5673 ecmascript: Add `ToUint32` trait (#13272) (sapphi-red)
 
-
 ## [0.82.3] - 2025-08-20
 
 ### 🐛 Bug Fixes
 
 - d27a04b ecmascript: Skip array length evaluation if there are any spread elements (#13162) (Monad)
-
 
 ## [0.82.2] - 2025-08-17
 
@@ -282,13 +266,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - e190ee5 minifier: Clean up `remove_unused_expression` (#13080) (Boshen)
 
-
 ## [0.82.1] - 2025-08-13
 
 ### 📚 Documentation
 
 - 9c05e2f ecmascript: Correct docs for `GlobalContext::is_global_reference` (#13022) (overlookmotel)
-
 
 ## [0.82.0] - 2025-08-12
 
@@ -315,13 +297,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 3ce27e9 ecmascript, minifier: Revert changes to changelogs (#12962) (overlookmotel)
 
-
 ## [0.81.0] - 2025-08-06
 
 ### 🚜 Refactor
 
 - f3f6012 ecmascript: Avoid redundant checks by splitting up match arms (#12782) (Ulrich Stark)
-
 
 ## [0.80.0] - 2025-08-03
 
@@ -333,13 +313,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 45e2fe8 rust: Fix typos and grammar mistakes in Rust documentation comments (#12715) (Copilot)
 
-
 ## [0.79.1] - 2025-07-31
 
 ### 🚀 Features
 
 - 763a618 minifier: Inline small constant values (#12639) (Boshen)
-
 
 ## [0.79.0] - 2025-07-30
 
@@ -351,10 +329,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - fe9c8e1 minifier: Do not remove non-plain empty functions (#12573) (Boshen)
 
-
-
-
-
 ## [0.77.1] - 2025-07-16
 
 ### 🚜 Refactor
@@ -362,16 +336,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - c68b607 ast: Rename `TemplateLiteral::quasi` to `TemplateLiteral::single_quasi` (#12266) (Dunqing)
 - 32c32af ast: Check whether there is a single `quasi` in `TemplateLiteral::quasi` (#12265) (Dunqing)
 
-
 ## [0.77.0] - 2025-07-12
 
 ### 🚜 Refactor
 
 - d5c94a8 ecmascript: Move `is_less_than` to its own file (#12189) (Boshen)
-
-
-
-
 
 ## [0.74.0] - 2025-06-23
 
@@ -387,9 +356,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 5a46641 ecmascript: Move `get_constant_value_for_reference_id` to `IsGlobalReference` trait (#11810) (Boshen)
 
-
-
-
 ## [0.73.0] - 2025-06-13
 
 ### 💥 BREAKING CHANGES
@@ -403,7 +369,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### ⚡ Performance
 
 - 365d8e5 ecmascript: Faster parsing integers (#11565) (overlookmotel)
-
 
 # Changelog
 
@@ -429,7 +394,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - e004a3f ecmascript: Add `respect_annotations` to `MayHaveSideEffectsContext` (#10127) (sapphi-red)
 
 ### Refactor
-
 
 ## [0.57.0] - 2025-03-11
 
@@ -741,4 +705,3 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Features
 
 - 9e62396 syntax_operations: Add crate `oxc_ecmascript` (#6202) (Boshen)
-

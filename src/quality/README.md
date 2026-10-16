@@ -4,25 +4,25 @@ The ECMA parser, transformer, linter and formatters are maintained inside Bun's
 root Cargo workspace. Their source lives with the runtime domain that owns it;
 there is no separate Oxc workspace or source fetch step.
 
-| Capability | Canonical source owner |
-| --- | --- |
-| Arena, collections, typed indices | `src/collections/{arena,ecma,typed_index}` |
-| Strings | `src/bun_core/ecma_strings` |
-| AST, spans, syntax, ESTree, visitors | `src/ast/{ecma,macros,visit,span,syntax,estree,estree_tokens,traverse}` |
-| Lexer, parser, regexp, JSDoc | `src/js_parser/{ecma,lexer,regexp,jsdoc}` |
-| Semantic analysis, control flow, language semantics | `src/sema/{ecma,cfg,ecmascript}` |
-| Printer | `src/js_printer/ecma` |
-| Transform, declarations, minification, compatibility | `src/transpiler/{ecma,ecma_engine,compat,declarations,mangler,minifier,plugins,relay,browserslist}` |
-| React compiler | `src/react_compiler/ecma` |
-| Resolution and source maps | `src/resolver/ecma`, `src/sourcemap/ecma` |
-| CSS, GraphQL, YAML, Markdown, TOML, JSON Schema | `src/css/parser`, `src/parsers/{graphql,yaml,toml_formatter,json_schema,json_schema_macros}`, `src/md/parser` |
-| Lint rules and diagnostics | `src/quality/{linter,lint_cli,config,diagnostics,macros}` |
-| Formatters and conformance | `src/quality/{format_cli,format_core,format_js,format_css,format_graphql,format_json,format_markdown,format_yaml,format_tests}` |
-| Language server | `src/lsp/quality` |
-| Generators, benchmarks, coverage and conformance tools | `src/codegen/ecma_*` |
-| Runtime facade | `src/transpiler/ecma_api`, `src/quality/src` |
-| Native adapters | `src/quality/adapters/{common,parser,minify,transform,react,relay,playground}` |
-| JavaScript parser and transform/minify declarations | `packages/bun-oxc/src/{parser-core,transform-core,minify-core}` |
+| Capability                                             | Canonical source owner                                                                                                          |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| Arena, collections, typed indices                      | `src/collections/{arena,ecma,typed_index}`                                                                                      |
+| Strings                                                | `src/bun_core/ecma_strings`                                                                                                     |
+| AST, spans, syntax, ESTree, visitors                   | `src/ast/{ecma,macros,visit,span,syntax,estree,estree_tokens,traverse}`                                                         |
+| Lexer, parser, regexp, JSDoc                           | `src/js_parser/{ecma,lexer,regexp,jsdoc}`                                                                                       |
+| Semantic analysis, control flow, language semantics    | `src/sema/{ecma,cfg,ecmascript}`                                                                                                |
+| Printer                                                | `src/js_printer/ecma`                                                                                                           |
+| Transform, declarations, minification, compatibility   | `src/transpiler/{ecma,ecma_engine,compat,declarations,mangler,minifier,plugins,relay,browserslist}`                             |
+| React compiler                                         | `src/react_compiler/ecma`                                                                                                       |
+| Resolution and source maps                             | `src/resolver/ecma`, `src/sourcemap/ecma`                                                                                       |
+| CSS, GraphQL, YAML, Markdown, TOML, JSON Schema        | `src/css/parser`, `src/parsers/{graphql,yaml,toml_formatter,json_schema,json_schema_macros}`, `src/md/parser`                   |
+| Lint rules and diagnostics                             | `src/quality/{linter,lint_cli,config,diagnostics,macros}`                                                                       |
+| Formatters and conformance                             | `src/quality/{format_cli,format_core,format_js,format_css,format_graphql,format_json,format_markdown,format_yaml,format_tests}` |
+| Language server                                        | `src/lsp/quality`                                                                                                               |
+| Generators, benchmarks, coverage and conformance tools | `src/codegen/ecma_*`                                                                                                            |
+| Runtime facade                                         | `src/transpiler/ecma_api`, `src/quality/src`                                                                                    |
+| Native adapters                                        | `src/quality/adapters/{common,parser,minify,transform,react,relay,playground}`                                                  |
+| JavaScript parser and transform/minify declarations    | `packages/bun-oxc/src/{parser-core,transform-core,minify-core}`                                                                 |
 
 Internal Cargo package names use `bun_*`. Existing Rust library names and
 dependency aliases such as `oxc_parser` remain compatibility names for the same

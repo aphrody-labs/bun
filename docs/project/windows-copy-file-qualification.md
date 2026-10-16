@@ -24,4 +24,4 @@ remain separate pending gates.
 
 Receipts: tmp/copy-file-native-serialized.log,
 tmp/copy-file-fallback-native-serialized.log and
- tmp/copy-file-final-<target>.jsonl with their exit-code files.
+tmp/copy-file-final-<target>.jsonl with their exit-code files.

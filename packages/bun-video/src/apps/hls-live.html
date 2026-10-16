@@ -64,16 +64,13 @@
   <section>
     <h2>État préchargé</h2>
     <pre id="status">Chargement…</pre>
-    <a
-      href="https://www.crunchyroll.com/fr/watch/GE00389313JAJP/the-god-who-destroys"
-      target="_blank"
-      rel="noreferrer"
+    <a href="https://www.crunchyroll.com/fr/watch/GE00389313JAJP/the-god-who-destroys" target="_blank" rel="noreferrer"
       >Ouvrir la vidéo Crunchyroll dans Chrome</a
     >
     <p>
       <small
-        >Les cookies restent côté Bun. La lecture réelle nécessite le manifeste autorisé du lecteur
-        officiel. Les résultats synthétiques ne prouvent pas une migration API.</small
+        >Les cookies restent côté Bun. La lecture réelle nécessite le manifeste autorisé du lecteur officiel. Les
+        résultats synthétiques ne prouvent pas une migration API.</small
       >
     </p>
   </section>
@@ -86,12 +83,9 @@
   </section>
   <section>
     <h2>Video explore</h2>
-    <input id="file" type="file" accept="video/*" /><button id="demo">
-      Créer une vidéo locale
-    </button>
+    <input id="file" type="file" accept="video/*" /><button id="demo">Créer une vidéo locale</button>
     <p><small>Métadonnées, codecs, lecture et image de la vidéo sélectionnée.</small></p>
-    <canvas id="frame" width="640" height="360"></canvas
-    ><button id="capture">Capturer l’image courante</button>
+    <canvas id="frame" width="640" height="360"></canvas><button id="capture">Capturer l’image courante</button>
     <pre id="explore"></pre>
   </section>
   <script src="./hls.js"></script>
@@ -133,8 +127,7 @@
         2,
       );
     }
-    for (const event of ["loadedmetadata", "timeupdate", "error"])
-      player.addEventListener(event, inspect);
+    for (const event of ["loadedmetadata", "timeupdate", "error"]) player.addEventListener(event, inspect);
     function loadHls(src) {
       clear();
       document.querySelector("#hlsStatus").textContent = "Chargement du manifeste…";
@@ -143,10 +136,9 @@
         config: { enableWorker: false },
         beforeStart(h) {
           h.on(Hls.Events.MANIFEST_PARSED, () => {
-            document.querySelector("#hlsStatus").textContent =
-              "Manifeste chargé · " + h.levels.length + " qualité(s)";
+            document.querySelector("#hlsStatus").textContent = "Manifeste chargé · " + h.levels.length + " qualité(s)";
             document.querySelector("#mediaInfo").textContent = JSON.stringify(
-              h.levels.map((l) => ({
+              h.levels.map(l => ({
                 width: l.width,
                 height: l.height,
                 bitrate: l.bitrate,
@@ -178,7 +170,7 @@
         document.querySelector("#hlsStatus").textContent = e.message;
       }
     };
-    document.querySelector("#file").onchange = (e) => {
+    document.querySelector("#file").onchange = e => {
       const f = e.target.files[0];
       if (f) {
         clear();
@@ -199,11 +191,11 @@
           stream = canvas.captureStream(24),
           chunks = [];
         const recorder = new MediaRecorder(stream, { mimeType: "video/webm;codecs=vp9" });
-        recorder.ondataavailable = (e) => chunks.push(e.data);
-        const stopped = new Promise((resolve) => (recorder.onstop = resolve));
+        recorder.ondataavailable = e => chunks.push(e.data);
+        const stopped = new Promise(resolve => (recorder.onstop = resolve));
         recorder.start();
         const start = performance.now();
-        await new Promise((resolve) => {
+        await new Promise(resolve => {
           function draw(now) {
             const t = (now - start) / 1000;
             ctx.fillStyle = "#143d36";
@@ -219,7 +211,7 @@
         });
         recorder.stop();
         await stopped;
-        stream.getTracks().forEach((t) => t.stop());
+        stream.getTracks().forEach(t => t.stop());
         blobURL = URL.createObjectURL(new Blob(chunks, { type: recorder.mimeType }));
         player.src = blobURL;
         player.play().catch(() => {});

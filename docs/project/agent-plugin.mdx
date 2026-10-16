@@ -66,22 +66,22 @@ The hooks are TypeScript files run by `bun` (`bun --no-install --no-env-file hoo
 | Before a search  | `PreToolUse` (`Grep`, `Glob`, and `rg`, `grep`, `find` in `Bash`; Claude Code only) |                               | once per session, names the `bun mcp` tools to prefer (`graph_*`, `lsp_*`, `vfs_*` when the server has them)                                                                                                                                                 |
 | After a command  | `PostToolUse` (`Bash`)                                                              | `PostToolUse` (`run_command`) | when `node`, `npm` or `python` is not found, names the Aphrody runtime's equivalent                                                                                                                                                                          |
 
-| Command                                    | Becomes                                                          |
-| ------------------------------------------ | ---------------------------------------------------------------- |
-| `npm i`, `npm install`, `npm ci`           | `bun i`, `bun install`, `bun install --frozen-lockfile`          |
-| `npm install -D x`                         | `bun install --dev x`                                            |
-| `yarn add -D x`, `pnpm add -D x`           | `bun add --dev x`                                                |
-| `npm run x`, `yarn x`, `pnpm x`            | `bun run x`                                                      |
-| `npx x`, `pnpm dlx x`, `yarn dlx x`        | `bunx x`                                                         |
-| `tsc`, `tsgo`, `bunx @typescript/native-preview` | `bun check`                                                |
-| `oxlint`, `eslint`, `bunx oxlint`           | `bun lint`                                                      |
-| `oxfmt`, `prettier`, `bunx oxfmt`           | `bun fmt`                                                       |
-| `n2b`, `bunx @aphrody/bun-plugin-n2b`       | `bun n2b`                                                       |
-| `bun check`, `bun lint`, `bun fmt`, `bun n2b` in a Bun checkout | `bun bd check`, `bun bd lint`, `bun bd fmt`, `bun bd n2b` |
-| `node file.js`                             | `bun file.js`                                                    |
-| `pip install x`, `python -m pip install x` | `bun uv pip install x`                                           |
-| `python file.py`, `uv ...`, `uvx ...`      | `bun uv run python file.py`, `bun uv ...`, `bun uv tool run ...` |
-| `bun test` inside a Bun checkout           | `bun bd test`                                                    |
+| Command                                                         | Becomes                                                          |
+| --------------------------------------------------------------- | ---------------------------------------------------------------- |
+| `npm i`, `npm install`, `npm ci`                                | `bun i`, `bun install`, `bun install --frozen-lockfile`          |
+| `npm install -D x`                                              | `bun install --dev x`                                            |
+| `yarn add -D x`, `pnpm add -D x`                                | `bun add --dev x`                                                |
+| `npm run x`, `yarn x`, `pnpm x`                                 | `bun run x`                                                      |
+| `npx x`, `pnpm dlx x`, `yarn dlx x`                             | `bunx x`                                                         |
+| `tsc`, `tsgo`, `bunx @typescript/native-preview`                | `bun check`                                                      |
+| `oxlint`, `eslint`, `bunx oxlint`                               | `bun lint`                                                       |
+| `oxfmt`, `prettier`, `bunx oxfmt`                               | `bun fmt`                                                        |
+| `n2b`, `bunx @aphrody/bun-plugin-n2b`                           | `bun n2b`                                                        |
+| `bun check`, `bun lint`, `bun fmt`, `bun n2b` in a Bun checkout | `bun bd check`, `bun bd lint`, `bun bd fmt`, `bun bd n2b`        |
+| `node file.js`                                                  | `bun file.js`                                                    |
+| `pip install x`, `python -m pip install x`                      | `bun uv pip install x`                                           |
+| `python file.py`, `uv ...`, `uvx ...`                           | `bun uv run python file.py`, `bun uv ...`, `bun uv tool run ...` |
+| `bun test` inside a Bun checkout                                | `bun bd test`                                                    |
 
 The Python rewrites only happen when the `bun` that runs the hook is the Aphrody runtime, which carries `uv`. A rewritten command runs without confirmation only when the agent already runs without asking (Claude Code `bypassPermissions`, Codex `approval_policy = "never"`); otherwise Claude Code and Antigravity ask for it, and Codex refuses the original with the rewritten one to run instead.
 

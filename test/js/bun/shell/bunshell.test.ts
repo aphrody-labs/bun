@@ -3605,16 +3605,23 @@ describe("sudo", () => {
   const isRoot = isPosix && process.getuid!() === 0;
   const sudo = isPosix ? Bun.which("sudo", { PATH: sudoPath }) : null;
   const canElevate =
-    isRoot || (sudo !== null && Bun.spawnSync({ cmd: [sudo, "-n", "true"], stdout: "ignore", stderr: "ignore" }).success);
+    isRoot ||
+    (sudo !== null && Bun.spawnSync({ cmd: [sudo, "-n", "true"], stdout: "ignore", stderr: "ignore" }).success);
 
   test.skipIf(!isRoot)("runs builtins directly when already root, without a sudo binary", async () => {
-    const { stdout, exitCode } = await $`sudo echo hi`.env({ ...bunEnv, PATH: "/nonexistent" }).nothrow().quiet();
+    const { stdout, exitCode } = await $`sudo echo hi`
+      .env({ ...bunEnv, PATH: "/nonexistent" })
+      .nothrow()
+      .quiet();
     expect(stdout.toString()).toBe("hi\n");
     expect(exitCode).toBe(0);
   });
 
   test.skipIf(!isPosix || !canElevate)("runs the command as root", async () => {
-    const { stdout, exitCode } = await $`sudo ${bunExe()} -e "console.log(process.getuid())"`.env(bunEnv).nothrow().quiet();
+    const { stdout, exitCode } = await $`sudo ${bunExe()} -e "console.log(process.getuid())"`
+      .env(bunEnv)
+      .nothrow()
+      .quiet();
     expect(stdout.toString()).toBe("0\n");
     expect(exitCode).toBe(0);
   });

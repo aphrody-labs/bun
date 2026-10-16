@@ -455,22 +455,19 @@ test.concurrent("bun lint --staged -f json prints an empty result if nothing is 
   expect({ stdout, stderr, exitCode }).toEqual({ stdout: "[]\n", stderr: "No staged files to lint\n", exitCode: 0 });
 });
 
-test.concurrent(
-  "with an oxlint config, bun lint --staged and --changed print the same messages, also on stderr",
-  async () => {
-    using repo = await repository({ ".oxlintrc.json": "{}", "a.js": before });
-    expect(await bun(repo.root, ["lint", "--staged"])).toEqual({
-      stdout: "",
-      stderr: "No staged files to lint\n",
-      exitCode: 0,
-    });
-    expect(await bun(repo.root, ["lint", "--changed=nothing"])).toEqual({
-      stdout: "",
-      stderr: 'error: "nothing" is not a branch, tag or commit in this repository\n',
-      exitCode: 2,
-    });
-  },
-);
+test.concurrent("with an oxlint config, bun lint --staged and --changed print the same messages, also on stderr", async () => {
+  using repo = await repository({ ".oxlintrc.json": "{}", "a.js": before });
+  expect(await bun(repo.root, ["lint", "--staged"])).toEqual({
+    stdout: "",
+    stderr: "No staged files to lint\n",
+    exitCode: 0,
+  });
+  expect(await bun(repo.root, ["lint", "--changed=nothing"])).toEqual({
+    stdout: "",
+    stderr: 'error: "nothing" is not a branch, tag or commit in this repository\n',
+    exitCode: 2,
+  });
+});
 
 describe.concurrent("bun lint --staged --fix still reports the problems in a partly staged file", () => {
   // One problem that can be fixed, and one that cannot.

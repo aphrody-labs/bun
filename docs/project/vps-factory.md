@@ -9,15 +9,15 @@ directories in `~` (`~/factory`, `~/builds`, `~/aphrody-build`,
 
 ## Layout
 
-| Path                                                     | Role                                                                                    |
-| -------------------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `~/depot_tools`                                          | Single depot_tools checkout, updated daily by the user timer `depot-tools-update.timer` |
-| `~/src/<project>`                                        | gclient/repo checkouts: `chromium`, `chromiumos`, `cef`, `brave-core`, `bun`, ...       |
-| `~/build/out/<project>/<config>`                         | GN output directories                                                                   |
+| Path                                             | Role                                                                                    |
+| ------------------------------------------------ | --------------------------------------------------------------------------------------- |
+| `~/depot_tools`                                  | Single depot_tools checkout, updated daily by the user timer `depot-tools-update.timer` |
+| `~/src/<project>`                                | gclient/repo checkouts: `chromium`, `chromiumos`, `cef`, `brave-core`, `bun`, ...       |
+| `~/build/out/<project>/<config>`                 | GN output directories                                                                   |
 | `~/build/google/cache/{git,sccache,ccache,siso}` | Shared caches: gclient git cache, compiler caches, Siso                                 |
-| `~/build/bun/install-cache`         | The single Bun install cache and global store (`BUN_INSTALL_CACHE_DIR`)                 |
-| `~/build/locks/heavy{,.1,.2}.lock`                       | Build slots; every sync, gen and build holds one or more under `flock`                  |
-| `~/apps`                                                 | Services (Docker compose, Gitea, Komodo, control plane)                                 |
+| `~/build/bun/install-cache`                      | The single Bun install cache and global store (`BUN_INSTALL_CACHE_DIR`)                 |
+| `~/build/locks/heavy{,.1,.2}.lock`               | Build slots; every sync, gen and build holds one or more under `flock`                  |
+| `~/apps`                                         | Services (Docker compose, Gitea, Komodo, control plane)                                 |
 
 Storage: `/home` is one btrfs volume (subvolume `@home`, `compress=zstd:1`) over
 two disks, about 805 GiB; `/` keeps the OS and Docker on its own disk. `~/src`,

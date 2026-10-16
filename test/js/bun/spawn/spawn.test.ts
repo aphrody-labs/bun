@@ -836,10 +836,8 @@ describe.skipIf(isWindows)("stdout reader of an unref'd child and process lifeti
     trickling: `const chunk = Buffer.alloc(2048, 120); setInterval(() => require("fs").writeSync(1, chunk), 1);`,
   };
   for (const [kind, producer] of Object.entries(producers)) {
-    it.concurrent(
-      `an idle reader stopped at the highwater mark does not keep the process alive (${kind} writer)`,
-      async () => {
-        const stdout = await run(`
+    it.concurrent(`an idle reader stopped at the highwater mark does not keep the process alive (${kind} writer)`, async () => {
+      const stdout = await run(`
         const producer = Bun.spawn({
           cmd: [process.execPath, "-e", ${JSON.stringify(producer)}],
           stdin: "ignore",
@@ -858,9 +856,8 @@ describe.skipIf(isWindows)("stdout reader of an unref'd child and process lifeti
         // The reader stays locked and idle while the child keeps writing: the pipe
         // reader fills to its highwater mark and stops, and then nothing is pending.
       `);
-        expect(JSON.parse(stdout)).toEqual({ gotFirstChunk: true, producerExitCode: null });
-      },
-    );
+      expect(JSON.parse(stdout)).toEqual({ gotFirstChunk: true, producerExitCode: null });
+    });
   }
 
   it.concurrent("a pending read keeps the process alive until the child writes", async () => {
@@ -1994,10 +1991,8 @@ describe.skipIf(!isPosix)("stdio source fds that are also slot numbers", () => {
     fs.writeSync(${reportFd}, JSON.stringify({ stdoutIsDevNull: isDevNull(1), stderrIsDevNull: isDevNull(2) }));
   `;
 
-  it.concurrent(
-    "a closed stdout slot that is inherited gets /dev/null, not the stdin pipe end that took fd 1",
-    async () => {
-      const result = await runInFreshProcess(`
+  it.concurrent("a closed stdout slot that is inherited gets /dev/null, not the stdin pipe end that took fd 1", async () => {
+    const result = await runInFreshProcess(`
       require("fs").closeSync(1);
       // stdin "pipe" makes a socketpair, and its child end lands on the free fd 1.
       const proc = Bun.spawn({
@@ -2006,15 +2001,12 @@ describe.skipIf(!isPosix)("stdio source fds that are also slot numbers", () => {
       });
       process.exitCode = await proc.exited;
     `);
-      expect(JSON.parse(result.stderr)).toEqual({ stdoutIsDevNull: true, stderrIsDevNull: false });
-      expect(result.exitCode).toBe(0);
-    },
-  );
+    expect(JSON.parse(result.stderr)).toEqual({ stdoutIsDevNull: true, stderrIsDevNull: false });
+    expect(result.exitCode).toBe(0);
+  });
 
-  it.concurrent(
-    "a closed stderr slot that is inherited gets /dev/null, not the stdout pipe end that took fd 2",
-    async () => {
-      const result = await runInFreshProcess(`
+  it.concurrent("a closed stderr slot that is inherited gets /dev/null, not the stdout pipe end that took fd 2", async () => {
+    const result = await runInFreshProcess(`
       require("fs").closeSync(2);
       // stdout "pipe" makes a socketpair, and the parent's end lands on the free fd 2.
       const proc = Bun.spawn({
@@ -2025,15 +2017,12 @@ describe.skipIf(!isPosix)("stdio source fds that are also slot numbers", () => {
       console.log(report);
       process.exitCode = exitCode;
     `);
-      expect(JSON.parse(result.stdout)).toEqual({ stdoutIsDevNull: false, stderrIsDevNull: true });
-      expect(result.exitCode).toBe(0);
-    },
-  );
+    expect(JSON.parse(result.stdout)).toEqual({ stdoutIsDevNull: false, stderrIsDevNull: true });
+    expect(result.exitCode).toBe(0);
+  });
 
-  it.concurrent(
-    "an extra inherit slot that is closed in the parent fails with EBADF, not with the pipe end that took its number",
-    async () => {
-      const result = await runInFreshProcess(`
+  it.concurrent("an extra inherit slot that is closed in the parent fails with EBADF, not with the pipe end that took its number", async () => {
+    const result = await runInFreshProcess(`
       const fs = require("fs");
       const free = fs.openSync("/dev/null", "r"); // the lowest free fd number
       fs.closeSync(free);
@@ -2051,11 +2040,10 @@ describe.skipIf(!isPosix)("stdio source fds that are also slot numbers", () => {
       }
       console.log(JSON.stringify({ freeIsExtraSlot: free >= 3, outcome }));
     `);
-      expect(result.stderr).toBe("");
-      expect(JSON.parse(result.stdout)).toEqual({ freeIsExtraSlot: true, outcome: "EBADF" });
-      expect(result.exitCode).toBe(0);
-    },
-  );
+    expect(result.stderr).toBe("");
+    expect(JSON.parse(result.stdout)).toEqual({ freeIsExtraSlot: true, outcome: "EBADF" });
+    expect(result.exitCode).toBe(0);
+  });
 });
 
 // A descriptor gets the lowest free number, which is 0, 1 or 2 once user code has closed one of
@@ -2384,7 +2372,9 @@ describe("elevate", () => {
 
   it("rejects elevate with argv0, uid or gid", () => {
     for (const extra of [{ argv0: "x" }, { uid: 0 }, { gid: 0 }]) {
-      expect(() => spawnSync({ cmd: [bunExe(), "-e", ""], elevate: true, ...extra })).toThrow(/elevate cannot be combined/);
+      expect(() => spawnSync({ cmd: [bunExe(), "-e", ""], elevate: true, ...extra })).toThrow(
+        /elevate cannot be combined/,
+      );
     }
   });
 
@@ -2405,7 +2395,12 @@ describe("elevate", () => {
   });
 
   it.skipIf(!isPosix || !canElevate)("spawn runs the command as root", async () => {
-    await using proc = spawn({ cmd: printUid, env: { ...bunEnv, ELEVATE_TEST: "async" }, elevate: true, stdout: "pipe" });
+    await using proc = spawn({
+      cmd: printUid,
+      env: { ...bunEnv, ELEVATE_TEST: "async" },
+      elevate: true,
+      stdout: "pipe",
+    });
     const [stdout, exitCode] = await Promise.all([proc.stdout.text(), proc.exited]);
     expect(stdout.trim()).toBe("0 async");
     expect(exitCode).toBe(0);

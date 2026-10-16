@@ -37,8 +37,8 @@ Architecture: `bun-build-system-internals`. Codegen: `bun-build-codegen`. Window
 | `rust:clippy`                                                                       | `cargo clippy --workspace --no-deps --keep-going`                                            |
 | `rust:mordant[:baseline]`, `rust:miri`                                              | see `bun-build-lint-format`                                                                  |
 | `watch` / `watch-windows`                                                           | `cargo watch -x 'check --workspace ...'` (windows: `--target x86_64-pc-windows-msvc`)        |
-| `bun fmt`, `fmt:cpp` (=clang-format), `fmt:rust` (`cargo fmt --all`)              | native JS/TS formatting; separate C++ and Rust formatters                                    |
-| `bun lint` / `bun lint --fix`                                                     | native lint with `--config oxlint.json`                                                      |
+| `bun fmt`, `fmt:cpp` (=clang-format), `fmt:rust` (`cargo fmt --all`)                | native JS/TS formatting; separate C++ and Rust formatters                                    |
+| `bun lint` / `bun lint --fix`                                                       | native lint with `--config oxlint.json`                                                      |
 | `bun check`                                                                         | native type checking                                                                         |
 | `bun n2b`                                                                           | native migration                                                                             |
 | `codegen:string-maps` / `codegen:verify`                                            | regenerate/check in-tree `*.generated.rs`                                                    |

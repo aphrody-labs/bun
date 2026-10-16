@@ -64,8 +64,7 @@ globalThis.setBenchmarkFrame(0);`;
       async fetch(req) {
         const pathname = decodeURIComponent(new URL(req.url).pathname);
         const path = resolve(work, "dist", `.${pathname === "/" ? "/index.html" : pathname}`);
-        if (relative(`${work}/dist`, path).startsWith(".."))
-          return new Response(null, { status: 403 });
+        if (relative(`${work}/dist`, path).startsWith("..")) return new Response(null, { status: 403 });
         const file = Bun.file(path);
         return (await file.exists()) ? new Response(file) : new Response(null, { status: 404 });
       },
@@ -85,9 +84,7 @@ globalThis.setBenchmarkFrame(0);`;
     const frames = [];
     for (const frame of [0, 15, 30]) {
       await context.evaluate(`globalThis.setBenchmarkFrame(${frame})`);
-      const actual = await context.evaluate(
-        'Number(document.getElementById("scene").dataset.frame)',
-      );
+      const actual = await context.evaluate('Number(document.getElementById("scene").dataset.frame)');
       if (actual !== frame) throw new Error(`React frame seek mismatch: ${actual} != ${frame}`);
       const png: Uint8Array = await context.screenshot();
       if (Buffer.from(png.subarray(0, 8)).toString("hex") !== "89504e470d0a1a0a")
@@ -100,9 +97,7 @@ globalThis.setBenchmarkFrame(0);`;
       await Bun.write(`${work}/frame-${frame}.png`, png);
     }
     stages.obscura = { status: "passed", ms: performance.now() - start, frames };
-    const passed = Object.values(stages).every(
-      (stage) => (stage as { status: string }).status === "passed",
-    );
+    const passed = Object.values(stages).every(stage => (stage as { status: string }).status === "passed");
     return {
       status: passed ? "passed" : "blocked",
       scope:

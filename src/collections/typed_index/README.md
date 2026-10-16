@@ -19,9 +19,9 @@ Forked version of [index_vec](https://github.com/thomcc/index_vec).
 
 This crate provides several optional features:
 
-* **`rayon`** - Enables parallel iteration support via Rayon
-* **`serde`** - Enables serialization/deserialization support via Serde
-* **`nonmax`** - Enables `define_nonmax_u32_index_type!` macro for memory-efficient index types using `NonMaxU32`
+- **`rayon`** - Enables parallel iteration support via Rayon
+- **`serde`** - Enables serialization/deserialization support via Serde
+- **`nonmax`** - Enables `define_nonmax_u32_index_type!` macro for memory-efficient index types using `NonMaxU32`
 
 ## Usage
 
@@ -93,11 +93,11 @@ struct MyData {
 
 Compared to the original `index_vec`:
 
-* **`rayon` feature** - Parallel iteration support
-* **`serde` feature** - Automatic serialization support using the crate's own serde dependency
-* **`nonmax` feature** - Memory-efficient index types with `define_nonmax_u32_index_type!` macro
-* **Const support** - Many methods are now `const fn` where possible
-* **Proc macro compatibility** - Macros work seamlessly with custom derive attributes like `#[ast]`, `#[estree(skip)]`, etc.
+- **`rayon` feature** - Parallel iteration support
+- **`serde` feature** - Automatic serialization support using the crate's own serde dependency
+- **`nonmax` feature** - Memory-efficient index types with `define_nonmax_u32_index_type!` macro
+- **Const support** - Many methods are now `const fn` where possible
+- **Proc macro compatibility** - Macros work seamlessly with custom derive attributes like `#[ast]`, `#[estree(skip)]`, etc.
 
 <p align="center">
   <a href="https://github.com/sponsors/Boshen">

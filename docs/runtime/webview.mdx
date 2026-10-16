@@ -95,12 +95,12 @@ const view = new Bun.WebView({ backend: "chrome" });
 
 Bun looks for the host in this order: `backend.path`, the `BUN_WEBVIEW_HOST` environment variable, next to the `bun` executable, then `$PATH`.
 
-| Backend       | Engine                  | Status                                        |
-| ------------- | ----------------------- | --------------------------------------------- |
-| `"webkitgtk"` | WebKitGTK 6.0 on GTK 4  | Linux (glibc and musl); needs a display       |
-| `"webview2"`  | WebView2                | Not yet built into the host                   |
-| `"wkwebview"` | WKWebView               | Not yet built into the host; use `"webkit"`   |
-| `"cef"`       | Chromium Embedded       | Not yet built into the host                   |
+| Backend       | Engine                 | Status                                      |
+| ------------- | ---------------------- | ------------------------------------------- |
+| `"webkitgtk"` | WebKitGTK 6.0 on GTK 4 | Linux (glibc and musl); needs a display     |
+| `"webview2"`  | WebView2               | Not yet built into the host                 |
+| `"wkwebview"` | WKWebView              | Not yet built into the host; use `"webkit"` |
+| `"cef"`       | Chromium Embedded      | Not yet built into the host                 |
 
 ```sh
 cargo build --release --manifest-path packages/bun-webview-core/Cargo.toml

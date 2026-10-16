@@ -9,7 +9,9 @@ it("Bun.Curl exposes the optional provider boundary", async () => {
   expect(capabilities.available).toBe(Bun.Curl.available);
   expect(Array.isArray(capabilities.protocols)).toBe(true);
   if (!Bun.Curl.available) {
-    await expect(Bun.Curl.request("http://127.0.0.1/")).rejects.toMatchObject({ code: "ERR_CURL_PROVIDER_UNAVAILABLE" });
+    await expect(Bun.Curl.request("http://127.0.0.1/")).rejects.toMatchObject({
+      code: "ERR_CURL_PROVIDER_UNAVAILABLE",
+    });
     expect(capabilities.protocols).toEqual([]);
     await expect(Bun.Curl.run(["--version"])).rejects.toMatchObject({ code: "ERR_CURL_PROVIDER_UNAVAILABLE" });
   }
@@ -17,11 +19,20 @@ it("Bun.Curl exposes the optional provider boundary", async () => {
 
 it("Bun.Curl transfers through libcurl and bounds response bytes", async () => {
   if (!Bun.Curl.available) return;
-  const server = Bun.serve({ port: 0, fetch(request) {
-    return new Response(request.method === "POST" ? request.body : "native curl", { headers: { "set-cookie": "fixture=value", "x-owner": "libcurl" } });
-  } });
+  const server = Bun.serve({
+    port: 0,
+    fetch(request) {
+      return new Response(request.method === "POST" ? request.body : "native curl", {
+        headers: { "set-cookie": "fixture=value", "x-owner": "libcurl" },
+      });
+    },
+  });
   try {
-    const response = await Bun.Curl.request(server.url.href, { method: "POST", body: "owned upload", headers: ["Content-Type: text/plain"] });
+    const response = await Bun.Curl.request(server.url.href, {
+      method: "POST",
+      body: "owned upload",
+      headers: ["Content-Type: text/plain"],
+    });
     expect(response.status).toBe(200);
     expect(await response.body.text()).toBe("owned upload");
     const automaticPost = await Bun.Curl.request(server.url.href, { body: "automatic post" });
@@ -36,11 +47,21 @@ it("Bun.Curl transfers through libcurl and bounds response bytes", async () => {
     const tool = await Bun.Curl.run(["--silent", "--show-error", server.url.href]);
     expect(new TextDecoder().decode(tool.stdout)).toBe("native curl");
     expect(tool.exitCode).toBe(0);
-    await expect(Bun.Curl.run(["--silent", server.url.href], { maxOutputBytes: 2 })).rejects.toMatchObject({ code: "ERR_CURL_OUTPUT_LIMIT" });
-    await expect(Bun.Curl.request(server.url.href, { signal: AbortSignal.abort() })).rejects.toMatchObject({ code: "ERR_CURL_ABORTED" });
-    await expect(Bun.Curl.request(server.url.href, { options: { WRITEFUNCTION: 0 } })).rejects.toMatchObject({ code: "ERR_CURL_OPTION_OWNED_BY_RUNTIME" });
-    await expect(Bun.Curl.request(server.url.href, { maxBytes: 2 })).rejects.toMatchObject({ code: "ERR_CURL_RESPONSE_LIMIT" });
-  } finally { server.stop(true); }
+    await expect(Bun.Curl.run(["--silent", server.url.href], { maxOutputBytes: 2 })).rejects.toMatchObject({
+      code: "ERR_CURL_OUTPUT_LIMIT",
+    });
+    await expect(Bun.Curl.request(server.url.href, { signal: AbortSignal.abort() })).rejects.toMatchObject({
+      code: "ERR_CURL_ABORTED",
+    });
+    await expect(Bun.Curl.request(server.url.href, { options: { WRITEFUNCTION: 0 } })).rejects.toMatchObject({
+      code: "ERR_CURL_OPTION_OWNED_BY_RUNTIME",
+    });
+    await expect(Bun.Curl.request(server.url.href, { maxBytes: 2 })).rejects.toMatchObject({
+      code: "ERR_CURL_RESPONSE_LIMIT",
+    });
+  } finally {
+    server.stop(true);
+  }
 });
 import {
   bunEnv,
@@ -940,27 +961,21 @@ function testBlobInterface(blobbyConstructor: { (..._: any[]): any }, hasBlobFn?
         hello: "😀 😃 😄 😁 😆 😅 😂 🤣 🥲 ☺️ 😊 😇 🙂 🙃 😉 😌 😍 🥰 😘 😗 😙 😚 😋 😛 😝 😜 🤪 🤨 🧐 🤓 😎 🥸 🤩 🥳",
       },
     ]) {
-      it.concurrent(
-        `${jsonObject.hello === true ? "latin1" : "utf16"} json${withGC ? " (with gc) " : ""}`,
-        async () => {
-          if (withGC) gc();
-          var response = blobbyConstructor(JSON.stringify(jsonObject));
-          if (withGC) gc();
-          expect(JSON.stringify(await response.json())).toBe(JSON.stringify(jsonObject));
-          if (withGC) gc();
-        },
-      );
+      it.concurrent(`${jsonObject.hello === true ? "latin1" : "utf16"} json${withGC ? " (with gc) " : ""}`, async () => {
+        if (withGC) gc();
+        var response = blobbyConstructor(JSON.stringify(jsonObject));
+        if (withGC) gc();
+        expect(JSON.stringify(await response.json())).toBe(JSON.stringify(jsonObject));
+        if (withGC) gc();
+      });
 
-      it.concurrent(
-        `${jsonObject.hello === true ? "latin1" : "utf16"} arrayBuffer -> json${withGC ? " (with gc) " : ""}`,
-        async () => {
-          if (withGC) gc();
-          var response = blobbyConstructor(new TextEncoder().encode(JSON.stringify(jsonObject)));
-          if (withGC) gc();
-          expect(JSON.stringify(await response.json())).toBe(JSON.stringify(jsonObject));
-          if (withGC) gc();
-        },
-      );
+      it.concurrent(`${jsonObject.hello === true ? "latin1" : "utf16"} arrayBuffer -> json${withGC ? " (with gc) " : ""}`, async () => {
+        if (withGC) gc();
+        var response = blobbyConstructor(new TextEncoder().encode(JSON.stringify(jsonObject)));
+        if (withGC) gc();
+        expect(JSON.stringify(await response.json())).toBe(JSON.stringify(jsonObject));
+        if (withGC) gc();
+      });
 
       it(`${jsonObject.hello === true ? "latin1" : "utf16"} arrayBuffer -> invalid json${
         withGC ? " (with gc) " : ""

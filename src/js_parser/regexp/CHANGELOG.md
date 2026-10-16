@@ -83,20 +83,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 561b743 regular_expression: Improve initizalizing state (#15045) (leaysgur)
 
-
-
-
-
-
 ## [0.91.0] - 2025-09-22
 
 ### 💼 Other
 
 - fb347da crates: V0.91.0 (#13961) (Boshen)
-
-
-
-
 
 ## [0.88.0] - 2025-09-15
 
@@ -111,7 +102,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 🚜 Refactor
 
 - babbaca all: Remove `pub` from modules with no exports (#13618) (overlookmotel)
-
 
 ## [0.87.0] - 2025-09-08
 
@@ -129,42 +119,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - c17b80a regular_expression: Extract `has_unsupported_regular_expression_pattern` (#13468) (sapphi-red)
 - 14c40fd ast: Implement `RegExpLiteral::parse_pattern` (#13467) (sapphi-red)
 
-
-
-
-
-
-
-
-
-
-
 ## [0.80.0] - 2025-08-03
 
 ### 📚 Documentation
 
 - 514322c rust: Add minimal documentation to example files in crates directory (#12731) (Copilot)
 
-
-
-
-
-
-
-
-
-
-
-
-
-
 ## [0.73.1] - 2025-06-17
 
 ### 🚜 Refactor
 
 - d057652 regular-expression: Shorten Span construction (#11689) (Ulrich Stark)
-
-
 
 # Changelog
 
@@ -250,7 +215,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Features
 
-
 ### Refactor
 
 - ef856f5 oxc: Apply `clippy::needless_pass_by_ref_mut` (#9253) (Boshen)
@@ -287,7 +251,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Features
 
-
 ### Refactor
 
 - 007e8c0 ast, regular_expression: Shorten `ContentEq` implementations (#8519) (overlookmotel)
@@ -298,7 +261,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 7eb6ccd ast: [**BREAKING**] Remove unused and not useful `ContentHash` (#8483) (Boshen)
 
 ### Features
-
 
 ## [0.42.0] - 2024-12-18
 
@@ -351,7 +313,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - f8e1907 regular_expression: Intro `ConstructorParser`(and `LiteralParser`) to handle escape sequence in RegExp('pat') (#6635) (leaysgur)
 
 ### Bug Fixes
-
 
 ### Refactor
 
@@ -438,4 +399,3 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Bug Fixes
 
 - cffce11 regular_expression: Prevent panic on too large number (#5282) (leaysgur)
-

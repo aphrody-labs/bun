@@ -10,7 +10,6 @@
   },
   "devDependencies": {
     "@octokit/types": "^8.1.1"
-
   },
   "scripts": {
     "format": "bun fmt --write src scripts",

@@ -12,8 +12,11 @@ bun crawl run --store ./pages.sqlite --seed https://example.org/ --concurrency 4
 
 ```ts
 const report = await Bun.Crawl.run({
-  action: "archive-media", store: "/absolute/path/items.sqlite",
-  query: "nature", mediaType: "movies", maxPages: 10,
+  action: "archive-media",
+  store: "/absolute/path/items.sqlite",
+  query: "nature",
+  mediaType: "movies",
+  maxPages: 10,
   signal: AbortSignal.timeout(30_000),
 });
 ```

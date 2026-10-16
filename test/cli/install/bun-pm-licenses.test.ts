@@ -752,21 +752,19 @@ describe("bun pm licenses", () => {
     });
   });
 
-  test.concurrent(
-    "a devDependency that is also an optional peerDependency is dev-only, like bun install --production",
-    async () => {
-      const dir = await setup("hoisted", {
-        "package.json": pkg({
-          dependencies: { "no-deps": "1.0.0" },
-          devDependencies: { "a-dep": "1.0.1" },
-          peerDependencies: { "a-dep": "^1.0.1" },
-          peerDependenciesMeta: { "a-dep": { optional: true } },
-        }),
-      });
+  test.concurrent("a devDependency that is also an optional peerDependency is dev-only, like bun install --production", async () => {
+    const dir = await setup("hoisted", {
+      "package.json": pkg({
+        dependencies: { "no-deps": "1.0.0" },
+        devDependencies: { "a-dep": "1.0.1" },
+        peerDependencies: { "a-dep": "^1.0.1" },
+        peerDependenciesMeta: { "a-dep": { optional: true } },
+      }),
+    });
 
-      const [prod, text] = await Promise.all([licensesJson(dir, "--prod"), licensesText(dir)]);
-      expect(prod).toStrictEqual({ Unknown: [u("no-deps", "1.0.0")] });
-      expect(normalizeBunSnapshot(text)).toMatchInlineSnapshot(`
+    const [prod, text] = await Promise.all([licensesJson(dir, "--prod"), licensesText(dir)]);
+    expect(prod).toStrictEqual({ Unknown: [u("no-deps", "1.0.0")] });
+    expect(normalizeBunSnapshot(text)).toMatchInlineSnapshot(`
       "bun pm licenses <version> (<revision>)
 
       Unknown (2)
@@ -775,8 +773,7 @@ describe("bun pm licenses", () => {
 
       2 packages across 1 license (checked 2 packages in bun.lock)"
     `);
-    },
-  );
+  });
 
   test.concurrent("os/cpu/libc-skipped optional dependencies are omitted, their parent is listed", async () => {
     const dir = await setup("hoisted", { "package.json": pkg({ dependencies: { "optional-native": "1.0.0" } }) });
@@ -975,18 +972,16 @@ describe("bun pm licenses", () => {
     `);
   });
 
-  test.concurrent(
-    "control characters from package.json are escaped in text output but preserved in --json",
-    async () => {
-      const dir = clone(hoistedDir);
-      const evilLicense = "MIT\u001b[31m\nEVIL";
-      patchInstalledManifest(dir, "a-dep", { license: evilLicense, description: "tab\there\r\n" });
-      patchInstalledManifest(dir, "one-dep", { license: "ISC\nGPL-3.0" });
-      patchInstalledManifest(dir, "no-deps", { license: "BSD\t2" });
+  test.concurrent("control characters from package.json are escaped in text output but preserved in --json", async () => {
+    const dir = clone(hoistedDir);
+    const evilLicense = "MIT\u001b[31m\nEVIL";
+    patchInstalledManifest(dir, "a-dep", { license: evilLicense, description: "tab\there\r\n" });
+    patchInstalledManifest(dir, "one-dep", { license: "ISC\nGPL-3.0" });
+    patchInstalledManifest(dir, "no-deps", { license: "BSD\t2" });
 
-      const [stdout, parsed] = await Promise.all([licensesText(dir, "--long", "--no-summary"), licensesJson(dir)]);
-      expect(stdout).not.toMatch(RAW_CONTROL);
-      expect(stdout).toMatchInlineSnapshot(`
+    const [stdout, parsed] = await Promise.all([licensesText(dir, "--long", "--no-summary"), licensesJson(dir)]);
+    expect(stdout).not.toMatch(RAW_CONTROL);
+    expect(stdout).toMatchInlineSnapshot(`
         "BSD\\t2 (1)
         └── no-deps@1.0.0
 
@@ -1012,15 +1007,14 @@ describe("bun pm licenses", () => {
         "
       `);
 
-      expect(Object.keys(parsed)).toStrictEqual(["BSD\t2", "ISC\nGPL-3.0", "MIT", evilLicense, "Unknown"]);
-      expect(parsed[evilLicense]).toStrictEqual([
-        { name: "a-dep", versions: ["1.0.1"], license: evilLicense, description: "tab\there\r\n" },
-      ]);
-      expect(parsed["ISC\nGPL-3.0"]).toStrictEqual([{ name: "one-dep", versions: ["1.0.0"], license: "ISC\nGPL-3.0" }]);
-      expect(parsed["BSD\t2"]).toStrictEqual([{ name: "no-deps", versions: ["1.0.0"], license: "BSD\t2" }]);
-      expect(parsed.Unknown).toStrictEqual([u("no-deps", "1.0.1")]);
-    },
-  );
+    expect(Object.keys(parsed)).toStrictEqual(["BSD\t2", "ISC\nGPL-3.0", "MIT", evilLicense, "Unknown"]);
+    expect(parsed[evilLicense]).toStrictEqual([
+      { name: "a-dep", versions: ["1.0.1"], license: evilLicense, description: "tab\there\r\n" },
+    ]);
+    expect(parsed["ISC\nGPL-3.0"]).toStrictEqual([{ name: "one-dep", versions: ["1.0.0"], license: "ISC\nGPL-3.0" }]);
+    expect(parsed["BSD\t2"]).toStrictEqual([{ name: "no-deps", versions: ["1.0.0"], license: "BSD\t2" }]);
+    expect(parsed.Unknown).toStrictEqual([u("no-deps", "1.0.1")]);
+  });
 
   test.concurrent("--long escapes control characters in author, description and homepage", async () => {
     const dir = clone(hoistedDir);
@@ -1704,25 +1698,22 @@ describe("bun pm licenses", () => {
   });
 
   // pnpm#5702: a package that cannot be read must not fail the whole listing; the omission is reported instead of silent.
-  test.concurrent(
-    "unparsable package.json is reported as Unknown, missing ones are omitted with a warning",
-    async () => {
-      const dir = clone(hoistedDir);
-      writeFileSync(nm(dir, "resolve", "package.json"), "{ not json");
-      rmSync(nm(dir, "one-dep"), { recursive: true, force: true });
+  test.concurrent("unparsable package.json is reported as Unknown, missing ones are omitted with a warning", async () => {
+    const dir = clone(hoistedDir);
+    writeFileSync(nm(dir, "resolve", "package.json"), "{ not json");
+    rmSync(nm(dir, "one-dep"), { recursive: true, force: true });
 
-      const [stdout, stderr, exitCode] = await licenses(dir, "--json");
-      expect(normalizeBunSnapshot(stderr)).toMatchInlineSnapshot(`
+    const [stdout, stderr, exitCode] = await licenses(dir, "--json");
+    expect(normalizeBunSnapshot(stderr)).toMatchInlineSnapshot(`
         "warn: 2 packages in bun.lock are not installed and were skipped
         note: run 'bun install' first"
       `);
-      expect(stripPaths(JSON.parse(stdout))).toStrictEqual({
-        MIT: [fullJson.MIT[0]],
-        Unknown: [u("a-dep", "1.0.1"), u("no-deps", "1.0.0"), u("resolve", "1.9.0")],
-      });
-      expect(exitCode).toBe(0);
-    },
-  );
+    expect(stripPaths(JSON.parse(stdout))).toStrictEqual({
+      MIT: [fullJson.MIT[0]],
+      Unknown: [u("a-dep", "1.0.1"), u("no-deps", "1.0.0"), u("resolve", "1.9.0")],
+    });
+    expect(exitCode).toBe(0);
+  });
 
   test.concurrent("pnpm#8589: --prod after `bun install --production` finds packages hoisted differently", async () => {
     const dir = prodInstallDir;

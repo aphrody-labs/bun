@@ -14,13 +14,13 @@ route remains separately selectable; it must not become a required dependency
 of FilmCraft's decode or export paths. An optional frame adapter can connect
 the engines when explicitly requested.
 
-| Source | Integration target |
-| --- | --- |
-| `crates/time` | Shared rational frame rates, integer timeline ticks and audio alignment |
-| `crates/edit`, `crates/project` | Timeline edits and the common studio project model |
-| `crates/render`, `crates/gpu` | Shared frame plans, WGSL effects and linear-light composition |
-| `crates/scopes`, `crates/color` | Grading controls and scopes derived from rendered frames |
-| `crates/automation` | Native editor commands exposed through Bun Video |
+| Source                          | Integration target                                                      |
+| ------------------------------- | ----------------------------------------------------------------------- |
+| `crates/time`                   | Shared rational frame rates, integer timeline ticks and audio alignment |
+| `crates/edit`, `crates/project` | Timeline edits and the common studio project model                      |
+| `crates/render`, `crates/gpu`   | Shared frame plans, WGSL effects and linear-light composition           |
+| `crates/scopes`, `crates/color` | Grading controls and scopes derived from rendered frames                |
+| `crates/automation`             | Native editor commands exposed through Bun Video                        |
 
 The GPU source uploads YUV planes and RGBA layers, caches uploads by pixel-buffer
 identity, composites into a floating-point accumulator, and compares results

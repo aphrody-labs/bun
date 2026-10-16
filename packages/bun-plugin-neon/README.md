@@ -59,7 +59,10 @@ const sql = createNeonHTTPClient({
   connectionString: env.NEON_DATABASE_URL,
   expectedDatabase: "bun_site",
 });
-const rows = await sql.query("SELECT id FROM aphrody_site.snapshots WHERE id = $1", [id]);
+const rows = await sql.query(
+  "SELECT id FROM aphrody_site.snapshots WHERE id = $1",
+  [id],
+);
 ```
 
 ## Migrations

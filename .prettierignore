@@ -50,3 +50,26 @@ src/js/internal/repl/acorn-walk.js
 packages/bun-aphrody-web/integrations
 packages/bun-aphrody-web/crates/obscura-js/js
 packages/bun-dotnet/dotnet
+
+# oxfmt/oxlint CLI fixtures with deliberately conflicting configs
+src/quality/format_cli/test/
+src/quality/lint_cli/test/
+packages/bun-video/yt-dlp/.github/ISSUE_TEMPLATE_tmpl/
+packages/bun-video/mediabunny/
+packages/bun-video/hyperframes/
+docs/chromium/sources/
+packages/bun-video/remotion/
+packages/bun-video/yt-dlp/
+packages/bun-oxc/adapters/
+packages/web/rust/
+src/browser/
+src/rio/
+src/parsers/
+docs/aphrody-source/
+docs/chromium/
+docs/project/agent-tools.mdx
+docs/runtime/mcp.mdx
+src/quality/format_cli/DIVERGENCES.md
+src/quality/format_css/DIVERGENCES.md
+src/quality/format_graphql/DIVERGENCES.md
+src/quality/format_markdown/DIVERGENCES.md

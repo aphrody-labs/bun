@@ -66,7 +66,10 @@ console.log(printSync(program).code);
 Set `ts` when the AST can contain TypeScript nodes. For TSX, set both `ts` and `jsx`:
 
 ```js
-const { program } = parseSync("component.tsx", "const Box = <T,>(value: T) => <div>{value}</div>");
+const { program } = parseSync(
+  "component.tsx",
+  "const Box = <T,>(value: T) => <div>{value}</div>",
+);
 
 const { code } = printSync(program, {
   ts: true,

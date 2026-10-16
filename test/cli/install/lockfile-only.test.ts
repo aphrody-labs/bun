@@ -309,62 +309,56 @@ describe("--lockfile-only with remove and update", () => {
     return { stdout, stderr, exitCode };
   }
 
-  it.concurrent(
-    "bun remove --lockfile-only edits package.json and bun.lock without creating node_modules",
-    async () => {
-      const { ctx, dir, urls } = await setup({ bar: "0.0.1", baz: "0.0.1" }, { "0.0.1": {} });
-      try {
-        const before = readFileSync(join(dir, "bun.lock"), "utf8");
-        expect(before).toContain('"bar": ["bar@0.0.1"');
-        expect(before).toContain('"baz": ["baz@0.0.1"');
+  it.concurrent("bun remove --lockfile-only edits package.json and bun.lock without creating node_modules", async () => {
+    const { ctx, dir, urls } = await setup({ bar: "0.0.1", baz: "0.0.1" }, { "0.0.1": {} });
+    try {
+      const before = readFileSync(join(dir, "bun.lock"), "utf8");
+      expect(before).toContain('"bar": ["bar@0.0.1"');
+      expect(before).toContain('"baz": ["baz@0.0.1"');
 
-        const { stdout, stderr, exitCode } = await run(ctx, "remove", "--lockfile-only", "bar");
-        expect(stderr).not.toContain("error:");
-        expect(stderr).toContain("Saved lockfile");
-        expect(stdout).toContain("Saved bun.lock");
-        expect(JSON.parse(readFileSync(join(dir, "package.json"), "utf8"))).toStrictEqual({
-          name: "foo",
-          dependencies: { baz: "0.0.1" },
-        });
-        const after = readFileSync(join(dir, "bun.lock"), "utf8");
-        expect(after).not.toContain("bar@");
-        expect(after).toContain('"baz": ["baz@0.0.1"');
-        expect(urls.filter(url => url.endsWith(".tgz"))).toStrictEqual([]);
-        expect(existsSync(join(dir, "node_modules"))).toBe(false);
-        expect(exitCode).toBe(0);
-      } finally {
-        destroyTestContext(ctx);
-      }
-    },
-  );
+      const { stdout, stderr, exitCode } = await run(ctx, "remove", "--lockfile-only", "bar");
+      expect(stderr).not.toContain("error:");
+      expect(stderr).toContain("Saved lockfile");
+      expect(stdout).toContain("Saved bun.lock");
+      expect(JSON.parse(readFileSync(join(dir, "package.json"), "utf8"))).toStrictEqual({
+        name: "foo",
+        dependencies: { baz: "0.0.1" },
+      });
+      const after = readFileSync(join(dir, "bun.lock"), "utf8");
+      expect(after).not.toContain("bar@");
+      expect(after).toContain('"baz": ["baz@0.0.1"');
+      expect(urls.filter(url => url.endsWith(".tgz"))).toStrictEqual([]);
+      expect(existsSync(join(dir, "node_modules"))).toBe(false);
+      expect(exitCode).toBe(0);
+    } finally {
+      destroyTestContext(ctx);
+    }
+  });
 
-  it.concurrent(
-    "bun update --lockfile-only edits package.json and bun.lock without creating node_modules",
-    async () => {
-      const { ctx, dir, urls } = await setup({ baz: "~0.0.3" }, { "0.0.3": {}, latest: "0.0.3" });
-      try {
-        expect(readFileSync(join(dir, "bun.lock"), "utf8")).toContain('"baz": ["baz@0.0.3"');
-        setContextHandler(ctx, dummyRegistryForContext(ctx, urls, { "0.0.3": {}, "0.0.5": {}, latest: "0.0.5" }));
+  it.concurrent("bun update --lockfile-only edits package.json and bun.lock without creating node_modules", async () => {
+    const { ctx, dir, urls } = await setup({ baz: "~0.0.3" }, { "0.0.3": {}, latest: "0.0.3" });
+    try {
+      expect(readFileSync(join(dir, "bun.lock"), "utf8")).toContain('"baz": ["baz@0.0.3"');
+      setContextHandler(ctx, dummyRegistryForContext(ctx, urls, { "0.0.3": {}, "0.0.5": {}, latest: "0.0.5" }));
 
-        const { stdout, stderr, exitCode } = await run(ctx, "update", "--lockfile-only", "baz");
-        expect(stderr).not.toContain("error:");
-        expect(stderr).toContain("Saved lockfile");
-        expect(stdout).toContain("Saved bun.lock");
-        expect(JSON.parse(readFileSync(join(dir, "package.json"), "utf8"))).toStrictEqual({
-          name: "foo",
-          dependencies: { baz: "~0.0.5" },
-        });
-        const after = readFileSync(join(dir, "bun.lock"), "utf8");
-        expect(after).toContain('"baz": ["baz@0.0.5"');
-        expect(after).not.toContain("baz@0.0.3");
-        expect(urls.map(url => url.slice(ctx.registry_url.length))).toStrictEqual(["baz"]);
-        expect(existsSync(join(dir, "node_modules"))).toBe(false);
-        expect(exitCode).toBe(0);
-      } finally {
-        destroyTestContext(ctx);
-      }
-    },
-  );
+      const { stdout, stderr, exitCode } = await run(ctx, "update", "--lockfile-only", "baz");
+      expect(stderr).not.toContain("error:");
+      expect(stderr).toContain("Saved lockfile");
+      expect(stdout).toContain("Saved bun.lock");
+      expect(JSON.parse(readFileSync(join(dir, "package.json"), "utf8"))).toStrictEqual({
+        name: "foo",
+        dependencies: { baz: "~0.0.5" },
+      });
+      const after = readFileSync(join(dir, "bun.lock"), "utf8");
+      expect(after).toContain('"baz": ["baz@0.0.5"');
+      expect(after).not.toContain("baz@0.0.3");
+      expect(urls.map(url => url.slice(ctx.registry_url.length))).toStrictEqual(["baz"]);
+      expect(existsSync(join(dir, "node_modules"))).toBe(false);
+      expect(exitCode).toBe(0);
+    } finally {
+      destroyTestContext(ctx);
+    }
+  });
 
   it.concurrent("bun update --lockfile-only with no arguments re-resolves the whole lockfile", async () => {
     const { ctx, dir, urls } = await setup({ baz: "~0.0.3" }, { "0.0.3": {}, latest: "0.0.3" });

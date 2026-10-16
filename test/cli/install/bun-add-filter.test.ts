@@ -179,32 +179,29 @@ async function expectAddedOnlyTo(
   expect(WORKSPACES.map(w => workspaces[lockKey(w)])).toStrictEqual((await allPackageJsons(dir)).map(lockEntryOf));
 }
 
-test.concurrent(
-  'add --filter targets one workspace by name (and does not install an npm package called "api")',
-  async () => {
-    const dir = await makeMonorepo();
+test.concurrent('add --filter targets one workspace by name (and does not install an npm package called "api")', async () => {
+  const dir = await makeMonorepo();
 
-    const { stderr, exitCode } = await run(["add", "no-deps", "--filter", "api"], dir, { linker: "hoisted" });
-    expect(stderr).toBe("Saved lockfile\n");
-    expect(exitCode).toBe(0);
+  const { stderr, exitCode } = await run(["add", "no-deps", "--filter", "api"], dir, { linker: "hoisted" });
+  expect(stderr).toBe("Saved lockfile\n");
+  expect(exitCode).toBe(0);
 
-    await expectWorkspaces(dir, [ROOT, plus(API), WEB, PKG_A, PKG_B]);
+  await expectWorkspaces(dir, [ROOT, plus(API), WEB, PKG_A, PKG_B]);
 
-    expect(await file(join(dir, "node_modules", "no-deps", "package.json")).json()).toStrictEqual({
-      name: "no-deps",
-      version: "2.0.0",
-    });
-    // node_modules/api is the linked workspace, not a registry package
-    expect(await file(join(dir, "node_modules", "api", "package.json")).json()).toStrictEqual({
-      name: "api",
-      dependencies: { "no-deps": "^2.0.0" },
-    });
-    const lockfile = await file(join(dir, "bun.lock")).text();
-    expect(lockfile).toContain('"no-deps@2.0.0"');
-    expect(lockfile).toContain('"api@workspace:packages/api"');
-    expect(lockfile).not.toMatch(/"api@\d/);
-  },
-);
+  expect(await file(join(dir, "node_modules", "no-deps", "package.json")).json()).toStrictEqual({
+    name: "no-deps",
+    version: "2.0.0",
+  });
+  // node_modules/api is the linked workspace, not a registry package
+  expect(await file(join(dir, "node_modules", "api", "package.json")).json()).toStrictEqual({
+    name: "api",
+    dependencies: { "no-deps": "^2.0.0" },
+  });
+  const lockfile = await file(join(dir, "bun.lock")).text();
+  expect(lockfile).toContain('"no-deps@2.0.0"');
+  expect(lockfile).toContain('"api@workspace:packages/api"');
+  expect(lockfile).not.toMatch(/"api@\d/);
+});
 
 test.concurrent("-F alias with --dev and --exact", async () => {
   const dir = await makeMonorepo();
@@ -455,25 +452,22 @@ test.concurrent("two relation selectors union", async () => {
   await expectAddedOnlyTo(dir, before, ["api", "web", "pkg-a"]);
 });
 
-test.concurrent(
-  "dependents are found through devDependencies and plain-range edges; the root stays out of add",
-  async () => {
-    const dir = await makeMonorepo({
-      root: { ...ROOT, dependencies: { api: "workspace:*" } },
-      api: { name: "api", version: "1.0.0" },
-      web: { name: "web", devDependencies: { api: "1.0.0" } },
-    });
-    await installOk(dir);
-    const before = await allPackageJsonTexts(dir);
+test.concurrent("dependents are found through devDependencies and plain-range edges; the root stays out of add", async () => {
+  const dir = await makeMonorepo({
+    root: { ...ROOT, dependencies: { api: "workspace:*" } },
+    api: { name: "api", version: "1.0.0" },
+    web: { name: "web", devDependencies: { api: "1.0.0" } },
+  });
+  await installOk(dir);
+  const before = await allPackageJsonTexts(dir);
 
-    const { stderr, exitCode } = await run(["add", "no-deps", "--filter", "...api"], dir);
-    expect(stderr).toBe("Saved lockfile\n");
-    expect(exitCode).toBe(0);
+  const { stderr, exitCode } = await run(["add", "no-deps", "--filter", "...api"], dir);
+  expect(stderr).toBe("Saved lockfile\n");
+  expect(exitCode).toBe(0);
 
-    await expectAddedOnlyTo(dir, before, ["api", "web"]);
-    expect((await lockfileJson(dir)).workspaces[""].dependencies).toStrictEqual({ api: "workspace:*" });
-  },
-);
+  await expectAddedOnlyTo(dir, before, ["api", "web"]);
+  expect((await lockfileJson(dir)).workspaces[""].dependencies).toStrictEqual({ api: "workspace:*" });
+});
 
 test.concurrent("relation selectors terminate on a workspace dependency cycle", async () => {
   const files = {
@@ -655,83 +649,80 @@ test.concurrent("a workspace created since the last install takes part in relati
   }
 });
 
-test.concurrent(
-  "a plain range the workspace version does not satisfy is not an edge; an unsatisfied workspace: range is the install error",
-  async () => {
-    {
-      const dir = await makeMonorepo({
-        api: { name: "api", version: "1.0.0" },
-        web: { name: "web", dependencies: { api: "2.0.0" } },
-      });
-      const before = await allPackageJsonTexts(dir);
+test.concurrent("a plain range the workspace version does not satisfy is not an edge; an unsatisfied workspace: range is the install error", async () => {
+  {
+    const dir = await makeMonorepo({
+      api: { name: "api", version: "1.0.0" },
+      web: { name: "web", dependencies: { api: "2.0.0" } },
+    });
+    const before = await allPackageJsonTexts(dir);
 
-      const { stderr, exitCode } = await run(["add", "no-deps", "--filter", "...^api"], dir);
-      expect(stderr).toBe('error: No workspace packages matched the filter "...^api"\n');
-      expect(exitCode).toBe(1);
+    const { stderr, exitCode } = await run(["add", "no-deps", "--filter", "...^api"], dir);
+    expect(stderr).toBe('error: No workspace packages matched the filter "...^api"\n');
+    expect(exitCode).toBe(1);
 
-      expect(await allPackageJsonTexts(dir)).toStrictEqual(before);
-      expect(await exists(join(dir, "bun.lock"))).toBeFalse();
-    }
+    expect(await allPackageJsonTexts(dir)).toStrictEqual(before);
+    expect(await exists(join(dir, "bun.lock"))).toBeFalse();
+  }
 
-    {
-      const dir = await makeMonorepo({
-        api: { name: "api", version: "1.0.0" },
-        web: { name: "web", dependencies: { api: "^1.0.0" } },
-      });
-      const before = await allPackageJsonTexts(dir);
+  {
+    const dir = await makeMonorepo({
+      api: { name: "api", version: "1.0.0" },
+      web: { name: "web", dependencies: { api: "^1.0.0" } },
+    });
+    const before = await allPackageJsonTexts(dir);
 
-      const { stderr, exitCode } = await run(["add", "no-deps", "--filter", "...^api"], dir);
-      expect(stderr).toBe("Saved lockfile\n");
-      expect(exitCode).toBe(0);
+    const { stderr, exitCode } = await run(["add", "no-deps", "--filter", "...^api"], dir);
+    expect(stderr).toBe("Saved lockfile\n");
+    expect(exitCode).toBe(0);
 
-      await expectAddedOnlyTo(dir, before, ["web"]);
-    }
+    await expectAddedOnlyTo(dir, before, ["web"]);
+  }
 
-    {
-      const dir = await makeMonorepo({
-        api: { name: "api", version: "1.0.0" },
-        web: { name: "web", dependencies: { api: "workspace:^2.0.0" } },
-      });
-      const before = await allPackageJsonTexts(dir);
+  {
+    const dir = await makeMonorepo({
+      api: { name: "api", version: "1.0.0" },
+      web: { name: "web", dependencies: { api: "workspace:^2.0.0" } },
+    });
+    const before = await allPackageJsonTexts(dir);
 
-      const { stderr, exitCode } = await run(["add", "no-deps", "--filter", "...api"], dir);
-      expect(stderr).toStartWith(
-        'error: No matching version for workspace dependency "api". Version: "workspace:^2.0.0"\n',
-      );
-      expect(exitCode).toBe(1);
+    const { stderr, exitCode } = await run(["add", "no-deps", "--filter", "...api"], dir);
+    expect(stderr).toStartWith(
+      'error: No matching version for workspace dependency "api". Version: "workspace:^2.0.0"\n',
+    );
+    expect(exitCode).toBe(1);
 
-      expect(await allPackageJsonTexts(dir)).toStrictEqual(before);
-      expect(await exists(join(dir, "bun.lock"))).toBeFalse();
-    }
+    expect(await allPackageJsonTexts(dir)).toStrictEqual(before);
+    expect(await exists(join(dir, "bun.lock"))).toBeFalse();
+  }
 
-    // '*' against a versionless workspace is an edge.
-    {
-      const dir = await makeMonorepo({ web: { name: "web", dependencies: { api: "*" } } });
-      const before = await allPackageJsonTexts(dir);
+  // '*' against a versionless workspace is an edge.
+  {
+    const dir = await makeMonorepo({ web: { name: "web", dependencies: { api: "*" } } });
+    const before = await allPackageJsonTexts(dir);
 
-      const { stderr, exitCode } = await run(["add", "no-deps", "--filter", "...^api"], dir);
-      expect(stderr).toBe("Saved lockfile\n");
-      expect(exitCode).toBe(0);
+    const { stderr, exitCode } = await run(["add", "no-deps", "--filter", "...^api"], dir);
+    expect(stderr).toBe("Saved lockfile\n");
+    expect(exitCode).toBe(0);
 
-      await expectAddedOnlyTo(dir, before, ["web"]);
-    }
+    await expectAddedOnlyTo(dir, before, ["web"]);
+  }
 
-    // A catalog entry that resolves to a workspace is an edge.
-    {
-      const dir = await makeMonorepo({
-        root: { name: "root", workspaces: { packages: ["packages/*"], catalog: { api: "workspace:*" } } },
-        web: { name: "web", dependencies: { api: "catalog:" } },
-      });
-      const before = await allPackageJsonTexts(dir);
+  // A catalog entry that resolves to a workspace is an edge.
+  {
+    const dir = await makeMonorepo({
+      root: { name: "root", workspaces: { packages: ["packages/*"], catalog: { api: "workspace:*" } } },
+      web: { name: "web", dependencies: { api: "catalog:" } },
+    });
+    const before = await allPackageJsonTexts(dir);
 
-      const { stderr, exitCode } = await run(["add", "no-deps", "--filter", "...^api"], dir);
-      expect(stderr).toBe("Saved lockfile\n");
-      expect(exitCode).toBe(0);
+    const { stderr, exitCode } = await run(["add", "no-deps", "--filter", "...^api"], dir);
+    expect(stderr).toBe("Saved lockfile\n");
+    expect(exitCode).toBe(0);
 
-      await expectAddedOnlyTo(dir, before, ["web"]);
-    }
-  },
-);
+    await expectAddedOnlyTo(dir, before, ["web"]);
+  }
+});
 
 test.concurrent("a bare '...' is rejected", async () => {
   const dir = await makeMonorepo();
@@ -748,33 +739,30 @@ test.concurrent("a bare '...' is rejected", async () => {
   expect(await exists(join(dir, "node_modules", "no-deps"))).toBeFalse();
 });
 
-test.concurrent(
-  "install --filter with a positive and a negated pattern installs only the positive matches",
-  async () => {
-    const fixture = {
-      root: { ...ROOT, dependencies: { "a-dep": "1.0.1" } },
-      api: { name: "api", dependencies: { "no-deps": "2.0.0" } },
-      "pkg-a": { name: "pkg-a", dependencies: { "is-number": "1.0.0" } },
-    };
-    const dir = await makeMonorepo(fixture);
+test.concurrent("install --filter with a positive and a negated pattern installs only the positive matches", async () => {
+  const fixture = {
+    root: { ...ROOT, dependencies: { "a-dep": "1.0.1" } },
+    api: { name: "api", dependencies: { "no-deps": "2.0.0" } },
+    "pkg-a": { name: "pkg-a", dependencies: { "is-number": "1.0.0" } },
+  };
+  const dir = await makeMonorepo(fixture);
 
-    const { stderr, exitCode } = await run(["install", "--filter", "api", "--filter", "!web"], dir, {
-      linker: "hoisted",
-    });
-    expect(stderr).toBe("Saved lockfile\n");
-    expect(exitCode).toBe(0);
+  const { stderr, exitCode } = await run(["install", "--filter", "api", "--filter", "!web"], dir, {
+    linker: "hoisted",
+  });
+  expect(stderr).toBe("Saved lockfile\n");
+  expect(exitCode).toBe(0);
 
-    expect(
-      await Promise.all([
-        exists(join(dir, "node_modules", "no-deps", "package.json")),
-        exists(join(dir, "node_modules", "a-dep")),
-        exists(join(dir, "node_modules", "is-number")),
-      ]),
-    ).toStrictEqual([true, false, false]);
-    // The whole monorepo is still resolved into bun.lock; the filter only decides what gets linked.
-    await expectWorkspaces(dir, [fixture.root, fixture.api, WEB, fixture["pkg-a"], PKG_B]);
-  },
-);
+  expect(
+    await Promise.all([
+      exists(join(dir, "node_modules", "no-deps", "package.json")),
+      exists(join(dir, "node_modules", "a-dep")),
+      exists(join(dir, "node_modules", "is-number")),
+    ]),
+  ).toStrictEqual([true, false, false]);
+  // The whole monorepo is still resolved into bun.lock; the filter only decides what gets linked.
+  await expectWorkspaces(dir, [fixture.root, fixture.api, WEB, fixture["pkg-a"], PKG_B]);
+});
 
 test.concurrent("install --filter with relations installs the closure only", async () => {
   const fixture = {
@@ -1093,26 +1081,23 @@ test.concurrent("--dry-run writes nothing", async () => {
 
 // Ported from pnpm's filtered add/remove suites and pacquet's install_filters.rs.
 
-test.concurrent(
-  "add --only-missing --filter leaves an existing entry untouched in the target that has it",
-  async () => {
-    const dir = await makeMonorepo({ api: { name: "api", dependencies: { "no-deps": "1.0.0" } } });
-    const apiBefore = await pkgText(dir, "api");
+test.concurrent("add --only-missing --filter leaves an existing entry untouched in the target that has it", async () => {
+  const dir = await makeMonorepo({ api: { name: "api", dependencies: { "no-deps": "1.0.0" } } });
+  const apiBefore = await pkgText(dir, "api");
 
-    const { stderr, exitCode } = await run(["add", "no-deps", "--only-missing", "--filter", "*"], dir);
-    expect(stderr).toBe("Saved lockfile\n");
-    expect(exitCode).toBe(0);
+  const { stderr, exitCode } = await run(["add", "no-deps", "--only-missing", "--filter", "*"], dir);
+  expect(stderr).toBe("Saved lockfile\n");
+  expect(exitCode).toBe(0);
 
-    expect(await pkgText(dir, "api")).toBe(apiBefore);
-    await expectWorkspaces(dir, [
-      ROOT,
-      { name: "api", dependencies: { "no-deps": "1.0.0" } },
-      { name: "web", dependencies: { "a-dep": "1.0.1", "no-deps": "^2.0.0" } },
-      { name: "pkg-a", dependencies: { "no-deps": "^2.0.0" } },
-      { name: "pkg-b", dependencies: { "no-deps": "^2.0.0" } },
-    ]);
-  },
-);
+  expect(await pkgText(dir, "api")).toBe(apiBefore);
+  await expectWorkspaces(dir, [
+    ROOT,
+    { name: "api", dependencies: { "no-deps": "1.0.0" } },
+    { name: "web", dependencies: { "a-dep": "1.0.1", "no-deps": "^2.0.0" } },
+    { name: "pkg-a", dependencies: { "no-deps": "^2.0.0" } },
+    { name: "pkg-b", dependencies: { "no-deps": "^2.0.0" } },
+  ]);
+});
 
 test.concurrent("add --only-missing --filter resolves from a target that received the request", async () => {
   // The root (first target) already has the dep; web must still get the freshly resolved version.
@@ -2301,27 +2286,24 @@ test.concurrent("an aliased local path is shared by targets at the same depth", 
   await expectAddedOnlyTo(dir, before, ["api", "web"], "myfoo", "file:../../vendor/foo");
 });
 
-test.concurrent(
-  "an aliased local path spelled differently per target is rejected before anything is written",
-  async () => {
-    const dir = await makeMonorepo();
-    await addVendorFoo(dir);
-    const before = await allPackageJsonTexts(dir);
+test.concurrent("an aliased local path spelled differently per target is rejected before anything is written", async () => {
+  const dir = await makeMonorepo();
+  await addVendorFoo(dir);
+  const before = await allPackageJsonTexts(dir);
 
-    const { stderr, exitCode } = await run(
-      ["add", "myfoo@file:./vendor/foo", "--filter", "root", "--filter", "api"],
-      dir,
-    );
-    expect(stderr).toBe(
-      'error: "myfoo@file:../../vendor/foo" is spelled differently relative to each selected workspace; add it to one workspace at a time\n',
-    );
-    expect(exitCode).toBe(1);
+  const { stderr, exitCode } = await run(
+    ["add", "myfoo@file:./vendor/foo", "--filter", "root", "--filter", "api"],
+    dir,
+  );
+  expect(stderr).toBe(
+    'error: "myfoo@file:../../vendor/foo" is spelled differently relative to each selected workspace; add it to one workspace at a time\n',
+  );
+  expect(exitCode).toBe(1);
 
-    expect(await allPackageJsonTexts(dir)).toStrictEqual(before);
-    expect(await exists(join(dir, "bun.lock"))).toBeFalse();
-    expect(await exists(join(dir, "node_modules"))).toBeFalse();
-  },
-);
+  expect(await allPackageJsonTexts(dir)).toStrictEqual(before);
+  expect(await exists(join(dir, "bun.lock"))).toBeFalse();
+  expect(await exists(join(dir, "node_modules"))).toBeFalse();
+});
 
 // Windows is left out: its path buffer holds more than any path the OS accepts.
 test.concurrent.skipIf(isWindows)(

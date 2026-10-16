@@ -109,27 +109,27 @@ const { exports } = await init({ args: ["tool"], env: {}, preopens: { "/": "." }
 
 ## Flags
 
-| Flag                      | Description                                                                         |
-| ------------------------- | ----------------------------------------------------------------------------------- |
-| `-o`, `--outdir=<dir>`    | Output package. Defaults to `pkg` in the crate                                      |
-| `-p`, `--package=<name>`  | A package of the Cargo workspace                                                    |
-| `--artifact=<file>`       | Package a `.wasm` cargo already built                                               |
-| `--cargo=<cmd>`           | Run `<cmd>` instead of `cargo`                                                      |
-| `--target=<t>`            | `wasm-bindgen` target: `web` (default), `bundler`, `nodejs`, `deno`, `no-modules`   |
-| `--wasi=<p1\|p2>`          | Build for WASI preview 1 or preview 2                                               |
-| `--triple=<triple>`       | Any Rust target triple                                                              |
-| `--dev`                   | Debug profile, no `wasm-opt`                                                        |
-| `--profile=<name>`        | Cargo profile. Defaults to `release`                                                |
-| `--opt-level=<level>`     | `wasm-opt` level: `Oz` (default), `Os`, `O0` to `O4`                                |
-| `--no-opt`                | Skip `wasm-opt`                                                                     |
-| `--name=<name>`           | Base name of the generated files                                                    |
-| `--features=<a,b>`        | Cargo features                                                                      |
-| `--no-default-features`   | Disable the crate's default features                                                |
-| `--locked`                | Pass `--locked` to cargo                                                            |
-| `--no-typescript`         | Do not emit `.d.ts` files                                                           |
-| `--no-pack`               | Do not write `package.json`                                                         |
-| `--max-bytes=<n>`         | Fail when the optimized `.wasm` is larger                                           |
-| `-- <cargo args>`         | Passed to `cargo build`                                                             |
+| Flag                     | Description                                                                       |
+| ------------------------ | --------------------------------------------------------------------------------- |
+| `-o`, `--outdir=<dir>`   | Output package. Defaults to `pkg` in the crate                                    |
+| `-p`, `--package=<name>` | A package of the Cargo workspace                                                  |
+| `--artifact=<file>`      | Package a `.wasm` cargo already built                                             |
+| `--cargo=<cmd>`          | Run `<cmd>` instead of `cargo`                                                    |
+| `--target=<t>`           | `wasm-bindgen` target: `web` (default), `bundler`, `nodejs`, `deno`, `no-modules` |
+| `--wasi=<p1\|p2>`        | Build for WASI preview 1 or preview 2                                             |
+| `--triple=<triple>`      | Any Rust target triple                                                            |
+| `--dev`                  | Debug profile, no `wasm-opt`                                                      |
+| `--profile=<name>`       | Cargo profile. Defaults to `release`                                              |
+| `--opt-level=<level>`    | `wasm-opt` level: `Oz` (default), `Os`, `O0` to `O4`                              |
+| `--no-opt`               | Skip `wasm-opt`                                                                   |
+| `--name=<name>`          | Base name of the generated files                                                  |
+| `--features=<a,b>`       | Cargo features                                                                    |
+| `--no-default-features`  | Disable the crate's default features                                              |
+| `--locked`               | Pass `--locked` to cargo                                                          |
+| `--no-typescript`        | Do not emit `.d.ts` files                                                         |
+| `--no-pack`              | Do not write `package.json`                                                       |
+| `--max-bytes=<n>`        | Fail when the optimized `.wasm` is larger                                         |
+| `-- <cargo args>`        | Passed to `cargo build`                                                           |
 
 `bun wasm opt <in.wasm>` runs `wasm-opt` (`-Oz` by default) on a module.
 

@@ -5,13 +5,13 @@ description: "One language server for TypeScript, JavaScript, Python, Rust, C, C
 
 `bun lsp` is a language server for editors and a command line for agents and scripts. It speaks the Language Server Protocol and passes each request to the server of the document's language. It starts that server the first time a file of that language needs it.
 
-| Language                | Server                                                                                                  | Diagnostics                                         |
-| ----------------------- | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------- |
-| TypeScript, JavaScript  | `tsgo` (`@typescript/native-preview`), else `typescript-language-server`, else `bun x` downloads `tsgo` | [`bun check`](/runtime/check), in the same process  |
-| Python                  | `ty`, else `basedpyright`, else `pyright`, else `ty` through [`bun uv`](/runtime/buv)                   | the server, plus `ruff server` if it is installed   |
-| Rust                    | `rust-analyzer`                                                                                         | the server                                          |
-| C, C++, Objective-C     | `clangd`, else `clangd` from PyPI through `bun uv`                                                      | the server                                          |
-| C#                      | Microsoft `roslyn-language-server` (`Microsoft.CodeAnalysis.LanguageServer`)                            | the server                                          |
+| Language               | Server                                                                                                  | Diagnostics                                        |
+| ---------------------- | ------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| TypeScript, JavaScript | `tsgo` (`@typescript/native-preview`), else `typescript-language-server`, else `bun x` downloads `tsgo` | [`bun check`](/runtime/check), in the same process |
+| Python                 | `ty`, else `basedpyright`, else `pyright`, else `ty` through [`bun uv`](/runtime/buv)                   | the server, plus `ruff server` if it is installed  |
+| Rust                   | `rust-analyzer`                                                                                         | the server                                         |
+| C, C++, Objective-C    | `clangd`, else `clangd` from PyPI through `bun uv`                                                      | the server                                         |
+| C#                     | Microsoft `roslyn-language-server` (`Microsoft.CodeAnalysis.LanguageServer`)                            | the server                                         |
 
 `bun lsp` finds servers in `node_modules/.bin`, in the `.venv` of the project, and on `PATH`.
 
@@ -62,13 +62,13 @@ src/index.ts:3:7: error TS2322: Type 'string' is not assignable to type 'number'
 
 Lines and columns start at 1, and columns count characters. `bun lsp query diagnostics` exits with code `1` if there is an error.
 
-| Flag              | Description                                                         |
-| ----------------- | ------------------------------------------------------------------- |
-| `--json`          | Print the answer as JSON                                            |
-| `--limit <n>`     | Print at most `n` items. Defaults to `100`                          |
-| `--timeout <ms>`  | How long a server may take. Defaults to `30000`                     |
-| `--apply`         | With `rename` and `fix`, write the edits to the files               |
-| `--no-daemon`     | Start the servers in this process, and stop them after the answer   |
+| Flag             | Description                                                       |
+| ---------------- | ----------------------------------------------------------------- |
+| `--json`         | Print the answer as JSON                                          |
+| `--limit <n>`    | Print at most `n` items. Defaults to `100`                        |
+| `--timeout <ms>` | How long a server may take. Defaults to `30000`                   |
+| `--apply`        | With `rename` and `fix`, write the edits to the files             |
+| `--no-daemon`    | Start the servers in this process, and stop them after the answer |
 
 ## Code graph and fixes
 
@@ -112,23 +112,23 @@ bun lsp compdb          # write compile_commands.json now
 
 ## Configuration
 
-| Environment variable       | Description                                                                                       |
-| -------------------------- | ------------------------------------------------------------------------------------------------- |
-| `BUN_LSP_TYPESCRIPT`       | The TypeScript server command, such as `"tsgo --lsp --stdio"` or a JSON array of arguments        |
-| `BUN_LSP_PYTHON`           | The Python server command                                                                         |
-| `BUN_LSP_RUST`             | The Rust server command                                                                           |
-| `BUN_LSP_CPP`              | The C and C++ server command. Its arguments replace those that `bun lsp` adds                     |
-| `BUN_LSP_CSHARP`           | The C# Roslyn server command, for example `"Microsoft.CodeAnalysis.LanguageServer --stdio"`       |
-| `BUN_LSP_TS_DIAGNOSTICS`   | `server` to take TypeScript diagnostics from the server instead of `bun check`                    |
-| `BUN_LSP_OFFLINE`          | `1` to never download a server with `bun x` or `bun uv`                                           |
-| `BUN_LSP_LIMIT`            | The most items in an answer, and `clangd --limit-results`. Defaults to `100`                      |
-| `BUN_LSP_JOBS`             | Threads of `clangd` and `rust-analyzer`. Defaults to half the CPU cores, at most 4                |
-| `BUN_LSP_MAX_SERVERS`      | The most servers that run at once. Defaults to `6`                                                |
-| `BUN_LSP_SERVER_IDLE_MS`   | How long an unused server keeps running. Defaults to 15 minutes                                   |
-| `BUN_LSP_IDLE_MS`          | How long the daemon waits for a query before it exits. Defaults to 30 minutes                     |
-| `BUN_LSP_TIMEOUT_MS`       | How long a server may take to answer. Defaults to 30 seconds                                      |
-| `BUN_LSP_GRAPH`            | `0` to turn the code graph off                                                                    |
-| `BUN_LSP_GRAPH_FILES`      | The most files in a graph. Defaults to `20000`                                                    |
-| `BUN_LSP_AI`               | The command that answers a prompt on stdin, for `fix`, such as `"claude -p"` or `"codex exec -"` |
+| Environment variable     | Description                                                                                      |
+| ------------------------ | ------------------------------------------------------------------------------------------------ |
+| `BUN_LSP_TYPESCRIPT`     | The TypeScript server command, such as `"tsgo --lsp --stdio"` or a JSON array of arguments       |
+| `BUN_LSP_PYTHON`         | The Python server command                                                                        |
+| `BUN_LSP_RUST`           | The Rust server command                                                                          |
+| `BUN_LSP_CPP`            | The C and C++ server command. Its arguments replace those that `bun lsp` adds                    |
+| `BUN_LSP_CSHARP`         | The C# Roslyn server command, for example `"Microsoft.CodeAnalysis.LanguageServer --stdio"`      |
+| `BUN_LSP_TS_DIAGNOSTICS` | `server` to take TypeScript diagnostics from the server instead of `bun check`                   |
+| `BUN_LSP_OFFLINE`        | `1` to never download a server with `bun x` or `bun uv`                                          |
+| `BUN_LSP_LIMIT`          | The most items in an answer, and `clangd --limit-results`. Defaults to `100`                     |
+| `BUN_LSP_JOBS`           | Threads of `clangd` and `rust-analyzer`. Defaults to half the CPU cores, at most 4               |
+| `BUN_LSP_MAX_SERVERS`    | The most servers that run at once. Defaults to `6`                                               |
+| `BUN_LSP_SERVER_IDLE_MS` | How long an unused server keeps running. Defaults to 15 minutes                                  |
+| `BUN_LSP_IDLE_MS`        | How long the daemon waits for a query before it exits. Defaults to 30 minutes                    |
+| `BUN_LSP_TIMEOUT_MS`     | How long a server may take to answer. Defaults to 30 seconds                                     |
+| `BUN_LSP_GRAPH`          | `0` to turn the code graph off                                                                   |
+| `BUN_LSP_GRAPH_FILES`    | The most files in a graph. Defaults to `20000`                                                   |
+| `BUN_LSP_AI`             | The command that answers a prompt on stdin, for `fix`, such as `"claude -p"` or `"codex exec -"` |
 
 `rust-analyzer` starts with `checkOnSave` off, so it does not run `cargo check` after each save.

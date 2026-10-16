@@ -26,5 +26,5 @@ is retained. These scoped results do not establish complete release or installed
 consumer qualification.
 
 Receipts: tmp/com-query-native.log/.exit and
- tmp/com-query-<target>.jsonl/.stderr/.exit. A separate clean published checkout
+tmp/com-query-<target>.jsonl/.stderr/.exit. A separate clean published checkout
 is being qualified to distinguish released source from concurrent shared work.

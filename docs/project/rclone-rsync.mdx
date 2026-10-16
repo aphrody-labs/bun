@@ -5,11 +5,11 @@ description: rclone (CLI et librclone via bun:ffi) et rsync statique, forks aphr
 
 Le paquet `packages/bun-tools` utilise les assets `aphrody-tools-1` avec tailles et SHA-256 fixes. Leur révision source n'est pas établie : le descriptif de release indique les forks, sans commit. L'installation est explicite (`bun-host tool install rclone`, `librclone` ou `rsync`). Le répertoire unique est `dirname(process.execPath)/lib/tools`, sans dossier de version, avec `rclone(.exe)`, `librclone(.so/.dll)` et `rsync`. `BUN_TOOLS_DIR` permet de choisir un répertoire absolu ; `APHRODY_TOOLS_DIR` reste uniquement un override explicite. CLI et API utilisent ce même fournisseur, vérifient ses SHA-256 avant usage et ne téléchargent rien implicitement. Les exécutables configurés restent prioritaires, puis le SDK installé, puis les outils du PATH.
 
-| Asset | Contenu |
-| --- | --- |
-| `rclone-linux-x64`, `rclone-windows-x64.exe` | CLI rclone |
+| Asset                                                 | Contenu                                                                                                                       |
+| ----------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| `rclone-linux-x64`, `rclone-windows-x64.exe`          | CLI rclone                                                                                                                    |
 | `librclone-linux-x64.so`, `librclone-windows-x64.dll` | librclone, avec l'export `RcloneRPCJSON` (réponse JSON en une chaîne, car bun:ffi ne lit pas une struct retournée par valeur) |
-| `rsync-linux-x64-musl` | rsync statique (musl) |
+| `rsync-linux-x64-musl`                                | rsync statique (musl)                                                                                                         |
 
 ```ts
 import { git, rclone, rcloneRpc, rsync, rsyncNative } from "@aphrody/bun-tools";

@@ -6,13 +6,13 @@ The standalone `buv-runtime` artifact exposes a versioned C ABI. Canonical
 `buv_*` and compatible `yolo_*` names share the same handles, registry and
 process owner. This source contract does not qualify every native target.
 
-| Piece | Canonical path in Bun |
-| --- | --- |
-| Library (cdylib + rlib) | `packages/bun-runtime-sdk/crates/yolo-runtime` |
-| C headers | `packages/bun-runtime-sdk/include/buv_runtime.h`, `yolo_runtime.h` |
-| TypeScript SDK (`bun:ffi`) | `packages/bun-runtime-sdk/src` |
-| Python ctypes | `packages/bun-runtime-sdk/python/ctypes` |
-| Artifact staging | `packages/bun-runtime-sdk/scripts/stage.ts` |
+| Piece                      | Canonical path in Bun                                              |
+| -------------------------- | ------------------------------------------------------------------ |
+| Library (cdylib + rlib)    | `packages/bun-runtime-sdk/crates/yolo-runtime`                     |
+| C headers                  | `packages/bun-runtime-sdk/include/buv_runtime.h`, `yolo_runtime.h` |
+| TypeScript SDK (`bun:ffi`) | `packages/bun-runtime-sdk/src`                                     |
+| Python ctypes              | `packages/bun-runtime-sdk/python/ctypes`                           |
+| Artifact staging           | `packages/bun-runtime-sdk/scripts/stage.ts`                        |
 
 ```sh
 bun scripts/build/rust/cargo-serial.ts build --manifest-path packages/bun-runtime-sdk/Cargo.toml --profile runtime -p yolo-runtime --jobs 1
@@ -33,14 +33,14 @@ Cargo uses the shared cache instead of the package's default target directory.
 The table uses compatible `yolo_*` names; matching `buv_*` entry points
 forward to the same owner.
 
-| Capability | Entry points | Owner |
-| --- | --- | --- |
-| `system.stats` | `yolo_system_stats` | `yolo_core` system statistics |
-| `bench.compute` | `yolo_bench_start`, operation wait/cancel/release | cancellable native benchmark |
-| `process.supervise` | process spawn/status/read/stop/release | Unix process group or Windows Job |
-| `process.stdin` | process stdin_write/stdin_close | bounded owned pipe writer |
-| `process.wait` | process wait_start, operation wait/cancel/release | same process owner, exit and capture completion |
-| `http.probe` | `yolo_http_probe_start` | bounded HTTP/1.0 probe |
+| Capability          | Entry points                                      | Owner                                           |
+| ------------------- | ------------------------------------------------- | ----------------------------------------------- |
+| `system.stats`      | `yolo_system_stats`                               | `yolo_core` system statistics                   |
+| `bench.compute`     | `yolo_bench_start`, operation wait/cancel/release | cancellable native benchmark                    |
+| `process.supervise` | process spawn/status/read/stop/release            | Unix process group or Windows Job               |
+| `process.stdin`     | process stdin_write/stdin_close                   | bounded owned pipe writer                       |
+| `process.wait`      | process wait_start, operation wait/cancel/release | same process owner, exit and capture completion |
+| `http.probe`        | `yolo_http_probe_start`                           | bounded HTTP/1.0 probe                          |
 
 Browser and GPU symbols remain optional feature extensions. Declarations do
 not establish availability; negotiate capabilities before resolving symbols.
@@ -121,7 +121,14 @@ the owned process group or Job and joins pipe workers. A successful result
 is JSON:
 
 ```json
-{"state":1,"pid":42,"exit_code":0,"signal":0,"output_complete":true,"stdin_complete":true}
+{
+  "state": 1,
+  "pid": 42,
+  "exit_code": 0,
+  "signal": 0,
+  "output_complete": true,
+  "stdin_complete": true
+}
 ```
 
 Success follows child exit and full capture EOF. Capture overflow, pipe I/O

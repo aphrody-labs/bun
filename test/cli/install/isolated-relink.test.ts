@@ -237,27 +237,24 @@ test.concurrent("re-linking a store entry does not re-run its lifecycle scripts"
   expect((await lstat(marker)).mtimeMs).toBe(markerMtime);
 });
 
-test.concurrent(
-  "a real directory in a store entry's dependency slot is left alone and not counted as a change",
-  async () => {
-    using packageDir = project(oneRangeDep());
-    const link = join(storeNodeModules(packageDir, "one-range-dep", "1.0.0"), "no-deps");
+test.concurrent("a real directory in a store entry's dependency slot is left alone and not counted as a change", async () => {
+  using packageDir = project(oneRangeDep());
+  const link = join(storeNodeModules(packageDir, "one-range-dep", "1.0.0"), "no-deps");
 
-    expect(await install(packageDir)).toEqual(installed("+ one-range-dep@1.0.0\n\n2 packages installed"));
-    expect(await layout(packageDir)).toEqual(oneRangeDepLayout("1.1.0"));
+  expect(await install(packageDir)).toEqual(installed("+ one-range-dep@1.0.0\n\n2 packages installed"));
+  expect(await layout(packageDir)).toEqual(oneRangeDepLayout("1.1.0"));
 
-    await unlink(link);
-    await mkdir(link);
-    await write(join(link, "package.json"), JSON.stringify({ name: "no-deps", version: "0.0.0-local-edit" }));
-    const withLocalEdit = {
-      ...oneRangeDepLayout("1.1.0"),
-      ".bun/one-range-dep@1.0.0/node_modules/no-deps": "no-deps@0.0.0-local-edit",
-    };
+  await unlink(link);
+  await mkdir(link);
+  await write(join(link, "package.json"), JSON.stringify({ name: "no-deps", version: "0.0.0-local-edit" }));
+  const withLocalEdit = {
+    ...oneRangeDepLayout("1.1.0"),
+    ".bun/one-range-dep@1.0.0/node_modules/no-deps": "no-deps@0.0.0-local-edit",
+  };
 
-    expect(await install(packageDir)).toEqual(noChanges);
-    expect(await layout(packageDir)).toEqual(withLocalEdit);
-  },
-);
+  expect(await install(packageDir)).toEqual(noChanges);
+  expect(await layout(packageDir)).toEqual(withLocalEdit);
+});
 
 test.concurrent.skipIf(!isWindows)("junction-mode warm install reports no changes", async () => {
   using packageDir = project(oneRangeDep());

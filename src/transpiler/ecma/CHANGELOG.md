@@ -461,22 +461,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 2bc1978 transformer/legacy-decorator: Correct generating metadata for getter/setter methods (#14495) (Dunqing)
 
-
 ## [0.95.0] - 2025-10-15
 
 ### 🚀 Features
 
 - bc4f0a1 transformer: Add ES2020 export namespace from transformation (#14277) (Copilot)
 
-
 ## [0.94.0] - 2025-10-06
 
 ### 🚀 Features
 
 - 588acd5 transformer: Add ES2026 target for explicit resource management (#14330) (Boshen)
-
-
-
 
 ## [0.91.0] - 2025-09-22
 
@@ -488,13 +483,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - fb347da crates: V0.91.0 (#13961) (Boshen)
 
-
 ## [0.91.0] - 2025-09-21
 
 ### 🚀 Features
 
 - d1a0d04 compat: Extract compatibility data to oxc_compat crate (#13932) (sapphi-red)
-
 
 ## [0.90.0] - 2025-09-18
 
@@ -502,8 +495,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 5ec9209 transformer/class-properties: Don't transform properties that have `declare` modifier (#13766) (Dunqing)
 - 7d0b8a1 transformer/typescript: Panic occurs when `declare` property and `definite` property that has initializer (#13785) (Dunqing)
-
-
 
 ## [0.88.0] - 2025-09-15
 
@@ -514,7 +505,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 🚜 Refactor
 
 - 08cbd39 transformer, estree: Clarify code using `is_exhausted` stack methods (#13674) (overlookmotel)
-
 
 ## [0.87.0] - 2025-09-08
 
@@ -532,14 +522,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - c17b80a regular_expression: Extract `has_unsupported_regular_expression_pattern` (#13468) (sapphi-red)
 - 14c40fd ast: Implement `RegExpLiteral::parse_pattern` (#13467) (sapphi-red)
 
-
 ## [0.86.0] - 2025-08-31
 
 ### 💥 BREAKING CHANGES
 
 - edeebc6 data_structures: [**BREAKING**] Rename `SliceIterExt` to `SliceIter` (#13439) (overlookmotel)
-
-
 
 ## [0.84.0] - 2025-08-30
 
@@ -547,7 +534,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 7ee19e2 transformer/styled-components: Remove leading whitespace when literal starts with block comment containing interpolation in CSS minification (#13391) (overlookmotel)
 - cf5175c transformer/styled-components: Remove unnecessary whitespace when removing block comments in CSS minification (#13390) (overlookmotel)
-
 
 ## [0.83.0] - 2025-08-29
 
@@ -569,7 +555,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - e7a49ed transformer/legacy-decorator: Eliminate unreliable identification of metadata (#13227) (Dunqing)
 - 66a5673 ecmascript: Add `ToUint32` trait (#13272) (sapphi-red)
 
-
 ## [0.82.3] - 2025-08-20
 
 ### 🐛 Bug Fixes
@@ -585,14 +570,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - ef3c23a transformer/decorator: Remove temporary `Vec` (#13218) (overlookmotel)
 
-
-
 ## [0.82.1] - 2025-08-13
 
 ### 🐛 Bug Fixes
 
 - 6fe0bb5 transformer/react: Spread props optimization breaks __self and __source injection (#13009) (#13020) (Dunqing)
-
 
 ## [0.82.0] - 2025-08-12
 
@@ -607,13 +589,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - ed40581 transformer: Improve doc comment formatting (#12899) (overlookmotel)
 - d14b8b8 transformer/styled-components: Remove duplicate backtick (#12897) (camc314)
 
-
 ## [0.81.0] - 2025-08-06
 
 ### 💥 BREAKING CHANGES
 
 - 2cc1001 ast: [**BREAKING**] Remove `ExportDefaultDeclaration` `exported` field (#12808) (overlookmotel)
-
 
 ## [0.80.0] - 2025-08-03
 
@@ -641,14 +621,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - c15da81 codegen, formatter, linter, minifier, transformer: Re-order imports (#12725) (Copilot)
 
-
-
 ## [0.79.0] - 2025-07-30
 
 ### 🐛 Bug Fixes
 
 - 2f66dd2 transformer/styled-components: Preserve whitespace before interpolations in minification (#12558) (Dunqing)
-
 
 ## [0.78.0] - 2025-07-24
 
@@ -676,20 +653,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - f32c816 transformer/typescript: Store `Atom` rather than `String` for `ConstantValue::String` (#12458) (Dunqing)
 
-
 ## [0.77.3] - 2025-07-20
 
 ### 🚀 Features
 
 - 0920e98 codegen: Keep arrow function PIFEs (#12353) (sapphi-red)
 
-
 ## [0.77.2] - 2025-07-17
 
 ### 🚜 Refactor
 
 - 7d1d515 transform/styled-components: Shorten code (#12316) (overlookmotel)
-
 
 ## [0.77.1] - 2025-07-16
 
@@ -714,7 +688,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 5ecf5c4 transform/styled-components: Optimize removal loop (#12284) (overlookmotel)
 - a8d1e22 transformer/styled-components: Remove quasis and expressions in batch (#12256) (Dunqing)
 - 8e13e2a transformer/styled-components: Simplify CSS minification (#12224) (overlookmotel)
-
 
 ## [0.77.0] - 2025-07-12
 
@@ -765,25 +738,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 2951645 transformer/styled-components: Fix memory leak (#12207) (overlookmotel)
 
-
-
-
 ## [0.75.0] - 2025-06-25
 
 ### 🚀 Features
 
 - e36ca9a transformer/react-refresh: Support checking a variable whether is used in JSX elements or JSX-like calls (#11859) (Dunqing)
 
-
 ## [0.74.0] - 2025-06-23
 
 ### 💥 BREAKING CHANGES
 
 - 8ef1be2 traverse: [**BREAKING**] Introduce `TraverseCtx<'a, State>` (#11770) (Boshen)
-
-
-
-
 
 # Changelog
 
@@ -819,7 +784,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - d374490 transformer/typescript: Panics when `setPublicClassFields = true` and the class includes private field (#11089) (Dunqing)
 
 ### Refactor
-
 
 ## [0.70.0] - 2025-05-15
 
@@ -1067,13 +1031,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Features
 
-
 ## [0.59.0] - 2025-03-18
 
-- ce6808a parser: [**BREAKING**] Rename `type_parameters` to `type_arguments` where needed  (#9815) (hi-ogawa)
+- ce6808a parser: [**BREAKING**] Rename `type_parameters` to `type_arguments` where needed (#9815) (hi-ogawa)
 
 ### Bug Fixes
-
 
 ### Refactor
 
@@ -1140,7 +1102,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Refactor
 
-
 ## [0.56.4] - 2025-03-07
 
 ### Refactor
@@ -1187,7 +1148,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 5f67fa9 transformer/optional-chaning: Keep `this` when transforming `this.f?.()` (#9505) (camc314)
 
 ### Performance
-
 
 ## [0.53.0] - 2025-02-26
 
@@ -1239,7 +1199,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Refactor
 
-
 ## [0.49.0] - 2025-02-10
 
 - bbb075d ast: [**BREAKING**] Name `AstBuilder` enum builders after variant name not type name (#8890) (overlookmotel)
@@ -1255,7 +1214,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 2c4f004 transformer/typescript: Typescript parameter properties disappear when there's two or more classes that uses that feature (#8969) (Dunqing)
 
 ### Refactor
-
 
 ### Styling
 
@@ -2285,7 +2243,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Performance
 
-
 ### Documentation
 
 - 9282647 transformer: Comment on RegExp transform for potential improvement (#5514) (overlookmotel)
@@ -2521,7 +2478,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Refactor
 
-
 ## [0.21.0] - 2024-07-18
 
 ### Features
@@ -2542,20 +2498,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Refactor
 
-
 ## [0.19.0] - 2024-07-09
 
 - b936162 ast/ast_builder: [**BREAKING**] Shorter allocator utility method names. (#4122) (rzvxa)
 
 ### Refactor
 
-
 ## [0.18.0] - 2024-07-09
 
 - d347aed ast: [**BREAKING**] Generate `ast_builder.rs`. (#3890) (rzvxa)
 
 ### Features
-
 
 ## [0.17.2] - 2024-07-08
 
@@ -2567,7 +2520,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Bug Fixes
 
-- aaac2d8 codegen: Preserve parentheses from AST instead calculating from  operator precedence (#4055) (Boshen)
+- aaac2d8 codegen: Preserve parentheses from AST instead calculating from operator precedence (#4055) (Boshen)
 
 ## [0.16.3] - 2024-07-02
 
@@ -2626,6 +2579,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - aea3e9a transformer: Correct spans for TS annotations transform (#3782) (overlookmotel)
 
 ### Performance
+
 - 4f7ff7e Do not pass `&Atom` to functions (#3818) (overlookmotel)
 
 ### Refactor
@@ -3013,7 +2967,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - c6ad660 semantic: Support scope descendents starting from a certain scope. (#1629) (Miles Johnson)
 - 92c1d9d transform: TypeScript Enum (#1173) (magic-akari)
 - 6cbc5dd transformer: Start on `function_name` transform. (#1510) (Miles Johnson)
-- c034eee transformer: Handle invalid react jsx  runtime (#1502) (IWANABETHATGUY)
+- c034eee transformer: Handle invalid react jsx runtime (#1502) (IWANABETHATGUY)
 - f66e4d8 transformer: Add transform property-literal plugin (#1458) (IWANABETHATGUY)
 - f0e452a transformer: Support importSource option in react_jsx (#1115) (Dunqing)
 - b6393f0 transformer/react: Handle babel 8 breaking removed-options (#1489) (IWANABETHATGUY)
@@ -3103,4 +3057,3 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - d9ba532 transformer: Add an empty SPAN utility for creating AST nodes (#1067) (Boshen)
 - 46a5c42 transformer: Add TransformerCtx struct for easier access to symbols and scopes (Boshen)
 - 1e1050f transformer: Clean up the transformer constructor code (Boshen)
-

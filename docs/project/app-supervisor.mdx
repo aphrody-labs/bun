@@ -28,7 +28,14 @@ await sup.ready(); // READY=1 once every child is ready
 ## Notifications
 
 ```ts
-import { notifyReady, notifyStopping, notifyStatus, notifyReloading, sdNotify, startWatchdog } from "@aphrody/supervisor";
+import {
+  notifyReady,
+  notifyStopping,
+  notifyStatus,
+  notifyReloading,
+  sdNotify,
+  startWatchdog,
+} from "@aphrody/supervisor";
 
 sdNotify("READY=1"); // returns false when NOTIFY_SOCKET is unset
 const stop = startWatchdog({ health: async () => db.ping() });
@@ -57,20 +64,20 @@ root.resize(4 * 2 ** 30); // children are recomputed recursively
 cache.release(); // the share goes back to the siblings
 ```
 
-| Member | Behavior |
-| --- | --- |
-| `Budget.root({ name, bytes })` | Fixed total. |
-| `Budget.fromCgroup({ name, ratio = 0.85 })` | `memory.high`, else `memory.max * ratio`, else `$SUPERVISOR_MEMORY_BYTES`, else half of the RAM. |
-| `child(name, { weight = 1, min = 0, max = Infinity })` | Shares are proportional to the weights of the siblings. Minimums are met first. Bytes above a maximum go to the others. |
-| `configure({ weight, min, max })` | Changes a child and rebalances the siblings. |
-| `resize(bytes)` | On a root, sets the total. On a child, pins its share. |
-| `onResize(cb(bytes, reason))` | Called when the effective share changes. |
-| `onShrink(cb(level))` | Release callback: close idle shards, empty caches. |
-| `shrink(level)` | Reduces the subtree (`soft` to 85%, `hard` to 60%), runs callbacks children first, then `Bun.gc(false)` for `soft` or `Bun.gc(true)` for `hard`. |
-| `relax()` | Removes the reduction. |
-| `idle()` | Runs `onIdle` callbacks, then `Bun.gc(true)`. |
-| `use(bytes)`, `usage` | Optional declared accounting. |
-| `tree()` | JSON snapshot with name, nominal, bytes, usage and children. |
+| Member                                                 | Behavior                                                                                                                                         |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `Budget.root({ name, bytes })`                         | Fixed total.                                                                                                                                     |
+| `Budget.fromCgroup({ name, ratio = 0.85 })`            | `memory.high`, else `memory.max * ratio`, else `$SUPERVISOR_MEMORY_BYTES`, else half of the RAM.                                                 |
+| `child(name, { weight = 1, min = 0, max = Infinity })` | Shares are proportional to the weights of the siblings. Minimums are met first. Bytes above a maximum go to the others.                          |
+| `configure({ weight, min, max })`                      | Changes a child and rebalances the siblings.                                                                                                     |
+| `resize(bytes)`                                        | On a root, sets the total. On a child, pins its share.                                                                                           |
+| `onResize(cb(bytes, reason))`                          | Called when the effective share changes.                                                                                                         |
+| `onShrink(cb(level))`                                  | Release callback: close idle shards, empty caches.                                                                                               |
+| `shrink(level)`                                        | Reduces the subtree (`soft` to 85%, `hard` to 60%), runs callbacks children first, then `Bun.gc(false)` for `soft` or `Bun.gc(true)` for `hard`. |
+| `relax()`                                              | Removes the reduction.                                                                                                                           |
+| `idle()`                                               | Runs `onIdle` callbacks, then `Bun.gc(true)`.                                                                                                    |
+| `use(bytes)`, `usage`                                  | Optional declared accounting.                                                                                                                    |
+| `tree()`                                               | JSON snapshot with name, nominal, bytes, usage and children.                                                                                     |
 
 `BoundedLRU<K, V>(budget, { sizeOf, maxEntries, ttlMs })` is a cache whose capacity is `budget.bytes`. It evicts the least recently used entries, expires entries after `ttlMs`, evicts when the budget shrinks and empties on a `hard` shrink.
 
@@ -92,13 +99,13 @@ Every `intervalMs`, the monitor reads `memory.current`, `memory.high`, `memory.e
 
 `spawnSelf(name, args, options)` starts `process.execPath` again with `args`. With `bun: true` it sets `BUN_BE_BUN=1`, so a compiled executable acts as the `bun` CLI for an external script.
 
-| Option | Default | Behavior |
-| --- | --- | --- |
-| `weight`, `min`, `max` | 1, 0, `Infinity` | Share of the supervisor budget. |
-| `restart` | `"always"` | `"always"`, `"on-failure"` or `"never"`. |
-| `ipc` | `true` | Channel for budget, shrink and memory messages. |
-| `ready` | spawned | `(child) => Promise<void>` that resolves when the child can serve. |
-| `env`, `cwd`, `bun`, `jsc` | | Environment, directory, `BUN_BE_BUN`, JSC limits. |
+| Option                     | Default          | Behavior                                                           |
+| -------------------------- | ---------------- | ------------------------------------------------------------------ |
+| `weight`, `min`, `max`     | 1, 0, `Infinity` | Share of the supervisor budget.                                    |
+| `restart`                  | `"always"`       | `"always"`, `"on-failure"` or `"never"`.                           |
+| `ipc`                      | `true`           | Channel for budget, shrink and memory messages.                    |
+| `ready`                    | spawned          | `(child) => Promise<void>` that resolves when the child can serve. |
+| `env`, `cwd`, `bun`, `jsc` |                  | Environment, directory, `BUN_BE_BUN`, JSC limits.                  |
 
 Each child receives `SUPERVISOR_NAME`, `SUPERVISOR_BUDGET_BYTES`, `BUN_JSC_forceRAMSize` (the budget) and `BUN_JSC_gcMaxHeapSize` (75% of the budget). `NOTIFY_SOCKET` and `WATCHDOG_*` are removed from the child environment. Set `jsc: false` to skip the JSC options.
 

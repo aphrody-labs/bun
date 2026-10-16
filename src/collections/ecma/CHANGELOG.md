@@ -80,16 +80,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - c81a331 data_structures: Doc comments on fields of `Stack` (#15793) (overlookmotel)
 
-
-
-
 ## [0.93.0] - 2025-09-28
 
 ### 🚀 Features
 
 - 1521a1f data_structures: Add `Stack::clear` (#14028) (sapphi-red)
-
-
 
 ## [0.91.0] - 2025-09-22
 
@@ -101,15 +96,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - fb347da crates: V0.91.0 (#13961) (Boshen)
 
-
 ## [0.91.0] - 2025-09-21
 
 ### 🚀 Features
 
 - f8feed1 data_structures: Add `advance_to_end` method to `SliceIter` trait (#13947) (overlookmotel)
-
-
-
 
 ## [0.88.0] - 2025-09-15
 
@@ -122,13 +113,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 1a58e99 data_structures: Add `is_exhausted` method to `NonEmptyStack` and `SparseStack` (#13672) (overlookmotel)
 - 2db32eb data_structures: Add `boxed_slice!` and `boxed_array!` macros (#13596) (overlookmotel)
 
-
 ## [0.87.0] - 2025-09-08
 
 ### 🐛 Bug Fixes
 
 - 34d3cde rust: Fix clippy issues (#13540) (Boshen)
-
 
 ## [0.86.0] - 2025-08-31
 
@@ -150,13 +139,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 475205f data_structures: Reduce `IterMut::advance_unchecked` to 1 instruction (#13438) (overlookmotel)
 
-
-
-
-
-
-
-
 ## [0.82.0] - 2025-08-12
 
 ### 💥 BREAKING CHANGES
@@ -167,13 +149,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - bb7838d data_structures: Add stacks to README (#12904) (overlookmotel)
 
-
 ## [0.81.0] - 2025-08-06
 
 ### ⚡ Performance
 
 - e8ac1a5 codegen: Write indent in chunks of 32 bytes (#12745) (overlookmotel)
-
 
 ## [0.80.0] - 2025-08-03
 
@@ -186,26 +166,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 45e2fe8 rust: Fix typos and grammar mistakes in Rust documentation comments (#12715) (Copilot)
 - de1de35 rust: Add comprehensive README.md documentation for all Rust crates (#12706) (Copilot)
 
-
-
-
-
-
-
 ## [0.77.1] - 2025-07-16
 
 ### 🚀 Features
 
 - 7cb4d22 data_structures: `SliceIterExt` extension trait (#12294) (overlookmotel)
-
-
-
-
-
-
-
-
-
 
 # Changelog
 
@@ -255,7 +220,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Features
 
-
 ## [0.55.0] - 2025-03-05
 
 ### Features
@@ -298,7 +262,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - f6b6e70 data_structures: Correct doc comments for `SparseStack` (#8907) (overlookmotel)
 
 ### Refactor
-
 
 ### Testing
 
@@ -382,4 +345,3 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - 147a5d5 data_structures: Remove `is_empty` methods for non-empty stacks (#6219) (overlookmotel)
 - 61805fd data_structures: Add debug assertion to `SparseStack` (#6218) (overlookmotel)
 - dbfa0bc data_structures: Add `len` method to `StackCommon` trait (#6215) (overlookmotel)
-

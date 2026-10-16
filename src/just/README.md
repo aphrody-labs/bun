@@ -432,7 +432,7 @@ With [extractions/setup-just](https://github.com/extractions/setup-just):
 ```yaml
 - uses: extractions/setup-just@v3
   with:
-    just-version: 1.5.0  # optional semver specification, otherwise latest
+    just-version: 1.5.0 # optional semver specification, otherwise latest
 ```
 
 Or with [taiki-e/install-action](https://github.com/taiki-e/install-action):
@@ -2085,13 +2085,13 @@ Strings prefixed with `x` are shell expanded<sup>1.27.0</sup>:
 foobar := x'~/$FOO/${BAR}'
 ```
 
-| Value | Replacement |
-|------|-------------|
-| `$VAR` | value of environment variable `VAR` |
-| `${VAR}` | value of environment variable `VAR` |
+| Value             | Replacement                                                           |
+| ----------------- | --------------------------------------------------------------------- |
+| `$VAR`            | value of environment variable `VAR`                                   |
+| `${VAR}`          | value of environment variable `VAR`                                   |
 | `${VAR:-DEFAULT}` | value of environment variable `VAR`, or `DEFAULT` if `VAR` is not set |
-| Leading `~` | path to current user's home directory |
-| Leading `~USER` | path to `USER`'s home directory |
+| Leading `~`       | path to current user's home directory                                 |
+| Leading `~USER`   | path to `USER`'s home directory                                       |
 
 This expansion is performed at compile time, so variables from `.env` files and
 exported `just` variables cannot be used. However, this allows shell expanded
@@ -2770,7 +2770,7 @@ recipes, such as the use of `cygpath` on Windows, the need to use
 requiring a temporary directory from which files can be executed.
 
 Recipes with an empty `[script]` attribute are executed with the value of `set
-script-interpreter := […]`<sup>1.33.0</sup>, defaulting to `sh -eu`, and *not*
+script-interpreter := […]`<sup>1.33.0</sup>, defaulting to `sh -eu`, and _not_
 the value of `set shell`.
 
 The body of the recipe is evaluated, written to disk in the temporary
@@ -3172,8 +3172,8 @@ If you want to change the default table mode to `light`:
 set shell := ['nu', '-m', 'light', '-c']
 ```
 
-*[Nushell](https://github.com/nushell/nushell) was written in Rust, and **has
-cross-platform support for Windows / macOS and Linux**.*
+_[Nushell](https://github.com/nushell/nushell) was written in Rust, and **has
+cross-platform support for Windows / macOS and Linux**._
 
 Environment Variables
 ---------------------
@@ -4025,7 +4025,6 @@ You can also default to listing recipes this behavior by settting the
 environment variable `JUST_DEFAULT_LIST=true` or passing
 `--default-list`<sup>1.52.0</sup>.
 
-
 The heading text can be customized with `--list-heading`:
 
 ```console
@@ -4315,7 +4314,7 @@ hello
 
 ### Signal Handling
 
-[Signals](https://en.wikipedia.org/wiki/Signal_(IPC)) are messages sent to
+[Signals](<https://en.wikipedia.org/wiki/Signal_(IPC)>) are messages sent to
 running programs to trigger specific behavior. For example, `SIGINT` is sent to
 all processes in the terminal foreground process group when `ctrl-c` is pressed.
 
@@ -4339,7 +4338,7 @@ only to its intended victim.
 When a child process is not running, `just` will exit immediately on receipt of
 any of the above signals.
 
-When a child process *is* running, `just` will wait until it terminates, to
+When a child process _is_ running, `just` will wait until it terminates, to
 avoid leaving it behind.
 
 Additionally, on receipt of `SIGTERM`, `just` will forward `SIGTERM` to any
@@ -4763,47 +4762,47 @@ Reference
 Recipes, `mod` statements, and aliases may be annotated with attributes that
 change their behavior.
 
-| Name | Type | Description |
-|------|------|-------------|
-| `[arg(ARG, help="HELP")]`<sup>1.46.0</sup> | recipe | Print help string `HELP` for `ARG` in usage messages. May be a const expression<sup>1.55.0</sup>. |
-| `[arg(ARG, long="LONG")]`<sup>1.46.0</sup> | recipe | Require values of argument `ARG` to be passed as `--LONG` option. If the parameter is variadic, the option is repeatable<sup>1.55.0master</sup>. |
-| `[arg(ARG, max="MAX")]`<sup>1.56.0</sup> | recipe | Allow at most `MAX` values to be passed to argument `ARG`. Requires `multiple` or a variadic parameter. |
-| `[arg(ARG, min="MIN")]`<sup>1.56.0</sup> | recipe | Require at least `MIN` values to be passed to argument `ARG`. Requires `multiple` or a variadic parameter. |
-| `[arg(ARG, pattern="PATTERN")]`<sup>1.45.0</sup> | recipe | Require values of argument `ARG` to match regular expression `PATTERN`. May be a const expression<sup>1.55.0</sup>. |
-| `[arg(ARG, short="S")]`<sup>1.46.0</sup> | recipe | Require values of argument `ARG` to be passed as short `-S` option. If the parameter is variadic, the option is repeatable<sup>1.55.0</sup>. |
-| `[arg(ARG, value=VALUE)]`<sup>1.46.0</sup> | recipe | Makes option `ARG` a flag which does not take a value. |
-| `[cache]`<sup>1.54.0</sup> | recipe | Skip recipe invocations when a matching entry exists in the cache. See [cached recipes](#cached-recipes) for details. Currently unstable. |
-| `[confirm(PROMPT)]`<sup>1.23.0</sup> | recipe | Require confirmation prior to executing recipe with a custom prompt. |
-| `[confirm]`<sup>1.17.0</sup> | recipe | Require confirmation prior to executing recipe. |
-| `[continue(SIGNALS)]`<sup>1.54.0</sup> | recipe | Continue execution normally if a command is interrupted by any of `SIGNALS` and exits successfully. Defaults to `SIGINT`. |
-| `[default]`<sup>1.43.0</sup> | recipe | Use recipe as module's default recipe. |
-| `[doc(DOC)]`<sup>1.27.0</sup> | module, recipe | Set recipe or module's [documentation comment](#documentation-comments) to `DOC`. May be a const expression<sup>1.56.0</sup>. |
-| `[dragonfly]`<sup>1.47.0</sup> | any<sup>1.56.0</sup> | Enable item on DragonFly BSD. |
-| `[env(NAME, VALUE)]` <sup>1.47.0</sup> | recipe | Set environment variable `NAME` to `VALUE` for recipe. `NAME` and `VALUE` may be expressions<sup>1.51.0</sup>. |
-| `[extension(EXT)]`<sup>1.32.0</sup> | recipe | Set shebang recipe script's file extension to `EXT`. `EXT` should include a period if one is desired. |
-| `[exit-message]`<sup>1.39.0</sup> | recipe | Print error message if recipe fails regardless of `set no-exit-message`. |
-| `[freebsd]`<sup>1.47.0</sup> | any<sup>1.56.0</sup> | Enable item on FreeBSD. |
-| `[group(NAME)]`<sup>1.27.0</sup> | module, recipe | Put recipe or module in [group](#groups) `NAME`. |
-| `[android]`<sup>1.50.0</sup> | any<sup>1.56.0</sup> | Enable item on Android. |
-| `[linux]`<sup>1.8.0</sup> | any<sup>1.56.0</sup> | Enable item on Linux. |
-| `[macos]`<sup>1.8.0</sup> | any<sup>1.56.0</sup> | Enable item on macOS. |
-| `[metadata(METADATA)]`<sup>1.42.0</sup> | recipe | Attach `METADATA` to recipe. |
-| `[netbsd]`<sup>1.47.0</sup> | any<sup>1.56.0</sup> | Enable item on NetBSD. |
-| `[no-cd]`<sup>1.9.0</sup> | recipe | Don't change directory before executing recipe. |
-| `[no-exit-message]`<sup>1.7.0</sup> | recipe | Don't print an error message if recipe fails. |
-| `[no-quiet]`<sup>1.23.0</sup> | recipe | Override globally quiet recipes and always echo out the recipe. |
-| `[openbsd]`<sup>1.38.0</sup> | any<sup>1.56.0</sup> | Enable item on OpenBSD. |
-| `[parallel]`<sup>1.42.0</sup> | recipe | Run this recipe's dependencies in parallel. |
-| `[positional-arguments]`<sup>1.29.0</sup> | recipe | Turn on [positional arguments](#positional-arguments) for this recipe. |
-| `[private]`<sup>1.10.0</sup> | alias, recipe | Make recipe, alias, or variable private. See [Private Recipes](#private-recipes). |
-| `[script(COMMAND)]`<sup>1.32.0</sup> | recipe | Execute recipe as a script interpreted by `COMMAND`. See [script recipes](#script-recipes) for more details. |
-| `[script]`<sup>1.33.0</sup> | recipe | Execute recipe as script. See [script recipes](#script-recipes) for more details. |
-| `[shell]`<sup>1.52.0</sup> | recipe | Execute recipe as a shell recipe, overriding `set default-script`. |
-| `[timestamp(FORMAT)]`<sup>1.58.0</sup> | recipe | Print command timestamps with format `FORMAT`. `FORMAT` may be an expression. |
-| `[timestamp]`<sup>1.58.0</sup> | recipe | Print command timestamps. |
-| `[unix]`<sup>1.8.0</sup> | any<sup>1.56.0</sup> | Enable item on unixes. (Includes macOS). |
-| `[windows]`<sup>1.8.0</sup> | any<sup>1.56.0</sup> | Enable item on Windows. |
-| `[working-directory(PATH)]`<sup>1.38.0</sup> | recipe | Set recipe working directory. `PATH` may be an expression<sup>1.51.0</sup> whose value is relative or absolute. If relative, it is interpreted relative to the default working directory. |
+| Name                                             | Type                 | Description                                                                                                                                                                               |
+| ------------------------------------------------ | -------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `[arg(ARG, help="HELP")]`<sup>1.46.0</sup>       | recipe               | Print help string `HELP` for `ARG` in usage messages. May be a const expression<sup>1.55.0</sup>.                                                                                         |
+| `[arg(ARG, long="LONG")]`<sup>1.46.0</sup>       | recipe               | Require values of argument `ARG` to be passed as `--LONG` option. If the parameter is variadic, the option is repeatable<sup>1.55.0master</sup>.                                          |
+| `[arg(ARG, max="MAX")]`<sup>1.56.0</sup>         | recipe               | Allow at most `MAX` values to be passed to argument `ARG`. Requires `multiple` or a variadic parameter.                                                                                   |
+| `[arg(ARG, min="MIN")]`<sup>1.56.0</sup>         | recipe               | Require at least `MIN` values to be passed to argument `ARG`. Requires `multiple` or a variadic parameter.                                                                                |
+| `[arg(ARG, pattern="PATTERN")]`<sup>1.45.0</sup> | recipe               | Require values of argument `ARG` to match regular expression `PATTERN`. May be a const expression<sup>1.55.0</sup>.                                                                       |
+| `[arg(ARG, short="S")]`<sup>1.46.0</sup>         | recipe               | Require values of argument `ARG` to be passed as short `-S` option. If the parameter is variadic, the option is repeatable<sup>1.55.0</sup>.                                              |
+| `[arg(ARG, value=VALUE)]`<sup>1.46.0</sup>       | recipe               | Makes option `ARG` a flag which does not take a value.                                                                                                                                    |
+| `[cache]`<sup>1.54.0</sup>                       | recipe               | Skip recipe invocations when a matching entry exists in the cache. See [cached recipes](#cached-recipes) for details. Currently unstable.                                                 |
+| `[confirm(PROMPT)]`<sup>1.23.0</sup>             | recipe               | Require confirmation prior to executing recipe with a custom prompt.                                                                                                                      |
+| `[confirm]`<sup>1.17.0</sup>                     | recipe               | Require confirmation prior to executing recipe.                                                                                                                                           |
+| `[continue(SIGNALS)]`<sup>1.54.0</sup>           | recipe               | Continue execution normally if a command is interrupted by any of `SIGNALS` and exits successfully. Defaults to `SIGINT`.                                                                 |
+| `[default]`<sup>1.43.0</sup>                     | recipe               | Use recipe as module's default recipe.                                                                                                                                                    |
+| `[doc(DOC)]`<sup>1.27.0</sup>                    | module, recipe       | Set recipe or module's [documentation comment](#documentation-comments) to `DOC`. May be a const expression<sup>1.56.0</sup>.                                                             |
+| `[dragonfly]`<sup>1.47.0</sup>                   | any<sup>1.56.0</sup> | Enable item on DragonFly BSD.                                                                                                                                                             |
+| `[env(NAME, VALUE)]` <sup>1.47.0</sup>           | recipe               | Set environment variable `NAME` to `VALUE` for recipe. `NAME` and `VALUE` may be expressions<sup>1.51.0</sup>.                                                                            |
+| `[extension(EXT)]`<sup>1.32.0</sup>              | recipe               | Set shebang recipe script's file extension to `EXT`. `EXT` should include a period if one is desired.                                                                                     |
+| `[exit-message]`<sup>1.39.0</sup>                | recipe               | Print error message if recipe fails regardless of `set no-exit-message`.                                                                                                                  |
+| `[freebsd]`<sup>1.47.0</sup>                     | any<sup>1.56.0</sup> | Enable item on FreeBSD.                                                                                                                                                                   |
+| `[group(NAME)]`<sup>1.27.0</sup>                 | module, recipe       | Put recipe or module in [group](#groups) `NAME`.                                                                                                                                          |
+| `[android]`<sup>1.50.0</sup>                     | any<sup>1.56.0</sup> | Enable item on Android.                                                                                                                                                                   |
+| `[linux]`<sup>1.8.0</sup>                        | any<sup>1.56.0</sup> | Enable item on Linux.                                                                                                                                                                     |
+| `[macos]`<sup>1.8.0</sup>                        | any<sup>1.56.0</sup> | Enable item on macOS.                                                                                                                                                                     |
+| `[metadata(METADATA)]`<sup>1.42.0</sup>          | recipe               | Attach `METADATA` to recipe.                                                                                                                                                              |
+| `[netbsd]`<sup>1.47.0</sup>                      | any<sup>1.56.0</sup> | Enable item on NetBSD.                                                                                                                                                                    |
+| `[no-cd]`<sup>1.9.0</sup>                        | recipe               | Don't change directory before executing recipe.                                                                                                                                           |
+| `[no-exit-message]`<sup>1.7.0</sup>              | recipe               | Don't print an error message if recipe fails.                                                                                                                                             |
+| `[no-quiet]`<sup>1.23.0</sup>                    | recipe               | Override globally quiet recipes and always echo out the recipe.                                                                                                                           |
+| `[openbsd]`<sup>1.38.0</sup>                     | any<sup>1.56.0</sup> | Enable item on OpenBSD.                                                                                                                                                                   |
+| `[parallel]`<sup>1.42.0</sup>                    | recipe               | Run this recipe's dependencies in parallel.                                                                                                                                               |
+| `[positional-arguments]`<sup>1.29.0</sup>        | recipe               | Turn on [positional arguments](#positional-arguments) for this recipe.                                                                                                                    |
+| `[private]`<sup>1.10.0</sup>                     | alias, recipe        | Make recipe, alias, or variable private. See [Private Recipes](#private-recipes).                                                                                                         |
+| `[script(COMMAND)]`<sup>1.32.0</sup>             | recipe               | Execute recipe as a script interpreted by `COMMAND`. See [script recipes](#script-recipes) for more details.                                                                              |
+| `[script]`<sup>1.33.0</sup>                      | recipe               | Execute recipe as script. See [script recipes](#script-recipes) for more details.                                                                                                         |
+| `[shell]`<sup>1.52.0</sup>                       | recipe               | Execute recipe as a shell recipe, overriding `set default-script`.                                                                                                                        |
+| `[timestamp(FORMAT)]`<sup>1.58.0</sup>           | recipe               | Print command timestamps with format `FORMAT`. `FORMAT` may be an expression.                                                                                                             |
+| `[timestamp]`<sup>1.58.0</sup>                   | recipe               | Print command timestamps.                                                                                                                                                                 |
+| `[unix]`<sup>1.8.0</sup>                         | any<sup>1.56.0</sup> | Enable item on unixes. (Includes macOS).                                                                                                                                                  |
+| `[windows]`<sup>1.8.0</sup>                      | any<sup>1.56.0</sup> | Enable item on Windows.                                                                                                                                                                   |
+| `[working-directory(PATH)]`<sup>1.38.0</sup>     | recipe               | Set recipe working directory. `PATH` may be an expression<sup>1.51.0</sup> whose value is relative or absolute. If relative, it is interpreted relative to the default working directory. |
 
 A recipe can have multiple attributes, either on multiple lines:
 
@@ -4846,37 +4845,37 @@ foo:
 
 #### Table of Settings
 
-| Name | Value | Default | Description |
-|------|-------|---------|-------------|
-| `allow-duplicate-recipes` | boolean | `false` | Allow recipes appearing later in a `justfile` to override earlier recipes with the same name. |
-| `allow-duplicate-variables` | boolean | `false` | Allow variables appearing later in a `justfile` to override earlier variables with the same name. |
-| `default-list` | boolean | `false` | List recipes instead of running the default recipe. |
-| `default-script`<sup>1.52.0</sup> | boolean | `false` | Default recipes to script instead of shell. |
-| `dotenv-command`<sup>1.54.0</sup> | string | - | Run a command and load its output as an environment file. |
-| `dotenv-filename` | string | - | Load a `.env` file with a custom name, if present. |
-| `dotenv-load` | boolean | `false` | Load a `.env` file, if present. |
-| `dotenv-override` | boolean | `false` | Override existing environment variables with values from the `.env` file. |
-| `dotenv-path` | string | - | Load a `.env` file from a custom path and error if not present. Overrides `dotenv-filename`. |
-| `dotenv-required` | boolean | `false` | Error if a `.env` file isn't found. |
-| `export` | boolean | `false` | Export all variables as environment variables. |
-| `fallback` | boolean | `false` | Search for `justfile` in parent directory if the first recipe on the command line is not found. |
-| `guards`<sup>1.47.0</sup> | boolean | `false` | Enable the `?` guard sigil on recipe lines. See [sigils](#sigils). |
-| `ignore-comments` | boolean | `false` | Ignore shell recipe lines beginning with `#`. Does not apply to script recipes.  |
-| `indentation`<sup>1.56.0</sup> | string | - | Set recipe body indentation used when formatting with `--fmt` or `--dump`. |
-| `lazy`<sup>1.47.0</sup> | boolean | `false` | Don't evaluate unused variables. |
-| `lists`<sup>1.53.0</sup> | boolean | `false` | Values may be lists of strings instead of strings. Currently unstable. |
-| `minimum-version`<sup>1.55.0</sup> | string | - | Error if `just` is older than `minimum-version`. Accepts a string of the form `MAJOR.MINOR.PATCH`, e.g., `"1.55.0"`. |
-| `no-cd`<sup>1.51.0</sup> | boolean | `false` | Don't change directory when executing recipes by recipe attribute. |
-| `no-exit-message`<sup>1.39.0</sup> | boolean | `false` | Don't print exit messages if recipes fail. |
-| `positional-arguments` | boolean | `false` | Pass positional arguments. |
-| `quiet` | boolean | `false` | Disable echoing recipe lines before executing. |
-| `script-interpreter`<sup>1.33.0</sup> | `[COMMAND, ARGS…]` | `['sh', '-eu']` | Set command used to invoke recipes with empty `[script]` attribute. |
-| `shell` | `[COMMAND, ARGS…]` | - | Set command used to invoke recipes and evaluate backticks. |
-| `tempdir` | string | - | Create temporary directories in `tempdir` instead of the system default temporary directory. |
-| `unstable`<sup>1.31.0</sup> | boolean | `false` | Enable unstable features. |
-| `windows-powershell` | boolean | `false` | Use PowerShell on Windows as default shell. (Deprecated. Use the `[windows]` attribute on `set shell`.) |
-| `windows-shell` | `[COMMAND, ARGS…]` | - | Set the command used to invoke recipes and evaluate backticks. (Deprecated. Use the `[windows]` attribute on `set shell`.) |
-| `working-directory`<sup>1.33.0</sup> | string | - | Set the working directory for recipes and backticks, relative to the default working directory. |
+| Name                                  | Value              | Default         | Description                                                                                                                |
+| ------------------------------------- | ------------------ | --------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| `allow-duplicate-recipes`             | boolean            | `false`         | Allow recipes appearing later in a `justfile` to override earlier recipes with the same name.                              |
+| `allow-duplicate-variables`           | boolean            | `false`         | Allow variables appearing later in a `justfile` to override earlier variables with the same name.                          |
+| `default-list`                        | boolean            | `false`         | List recipes instead of running the default recipe.                                                                        |
+| `default-script`<sup>1.52.0</sup>     | boolean            | `false`         | Default recipes to script instead of shell.                                                                                |
+| `dotenv-command`<sup>1.54.0</sup>     | string             | -               | Run a command and load its output as an environment file.                                                                  |
+| `dotenv-filename`                     | string             | -               | Load a `.env` file with a custom name, if present.                                                                         |
+| `dotenv-load`                         | boolean            | `false`         | Load a `.env` file, if present.                                                                                            |
+| `dotenv-override`                     | boolean            | `false`         | Override existing environment variables with values from the `.env` file.                                                  |
+| `dotenv-path`                         | string             | -               | Load a `.env` file from a custom path and error if not present. Overrides `dotenv-filename`.                               |
+| `dotenv-required`                     | boolean            | `false`         | Error if a `.env` file isn't found.                                                                                        |
+| `export`                              | boolean            | `false`         | Export all variables as environment variables.                                                                             |
+| `fallback`                            | boolean            | `false`         | Search for `justfile` in parent directory if the first recipe on the command line is not found.                            |
+| `guards`<sup>1.47.0</sup>             | boolean            | `false`         | Enable the `?` guard sigil on recipe lines. See [sigils](#sigils).                                                         |
+| `ignore-comments`                     | boolean            | `false`         | Ignore shell recipe lines beginning with `#`. Does not apply to script recipes.                                            |
+| `indentation`<sup>1.56.0</sup>        | string             | -               | Set recipe body indentation used when formatting with `--fmt` or `--dump`.                                                 |
+| `lazy`<sup>1.47.0</sup>               | boolean            | `false`         | Don't evaluate unused variables.                                                                                           |
+| `lists`<sup>1.53.0</sup>              | boolean            | `false`         | Values may be lists of strings instead of strings. Currently unstable.                                                     |
+| `minimum-version`<sup>1.55.0</sup>    | string             | -               | Error if `just` is older than `minimum-version`. Accepts a string of the form `MAJOR.MINOR.PATCH`, e.g., `"1.55.0"`.       |
+| `no-cd`<sup>1.51.0</sup>              | boolean            | `false`         | Don't change directory when executing recipes by recipe attribute.                                                         |
+| `no-exit-message`<sup>1.39.0</sup>    | boolean            | `false`         | Don't print exit messages if recipes fail.                                                                                 |
+| `positional-arguments`                | boolean            | `false`         | Pass positional arguments.                                                                                                 |
+| `quiet`                               | boolean            | `false`         | Disable echoing recipe lines before executing.                                                                             |
+| `script-interpreter`<sup>1.33.0</sup> | `[COMMAND, ARGS…]` | `['sh', '-eu']` | Set command used to invoke recipes with empty `[script]` attribute.                                                        |
+| `shell`                               | `[COMMAND, ARGS…]` | -               | Set command used to invoke recipes and evaluate backticks.                                                                 |
+| `tempdir`                             | string             | -               | Create temporary directories in `tempdir` instead of the system default temporary directory.                               |
+| `unstable`<sup>1.31.0</sup>           | boolean            | `false`         | Enable unstable features.                                                                                                  |
+| `windows-powershell`                  | boolean            | `false`         | Use PowerShell on Windows as default shell. (Deprecated. Use the `[windows]` attribute on `set shell`.)                    |
+| `windows-shell`                       | `[COMMAND, ARGS…]` | -               | Set the command used to invoke recipes and evaluate backticks. (Deprecated. Use the `[windows]` attribute on `set shell`.) |
+| `working-directory`<sup>1.33.0</sup>  | string             | -               | Set the working directory for recipes and backticks, relative to the default working directory.                            |
 
 Boolean settings can be written as:
 
@@ -5013,7 +5012,6 @@ $ just
 - `which(name)`<sup>1.39.0</sup> — Search directories in the `PATH` environment
   variable for the executable `name` and return its full path, or the empty
   list if not found. Requires `set lists`<sup>1.53.0</sup>.
-
 
   ```just
   set unstable
@@ -5206,10 +5204,10 @@ which will halt execution.
 - `clean(path)` - Simplify `path` by removing extra path separators,
   intermediate `.` components, and `..` where possible. `clean("foo//bar")` is
   `foo/bar`, `clean("foo/..")` is `.`, `clean("foo/./bar")` is `foo/bar`.
-- `join(a, b…)` - *This function uses `/` on Unix and `\` on Windows, which can
+- `join(a, b…)` - _This function uses `/` on Unix and `\` on Windows, which can
   lead to unwanted behavior. The `/` operator, e.g., `a / b`, which always
   uses `/`, should be considered as a replacement unless `\`s are specifically
-  desired on Windows.* Join path `a` with path `b`. `join("foo/bar", "baz")` is
+  desired on Windows._ Join path `a` with path `b`. `join("foo/bar", "baz")` is
   `foo/bar/baz`. Accepts two or more arguments.
 
 #### Filesystem Access
@@ -5380,37 +5378,37 @@ xdg_config_dir := if env('XDG_CONFIG_HOME', '') =~ '^/' {
 
 A number of constants are predefined:
 
-| Name | Value | Value on Windows |
-|---|---|---|
-| `HEX`<sup>1.27.0</sup> | `"0123456789abcdef"` |  |
-| `HEXLOWER`<sup>1.27.0</sup> | `"0123456789abcdef"` |  |
-| `HEXUPPER`<sup>1.27.0</sup> | `"0123456789ABCDEF"` |  |
-| `PATH_SEP`<sup>1.41.0</sup> | `"/"` | `"\"` |
-| `PATH_VAR_SEP`<sup>1.41.0</sup> | `":"` | `";"` |
-| `CLEAR`<sup>1.37.0</sup> | `"\ec"` |  |
-| `NORMAL`<sup>1.37.0</sup> | `"\e[0m"` |  |
-| `BOLD`<sup>1.37.0</sup> | `"\e[1m"` |  |
-| `ITALIC`<sup>1.37.0</sup> | `"\e[3m"` |  |
-| `UNDERLINE`<sup>1.37.0</sup> | `"\e[4m"` |  |
-| `INVERT`<sup>1.37.0</sup> | `"\e[7m"` |  |
-| `HIDE`<sup>1.37.0</sup> | `"\e[8m"` |  |
-| `STRIKETHROUGH`<sup>1.37.0</sup> | `"\e[9m"` |  |
-| `BLACK`<sup>1.37.0</sup> | `"\e[30m"` |  |
-| `RED`<sup>1.37.0</sup> | `"\e[31m"` |  |
-| `GREEN`<sup>1.37.0</sup> | `"\e[32m"` |  |
-| `YELLOW`<sup>1.37.0</sup> | `"\e[33m"` |  |
-| `BLUE`<sup>1.37.0</sup> | `"\e[34m"` |  |
-| `MAGENTA`<sup>1.37.0</sup> | `"\e[35m"` |  |
-| `CYAN`<sup>1.37.0</sup> | `"\e[36m"` |  |
-| `WHITE`<sup>1.37.0</sup> | `"\e[37m"` |  |
-| `BG_BLACK`<sup>1.37.0</sup> | `"\e[40m"` |  |
-| `BG_RED`<sup>1.37.0</sup> | `"\e[41m"` |  |
-| `BG_GREEN`<sup>1.37.0</sup> | `"\e[42m"` |  |
-| `BG_YELLOW`<sup>1.37.0</sup> | `"\e[43m"` |  |
-| `BG_BLUE`<sup>1.37.0</sup> | `"\e[44m"` |  |
-| `BG_MAGENTA`<sup>1.37.0</sup> | `"\e[45m"` |  |
-| `BG_CYAN`<sup>1.37.0</sup> | `"\e[46m"` |  |
-| `BG_WHITE`<sup>1.37.0</sup> | `"\e[47m"` |  |
+| Name                             | Value                | Value on Windows |
+| -------------------------------- | -------------------- | ---------------- |
+| `HEX`<sup>1.27.0</sup>           | `"0123456789abcdef"` |                  |
+| `HEXLOWER`<sup>1.27.0</sup>      | `"0123456789abcdef"` |                  |
+| `HEXUPPER`<sup>1.27.0</sup>      | `"0123456789ABCDEF"` |                  |
+| `PATH_SEP`<sup>1.41.0</sup>      | `"/"`                | `"\"`            |
+| `PATH_VAR_SEP`<sup>1.41.0</sup>  | `":"`                | `";"`            |
+| `CLEAR`<sup>1.37.0</sup>         | `"\ec"`              |                  |
+| `NORMAL`<sup>1.37.0</sup>        | `"\e[0m"`            |                  |
+| `BOLD`<sup>1.37.0</sup>          | `"\e[1m"`            |                  |
+| `ITALIC`<sup>1.37.0</sup>        | `"\e[3m"`            |                  |
+| `UNDERLINE`<sup>1.37.0</sup>     | `"\e[4m"`            |                  |
+| `INVERT`<sup>1.37.0</sup>        | `"\e[7m"`            |                  |
+| `HIDE`<sup>1.37.0</sup>          | `"\e[8m"`            |                  |
+| `STRIKETHROUGH`<sup>1.37.0</sup> | `"\e[9m"`            |                  |
+| `BLACK`<sup>1.37.0</sup>         | `"\e[30m"`           |                  |
+| `RED`<sup>1.37.0</sup>           | `"\e[31m"`           |                  |
+| `GREEN`<sup>1.37.0</sup>         | `"\e[32m"`           |                  |
+| `YELLOW`<sup>1.37.0</sup>        | `"\e[33m"`           |                  |
+| `BLUE`<sup>1.37.0</sup>          | `"\e[34m"`           |                  |
+| `MAGENTA`<sup>1.37.0</sup>       | `"\e[35m"`           |                  |
+| `CYAN`<sup>1.37.0</sup>          | `"\e[36m"`           |                  |
+| `WHITE`<sup>1.37.0</sup>         | `"\e[37m"`           |                  |
+| `BG_BLACK`<sup>1.37.0</sup>      | `"\e[40m"`           |                  |
+| `BG_RED`<sup>1.37.0</sup>        | `"\e[41m"`           |                  |
+| `BG_GREEN`<sup>1.37.0</sup>      | `"\e[42m"`           |                  |
+| `BG_YELLOW`<sup>1.37.0</sup>     | `"\e[43m"`           |                  |
+| `BG_BLUE`<sup>1.37.0</sup>       | `"\e[44m"`           |                  |
+| `BG_MAGENTA`<sup>1.37.0</sup>    | `"\e[45m"`           |                  |
+| `BG_CYAN`<sup>1.37.0</sup>       | `"\e[46m"`           |                  |
+| `BG_WHITE`<sup>1.37.0</sup>      | `"\e[47m"`           |                  |
 
 ```just
 @foo:
@@ -5574,10 +5572,10 @@ be installed manually or with `npx skills add casey/just --global`.
 There is no shortage of command runners! Some more or less similar alternatives
 to `just` include:
 
-- [make](https://en.wikipedia.org/wiki/Make_(software)): The Unix build tool
+- [make](<https://en.wikipedia.org/wiki/Make_(software)>): The Unix build tool
   that inspired `just`. There are a few different modern day descendants of the
   original `make`, including
-  [FreeBSD Make](https://www.freebsd.org/cgi/man.cgi?make(1)) and
+  [FreeBSD Make](<https://www.freebsd.org/cgi/man.cgi?make(1)>) and
   [GNU Make](https://www.gnu.org/software/make/).
 - [task](https://github.com/go-task/task): A YAML-based command runner written
   in Go.

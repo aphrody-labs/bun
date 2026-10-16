@@ -113,7 +113,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 48e646b oxlint/lsp: Update snapshot for invalid syntax test (#15191) (Sysix)
 
-
 ## [1.25.0] - 2025-10-30
 
 ### 💥 BREAKING CHANGES
@@ -125,7 +124,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - b1e1531 language_server: Extract library interface from main.rs (#15036) (Boshen)
 - 5de99c2 formatter: Export unified way to get_parse_options (#15027) (leaysgur)
 - b55df7f language_server: Move sub option for `flags` to the root + deprecate flags (#14933) (Sysix)
-
 
 ## [1.24.0] - 2025-10-22
 
@@ -154,7 +152,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 22ee19f language_server: Avoid creating HashMap in `Backend::did_change_configuration` (#14736) (Sysix)
 - ed922ec language_server: Avoid creating HashMap in `Backend::did_change_watched_files` (#14735) (Sysix)
 
-
 ## [1.23.0] - 2025-10-13
 
 ### 🚀 Features
@@ -182,8 +179,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 33b6cde language_server: Add basic tests for `WorkspaceWorker::did_change_configuration` (#14531) (Sysix)
 - bfe1ecd language_server: Add tests for `WorkspaceWorker::init_watchers` (#14516) (Sysix)
 
-
-
 ## [1.21.0] - 2025-10-08
 
 ### 🐛 Bug Fixes
@@ -196,7 +191,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 3374b8e linter/language_server: Move all lsp relevant code to `oxc_language_server` crate (#14430) (Sysix)
 - d24b74e linter/language_server: `oxc_linter::TsgoLinter::run_source` returns `Message` (#14429) (Sysix)
 - e5b7fb2 linter/language_server: `oxc_linter::Runtime::run_source` returns `Message` (#14428) (Sysix)
-
 
 ## [1.20.0] - 2025-10-06
 
@@ -217,7 +211,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### ⚡ Performance
 
 - fa3712d language_server: Create less `ExternalPluginStore`s (#14378) (overlookmotel)
-
 
 ## [1.19.0] - 2025-09-29
 
@@ -245,8 +238,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - be58d6d language_server: Fix test for ServerFormatter in windows (#14210) (Sysix)
 - d7041c1 language_server: Add linebreaks for formatter snapshot (#14173) (Sysix)
 
-
-
 ## [1.17.0] - 2025-09-23
 
 ### 🚀 Features
@@ -270,13 +261,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 2600858 language_server: Add Tester for ServerFormatter (#13969) (Sysix)
 - 37aadf0 language_server: Add `test_and_snapshot_multiple_file` (#13966) (Sysix)
 
-
 ## [1.16.0] - 2025-09-16
 
 ### 🚜 Refactor
 
 - 137896a language_server: Split options for linting and formatting (#13627) (Sysix)
-
 
 ## [1.15.0] - 2025-09-11
 
@@ -289,7 +278,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 🚜 Refactor
 
 - 671e0fd language_server: Only store one instance of a diagnostic (#13514) (Sysix)
-
 
 ## [1.14.0] - 2025-08-30
 
@@ -306,13 +294,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - 33e0e8b language_server: Dont run tsgolint related test on big-edian (#13342) (Sysix)
 
-
 ## [1.13.0] - 2025-08-26
 
 ### 🐛 Bug Fixes
 
 - 648e939 linter: Parse `ignorePatterns` with gitignore syntax (#13221) (Sysix)
-
 
 ## [1.12.0] - 2025-08-17
 
@@ -329,15 +315,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - b638371 language_server: Do not check twice for supported extension (#13130) (Sysix)
 - 6c5b8be linter: Create `AllocatorPool` in `Runtime::new` (#13106) (overlookmotel)
 
-
-
-
 ## [1.11.0] - 2025-08-07
 
 ### 🚜 Refactor
 
 - 9b9249d oxc_language_server: Remove unnecessary globset (#12861) (shulaoda)
-
 
 ## [1.10.0] - 2025-08-06
 
@@ -352,9 +334,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 🎨 Styling
 
 - c15da81 codegen, formatter, linter, minifier, transformer: Re-order imports (#12725) (Copilot)
-
-
-
 
 ## [1.7.0] - 2025-07-16
 
@@ -372,7 +351,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 6e54645 language_server: Store `LintService` instead of `Linter` (#12016) (Sysix)
 - 113cf8c linter: Move `LintServiceOptions.paths` to `LintService.with_paths` (#12015) (Sysix)
 
-
 ## [1.6.0] - 2025-07-07
 
 ### 🚀 Features
@@ -388,9 +366,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 - 8d1be94 language_server: Fix todo by avoiding allocation (#12096) (Ulrich Stark)
 - 72418ca linter: `RuntimeFileSystem::write_file` take `&str` (#12075) (overlookmotel)
 
-
-
-
 ## [1.3.0] - 2025-06-23
 
 ### 🚀 Features
@@ -402,7 +377,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 - b39d1fa linter: Output smaller spans for unused disable directives with multiple rules (#11781) (Sysix)
 
-
 ## [1.2.0] - 2025-06-19
 
 ### 🚀 Features
@@ -413,8 +387,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### 🚜 Refactor
 
 - abdbaa9 language_server: Use rule name directly from OxcCode instead of parsing out of the stringified version of OxcCode (#11714) (Nicholas Rayburn)
-
-
 
 ## [1.0.0] - 2025-06-10
 
@@ -627,7 +599,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 
 ### Bug Fixes
 
-- 2d7b0cf editor: Re-add tester and prevent empty inverted diagnostics  (#9991) (camchenry)
+- 2d7b0cf editor: Re-add tester and prevent empty inverted diagnostics (#9991) (camchenry)
 
 ### Refactor
 
@@ -666,4 +638,3 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0).
 ### Refactor
 
 - 6ec81ef language_server: Use `papaya` instead of `dashmap` (#9220) (Boshen)
-

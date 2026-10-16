@@ -88,7 +88,6 @@ A space-only EOF line at-or-below the block's indent holds no line break, so it 
 ```yaml
 # input
 ...
-
 # ours
 ...
 
@@ -112,7 +111,7 @@ a:
 
 # ours: the width is clamped to 1
 a:
- b: c
+  b: c
 
 # prettier: the nesting is gone, `b` becomes a top-level key
 a:
@@ -132,7 +131,7 @@ Indentation is the block structure in YAML, so a zero indent width cannot print 
 # input
 # oxfmt-ignore
 kept:   {  as: is  }
-reformatted:   {  a: 1  }
+reformatted: { a: 1 }
 
 # ours
 # oxfmt-ignore
@@ -154,7 +153,6 @@ A suppression comment freezes exactly ONE node, never everything after it; the s
 # input
 - a
 - b
-
 
 # blank above
 
@@ -202,9 +200,11 @@ More-indented lines in a folded scalar are never re-flowed under `proseWrap: alw
 
 ```yaml
 # input
-- [? foo
-    bar
-  : baz]
+- [
+    ? foo
+      bar
+    : baz,
+  ]
 
 # ours
 - [
@@ -214,9 +214,11 @@ More-indented lines in a folded scalar are never re-flowed under `proseWrap: alw
   ]
 
 # prettier
-- [? foo
+- [
+    ? foo
       bar
-    : baz]
+    : baz,
+  ]
 ```
 
 A flow collection either fits on one line or breaks normally (trailing comma, bracket on its own line), the core `group` semantics every crate prints (JS arrays and objects, GraphQL argument lists).
@@ -230,9 +232,11 @@ Prettier sometimes emits a newline inside flow brackets while keeping them flat 
 
 ```yaml
 # input
-key: [ # kept inside the brackets
-  a,
-  b ]
+key: [
+    # kept inside the brackets
+    a,
+    b,
+  ]
 
 # ours
 key: [
@@ -264,8 +268,7 @@ Properties:
 # ours: unchanged
 # prettier
 Properties:
-  Type:
-    application
+  Type: application
     # over-indented comment
   Other: 1
 ```
@@ -285,8 +288,7 @@ run: | # this trailing comment is long enough to push the header line far beyond
 
 # ours: unchanged, the comment is a line_suffix and never counts toward fits
 # prettier
-run:
-  | # this trailing comment is long enough to push the header line far beyond every print width
+run: | # this trailing comment is long enough to push the header line far beyond every print width
   set -euo pipefail
 ```
 

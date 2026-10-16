@@ -3725,39 +3725,36 @@ describe("minimum-release-age", () => {
       });
     });
 
-    test.concurrent(
-      "peer bound to the version already in the tree, with and without a warm manifest cache",
-      async () => {
-        using registry = serveRegistry();
-        using dir = createProject(registry.origin, {
-          "package.json": JSON.stringify({
-            name: "app",
-            dependencies: { gated: "^1.0.0", "needs-gated": "1.0.0" },
-          }),
-        });
+    test.concurrent("peer bound to the version already in the tree, with and without a warm manifest cache", async () => {
+      using registry = serveRegistry();
+      using dir = createProject(registry.origin, {
+        "package.json": JSON.stringify({
+          name: "app",
+          dependencies: { gated: "^1.0.0", "needs-gated": "1.0.0" },
+        }),
+      });
 
-        const expectBoundToInstalledVersion = ({ stderr, exitCode }: InstallResult) => {
-          expect(stderr).toContain('warn: incorrect peer dependency "gated@1.0.0"');
-          expect(stderr).not.toContain("blocked by minimum-release-age");
-          expect(stderr).not.toContain("error:");
-          expect(exitCode).toBe(0);
-        };
+      const expectBoundToInstalledVersion = ({ stderr, exitCode }: InstallResult) => {
+        expect(stderr).toContain('warn: incorrect peer dependency "gated@1.0.0"');
+        expect(stderr).not.toContain("blocked by minimum-release-age");
+        expect(stderr).not.toContain("error:");
+        expect(exitCode).toBe(0);
+      };
 
-        const verbose = { args: ["--verbose"] };
-        await installUntilManifestsCached(String(dir), 2, expectBoundToInstalledVersion, verbose);
-        const lockfile = await Bun.file(`${dir}/bun.lock`).text();
-        expect(lockfile).toContain('"gated@1.0.0"');
+      const verbose = { args: ["--verbose"] };
+      await installUntilManifestsCached(String(dir), 2, expectBoundToInstalledVersion, verbose);
+      const lockfile = await Bun.file(`${dir}/bun.lock`).text();
+      expect(lockfile).toContain('"gated@1.0.0"');
 
-        // With both manifests in the cache the peer is looked up synchronously
-        // while regular dependencies are still being resolved, before the pass
-        // that binds peers to what the tree contains.
-        await reResolve(String(dir));
-        registry.requests.length = 0;
-        expectBoundToInstalledVersion(await install(String(dir), verbose));
-        expect(registry.requests).toEqual([]);
-        expect(await Bun.file(`${dir}/bun.lock`).text()).toBe(lockfile);
-      },
-    );
+      // With both manifests in the cache the peer is looked up synchronously
+      // while regular dependencies are still being resolved, before the pass
+      // that binds peers to what the tree contains.
+      await reResolve(String(dir));
+      registry.requests.length = 0;
+      expectBoundToInstalledVersion(await install(String(dir), verbose));
+      expect(registry.requests).toEqual([]);
+      expect(await Bun.file(`${dir}/bun.lock`).text()).toBe(lockfile);
+    });
 
     test.concurrent("the version every dependent of a peer accepts is picked behind the gate too", async () => {
       using registry = serveRegistry();

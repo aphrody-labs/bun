@@ -1073,33 +1073,30 @@ describe("bun pm cache pack", () => {
     },
   );
 
-  test.concurrent(
-    "replaces the previous pack, makes the directory, and takes <file> relative to where it was typed",
-    async () => {
-      using box = sandbox({ project: { packages: { a: { "package.json": JSON.stringify({ name: "a" }) } } } });
-      await installedProject(box, { workspaces: ["packages/*"] });
-      const workspace = join(box.project, "packages", "a");
-      writeFileSync(join(workspace, "cache.pack"), "the previous pack");
+  test.concurrent("replaces the previous pack, makes the directory, and takes <file> relative to where it was typed", async () => {
+    using box = sandbox({ project: { packages: { a: { "package.json": JSON.stringify({ name: "a" }) } } } });
+    await installedProject(box, { workspaces: ["packages/*"] });
+    const workspace = join(box.project, "packages", "a");
+    writeFileSync(join(workspace, "cache.pack"), "the previous pack");
 
-      let r = await bun(box, ["pm", "cache", "pack", "cache.pack"], { cwd: workspace });
-      expect(r.err).toBe("");
-      expect(r.code).toBe(0);
-      expect(readFileSync(join(workspace, "cache.pack")).subarray(0, MAGIC.length)).toEqual(MAGIC);
-      expect(existsSync(join(box.project, "cache.pack"))).toBeFalse();
+    let r = await bun(box, ["pm", "cache", "pack", "cache.pack"], { cwd: workspace });
+    expect(r.err).toBe("");
+    expect(r.code).toBe(0);
+    expect(readFileSync(join(workspace, "cache.pack")).subarray(0, MAGIC.length)).toEqual(MAGIC);
+    expect(existsSync(join(box.project, "cache.pack"))).toBeFalse();
 
-      r = await bun(box, ["pm", "cache", "pack", join(".ci", "deep", "cache.pack")], { cwd: workspace });
-      expect(r.err).toBe("");
-      expect(r.code).toBe(0);
-      expect(readFileSync(join(workspace, ".ci", "deep", "cache.pack"))).toEqual(
-        readFileSync(join(workspace, "cache.pack")),
-      );
+    r = await bun(box, ["pm", "cache", "pack", join(".ci", "deep", "cache.pack")], { cwd: workspace });
+    expect(r.err).toBe("");
+    expect(r.code).toBe(0);
+    expect(readFileSync(join(workspace, ".ci", "deep", "cache.pack"))).toEqual(
+      readFileSync(join(workspace, "cache.pack")),
+    );
 
-      r = await bun(box, ["pm", "cache", "unpack", "cache.pack"], { cwd: workspace, cache: box.at("restored") });
-      expect(r.err).toBe("");
-      expect(r.out).toContain(`(${installedCount} new, `);
-      expect(r.code).toBe(0);
-    },
-  );
+    r = await bun(box, ["pm", "cache", "unpack", "cache.pack"], { cwd: workspace, cache: box.at("restored") });
+    expect(r.err).toBe("");
+    expect(r.out).toContain(`(${installedCount} new, `);
+    expect(r.code).toBe(0);
+  });
 
   test.concurrent.each(dryRuns)("$title reads the cache and writes nothing", async ({ flags, config }) => {
     using box = sandbox();

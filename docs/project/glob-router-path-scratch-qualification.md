@@ -24,12 +24,12 @@ The owner factory uses MSVC 14.44, four Ninja jobs, four linker threads and full
 
 Serialized strict Clippy checks cover both `bun_runtime` and `bun_glob`:
 
-| Target | Command exit | Owned errors | Remaining runtime errors |
-| --- | --- | --- | --- |
-| GNU x64 | 0 | 0 | 0 |
-| GNU ARM64 | 0 | 0 | 0 |
-| MSVC x64 | 101 | 0 | 33 |
-| MSVC ARM64 | 101 | 0 | 33 |
+| Target     | Command exit | Owned errors | Remaining runtime errors |
+| ---------- | ------------ | ------------ | ------------------------ |
+| GNU x64    | 0            | 0            | 0                        |
+| GNU ARM64  | 0            | 0            | 0                        |
+| MSVC x64   | 101          | 0            | 33                       |
+| MSVC ARM64 | 101          | 0            | 33                       |
 
 GNU receipts are under the VPS owner's `tmp/owner-linux-qualification/path-scratch-policy-*`; Windows receipts are `tmp/path-scratch-policy-*.jsonl/.stderr/.exit` and `tmp/path-scratch-policy-windows-summary.json`. GNU ARM64 uses the previously qualified LLVM23/official Ubuntu cross sysroot. These checks do not establish a linked ARM64 binary, hardware execution or the distribution's glibc floor.
 

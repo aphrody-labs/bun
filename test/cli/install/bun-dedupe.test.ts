@@ -1046,49 +1046,40 @@ async function setupWorkspaceDuplicate(packageDir: string, packageJson: string, 
   return workspaceDir;
 }
 
-test.concurrent(
-  "hoisted: a workspace's collapsed nested copy is removed, foreign directories in the same folder are not",
-  async () => {
-    const { packageDir, packageJson } = await registry.createTestDir();
-    const workspaceDir = join(packageDir, "packages", "a");
-    await write(
-      join(workspaceDir, "package.json"),
-      JSON.stringify({ name: "a", dependencies: { "no-deps": "^1.0.0" } }),
-    );
-    const lockfile = await installTwice(
-      packageDir,
-      packageJson,
-      { name: "root", workspaces: ["packages/*"] },
-      { name: "root", workspaces: ["packages/*"], dependencies: { "no-deps": "1.0.0" } },
-    );
-    expect(lockfile).toContain('"no-deps@1.0.0"');
-    expect(lockfile).toContain('"no-deps@1.1.0"');
-    const versions = () =>
-      Promise.all([nodeModulesVersion(packageDir, "no-deps"), nodeModulesVersion(workspaceDir, "no-deps")]);
-    expect(await versions()).toStrictEqual(["1.0.0", "1.1.0"]);
+test.concurrent("hoisted: a workspace's collapsed nested copy is removed, foreign directories in the same folder are not", async () => {
+  const { packageDir, packageJson } = await registry.createTestDir();
+  const workspaceDir = join(packageDir, "packages", "a");
+  await write(join(workspaceDir, "package.json"), JSON.stringify({ name: "a", dependencies: { "no-deps": "^1.0.0" } }));
+  const lockfile = await installTwice(
+    packageDir,
+    packageJson,
+    { name: "root", workspaces: ["packages/*"] },
+    { name: "root", workspaces: ["packages/*"], dependencies: { "no-deps": "1.0.0" } },
+  );
+  expect(lockfile).toContain('"no-deps@1.0.0"');
+  expect(lockfile).toContain('"no-deps@1.1.0"');
+  const versions = () =>
+    Promise.all([nodeModulesVersion(packageDir, "no-deps"), nodeModulesVersion(workspaceDir, "no-deps")]);
+  expect(await versions()).toStrictEqual(["1.0.0", "1.1.0"]);
 
-    // Stand-ins for a manual `bun link` inside the workspace and an extraneous root package: bun.lock never placed them.
-    const handLinked = join(workspaceDir, "node_modules", "hand-linked", "package.json");
-    const extraneous = join(packageDir, "node_modules", "extraneous", "package.json");
-    await Promise.all([
-      mkdir(dirname(handLinked), { recursive: true }),
-      mkdir(dirname(extraneous), { recursive: true }),
-    ]);
-    await Promise.all([write(handLinked, '{"name":"hand-linked"}'), write(extraneous, '{"name":"extraneous"}')]);
+  // Stand-ins for a manual `bun link` inside the workspace and an extraneous root package: bun.lock never placed them.
+  const handLinked = join(workspaceDir, "node_modules", "hand-linked", "package.json");
+  const extraneous = join(packageDir, "node_modules", "extraneous", "package.json");
+  await Promise.all([mkdir(dirname(handLinked), { recursive: true }), mkdir(dirname(extraneous), { recursive: true })]);
+  await Promise.all([write(handLinked, '{"name":"hand-linked"}'), write(extraneous, '{"name":"extraneous"}')]);
 
-    const { stdout, stderr, exitCode } = await dedupe(packageDir);
-    expectRemoved(stdout, "no-deps 1.1.0 -> 1.0.0");
-    expect(stderr).not.toContain("error:");
-    expect(exitCode).toBe(0);
+  const { stdout, stderr, exitCode } = await dedupe(packageDir);
+  expectRemoved(stdout, "no-deps 1.1.0 -> 1.0.0");
+  expect(stderr).not.toContain("error:");
+  expect(exitCode).toBe(0);
 
-    expect(await lock(packageDir)).not.toContain('"no-deps@1.1.0"');
-    expect(await exists(join(workspaceDir, "node_modules", "no-deps"))).toBeFalse();
-    expect(await Promise.all([exists(handLinked), exists(extraneous)])).toStrictEqual([true, true]);
-    expect(await nodeModulesVersion(packageDir, "no-deps")).toBe("1.0.0");
-    await expectAlreadyDeduplicated(packageDir);
-    await runBunInstall(installEnv(packageDir), packageDir, { frozenLockfile: true });
-  },
-);
+  expect(await lock(packageDir)).not.toContain('"no-deps@1.1.0"');
+  expect(await exists(join(workspaceDir, "node_modules", "no-deps"))).toBeFalse();
+  expect(await Promise.all([exists(handLinked), exists(extraneous)])).toStrictEqual([true, true]);
+  expect(await nodeModulesVersion(packageDir, "no-deps")).toBe("1.0.0");
+  await expectAlreadyDeduplicated(packageDir);
+  await runBunInstall(installEnv(packageDir), packageDir, { frozenLockfile: true });
+});
 
 type StaleFixture = { packageDir: string; cwds: string[]; afterRefusal?: () => Promise<void> };
 
@@ -2053,26 +2044,23 @@ test.concurrent("--silent prints nothing when refusing either", async () => {
   }
 });
 
-test.concurrent(
-  "bun dedupe wins over a package.json script named dedupe; bun run dedupe still runs the script",
-  async () => {
-    const { packageDir, packageJson } = await registry.createTestDir();
-    await setupRangeDuplicate(packageDir, packageJson);
-    const pkg = await file(packageJson).json();
-    await write(packageJson, JSON.stringify({ ...pkg, scripts: { dedupe: "echo SCRIPT_RAN" } }));
+test.concurrent("bun dedupe wins over a package.json script named dedupe; bun run dedupe still runs the script", async () => {
+  const { packageDir, packageJson } = await registry.createTestDir();
+  await setupRangeDuplicate(packageDir, packageJson);
+  const pkg = await file(packageJson).json();
+  await write(packageJson, JSON.stringify({ ...pkg, scripts: { dedupe: "echo SCRIPT_RAN" } }));
 
-    const { stdout, stderr, exitCode } = await dedupe(packageDir);
-    expectRemoved(stdout, "no-deps 1.1.0 -> 1.0.0");
-    expect(stdout).not.toContain("SCRIPT_RAN");
-    expect(stderr).not.toContain("SCRIPT_RAN");
-    expect(exitCode).toBe(0);
-    expect(await lock(packageDir)).not.toContain('"no-deps@1.1.0"');
+  const { stdout, stderr, exitCode } = await dedupe(packageDir);
+  expectRemoved(stdout, "no-deps 1.1.0 -> 1.0.0");
+  expect(stdout).not.toContain("SCRIPT_RAN");
+  expect(stderr).not.toContain("SCRIPT_RAN");
+  expect(exitCode).toBe(0);
+  expect(await lock(packageDir)).not.toContain('"no-deps@1.1.0"');
 
-    const script = await run(packageDir, "run", "dedupe");
-    expect(script.stdout).toContain("SCRIPT_RAN");
-    expect(script.exitCode).toBe(0);
-  },
-);
+  const script = await run(packageDir, "run", "dedupe");
+  expect(script.stdout).toContain("SCRIPT_RAN");
+  expect(script.exitCode).toBe(0);
+});
 
 test.concurrent("errors without a package.json", async () => {
   const { packageDir } = await registry.createTestDir();

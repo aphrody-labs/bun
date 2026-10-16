@@ -16,13 +16,15 @@
 declare module "bun" {
   type PathLike = string | NodeJS.TypedArray | ArrayBufferLike | URL;
   type ArrayBufferView<TArrayBuffer extends ArrayBufferLike = ArrayBufferLike> =
-    NodeJS.TypedArray<TArrayBuffer> | DataView<TArrayBuffer>;
+    | NodeJS.TypedArray<TArrayBuffer>
+    | DataView<TArrayBuffer>;
   type BufferSource = NodeJS.TypedArray<ArrayBufferLike> | DataView<ArrayBufferLike> | ArrayBufferLike;
   type StringOrBuffer = string | NodeJS.TypedArray | ArrayBufferLike;
   type XMLHttpRequestBodyInit = Blob | BufferSource | FormData | URLSearchParams | string;
   type ReadableStreamController<T> = ReadableStreamDefaultController<T>;
   type ReadableStreamDefaultReadResult<T> =
-    ReadableStreamDefaultReadValueResult<T> | ReadableStreamDefaultReadDoneResult;
+    | ReadableStreamDefaultReadValueResult<T>
+    | ReadableStreamDefaultReadDoneResult;
   type ReadableStreamReader<T> = ReadableStreamDefaultReader<T>;
   type Transferable = ArrayBuffer | MessagePort;
   type MessageEventSource = Bun.__internal.UseLibDomIfAvailable<"MessageEventSource", undefined>;
@@ -1152,7 +1154,10 @@ declare module "bun" {
      * Read attributes of the elements matched by CSS selectors (Brave web-discovery document extractor).
      * Use the attribute name `"textContent"` to read text. One result is returned per matched element.
      */
-    function extract(markup: string | ArrayBufferLike | ArrayBufferView, requests: HTMLExtractRequest[]): HTMLExtractResult[];
+    function extract(
+      markup: string | ArrayBufferLike | ArrayBufferView,
+      requests: HTMLExtractRequest[],
+    ): HTMLExtractResult[];
   }
 
   interface ReadabilityOptions {
@@ -5290,7 +5295,10 @@ declare module "bun" {
      * The current state of the connection
      */
     readonly readyState:
-      typeof WebSocket.CONNECTING | typeof WebSocket.OPEN | typeof WebSocket.CLOSING | typeof WebSocket.CLOSED;
+      | typeof WebSocket.CONNECTING
+      | typeof WebSocket.OPEN
+      | typeof WebSocket.CLOSING
+      | typeof WebSocket.CLOSED;
 
     /**
      * The number of bytes of data that have been queued using send() but not yet transmitted to the network
@@ -6299,7 +6307,27 @@ declare module "bun" {
      * The gzip header has no file name, no extra data, no comment, no modification time (set to zero) and no header CRC.
      */
     windowBits?:
-      -9 | -10 | -11 | -12 | -13 | -14 | -15 | 9 | 10 | 11 | 12 | 13 | 14 | 15 | 25 | 26 | 27 | 28 | 29 | 30 | 31;
+      | -9
+      | -10
+      | -11
+      | -12
+      | -13
+      | -14
+      | -15
+      | 9
+      | 10
+      | 11
+      | 12
+      | 13
+      | 14
+      | 15
+      | 25
+      | 26
+      | 27
+      | 28
+      | 29
+      | 30
+      | 31;
     /**
      * Tunes the compression algorithm.
      *
@@ -9730,9 +9758,20 @@ declare module "bun" {
     version: string | null;
   }
   export type WebDetectChallengeProvider =
-    | "none" | "cloudflare-block" | "cloudflare-challenge" | "cloudflare-turnstile"
-    | "akamai-bot-manager" | "perimeter-x" | "data-dome" | "kasada" | "incapsula"
-    | "aws-waf" | "sucuri" | "js-required" | "soft-block" | "rate-limit";
+    | "none"
+    | "cloudflare-block"
+    | "cloudflare-challenge"
+    | "cloudflare-turnstile"
+    | "akamai-bot-manager"
+    | "perimeter-x"
+    | "data-dome"
+    | "kasada"
+    | "incapsula"
+    | "aws-waf"
+    | "sucuri"
+    | "js-required"
+    | "soft-block"
+    | "rate-limit";
   export interface WebDetectReport {
     url: string;
     finalUrl: string;
@@ -9787,7 +9826,15 @@ declare module "bun" {
     pending?: number;
     locked?: number;
     failed?: number;
-    targets: { id: string; completed?: boolean; pending?: number; locked?: number; failed?: number; documents?: number; frontierPresent?: boolean }[];
+    targets: {
+      id: string;
+      completed?: boolean;
+      pending?: number;
+      locked?: number;
+      failed?: number;
+      documents?: number;
+      frontierPresent?: boolean;
+    }[];
     errors?: [url: string, message: string][] | null;
   }
 
@@ -9839,11 +9886,15 @@ declare module "bun" {
     /** Inserts or replaces an unsigned 64-bit key. Numeric keys are rejected to prevent truncation. */
     add(key: bigint, vector: Float32Array | readonly number[]): void;
     /** Scores are negative squared L2 distance (default), or cosine similarity; higher is better. */
-    search(vector: Float32Array | readonly number[], k: number, options?: {
-      /** Restricts eligible hits before top-k selection; an empty set returns no hits. */
-      allowedKeys?: BigUint64Array | readonly bigint[];
-      ef?: number;
-    }): { key: bigint; score: number }[];
+    search(
+      vector: Float32Array | readonly number[],
+      k: number,
+      options?: {
+        /** Restricts eligible hits before top-k selection; an empty set returns no hits. */
+        allowedKeys?: BigUint64Array | readonly bigint[];
+        ef?: number;
+      },
+    ): { key: bigint; score: number }[];
     remove(key: bigint): boolean;
     /** Atomically persists to the constructor path, including an empty index. */
     save(): void;
@@ -9853,29 +9904,46 @@ declare module "bun" {
 
   export class Curl {
     static readonly available: boolean;
-    static capabilities(): { available: boolean; version?: string | null; tls?: string | null; protocols: string[]; features?: number };
+    static capabilities(): {
+      available: boolean;
+      version?: string | null;
+      tls?: string | null;
+      protocols: string[];
+      features?: number;
+    };
     /** Runs the complete embedded curl tool in a child of this Bun binary, before its VM starts. */
-    static run(argv: string[], options?: {
-      maxOutputBytes?: number;
-      timeout?: number;
-      signal?: AbortSignal;
-      cwd?: string;
-      env?: Record<string, string | undefined>;
-      stdin?: Blob | ArrayBufferView | ArrayBuffer;
-    }): Promise<{ stdout: Uint8Array; stderr: Uint8Array; exitCode: number; signalCode: NodeJS.Signals | number | null }>;
+    static run(
+      argv: string[],
+      options?: {
+        maxOutputBytes?: number;
+        timeout?: number;
+        signal?: AbortSignal;
+        cwd?: string;
+        env?: Record<string, string | undefined>;
+        stdin?: Blob | ArrayBufferView | ArrayBuffer;
+      },
+    ): Promise<{
+      stdout: Uint8Array;
+      stderr: Uint8Array;
+      exitCode: number;
+      signalCode: NodeJS.Signals | number | null;
+    }>;
     /** Uses the optional native libcurl provider; the response header text redacts protected values. */
-    static request(url: string, options?: {
-      method?: string;
-      headers?: string[];
-      body?: string | ArrayBufferView | ArrayBuffer;
-      timeout?: number;
-      maxBytes?: number;
-      followRedirects?: boolean;
-      maxRedirects?: number;
-      signal?: AbortSignal;
-      /** Native CURLOPT names: string, long/enum, curl_off_t and slist types. Pointer/callback/blob options are rejected. */
-      options?: Record<string, string | number | boolean | string[]>;
-    }): Promise<{ status: number; body: Blob; headers: string }>;
+    static request(
+      url: string,
+      options?: {
+        method?: string;
+        headers?: string[];
+        body?: string | ArrayBufferView | ArrayBuffer;
+        timeout?: number;
+        maxBytes?: number;
+        followRedirects?: boolean;
+        maxRedirects?: number;
+        signal?: AbortSignal;
+        /** Native CURLOPT names: string, long/enum, curl_off_t and slist types. Pointer/callback/blob options are rejected. */
+        options?: Record<string, string | number | boolean | string[]>;
+      },
+    ): Promise<{ status: number; body: Blob; headers: string }>;
   }
 
   /** Native Rust media probing, frame extraction and Bun.Image transformations. */
@@ -10422,9 +10490,13 @@ declare module "bun" {
    */
   class WebView extends EventTarget {
     /** Open an application window in its native browser-owned profile, including that browser's credentials and sessions. */
-    static openApplication(options: import("bun:chromium").profiles.OpenApplicationOptions): Promise<import("bun:chromium").profiles.OpenApplicationResult>;
+    static openApplication(
+      options: import("bun:chromium").profiles.OpenApplicationOptions,
+    ): Promise<import("bun:chromium").profiles.OpenApplicationResult>;
     /** Import only the selected site's live cookies and session metadata from an explicit source browser. */
-    importProfile(options: Omit<import("bun:chromium").profiles.ImportSiteOptions, "view">): Promise<import("bun:chromium").profiles.ImportSiteResult>;
+    importProfile(
+      options: Omit<import("bun:chromium").profiles.ImportSiteOptions, "view">,
+    ): Promise<import("bun:chromium").profiles.ImportSiteResult>;
     /**
      * @throws on non-macOS platforms when `backend` is `"webkit"` (the
      * default). Pass `backend: "chrome"` for cross-platform support.
