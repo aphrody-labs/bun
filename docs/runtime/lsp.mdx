@@ -50,6 +50,10 @@ bun lsp query hover src/index.ts:12:8
 bun lsp query symbols src/index.ts
 bun lsp query workspace-symbols . Router
 bun lsp query rename src/index.ts:12:8 newName --apply
+bun lsp query context src/index.ts:12:8
+bun lsp query callers src/index.ts:12:8
+bun lsp query callees src/index.ts:12:8
+bun lsp query fix src/index.ts:12 --apply
 ```
 
 ```txt
@@ -63,8 +67,22 @@ Lines and columns start at 1, and columns count characters. `bun lsp query diagn
 | `--json`          | Print the answer as JSON                                            |
 | `--limit <n>`     | Print at most `n` items. Defaults to `100`                          |
 | `--timeout <ms>`  | How long a server may take. Defaults to `30000`                     |
-| `--apply`         | With `rename`, write the edits to the files                         |
+| `--apply`         | With `rename` and `fix`, write the edits to the files               |
 | `--no-daemon`     | Start the servers in this process, and stop them after the answer   |
+
+## Code graph and fixes
+
+The daemon builds the code graph of the workspace in the background, and updates it when files change. It holds the calls between functions in Rust, TypeScript, JavaScript and Markdown, and the links between languages that no single server sees: C ABI symbols shared by name between Rust, C, C++ and Zig, the `$rust`, `$cpp` and `$zig` calls of builtin modules, and the Rust methods that `.classes.ts` definitions bind.
+
+- `context` prints what the graph, the server and the workspace docs know of the symbol.
+- `callers` and `callees` print the functions that call it or that it calls, with its uses and definitions in other languages.
+- `fix` sends the lines around the given line, or around the first error, to the command of `BUN_LSP_AI` with their diagnostics, hover, graph context and docs. The first fenced block of the answer replaces those lines; `--apply` writes it.
+
+```bash terminal icon="terminal"
+BUN_LSP_AI="claude -p" bun lsp query fix src/index.ts --apply
+```
+
+`bun lsp status` prints the size of each graph and how long it took to build.
 
 The other commands manage the daemon of the workspace in the current directory, or in the given directory:
 
@@ -109,5 +127,8 @@ bun lsp compdb          # write compile_commands.json now
 | `BUN_LSP_SERVER_IDLE_MS`   | How long an unused server keeps running. Defaults to 15 minutes                                   |
 | `BUN_LSP_IDLE_MS`          | How long the daemon waits for a query before it exits. Defaults to 30 minutes                     |
 | `BUN_LSP_TIMEOUT_MS`       | How long a server may take to answer. Defaults to 30 seconds                                      |
+| `BUN_LSP_GRAPH`            | `0` to turn the code graph off                                                                    |
+| `BUN_LSP_GRAPH_FILES`      | The most files in a graph. Defaults to `20000`                                                    |
+| `BUN_LSP_AI`               | The command that answers a prompt on stdin, for `fix`, such as `"claude -p"` or `"codex exec -"` |
 
 `rust-analyzer` starts with `checkOnSave` off, so it does not run `cargo check` after each save.
