@@ -106,7 +106,7 @@ impl AdblockEngine {
             }
             Some(value) if value.is_array() => {
                 let rules: Vec<String> = from_json(global, value, "rules")?;
-                set.add_filters(rules, opts);
+                set.add_filter_list(rules.join("\n"), opts);
             }
             _ => {
                 return Err(ErrorCode::ERR_INVALID_ARG_TYPE.throw(
@@ -136,10 +136,7 @@ impl AdblockEngine {
         engine.deserialize(buffer.byte_slice()).map_err(|error| {
             invalid(global, format_args!("Invalid serialized engine: {error:?}"))
         })?;
-        Ok(<Self as jsc::JsClass>::to_js_boxed(
-            Box::new(Self { engine }),
-            global,
-        ))
+        Ok(Self::to_js_boxed(Box::new(Self { engine }), global))
     }
 
     /// Whether `fetch(…, { adblock })` must block the request; `None` when the URL is not checkable.
@@ -210,11 +207,11 @@ impl AdblockEngine {
     ) -> JsResult<JSValue> {
         let url = string_arg(global, frame.argument(0), "url")?;
         let resources = self.engine.url_cosmetic_resources(&url);
-        let sorted = |set: &HashSet<String>| {
+        fn sorted(set: &HashSet<String>) -> Vec<&String> {
             let mut values: Vec<&String> = set.iter().collect();
             values.sort();
             values
-        };
+        }
         to_js_json(
             global,
             &serde_json::json!({

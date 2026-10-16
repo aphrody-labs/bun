@@ -354,10 +354,9 @@ export function getJS2NativeRust() {
       .map(s => snake(s))
       .join("::");
     if (segs[0] === "runtime") {
-      const mod = segs
-        .slice(1)
-        .map(s => snake(s))
-        .join("::");
+      // A terminal mod.rs declares the containing Rust module.
+      const modules = segs.at(-1) === "mod" ? segs.slice(1, -1) : segs.slice(1);
+      const mod = modules.map(s => snake(s)).join("::");
       return `crate::${mod}::${fn}`;
     }
     // Out-of-crate call site: route through a flat dispatch module that
