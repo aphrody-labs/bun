@@ -1,5 +1,5 @@
 // Real WinRT calls through the generated families (Windows only): bun scripts/aphrody/winrt/calls.ts
-const P = require("node:path").join(import.meta.dir, "../../../packages/") + "/";
+const P = require("node:path").join(process.env.BUN_OS_ROOT ?? "C:/src/bun-os", "packages") + "/";
 const profile = require(P + "bun-windows-winrt-windows-system-profile");
 require(P + "bun-windows-winrt-windows-data-xml-dom");
 const notifications = require(P + "bun-windows-winrt-windows-ui-notifications");

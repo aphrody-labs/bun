@@ -12,7 +12,8 @@ import winmd, { type TypeSig } from "../../../src/js/internal/winmd.ts";
 
 const { Winmd, Tables: T, guidFromArgs } = winmd;
 const repo = join(import.meta.dir, "..", "..", "..");
-const packages = join(repo, "packages");
+const osRoot = process.env.BUN_OS_ROOT ?? "C:/src/bun-os";
+const packages = join(osRoot, "packages");
 const METADATA_PACKAGE = "Microsoft.Windows.SDK.Win32Metadata";
 const METADATA_VERSION = "71.0.30-preview";
 

@@ -38,7 +38,7 @@ if (import.meta.main) {
     const data = model.get(ns);
     if (!data) throw new Error(`namespace ${ns} not found in ${winmdPath}`);
     const family = familyName(ns);
-    const dir = join(repo, "packages", `bun-windows-${family}`);
+    const dir = join(process.env.BUN_OS_ROOT ?? "C:/src/bun-os", "packages", `bun-windows-`);
     const pkg = {
       name: `@aphrody/bun-windows-${family}`,
       version: packageVersion,

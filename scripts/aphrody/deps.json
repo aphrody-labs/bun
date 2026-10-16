@@ -313,7 +313,7 @@
       "repo": "aphrody-labs/aphrody",
       "kind": "cargo-git",
       "ref": "631434e1aa92291f417a09ee19c41056527402b4",
-      "usedBy": ["packages/bun-windows-winclean/Cargo.toml"],
+      "usedBy": ["../src/bun-os/packages/bun-windows-winclean/Cargo.toml"],
       "internal": true,
       "visibility": "PRIVATE"
     },

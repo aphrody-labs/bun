@@ -5,7 +5,8 @@ import { join, relative, resolve } from "node:path";
 import { familyDefinition, familyFiles, obsoleteFamilyFiles, sharedFiles } from "../../scripts/aphrody/win32/gen";
 
 const root = resolve(import.meta.dir, "../..");
-const owner = join(root, "packages/bun-windows-win32");
+const osRoot = process.env.BUN_OS_ROOT ?? "C:/src/bun-os";
+const owner = join(osRoot, "packages/bun-windows-win32");
 
 test("all generated public declarations and dependency versions survive common descriptor ownership", async () => {
   const manifest = await Bun.file(join(owner, "manifest.json")).json();
@@ -21,7 +22,7 @@ test("all generated public declarations and dependency versions survive common d
     expect(definition.dll).toBe(summary.dll);
     expect(Object.keys(definition.functions)).toHaveLength(summary.functions);
     const files = familyFiles(name, data);
-    const folder = join(root, "packages", `bun-windows-${name}`);
+    const folder = join(osRoot, "packages", `bun-windows-`);
     expect(await Bun.file(join(folder, "index.d.ts")).text()).toBe(files["index.d.ts"]);
     expect(await Bun.file(join(folder, "index.js")).text()).toBe(files["index.js"]);
     const pkg = JSON.parse(await Bun.file(join(folder, "package.json")).text());
@@ -64,7 +65,7 @@ test.skipIf(!isWindows)(
     const coreArchive = join(staging, "metadata.tgz"),
       familyArchive = join(staging, "kernel32.tgz");
     await pack(owner, coreArchive);
-    await pack(join(root, "packages/bun-windows-kernel32"), familyArchive);
+    await pack(join(osRoot, "packages/bun-windows-kernel32"), familyArchive);
     const metaExtract = join(staging, "unpack-metadata"),
       familyExtract = join(staging, "unpack-family");
     await new Bun.Archive(await Bun.file(coreArchive).bytes()).extract(metaExtract);

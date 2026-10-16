@@ -7,7 +7,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 
 import { join } from "node:path";
 
 const repo = join(import.meta.dir, "..", "..", "..");
-const shared = join(repo, "packages", "bun-windows-win32");
+const shared = join(process.env.BUN_OS_ROOT ?? "C:/src/bun-os", "packages", "bun-windows-win32");
 const mode = process.argv[2] ?? "layouts";
 const work = join(process.env.TEMP ?? "C:/tmp", "bun-win32-verify");
 mkdirSync(work, { recursive: true });
