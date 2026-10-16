@@ -41,7 +41,7 @@ test runner and package manager.
   `~/depot_tools` (daily `depot-tools-update.timer`), checkouts in
   `~/src/<project>` (chromium, chromiumos, cef, brave-core, bun), GN outputs in
   `~/build/out/<project>/<config>`, shared caches in
-  `~/build/storage/google/cache`, services in `~/apps`. Drive it with
+  `~/build/google/cache`, services in `~/apps`. Drive it with
   `bun factory sync|gen|build|all <target>`, which takes free build slots
   (multi-build mode, `bun factory slots`); `bun factory run -- <command>` runs
   any other heavy command, such as `bun bd`, in a slot.

@@ -123,4 +123,4 @@ Statuts : `fait` (déjà dans Bun), `en cours (autre agent)`, `à faire`,
 
 Chaque lot : un commit Bun, puis suppression des sources absorbées dans aphrody.
 Les builds natifs se font sur le VPS (`/home/ubuntu/src/bun`, verrou
-`/home/ubuntu/build/locks/heavy.lock`, artefacts dans `/home/ubuntu/build/storage`).
+`/home/ubuntu/build/locks/heavy.lock`, artefacts dans `/home/ubuntu/build`).

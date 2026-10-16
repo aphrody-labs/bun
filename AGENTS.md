@@ -54,17 +54,17 @@ test runner and package manager.
   `~/depot_tools` (daily `depot-tools-update.timer`), checkouts in
   `~/src/<project>` (chromium, chromiumos, cef, brave-core, bun), GN outputs in
   `~/build/out/<project>/<config>`, shared caches in
-  `~/build/storage/google/cache`, services in `~/apps`. Drive it with
+  `~/build/google/cache`, services in `~/apps`. Drive it with
   `bun factory sync|gen|build|all <target>`, which takes free build slots
   (multi-build mode, `bun factory slots`); `bun factory run -- <command>` runs
   any other heavy command, such as `bun bd`, in a slot.
-- The shared artifact pool is `/home/ubuntu/build/storage`. Put heavy outputs,
-  caches, downloads, toolchains and transient files there. The older
-  `/home/ubuntu/src` and `/home/ubuntu/build` filesystem can fill independently
-  while the pool still has hundreds of GiB free; check both filesystems.
+- `/home` on `vps` is a single btrfs volume (subvolume `@home`, about 805 GiB
+  over two disks); `/` stays on its own disk. Put heavy outputs, caches,
+  downloads, toolchains and transient files under `/home/ubuntu/build`, never
+  on `/`. Check free space on `/` and `/home` before a large build.
 - The existing Bun checkout is `/home/ubuntu/src/bun`; do not resurrect the
   absent `/home/ubuntu/builds/bun-os-factory/sources/bun` checkout. The factory
-  policy lives in `tools/config/fusion-factory.json` and uses pooled directories.
+  policy lives in `tools/config/fusion-factory.json` and uses directories under `~/build`.
 - Run `aphrody infra ssh exec` from `/home/ubuntu` with
   `APHRODY_INFRA_ROOT=/home/ubuntu` so `var/runs` receipts use the root
   filesystem. Changing the working directory alone does not relocate receipts.

@@ -5,7 +5,7 @@ factory for Chromium, Chromium OS, CEF, Brave and Bun. Production stays on
 `dbfr`. The legacy layout is retired: do not create new top-level build
 directories in `~` (`~/factory`, `~/builds`, `~/aphrody-build`,
 `~/shenron-release`) or extra `vendor/depot_tools` copies. Large data such as
-`~/.aphrody/models` lives in the pool behind a symlink.
+`~/.aphrody/models` lives on the `/home` volume.
 
 ## Layout
 
@@ -13,25 +13,23 @@ directories in `~` (`~/factory`, `~/builds`, `~/aphrody-build`,
 | -------------------------------------------------------- | --------------------------------------------------------------------------------------- |
 | `~/depot_tools`                                          | Single depot_tools checkout, updated daily by the user timer `depot-tools-update.timer` |
 | `~/src/<project>`                                        | gclient/repo checkouts: `chromium`, `chromiumos`, `cef`, `brave-core`, `bun`, ...       |
-| `~/build/out/<project>/<config>`                         | GN output directories (symlink into the pool, `~/build/storage/out`)                    |
-| `~/build/storage/google/cache/{git,sccache,ccache,siso}` | Shared caches: gclient git cache, compiler caches, Siso                                 |
-| `/mnt/aphrody-storage/disk500/bun/install-cache`         | The single Bun install cache and global store (`BUN_INSTALL_CACHE_DIR`)                 |
+| `~/build/out/<project>/<config>`                         | GN output directories                                                                   |
+| `~/build/google/cache/{git,sccache,ccache,siso}` | Shared caches: gclient git cache, compiler caches, Siso                                 |
+| `~/build/bun/install-cache`         | The single Bun install cache and global store (`BUN_INSTALL_CACHE_DIR`)                 |
 | `~/build/locks/heavy{,.1,.2}.lock`                       | Build slots; every sync, gen and build holds one or more under `flock`                  |
 | `~/apps`                                                 | Services (Docker compose, Gitea, Komodo, control plane)                                 |
 
-Mounts: `~/src`, `~/apps` and `~/build/storage` are mergerfs pools over
-`sdb1` (`~/build`) and `sdc1` (`/mnt/aphrody-storage/disk500`). Heavy outputs and
-caches belong in the pool, never on `/`. Check free space on `/`, `~/build` and
-the pool before a large sync.
+Storage: `/home` is one btrfs volume (subvolume `@home`, `compress=zstd:1`) over
+two disks, about 805 GiB; `/` keeps the OS and Docker on its own disk. `~/src`,
+`~/apps`, `~/build` and `~/archive` are plain directories of that volume, so
+hardlinks and reflinks work between all of them. Heavy outputs and caches
+belong under `~/build`, never on `/`. Check free space on `/` and `/home` before
+a large sync.
 
-The Bun install cache sits on the `sdc1` branch itself, not behind the
-mergerfs pool: the global store hardlinks cache files into `links/`, and a
-mergerfs path may put the source and the link on different branches (`EXDEV`).
 `BUN_INSTALL_CACHE_DIR` (`~/.config/aphrody/host.sh`) and `install.cache` in
-`~/.bunfig.toml` both name it; `~/.bun/install/cache` is a symlink to it (the
-former `~/build/cache/bun` copy is gone), and `~/.bun/install/global` lives beside it in
-`/mnt/aphrody-storage/disk500/bun/install-global`, so global installs hardlink
-from the cache instead of copying.
+`~/.bunfig.toml` both name `~/build/bun/install-cache`; `~/.bun/install/cache`
+is a symlink to it and `~/.bun/install/global` lives beside it in
+`~/build/bun/install-global`, so installs hardlink from the cache.
 
 ## Tool
 
@@ -76,4 +74,4 @@ BUN_FACTORY_MODE=single bun factory build chromium   # one exclusive build, 12 j
 
 Each slot has about 12 GiB of RAM once `resources.reserveMemoryGiB` is kept
 free; give memory-heavy links two slots. The caches may grow to
-`builds.sccacheGiB` (150) and `builds.ccacheGiB` (100) in the pool.
+`builds.sccacheGiB` (150) and `builds.ccacheGiB` (100) under `~/build`.

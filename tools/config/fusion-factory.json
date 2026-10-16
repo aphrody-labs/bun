@@ -5,8 +5,8 @@
   "target": "vps",
   "executionOnlyTargets": [],
   "workspaceRoot": "/home/ubuntu/src/bun",
-  "cacheRoot": "/home/ubuntu/build/storage/bun/factory/cache",
-  "artifactRoot": "/home/ubuntu/build/storage/bun/factory/artifacts",
+  "cacheRoot": "/home/ubuntu/build/bun/factory/cache",
+  "artifactRoot": "/home/ubuntu/build/bun/factory/artifacts",
   "lockPath": "/home/ubuntu/build/locks/heavy.lock",
   "hostEnvironment": {
     "name": "APHRODY_BUILD_HOST",
@@ -57,7 +57,7 @@
     "bun-os": "/home/ubuntu/src/bun"
   },
   "cleanup": {
-    "transientRoot": "/home/ubuntu/build/storage/bun/factory/transient",
+    "transientRoot": "/home/ubuntu/build/bun/factory/transient",
     "privilegeBinary": "/usr/bin/sudo-rs",
     "retiredOutputs": []
   },
@@ -71,7 +71,7 @@
     "depotTools": "/home/ubuntu/depot_tools",
     "srcRoot": "/home/ubuntu/src",
     "outRoot": "/home/ubuntu/build/out",
-    "cacheRoot": "/home/ubuntu/build/storage/google/cache",
+    "cacheRoot": "/home/ubuntu/build/google/cache",
     "jobs": 12,
     "targets": {
       "chromium": {

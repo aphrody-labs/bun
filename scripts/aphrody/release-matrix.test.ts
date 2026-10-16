@@ -100,10 +100,10 @@ test("VPS release plan keeps execution with the serialized Infra resource owner"
     expect(step.directory).toBe(plan.source);
     expect(step.command).toContain("-j12");
     expect(step.command).toContain("--link-threads=12");
-    expect(step.command).toContain("--cache-dir=/home/ubuntu/build/storage/bun/factory/cache");
+    expect(step.command).toContain("--cache-dir=/home/ubuntu/build/bun/factory/cache");
     expect(
       step.command.some(arg =>
-        arg.startsWith("--build-dir=/home/ubuntu/build/storage/bun/factory/artifacts/runtime-release/"),
+        arg.startsWith("--build-dir=/home/ubuntu/build/bun/factory/artifacts/runtime-release/"),
       ),
     ).toBe(true);
   }
@@ -112,10 +112,10 @@ test("VPS release plan keeps execution with the serialized Infra resource owner"
   expect(plan.mullvadSidecar.target).toBe("x86_64-unknown-linux-gnu");
   expect(plan.mullvadSidecar.workingDirectory).toBe(`${plan.source}/vendor/mullvad`);
   expect(plan.mullvadSidecar.lock).toBe("/home/ubuntu/build/locks/heavy.lock");
-  expect(plan.mullvadSidecar.outputDirectory).toBe("/home/ubuntu/build/storage/bun/factory/artifacts/runtime-release");
-  expect(plan.mullvadSidecar.workDirectory).toContain("/home/ubuntu/build/storage/bun/factory/transient/mullvad-");
+  expect(plan.mullvadSidecar.outputDirectory).toBe("/home/ubuntu/build/bun/factory/artifacts/runtime-release");
+  expect(plan.mullvadSidecar.workDirectory).toContain("/home/ubuntu/build/bun/factory/transient/mullvad-");
   expect(plan.mullvadSidecar.log).toBe(
-    "/home/ubuntu/build/storage/bun/factory/artifacts/runtime-release/mullvad-linux-x64.log",
+    "/home/ubuntu/build/bun/factory/artifacts/runtime-release/mullvad-linux-x64.log",
   );
   expect(plan.mullvadSidecar.runtimeLinked).toBe(false);
   expect(plan.mullvadSidecar.performanceQualified).toBe(false);
