@@ -115,36 +115,36 @@ name = "oxc_estree_tokens"
 path = "src/lib.rs"
 
 [dependencies.oxc_ast]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../ecma"
 package = "bun_ecma_ast"
 
 [dependencies.oxc_ast_visit]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../visit"
 features = ["serialize"]
 package = "bun_ecma_ast_visit"
 
 [dependencies.oxc_data_structures]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../collections/ecma"
 features = ["assert_unchecked"]
 package = "bun_ecma_collections"
 
 [dependencies.oxc_estree]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../estree"
 features = ["serialize"]
 package = "bun_estree"
 
 [dependencies.oxc_parser]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../js_parser/ecma"
 features = ["regular_expression", "mutate_tokens"]
 package = "bun_ecma_parser"
 
 [dependencies.oxc_span]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../span"
 features = ["serialize"]
 package = "bun_ecma_span"

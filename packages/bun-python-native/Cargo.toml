@@ -12,7 +12,7 @@ license = "Apache-2.0"
 repository = "https://github.com/aphrody-labs/bun"
 
 [workspace.dependencies]
-pyo3 = "=0.29.3"
+pyo3 = "0.29.3"
 # Product algorithms stay with their capability owner; only the Python adapter moves.
 aphrody-rag-core = { git = "https://github.com/aphrody-labs/aphrody", rev = "c58e93d6dc1b4b2d420c3c929a40c67dd071d2f4", default-features = false }
 

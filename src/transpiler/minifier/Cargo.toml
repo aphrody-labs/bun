@@ -114,76 +114,76 @@ name = "oxc_minifier"
 path = "src/lib.rs"
 
 [dependencies.oxc_allocator]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../collections/arena"
 package = "bun_arena"
 
 [dependencies.oxc_ast]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../ast/ecma"
 package = "bun_ecma_ast"
 
 [dependencies.oxc_ast_visit]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../ast/visit"
 package = "bun_ecma_ast_visit"
 
 [dependencies.oxc_compat]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../compat"
 package = "bun_ecma_compat"
 
 [dependencies.oxc_data_structures]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../collections/ecma"
 features = ["stack"]
 package = "bun_ecma_collections"
 
 [dependencies.oxc_ecmascript]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../sema/ecmascript"
 features = ["constant_evaluation"]
 package = "bun_ecmascript"
 
 [dependencies.oxc_index]
-version = "=5.0.0"
+version = "5.0.0"
 features = ["nonmax", "serde"]
 package = "bun_typed_index"
 path = "../../collections/typed_index"
 
 [dependencies.oxc_mangler]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../mangler"
 package = "bun_ecma_mangler"
 
 [dependencies.oxc_parser]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../js_parser/ecma"
 features = ["regular_expression"]
 package = "bun_ecma_parser"
 
 [dependencies.oxc_semantic]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../sema/ecma"
 package = "bun_ecma_semantic"
 
 [dependencies.oxc_span]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../ast/span"
 package = "bun_ecma_span"
 
 [dependencies.oxc_str]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../bun_core/ecma_strings"
 package = "bun_ecma_str"
 
 [dependencies.oxc_syntax]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../ast/syntax"
 package = "bun_ecma_syntax"
 
 [dependencies.oxc_traverse]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../ast/traverse"
 package = "bun_ecma_traverse"
 
@@ -200,20 +200,20 @@ version = "3.6.0"
 version = "2"
 
 [dev-dependencies.oxc_codegen]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../js_printer/ecma"
 default-features = false
 features = ["sourcemap"]
 package = "bun_ecma_codegen"
 
 [dev-dependencies.oxc_parser]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../js_parser/ecma"
 features = ["regular_expression"]
 package = "bun_ecma_parser"
 
 [dev-dependencies.oxc_sourcemap]
-version = "=9.0.0"
+version = "9.0.0"
 package = "bun_ecma_sourcemap"
 path = "../../sourcemap/ecma"
 

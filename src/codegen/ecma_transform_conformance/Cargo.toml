@@ -117,7 +117,7 @@ doctest = false
 path = "src/main.rs"
 
 [dependencies.oxc]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../transpiler/ecma_engine"
 features = ["full"]
 package = "bun_ecma"
@@ -125,12 +125,12 @@ package = "bun_ecma"
 [dependencies.oxc_tasks_common]
 path = "../ecma_common"
 package = "bun_ecma_common"
-version = "=0.0.0"
+version = "0.0.0"
 
 [dependencies.oxc_tasks_transform_checker]
 path = "../ecma_transform_checker"
 package = "bun_ecma_transform_checker"
-version = "=0.0.0"
+version = "0.0.0"
 
 [dependencies.cow-utils]
 version = "0.1.3"

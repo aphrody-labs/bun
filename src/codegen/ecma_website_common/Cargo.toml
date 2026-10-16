@@ -116,7 +116,7 @@ version = "0.15.0"
 
 [dependencies.schemars]
 package = "bun_json_schema"
-version = "=0.9.1"
+version = "0.9.1"
 path = "../../parsers/json_schema"
 
 [dependencies.serde]

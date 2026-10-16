@@ -114,22 +114,22 @@ name = "oxc_ast_visit"
 path = "src/lib.rs"
 
 [dependencies.oxc_allocator]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../collections/arena"
 package = "bun_arena"
 
 [dependencies.oxc_ast]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../ecma"
 package = "bun_ecma_ast"
 
 [dependencies.oxc_span]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../span"
 package = "bun_ecma_span"
 
 [dependencies.oxc_syntax]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../syntax"
 package = "bun_ecma_syntax"
 

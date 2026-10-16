@@ -114,45 +114,45 @@ doctest = false
 path = "src/main.rs"
 
 [dependencies.oxc_allocator]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../collections/arena"
 package = "bun_arena"
 
 [dependencies.oxc_codegen]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../js_printer/ecma"
 default-features = false
 features = ["sourcemap"]
 package = "bun_ecma_codegen"
 
 [dependencies.oxc_minifier]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../transpiler/minifier"
 package = "bun_ecma_minifier"
 
 [dependencies.oxc_parser]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../js_parser/ecma"
 features = ["regular_expression"]
 package = "bun_ecma_parser"
 
 [dependencies.oxc_semantic]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../sema/ecma"
 package = "bun_ecma_semantic"
 
 [dependencies.oxc_span]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../ast/span"
 package = "bun_ecma_span"
 
 [dependencies.oxc_tasks_common]
 path = "../ecma_common"
 package = "bun_ecma_common"
-version = "=0.0.0"
+version = "0.0.0"
 
 [dependencies.oxc_transformer_plugins]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../transpiler/plugins"
 package = "bun_ecma_transformer_plugins"
 

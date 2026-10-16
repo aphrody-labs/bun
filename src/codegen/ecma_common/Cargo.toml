@@ -112,7 +112,7 @@ path = "src/lib.rs"
 version = "0.16.4"
 
 [dependencies.oxc_span]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../ast/span"
 package = "bun_ecma_span"
 

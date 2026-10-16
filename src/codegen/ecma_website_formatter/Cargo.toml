@@ -117,14 +117,14 @@ features = ["docgen"]
 [dependencies.oxfmt]
 path = "../../quality/format_cli"
 package = "bun_format_cli"
-version = "=0.72.0"
+version = "0.72.0"
 
 [dependencies.pico-args]
 version = "0.5.0"
 
 [dependencies.schemars]
 package = "bun_json_schema"
-version = "=0.9.1"
+version = "0.9.1"
 features = ["indexmap2"]
 path = "../../parsers/json_schema"
 
@@ -135,7 +135,7 @@ features = ["preserve_order"]
 [dependencies.website_common]
 path = "../ecma_website_common"
 package = "bun_ecma_website_common"
-version = "=0.0.0"
+version = "0.0.0"
 
 [dev-dependencies.insta]
 version = "1.48.0"

@@ -93,7 +93,7 @@ tempfile   = { version = "3.27.0", optional = true }
 walkdir    = "2.5.0"
 # Pure-Rust YARA pattern-matching engine (BSD-3-Clause). Optional: host-only,
 # compiles rules at runtime. Default features off: only the core scanner + string/pattern engine.
-yara-x     = { version = "=1.7.0", optional = true, default-features = false }
+yara-x     = { version = "1.7.0", optional = true, default-features = false }
 
 [dev-dependencies]
 serde_json = "1.0.150"

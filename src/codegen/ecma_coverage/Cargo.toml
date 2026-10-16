@@ -120,13 +120,13 @@ path = "src/main.rs"
 version = "0.1.3"
 
 [dependencies.oxc]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../transpiler/ecma_engine"
 features = ["full", "isolated_declarations", "serialize", "conformance"]
 package = "bun_ecma"
 
 [dependencies.oxc_estree_tokens]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../ast/estree_tokens"
 package = "bun_estree_tokens"
 
@@ -134,27 +134,27 @@ package = "bun_estree_tokens"
 path = "../../js_parser/lexer"
 optional = true
 package = "bun_ecma_lexer"
-version = "=0.139.0"
+version = "0.139.0"
 
 [dependencies.oxc_formatter]
 path = "../../quality/format_js"
 package = "bun_format_js"
-version = "=0.72.0"
+version = "0.72.0"
 
 [dependencies.oxc_formatter_core]
 path = "../../quality/format_core"
 package = "bun_format_core"
-version = "=0.72.0"
+version = "0.72.0"
 
 [dependencies.oxc_tasks_common]
 path = "../ecma_common"
 package = "bun_ecma_common"
-version = "=0.0.0"
+version = "0.0.0"
 
 [dependencies.oxc_tasks_transform_checker]
 path = "../ecma_transform_checker"
 package = "bun_ecma_transform_checker"
-version = "=0.0.0"
+version = "0.0.0"
 
 [dependencies.encoding_rs]
 version = "0.8.35"

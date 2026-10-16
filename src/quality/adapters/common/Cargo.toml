@@ -116,28 +116,28 @@ name = "oxc_napi"
 path = "src/lib.rs"
 
 [dependencies.oxc_ast]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../../ast/ecma"
 package = "bun_ecma_ast"
 
 [dependencies.oxc_ast_visit]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../../ast/visit"
 features = ["serialize"]
 package = "bun_ecma_ast_visit"
 
 [dependencies.oxc_diagnostics]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../diagnostics"
 package = "bun_ecma_diagnostics"
 
 [dependencies.oxc_span]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../../ast/span"
 package = "bun_ecma_span"
 
 [dependencies.oxc_syntax]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../../ast/syntax"
 package = "bun_ecma_syntax"
 

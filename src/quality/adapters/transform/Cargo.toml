@@ -116,18 +116,18 @@ name = "oxc_transform_napi"
 path = "src/lib.rs"
 
 [dependencies.oxc]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../../transpiler/ecma_engine"
 features = ["full"]
 package = "bun_ecma"
 
 [dependencies.oxc_napi]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../common"
 package = "bun_ecma_napi"
 
 [dependencies.oxc_sourcemap]
-version = "=9.0.0"
+version = "9.0.0"
 features = ["napi"]
 package = "bun_ecma_sourcemap"
 path = "../../../sourcemap/ecma"

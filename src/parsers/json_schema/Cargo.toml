@@ -230,7 +230,7 @@ features = ["derive"]
 version = "1.0.25"
 
 [dependencies.schemars_derive]
-version = "=0.8.26"
+version = "0.8.26"
 optional = true
 package = "bun_json_schema_macros"
 path = "../json_schema_macros"

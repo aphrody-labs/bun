@@ -30,7 +30,7 @@ rusqlite = { version = "0.40", features = ["bundled"] }
 tempfile = "3.27.0"
 
 [target.'cfg(windows)'.dependencies]
-ort = { version = "=2.0.0-rc.12", default-features = false, features = ["std", "api-24", "ndarray", "tracing", "load-dynamic"] }
+ort = { version = "2.0.0-rc.12", default-features = false, features = ["std", "api-24", "ndarray", "tracing", "load-dynamic"] }
 pollster = "1.0.1"
 uiautomation = { version = "0.25.1", default-features = false, features = ["input"] }
 vigem-rust = { version = "0.2.0", default-features = false, features = ["x360"] }

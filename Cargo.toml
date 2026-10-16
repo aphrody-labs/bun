@@ -536,7 +536,7 @@ assert_cmd = "2"
 jsonschema = { version = "0.58", default-features = false }
 proptest = "1"
 aphrody-jev = { path = "crates/aphrody-jev", version = "1.4.4", default-features = false }
-axum = "=0.8.9"
+axum = "0.8.9"
 bun_git = { path = "src/git" }
 bun_pkg_core = { path = "src/pkg/core" }
 bun_pkg_store = { path = "src/pkg/store" }
@@ -553,7 +553,7 @@ bun_workspace = { path = "src/workspace" }
 "async-trait" = "0.1.92"
 "base64" = "0.23.1"
 "chrono" = { "version" = "0.4", "features" = ["serde"] }
-"cookie" = "=0.18.2"
+"cookie" = "0.18.2"
 "futures" = "0.3.34"
 "futures-util" = { "version" = "0.3", "features" = [] }
 "html5ever" = { "version" = "0.40", "features" = [] }
@@ -571,7 +571,7 @@ bun_workspace = { path = "src/workspace" }
 "regex" = { "version" = "1.11", "features" = [] }
 "reqwest" = { "version" = "0.13.5", "features" = ["rustls-no-provider","json","stream","form","query","charset","http2","system-proxy","blocking","cookies","gzip","brotli","deflate","socks","multipart"], "default-features" = false }
 "rustls" = { "version" = "0.23", "default-features" = false, "features" = ["ring","std","tls12"] }
-"serde" = { "version" = "=1.0.228", "features" = ["derive"] }
+"serde" = { "version" = "1.0.228", "features" = ["derive"] }
 "serde_json" = "1.0.151"
 "sha1" = { "version" = "0.11.0" }
 "sha2" = "0.11.0"

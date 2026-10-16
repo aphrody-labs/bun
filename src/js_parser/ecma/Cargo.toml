@@ -113,49 +113,49 @@ name = "oxc_parser"
 path = "src/lib.rs"
 
 [dependencies.oxc_allocator]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../collections/arena"
 package = "bun_arena"
 
 [dependencies.oxc_ast]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../ast/ecma"
 package = "bun_ecma_ast"
 
 [dependencies.oxc_data_structures]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../collections/ecma"
 features = ["assert_unchecked", "branch_hints", "fieldless_enum"]
 package = "bun_ecma_collections"
 
 [dependencies.oxc_diagnostics]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../quality/diagnostics"
 package = "bun_ecma_diagnostics"
 
 [dependencies.oxc_ecmascript]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../sema/ecmascript"
 package = "bun_ecmascript"
 
 [dependencies.oxc_regular_expression]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../regexp"
 optional = true
 package = "bun_ecma_regexp"
 
 [dependencies.oxc_span]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../ast/span"
 package = "bun_ecma_span"
 
 [dependencies.oxc_str]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../bun_core/ecma_strings"
 package = "bun_ecma_str"
 
 [dependencies.oxc_syntax]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../ast/syntax"
 package = "bun_ecma_syntax"
 
@@ -181,13 +181,13 @@ version = "0.3.6"
 version = "2.8.2"
 
 [dev-dependencies.oxc_ast]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../ast/ecma"
 features = ["serialize"]
 package = "bun_ecma_ast"
 
 [dev-dependencies.oxc_ast_visit]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../ast/visit"
 features = ["serialize"]
 package = "bun_ecma_ast_visit"

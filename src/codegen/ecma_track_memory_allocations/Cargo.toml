@@ -114,7 +114,7 @@ doctest = false
 path = "src/main.rs"
 
 [dependencies.oxc_allocator]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../collections/arena"
 features = ["track_allocations"]
 package = "bun_arena"
@@ -122,31 +122,31 @@ package = "bun_arena"
 [dependencies.oxc_formatter]
 path = "../../quality/format_js"
 package = "bun_format_js"
-version = "=0.72.0"
+version = "0.72.0"
 
 [dependencies.oxc_minifier]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../transpiler/minifier"
 package = "bun_ecma_minifier"
 
 [dependencies.oxc_parser]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../js_parser/ecma"
 features = ["regular_expression"]
 package = "bun_ecma_parser"
 
 [dependencies.oxc_semantic]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../sema/ecma"
 package = "bun_ecma_semantic"
 
 [dependencies.oxc_tasks_common]
 path = "../ecma_common"
 package = "bun_ecma_common"
-version = "=0.0.0"
+version = "0.0.0"
 
 [dependencies.oxc_transformer]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../transpiler/ecma"
 package = "bun_ecma_transformer"
 

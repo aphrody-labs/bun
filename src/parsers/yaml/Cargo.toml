@@ -29,7 +29,7 @@ path = "src/lib.rs"
 doctest = true
 
 [dependencies.oxc_allocator]
-version = "=0.153.0"
+version = "0.153.0"
 package = "bun_arena"
 path = "../../collections/arena"
 

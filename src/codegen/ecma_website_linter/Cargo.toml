@@ -121,13 +121,13 @@ version = "0.15.0"
 path = "../../quality/linter"
 features = ["ruledocs"]
 package = "bun_linter"
-version = "=1.87.0"
+version = "1.87.0"
 
 [dependencies.oxlint]
 path = "../../quality/lint_cli"
 features = ["ruledocs"]
 package = "bun_lint_cli"
-version = "=1.87.0"
+version = "1.87.0"
 
 [dependencies.pico-args]
 version = "0.5.0"
@@ -137,13 +137,13 @@ version = "0.2.2"
 
 [dependencies.schemars]
 package = "bun_json_schema"
-version = "=0.9.1"
+version = "0.9.1"
 path = "../../parsers/json_schema"
 
 [dependencies.website_common]
 path = "../ecma_website_common"
 package = "bun_ecma_website_common"
-version = "=0.0.0"
+version = "0.0.0"
 
 [dev-dependencies.insta]
 version = "1.48.0"

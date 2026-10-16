@@ -119,41 +119,41 @@ side_effects = ["dep:oxc_allocator", "dep:oxc_compat", "dep:oxc_regular_expressi
 constant_evaluation = ["side_effects", "dep:cow-utils", "dep:smallvec"]
 
 [dependencies.oxc_allocator]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../collections/arena"
 optional = true
 package = "bun_arena"
 
 [dependencies.oxc_ast]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../ast/ecma"
 package = "bun_ecma_ast"
 
 [dependencies.oxc_compat]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../transpiler/compat"
 optional = true
 package = "bun_ecma_compat"
 
 [dependencies.oxc_data_structures]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../collections/ecma"
 features = ["inline_string"]
 package = "bun_ecma_collections"
 
 [dependencies.oxc_regular_expression]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../js_parser/regexp"
 optional = true
 package = "bun_ecma_regexp"
 
 [dependencies.oxc_span]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../ast/span"
 package = "bun_ecma_span"
 
 [dependencies.oxc_syntax]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../ast/syntax"
 features = ["to_js_string"]
 package = "bun_ecma_syntax"

@@ -116,10 +116,10 @@ path = "src/main.rs"
 [dependencies.oxc_tasks_common]
 path = "../ecma_common"
 package = "bun_ecma_common"
-version = "=0.0.0"
+version = "0.0.0"
 
 [dependencies.oxc_transformer]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../transpiler/ecma"
 package = "bun_ecma_transformer"
 

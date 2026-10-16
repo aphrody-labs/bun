@@ -47,9 +47,9 @@ gtk4 = { version = "0.11", optional = true, features = ["v4_10"] }
 wry = { git = "https://github.com/aphrody-labs/wry", branch = "dev", optional = true, default-features = false, features = ["os-webview"] }
 
 [target.'cfg(windows)'.dependencies]
-winit = { package = "tauri-winit", version = "=0.31.0-beta.3", default-features = false, optional = true }
-webview2-com = { version = "=0.39.1", optional = true }
-windows-core = { version = "=0.62.2", optional = true }
+winit = { package = "tauri-winit", version = "0.31.0-beta.3", default-features = false, optional = true }
+webview2-com = { version = "0.39.1", optional = true }
+windows-core = { version = "0.62.2", optional = true }
 
 [profile.release]
 lto = "thin"

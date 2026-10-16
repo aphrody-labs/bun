@@ -123,98 +123,98 @@ path = "examples/compiler.rs"
 required-features = ["full"]
 
 [dependencies.oxc_allocator]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../collections/arena"
 package = "bun_arena"
 
 [dependencies.oxc_ast]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../ast/ecma"
 package = "bun_ecma_ast"
 
 [dependencies.oxc_ast_visit]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../ast/visit"
 optional = true
 package = "bun_ecma_ast_visit"
 
 [dependencies.oxc_cfg]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../sema/cfg"
 optional = true
 package = "bun_ecma_cfg"
 
 [dependencies.oxc_codegen]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../js_printer/ecma"
 default-features = false
 optional = true
 package = "bun_ecma_codegen"
 
 [dependencies.oxc_diagnostics]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../quality/diagnostics"
 package = "bun_ecma_diagnostics"
 
 [dependencies.oxc_isolated_declarations]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../declarations"
 optional = true
 package = "bun_ecma_declarations"
 
 [dependencies.oxc_mangler]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../mangler"
 optional = true
 package = "bun_ecma_mangler"
 
 [dependencies.oxc_minifier]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../minifier"
 optional = true
 package = "bun_ecma_minifier"
 
 [dependencies.oxc_parser]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../js_parser/ecma"
 features = ["regular_expression"]
 package = "bun_ecma_parser"
 
 [dependencies.oxc_regular_expression]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../js_parser/regexp"
 optional = true
 package = "bun_ecma_regexp"
 
 [dependencies.oxc_semantic]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../sema/ecma"
 optional = true
 package = "bun_ecma_semantic"
 
 [dependencies.oxc_span]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../ast/span"
 package = "bun_ecma_span"
 
 [dependencies.oxc_str]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../bun_core/ecma_strings"
 package = "bun_ecma_str"
 
 [dependencies.oxc_syntax]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../ast/syntax"
 package = "bun_ecma_syntax"
 
 [dependencies.oxc_transformer]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../ecma"
 optional = true
 package = "bun_ecma_transformer"
 
 [dependencies.oxc_transformer_plugins]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../plugins"
 optional = true
 package = "bun_ecma_transformer_plugins"

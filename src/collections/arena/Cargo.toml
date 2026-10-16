@@ -119,25 +119,25 @@ name = "oxc_allocator"
 path = "src/lib.rs"
 
 [dependencies.oxc_ast_macros]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../ast/macros"
 optional = true
 package = "bun_ecma_ast_macros"
 
 [dependencies.oxc_data_structures]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../ecma"
 features = ["assert_unchecked", "stack"]
 package = "bun_ecma_collections"
 
 [dependencies.oxc_estree]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../ast/estree"
 optional = true
 package = "bun_estree"
 
 [dependencies.allocator-api2]
-version = "=0.2.21"
+version = "0.2.21"
 
 [dependencies.hashbrown]
 version = "0.17.1"
@@ -157,13 +157,13 @@ features = ["Win32_System_Memory"]
 optional = true
 
 [dev-dependencies.oxc_data_structures]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../ecma"
 features = ["types"]
 package = "bun_ecma_collections"
 
 [dev-dependencies.oxc_estree]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../ast/estree"
 features = ["serialize"]
 package = "bun_estree"
@@ -184,7 +184,7 @@ version = "1"
 path = ""
 features = ["testing"]
 package = "bun_arena"
-version = "=0.153.0"
+version = "0.153.0"
 
 [features]
 bitset = []

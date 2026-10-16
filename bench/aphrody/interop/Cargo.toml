@@ -10,6 +10,6 @@ name = "bun_runtime_bench"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "=0.29.3", features = ["abi3-py311"] }
+pyo3 = { version = "0.29.3", features = ["abi3-py311"] }
 
 [workspace]

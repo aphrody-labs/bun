@@ -108,7 +108,7 @@ level = "warn"
 priority = -1
 
 [dependencies.oxc_data_structures]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../collections/ecma"
 features = ["code_buffer", "slice_iter", "stack"]
 optional = true

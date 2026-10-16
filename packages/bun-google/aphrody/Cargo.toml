@@ -26,39 +26,39 @@ aphrody-mcp-client = { version = "1.4.4", features = [], git = "https://github.c
 aphrody-model-client = { version = "1.4.4", features = [], git = "https://github.com/aphrody-labs/aphrody", rev = "4b83ea7f6c2727d67c30d4942501e5b831e559dd" }
 aphrody-proc = { version = "1.4.4", features = [], git = "https://github.com/aphrody-labs/aphrody", rev = "4b83ea7f6c2727d67c30d4942501e5b831e559dd" }
 aphrody-toolcall = { version = "1.4.4", features = [], git = "https://github.com/aphrody-labs/aphrody", rev = "4b83ea7f6c2727d67c30d4942501e5b831e559dd" }
-async-trait = { version = "=0.1.92" }
-base64 = { version = "=0.23.1" }
-bytes = { version = "=1.12.1" }
-chrono = { version = "=0.4.45", features = ["serde"] }
-clap = { version = "=4.6.7", features = ["derive", "env", "color"] }
-data-encoding = { version = "=2.11.1", features = [] }
-dirs = { version = "=7.0.0" }
-futures = { version = "=0.3.34" }
-futures-util = { version = "=0.3.34", features = [] }
-getrandom = { version = "=0.4.3" }
+async-trait = { version = "0.1.92" }
+base64 = { version = "0.23.1" }
+bytes = { version = "1.12.1" }
+chrono = { version = "0.4.45", features = ["serde"] }
+clap = { version = "4.6.7", features = ["derive", "env", "color"] }
+data-encoding = { version = "2.11.1", features = [] }
+dirs = { version = "7.0.0" }
+futures = { version = "0.3.34" }
+futures-util = { version = "0.3.34", features = [] }
+getrandom = { version = "0.4.3" }
 obscura = { version = "1.4.4", package = "aphrody-obscura", path = "../../web/rust/crates/obscura" }
 obscura-dom = { version = "1.4.4", features = [], path = "../../web/rust/crates/obscura-dom" }
-pretty_assertions = { version = "=1.4.1", features = [] }
-prost = { version = "=0.14.4", features = [] }
-protoc-bin-vendored = { version = "=3.2.0", features = [] }
-rand = { version = "=0.10.3" }
-regex = { version = "=1.13.1", features = [] }
-reqwest = { version = "=0.13.5", features = ["rustls-no-provider", "json", "stream", "form", "query", "charset", "http2", "system-proxy", "blocking", "cookies", "gzip", "brotli", "deflate", "socks", "multipart"], default-features = false }
-rusqlite = { version = "=0.40.2", features = ["bundled"] }
-rustls = { version = "=0.23.45", default-features = false, features = ["ring", "std", "tls12"] }
+pretty_assertions = { version = "1.4.1", features = [] }
+prost = { version = "0.14.4", features = [] }
+protoc-bin-vendored = { version = "3.2.0", features = [] }
+rand = { version = "0.10.3" }
+regex = { version = "1.13.1", features = [] }
+reqwest = { version = "0.13.5", features = ["rustls-no-provider", "json", "stream", "form", "query", "charset", "http2", "system-proxy", "blocking", "cookies", "gzip", "brotli", "deflate", "socks", "multipart"], default-features = false }
+rusqlite = { version = "0.40.2", features = ["bundled"] }
+rustls = { version = "0.23.45", default-features = false, features = ["ring", "std", "tls12"] }
 serde = { version = "1.0.228", features = ["derive", "std"], default-features = false }
-serde_json = { version = "=1.0.151" }
-sha2 = { version = "=0.11.0" }
-tempfile = { version = "=3.27.0" }
-thiserror = { version = "=2.0.21" }
+serde_json = { version = "1.0.151" }
+sha2 = { version = "0.11.0" }
+tempfile = { version = "3.27.0" }
+thiserror = { version = "2.0.21" }
 tokio = { version = "1.53.1", features = ["process", "rt-multi-thread", "macros", "time", "signal", "sync", "fs", "io-util", "full"] }
-tonic = { version = "=0.14.6", features = [] }
-tonic-prost = { version = "=0.14.6", features = [] }
-tonic-prost-build = { version = "=0.14.6", features = [] }
-tracing = { version = "=0.1.44" }
-url = { version = "=2.5.8", features = ["serde"] }
-webbrowser = { version = "=1.2.4", features = [] }
-which = { version = "=8.0.6", features = [] }
+tonic = { version = "0.14.6", features = [] }
+tonic-prost = { version = "0.14.6", features = [] }
+tonic-prost-build = { version = "0.14.6", features = [] }
+tracing = { version = "0.1.44" }
+url = { version = "2.5.8", features = ["serde"] }
+webbrowser = { version = "1.2.4", features = [] }
+which = { version = "8.0.6", features = [] }
 
 [workspace.lints.rust]
 unsafe_op_in_unsafe_fn = "deny"

@@ -114,12 +114,12 @@ name = "oxc_str"
 path = "src/lib.rs"
 
 [dependencies.oxc_allocator]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../collections/arena"
 package = "bun_arena"
 
 [dependencies.oxc_estree]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../ast/estree"
 package = "bun_estree"
 
@@ -133,7 +133,7 @@ features = ["inline-more"]
 
 [dependencies.schemars]
 package = "bun_json_schema"
-version = "=0.9.1"
+version = "0.9.1"
 optional = true
 path = "../../parsers/json_schema"
 
@@ -142,7 +142,7 @@ version = "1"
 optional = true
 
 [dev-dependencies.oxc_data_structures]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../collections/ecma"
 features = ["types"]
 package = "bun_ecma_collections"

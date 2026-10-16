@@ -28,7 +28,7 @@ name = "oxc_css_parser"
 path = "src/lib.rs"
 
 [dependencies.oxc_allocator]
-version = "=0.153.0"
+version = "0.153.0"
 package = "bun_arena"
 path = "../../collections/arena"
 

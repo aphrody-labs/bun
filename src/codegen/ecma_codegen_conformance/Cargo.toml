@@ -114,46 +114,46 @@ name = "oxc_codegen_conformance"
 path = "src/lib.rs"
 
 [dependencies.oxc_allocator]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../collections/arena"
 package = "bun_arena"
 
 [dependencies.oxc_ast]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../ast/ecma"
 package = "bun_ecma_ast"
 
 [dependencies.oxc_ast_visit]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../ast/visit"
 package = "bun_ecma_ast_visit"
 
 [dependencies.oxc_codegen]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../js_printer/ecma"
 default-features = false
 features = ["sourcemap"]
 package = "bun_ecma_codegen"
 
 [dependencies.oxc_napi]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../quality/adapters/common"
 package = "bun_ecma_napi"
 
 [dependencies.oxc_parser]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../js_parser/ecma"
 features = ["regular_expression"]
 package = "bun_ecma_parser"
 
 [dependencies.oxc_sourcemap]
-version = "=9.0.0"
+version = "9.0.0"
 features = ["napi"]
 package = "bun_ecma_sourcemap"
 path = "../../sourcemap/ecma"
 
 [dependencies.oxc_syntax]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../ast/syntax"
 package = "bun_ecma_syntax"
 

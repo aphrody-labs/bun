@@ -115,13 +115,13 @@ name = "oxc_cfg"
 path = "src/lib.rs"
 
 [dependencies.oxc_index]
-version = "=5.0.0"
+version = "5.0.0"
 features = ["nonmax", "serde"]
 package = "bun_typed_index"
 path = "../../collections/typed_index"
 
 [dependencies.oxc_syntax]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../ast/syntax"
 package = "bun_ecma_syntax"
 

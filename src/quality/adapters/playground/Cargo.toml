@@ -116,38 +116,38 @@ name = "oxc_playground_napi"
 path = "src/lib.rs"
 
 [dependencies.oxc]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../../transpiler/ecma_engine"
 features = ["ast_visit", "codegen", "minifier", "mangler", "semantic", "serialize", "transformer", "isolated_declarations", "regular_expression", "cfg"]
 package = "bun_ecma"
 
 [dependencies.oxc_compat]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../../transpiler/compat"
 package = "bun_ecma_compat"
 
 [dependencies.oxc_formatter]
 path = "../../format_js"
 package = "bun_format_js"
-version = "=0.72.0"
+version = "0.72.0"
 
 [dependencies.oxc_formatter_core]
 path = "../../format_core"
 package = "bun_format_core"
-version = "=0.72.0"
+version = "0.72.0"
 
 [dependencies.oxc_linter]
 path = "../../linter"
 package = "bun_linter"
-version = "=1.87.0"
+version = "1.87.0"
 
 [dependencies.oxc_napi]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../common"
 package = "bun_ecma_napi"
 
 [dependencies.oxc_transformer_plugins]
-version = "=0.153.0"
+version = "0.153.0"
 path = "../../../transpiler/plugins"
 package = "bun_ecma_transformer_plugins"
 
