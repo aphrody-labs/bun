@@ -1,7 +1,7 @@
 //! `Bun.WebDetect`: offline technology/anti-bot detection and the browser SSRF deny-set.
 
 use bun_jsc::StringJsc as _;
-use bun_jsc::{self as jsc, CallFrame, JSGlobalObject, JSValue, JsResult};
+use bun_jsc::{CallFrame, JSGlobalObject, JSValue, JsResult};
 
 #[bun_jsc::JsClass]
 pub(crate) struct WebDetect;
@@ -82,8 +82,8 @@ impl WebDetect {
                 "WebDetect.isForbiddenAddress expects an IP address string"
             )));
         }
-        let text = value.to_bun_string(global)?.to_utf8();
-        let text = std::str::from_utf8(text.slice()).unwrap_or("");
+        let text = value.to_utf8(global)?;
+        let text = std::str::from_utf8(&text).unwrap_or("");
         let text = text.trim().trim_start_matches('[').trim_end_matches(']');
         let ip: std::net::IpAddr = text.parse().map_err(|_| {
             global.throw_invalid_arguments(format_args!("Invalid IP address: {text}"))
