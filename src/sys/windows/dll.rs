@@ -701,7 +701,7 @@ pub struct Diagnosis {
 /// Windows directory and reports what keeps it from loading. `None` when `path` is not a
 /// readable PE image.
 pub fn diagnose(path: &[u8]) -> Option<Diagnosis> {
-    let mut pe = Pe::open(path)?;
+    let pe = Pe::open(path)?;
     let machine = pe.machine;
     let mut problems = Vec::new();
     if machine != NATIVE_MACHINE {
