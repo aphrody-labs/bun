@@ -119,7 +119,6 @@
     // TS7.1 ambient import attributes and a Handlebars template are not parseable
     // by the pinned JavaScript linter; their declaration/template owners validate them.
     "packages/bun-types/ts7.1/import-attributes.d.ts",
-    "packages/bun-tauri/crates/aphrody-tauri-cli/templates/plugin/guest-js/index.ts",
     "vendor",
     "build",
     "**/.pytest_cache/**",
@@ -183,8 +182,6 @@
         "packages/bun-dotnet/dotnet/test/TestCases/node-addon-api/basic_types/value.js",
         "packages/bun-dotnet/dotnet/test/TestCases/node-addon-api/object/object.js",
         "packages/bun-n2b/crates/n2b/tests/fixtures/node-project/src/server.ts",
-        "packages/bun-tauri/crates/aphrody-tauri/scripts/bundle.global.js",
-        "packages/bun-tauri/crates/tauri-plugin-aphrody/src/mcp_bridge/bridge.js"
       ],
       "rules": {
         "eslint/no-unused-vars": "off"
@@ -193,7 +190,7 @@
     {
       // Obscura's DOM emulation keeps WebIDL parameter names (Function.length is
       // page-observable) and implements page evaluation with eval.
-      "files": ["packages/web/rust/crates/obscura-js/js/bootstrap.js"],
+      "files": ["src/browser/crates/js/js/bootstrap.js"],
       "rules": {
         "eslint/no-unused-vars": ["error", { "args": "none", "caughtErrors": "none", "varsIgnorePattern": "^_" }],
         "eslint/no-eval": "off"
@@ -217,18 +214,7 @@
     },
     {
       "files": [
-        "packages/bun-tauri/crates/aphrody-tauri/scripts/bundle.global.js",
-        "packages/bun-tauri/crates/aphrody-tauri/scripts/init.js",
-        "packages/bun-tauri/crates/aphrody-tauri/scripts/process-ipc-message-fn.js",
         "packages/web/rust/integrations/crates/tauri/aphrody-tauri/scripts/process-ipc-message-fn.js",
-        "packages/bun-tauri/crates/tauri-plugin-aphrody/iife/fs.js",
-        "packages/bun-tauri/crates/tauri-plugin-aphrody/iife/log.js",
-        "packages/bun-tauri/crates/tauri-plugin-aphrody/iife/notification.js",
-        "packages/bun-tauri/crates/tauri-plugin-aphrody/iife/store.js",
-        "packages/bun-tauri/crates/tauri-plugin-aphrody/iife/updater.js",
-        "packages/bun-tauri/crates/tauri-plugin-aphrody/src/dialog/init-iife.js",
-        "packages/bun-tauri/crates/tauri-plugin-aphrody/src/notification/init-iife.js",
-        "packages/bun-tauri/crates/tauri-plugin-aphrody/src/opener/init-iife.js",
         "packages/bun-webview-core/src/input.js"
       ],
       "rules": {
@@ -237,8 +223,6 @@
     },
     {
       "files": [
-        "packages/bun-tauri/crates/aphrody-tauri/scripts/bundle.global.js",
-        "packages/bun-tauri/crates/tauri-plugin-aphrody/iife/updater.js"
       ],
       "rules": {
         "eslint/constructor-super": "off"
@@ -246,9 +230,7 @@
     },
     {
       "files": [
-        "packages/bun-types/globals.d.ts",
-        "packages/bun-windows-chakra/index.d.ts",
-        "packages/bun-windows-webservices/index.d.ts"
+        "packages/bun-types/globals.d.ts"
       ],
       "rules": {
         "eslint/no-shadow-restricted-names": "off"

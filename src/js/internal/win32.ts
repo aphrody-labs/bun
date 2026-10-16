@@ -1,4 +1,4 @@
-// Runtime of the generated Win32 families (packages/bun-windows-<dll>, scripts/aphrody/win32/gen.ts).
+// Runtime of the generated Win32 families (bun-os packages/bun-windows-<dll>, scripts/aphrody/win32/gen.ts).
 // Functions are bound lazily through bun:ffi (LoadLibraryExW + GetProcAddress + CFunction), structs are
 // views over a Uint8Array laid out from win32metadata, and COM interfaces are called through their vtables.
 //

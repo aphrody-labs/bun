@@ -42,7 +42,7 @@ ne deviennent pas une distribution ChromiumOS par ajout de quelques crates.
 
 ## Réutilisation dans l'écosystème Bun
 
-`packages/bun-tauri/crates/aphrody-tauri-runtime-cef` fournit déjà le propriétaire
+`bun-os/packages/bun-tauri/crates/aphrody-tauri-runtime-cef` fournit déjà le propriétaire
 Chromium embarqué. `src/browser` contient les bibliothèques DOM, CDP, réseau et
 rendu optionnel intégrées au workspace Cargo racine de Bun ; leurs gates natifs
 restent suivis dans `src/browser/PLAN.md`. `bun:windows` et `bun:cosmic` possèdent

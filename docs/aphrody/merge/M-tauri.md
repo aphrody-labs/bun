@@ -1,7 +1,7 @@
 # M-tauri — one Tauri plugin (`tauri-plugin-aphrody` + `@aphrody/tauri`)
 
 Source: aphrody-labs/aphrody@55652e3f56 (handoff-runtime-bun lot 0 `tauri`): `crates/tauri/*`, `crates/ui/tauri-plugin-mcp-bridge`, `crates/ui/tauri-wrap`.
-Destination: `packages/bun-tauri` (separate Cargo workspace). Guide: `docs/guides/runtime/tauri.mdx`. Owner: TP.
+Destination: `bun-os/packages/bun-tauri` (separate Cargo workspace). Guide: `docs/guides/runtime/tauri.mdx`. Owner: TP.
 Runtimes (`aphrody-tauri-runtime{,-cef,-wry}`) belong to WV (`C:/tmp/wv-coord.md`). TP does not modify them.
 
 Legend: ✅ verified by a real run (command and date) · ⏳ not done · ➖ not applicable.
@@ -28,7 +28,7 @@ Legend: ✅ verified by a real run (command and date) · ⏳ not done · ➖ not
 Commands:
 
 ```sh
-cd packages/bun-tauri
+cd bun-os/packages/bun-tauri
 cargo test -p tauri-plugin-aphrody            # 36 unit + 7 e2e + 61 doctests, Windows 11 2026-10-09
 cargo test -p aphrody-tauri-utils bundle_tests
 # Linux (VPS, nice): docker run --rm -v $PWD:/w -w /w <ubuntu-26.04|alpine-3.24 image with rust+bun> cargo test -p tauri-plugin-aphrody

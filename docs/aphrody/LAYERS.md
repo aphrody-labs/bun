@@ -47,7 +47,7 @@ Le reste vit dans des paquets séparés, en plugins natifs (bun native plugin / 
 - l'hôte .NET : `@aphrody/bun-dotnet` ;
 - les backends webview lourds (CEF) ;
 - COSMIC : `packages/bun-cosmic` ;
-- Tauri : `packages/bun-tauri` ;
+- Tauri : `bun-os/packages/bun-tauri` ;
 - Obscura.
 
 `bun:windows` réexporte ces paquets paresseusement quand ils sont installés.

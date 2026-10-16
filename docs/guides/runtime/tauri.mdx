@@ -4,7 +4,7 @@ sidebarTitle: Tauri with Bun
 mode: center
 ---
 
-`packages/bun-tauri` holds the aphrody fork of Tauri 3 (alpha) as its own Cargo workspace: the core crates (`aphrody-tauri`, `-runtime`, `-runtime-cef`, `-utils`, `-plugin`, `-build`, `-codegen`, `-macros`, `-cli`, `-bundler`) and one plugin crate, `tauri-plugin-aphrody`. That crate contains every plugin of the fork plus the MCP debug bridge and `tauri-wrap`. Its JavaScript side is `@aphrody/tauri`.
+`bun-os/packages/bun-tauri` holds the aphrody fork of Tauri 3 (alpha) as its own Cargo workspace: the core crates (`aphrody-tauri`, `-runtime`, `-runtime-cef`, `-utils`, `-plugin`, `-build`, `-codegen`, `-macros`, `-cli`, `-bundler`) and one plugin crate, `tauri-plugin-aphrody`. That crate contains every plugin of the fork plus the MCP debug bridge and `tauri-wrap`. Its JavaScript side is `@aphrody/tauri`.
 
 The code comes from `aphrody-labs/aphrody@55652e3f56` (`crates/tauri`, `crates/ui/tauri-plugin-mcp-bridge`, `crates/ui/tauri-wrap`), under Apache-2.0 OR MIT. The MCP bridge is MIT (hypothesi).
 
@@ -104,7 +104,7 @@ Tauri 3 has no default runtime. Pass one with `Builder::runtime(...)`.
 ## Test
 
 ```sh terminal icon="terminal"
-cd packages/bun-tauri
+cd bun-os/packages/bun-tauri
 cargo test -p tauri-plugin-aphrody
 ```
 

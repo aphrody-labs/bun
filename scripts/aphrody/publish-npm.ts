@@ -398,14 +398,6 @@ export const PACKAGES: PackageSpec[] = [
   },
 ];
 
-for (const dir of readdirSync(join(ROOT, "packages"))
-  .filter(name => name.startsWith("bun-windows-") && existsSync(join(ROOT, "packages", name, "package.json")))
-  .sort((a, b) => (a === "bun-windows-win32" ? -1 : b === "bun-windows-win32" ? 1 : a.localeCompare(b)))) {
-  const manifest = JSON.parse(readFileSync(join(ROOT, "packages", dir, "package.json"), "utf8"));
-  if (manifest.name !== `${SCOPE}/${dir}` || manifest.private === true)
-    throw new Error(`Windows projection owner mismatch: ${dir}`);
-  PACKAGES.push({ dir, platform: "win32" });
-}
 
 /** The scoped npm name of a fork package. */
 export function npmName(spec: PackageSpec): string {

@@ -50,7 +50,7 @@ Ces éléments sont vérifiés dans les sources locales, sans nouvelle compilati
 | Bun Cosmic | `src/js/bun/cosmic.ts` relie le layout de texte à Rust ; `src/cosmic/Cargo.toml` déclare `cosmic-text`. |
 | Navigateur Bun | `src/browser/crates/render/Cargo.toml` active `tiny-skia` 0.12 avec `paint`; `bun_browser_js` propage `render` vers ce renderer. |
 | Aphrody UI | `C:/aphrody/crates/ui/render/Cargo.toml` active `wgpu` via la feature optionnelle `gpu`, avec notamment DX12, Vulkan et Metal. |
-| CEF Bun | `packages/bun-tauri/crates/aphrody-tauri-runtime-cef` possède le navigateur Chromium embarqué et son transport DevTools. |
+| CEF Bun | `bun-os/packages/bun-tauri/crates/aphrody-tauri-runtime-cef` possède le navigateur Chromium embarqué et son transport DevTools. |
 
 `tiny-skia` est un rasteriseur Rust distinct de la bibliothèque Skia C++.
 `wgpu` et Dawn sont des implémentations distinctes de WebGPU ; les traiter comme

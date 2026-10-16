@@ -60,7 +60,7 @@ Une option de lancement ou un indicateur déclaré ne prouve pas l'activation ef
 | Automatisation Chromium | `src/js/bun/chromium.ts`                              | Connexion CDP à un navigateur externe                               |
 | Chrome WebView          | `src/runtime/webview`                                 | Processus Chrome, pipe CDP ou WebSocket                             |
 | Obscura                 | `src/browser`                                         | Bibliothèques du workspace Rust Bun, DOM et fournisseur V8 conservé |
-| Application CEF         | `packages/bun-tauri/crates/aphrody-tauri-runtime-cef` | Runtime Tauri sur CEF                                               |
+| Application CEF         | `bun-os/packages/bun-tauri/crates/aphrody-tauri-runtime-cef` | Runtime Tauri sur CEF                                               |
 | GPU Windows             | `src/runtime/windows/sys/gpu.rs`                      | Opérations et sondes D3D12 natives                                  |
 
 Ces surfaces existent avec des niveaux de qualification distincts.
@@ -96,7 +96,7 @@ Source : [documentation générale CEF](https://chromiumembedded.github.io/cef/g
 Le fichier local `sandbox.rs` documente une limite Windows importante.
 Le runtime transmet actuellement un pointeur sandbox nul aux entrées CEF.
 Ne pas annoncer un sandbox Windows actif sans qualification du packaging bootstrap.
-Référence : [politique CEF locale](../../packages/bun-tauri/crates/aphrody-tauri-runtime-cef/src/sandbox.rs).
+Référence : [politique CEF locale](https://github.com/aphrody-labs/bun-distribution/blob/os/packages/bun-tauri/crates/aphrody-tauri-runtime-cef/src/sandbox.rs).
 
 ## Contrat d'intégration à qualifier
 

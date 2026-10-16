@@ -64,7 +64,7 @@ Statuts : `fait` (déjà dans Bun), `en cours (autre agent)`, `à faire`,
 | crates/shell/aphrody-term | src/vt (grille et parseur déjà portés) | reste aphrody : pty et computer_use servent agent-tools (IA) |
 | crates/shell/term-caps | — | supprimé (sans consommateur), aphrody `4b50cb3e2d` |
 | crates/shell/terminal-backend | — | reste aphrody : dépend d’aphrody-a2a-coord (IA) |
-| crates/shell/tauri | packages/bun-tauri | à faire (lot 5) |
+| crates/shell/tauri | bun-os/packages/bun-tauri | à faire (lot 5) |
 
 ### OS et plateforme
 
@@ -72,7 +72,7 @@ Statuts : `fait` (déjà dans Bun), `en cours (autre agent)`, `à faire`,
 | --- | --- | --- |
 | crates/os/kernel, crates/os/ostd | — | reste aphrody : kernel MCP, bus A2A et ses bibliothèques (couche IA/infra) |
 | packages/os/kernel-client (@aphrody/os) | — | reste aphrody : client du kernel MCP |
-| packages/os/winclean | packages/bun-windows-winclean | fait ; supprimer côté aphrody |
+| packages/os/winclean | bun-os/packages/bun-windows-winclean | fait ; supprimer côté aphrody |
 | packages/os/drive-client, crates/ui/drive | packages/bun-google (Drive) | en cours (autre agent) |
 | crates/native/native (aphrody-native) | src/host/native (`bun_host::native::NativePlatform`) | fait (lot 1) |
 | packages/interop/native (@aphrody/bun) | — | reste aphrody : pont bun:ffi vers aphrody-ffi (CLI IA en processus) |
@@ -88,10 +88,10 @@ Statuts : `fait` (déjà dans Bun), `en cours (autre agent)`, `à faire`,
 
 | Source aphrody | Cible Bun | Statut |
 | --- | --- | --- |
-| crates/tauri/aphrody-tauri, -runtime, -runtime-cef | packages/bun-tauri/crates/* | fait (divergence à réconcilier, lot 5) |
-| crates/tauri/aphrody-tauri-plugin-* (15) | packages/bun-tauri/crates/plugins | à faire (lot 5) |
-| crates/tauri/aphrody-tauri-api | packages/bun-tauri/js | à faire (lot 5) |
-| crates/ui/tauri-wrap, tauri-plugin-mcp-bridge | packages/bun-tauri | à faire (lot 5) |
+| crates/tauri/aphrody-tauri, -runtime, -runtime-cef | bun-os/packages/bun-tauri/crates/* | fait (divergence à réconcilier, lot 5) |
+| crates/tauri/aphrody-tauri-plugin-* (15) | bun-os/packages/bun-tauri/crates/plugins | à faire (lot 5) |
+| crates/tauri/aphrody-tauri-api | bun-os/packages/bun-tauri/js | à faire (lot 5) |
+| crates/ui/tauri-wrap, tauri-plugin-mcp-bridge | bun-os/packages/bun-tauri | à faire (lot 5) |
 | crates/ui/taffy | src/browser/crates/layout (`bun_browser_layout`, lib `taffy`) | supprimé (doublon sans consommateur), aphrody `4b50cb3e2d` |
 | crates/ui/render, softraster, svg | src/browser/crates/render | reste aphrody : consommés par yolo-runtime et aphrody-ffi (IA) |
 | crates/ui/m3-reproduce, app, identity, sprite-sheet | packages/aphrody-migrated/m3, packages/bun-m3 | à faire (lot 7) |
@@ -115,7 +115,7 @@ Statuts : `fait` (déjà dans Bun), `en cours (autre agent)`, `à faire`,
 2. `bun git` : crate `bun_git` (gix) + sous-commande ; tests test/cli.
 3. Terminal : term-caps et terminal-backend dans src/vt.
 4. Site/shell web dans packages/web (après l'autre agent).
-5. Tauri : réconcilier packages/bun-tauri avec aphrody, plugins et API JS.
+5. Tauri : réconcilier bun-os/packages/bun-tauri avec aphrody, plugins et API JS.
 6. OS : kernel/ostd vers bun:linux, @aphrody/os vers packages/bun-os.
 7. Rendu : taffy/render/softraster/svg vers src/browser, m3 vers packages/bun-m3, gpu-backend vers bun-video.
 8. Paquets système : aphrody-pkg vers src/install, toolchains vers scripts/build.

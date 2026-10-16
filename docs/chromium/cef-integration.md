@@ -1,6 +1,6 @@
 # Intégration CEF dans Bun
 
-`packages/bun-tauri` fournit le runtime Tauri CEF avec `cef` et `cef-dll-sys` pinés
+`bun-os/packages/bun-tauri` fournit le runtime Tauri CEF avec `cef` et `cef-dll-sys` pinés
 à `152.3.0`, correspondant à Chromium `152.0.7977.83`.
 
 Le contrat canonique est exposé par `bun cef` :

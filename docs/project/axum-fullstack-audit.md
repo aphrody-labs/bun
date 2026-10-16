@@ -14,7 +14,7 @@ Le fork [aphrody-labs/axum](https://github.com/aphrody-labs/axum) et le snapshot
 | Axum Web | packages/web/rust/Cargo.toml:117, defaults false, json/query/tokio/http1/http2 | Workspace et lock distincts. |
 | Tower Web | packages/web/rust/Cargo.toml:296, tower =0.5.3 util ; :300, tower-http =0.7.1 cors | Site ajoute fs ; lock Web contient également tower-http 0.6.11 transitif. |
 | Site Rust | packages/web/rust/crates/site/Cargo.toml:14 et :21 ; src/lib.rs:84 | Serveur Axum applicatif existant. |
-| Tauri | packages/bun-tauri/Cargo.toml:20 ; crates/tauri-plugin-aphrody/src/wrap/serve.rs:156 | Serveur loopback du mode bundle, facultatif. |
+| Tauri | bun-os/packages/bun-tauri/Cargo.toml:20 ; crates/tauri-plugin-aphrody/src/wrap/serve.rs:156 | Serveur loopback du mode bundle, facultatif. |
 | Dragon Pixel | packages/web/rust/crates/dragon-pixel-server/Cargo.toml:19 | Autre consommateur applicatif existant. |
 | Bun HTTP | src/runtime/server/mod.rs:2780, src/runtime/server/ServerConfig.rs | uWS, transports H1/H2/H3, bindings JSC, cycle de vie Bun. |
 | Snapshot complet | vendor/axum/axum/Cargo.toml:3 ; axum-core/Cargo.toml:12 ; axum-extra/Cargo.toml:12 ; axum-macros/Cargo.toml:12 | Versions respectives 0.8.9, 0.5.5, 0.12.6, 0.5.1. |
