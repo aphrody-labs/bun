@@ -64,6 +64,7 @@ jobs:
       - uses: ./.github/actions/setup-bun
         with:
           bun-version: aphrody-v1.4.3-aphrody.2
+      - uses: ./.github/actions/setup-llvm
       - uses: ./.github/actions/setup-sccache
         with:
           endpoint: ${{ secrets.R2_ENDPOINT }}

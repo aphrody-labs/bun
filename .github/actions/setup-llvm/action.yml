@@ -1,0 +1,48 @@
+name: Setup LLVM
+description: "Installs the LLVM release pinned by scripts/build/ci-images/spec.ts, verified against its published sha256."
+
+inputs:
+  version:
+    description: "LLVM release (series 23.1)."
+    default: "23.1.1"
+  token:
+    description: "Token for the GitHub API."
+    default: ${{ github.token }}
+
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        LLVM_VERSION: ${{ inputs.version }}
+        GH_TOKEN: ${{ inputs.token }}
+      run: |
+        set -euo pipefail
+        case "$RUNNER_OS" in
+          Linux)   name="LLVM-${LLVM_VERSION}-Linux-X64.tar.xz";;
+          Windows) name="clang+llvm-${LLVM_VERSION}-x86_64-pc-windows-msvc.tar.xz";;
+          *) echo "::error::unsupported runner OS $RUNNER_OS"; exit 1;;
+        esac
+        digest=$(gh api "repos/llvm/llvm-project/releases/tags/llvmorg-${LLVM_VERSION}" \
+          --jq ".assets[] | select(.name == \"$name\") | .digest" | sed 's/^sha256://')
+        [ -n "$digest" ] || { echo "::error::llvmorg-${LLVM_VERSION} has no $name with a digest"; exit 1; }
+        dest="$RUNNER_TEMP/llvm"
+        mkdir -p "$dest.dl"
+        curl -fsSL --retry 5 -o "$dest.dl/llvm.tar.xz" "https://github.com/llvm/llvm-project/releases/download/llvmorg-${LLVM_VERSION}/$name"
+        got=$(sha256sum "$dest.dl/llvm.tar.xz" | cut -d' ' -f1)
+        [ "$got" = "$digest" ] || { echo "::error::LLVM sha256 differs"; exit 1; }
+        mkdir -p "$dest"
+        tar -xf "$dest.dl/llvm.tar.xz" -C "$dest" --strip-components=1
+        rm -rf "$dest.dl"
+        if [ "$RUNNER_OS" = Linux ]; then
+          # lld and llvm-mt of this release link against ICU 70 (Ubuntu 22.04), which 24.04 does not ship.
+          deb="$RUNNER_TEMP/libicu70.deb"
+          curl -fsSL --retry 5 -o "$deb" "http://archive.ubuntu.com/ubuntu/pool/main/i/icu/libicu70_70.1-2_amd64.deb"
+          [ "$(sha256sum "$deb" | cut -d' ' -f1)" = "58a154f6307289813da2276f900498ef536ae7c0522d2cf31a3c3c5cf62dfd9a" ] || { echo "::error::libicu70 sha256 differs"; exit 1; }
+          dpkg-deb -x "$deb" "$RUNNER_TEMP/icu"
+          cp -a "$RUNNER_TEMP"/icu/usr/lib/x86_64-linux-gnu/libicu*.so* "$dest/lib/"
+          rm -rf "$deb" "$RUNNER_TEMP/icu"
+        fi
+        if [ "$RUNNER_OS" = Windows ]; then dest=$(cygpath -w "$dest"); fi
+        echo "BUN_TOOLCHAIN_LLVM=$dest" >> "$GITHUB_ENV"
+        if [ "$RUNNER_OS" = Windows ]; then echo "$dest\bin" >> "$GITHUB_PATH"; else echo "$dest/bin" >> "$GITHUB_PATH"; fi
