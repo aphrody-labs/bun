@@ -15,7 +15,6 @@ serde_json = { workspace = true }
 [workspace]
 resolver = "3"
 members = ["crates/x", "crates/webos-wasm", "crates/web-service", "crates/web-index", "crates/web-frames", "crates/web-extract", "crates/web-engine", "crates/web-crawl", "crates/site", "crates/obscura-ssrf", "crates/obscura-render", "crates/obscura-net", "crates/obscura-mcp", "crates/obscura-js", "crates/obscura-dom", "crates/obscura-cdp", "crates/obscura-browser", "crates/obscura", "integrations/crates/shell/session", "integrations/crates/shell/vfs", "integrations/crates/shell/terminal-core", "integrations/crates/shell/web"]
-exclude = ["crates/dragon-pixel-core", "crates/dragon-pixel-server", "crates/dragon-pixel-wasm"]
 
 [workspace.package]
 version = "1.4.4"
