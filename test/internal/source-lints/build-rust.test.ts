@@ -158,10 +158,13 @@ test("native video is enabled by default and supports an explicit opt out", () =
   const standard = resolve(base);
   expect(standard.videoNative).toBe(true);
   const standardArgs = cargoBuildInvocation(standard).args;
-  expect(standardArgs[standardArgs.indexOf("--features") + 1]).toBe("coreutils,video_native");
-  const disabled = cargoBuildInvocation(resolve({ ...base, videoNative: false })).args;
+  expect(standardArgs[standardArgs.indexOf("--features") + 1]).toBe(
+    "coreutils,video_native,browser_crawl,browser_index,google_search",
+  );
+  const only = { browserCrawl: false, browserIndex: false, googleSearch: false } as const;
+  const disabled = cargoBuildInvocation(resolve({ ...base, ...only, videoNative: false })).args;
   expect(disabled[disabled.indexOf("--features") + 1]).toBe("coreutils");
-  const videoOnly = cargoBuildInvocation(resolve({ ...base, videoNative: true, coreutils: false })).args;
+  const videoOnly = cargoBuildInvocation(resolve({ ...base, ...only, videoNative: true, coreutils: false })).args;
   expect(videoOnly[videoOnly.indexOf("--features") + 1]).toBe("video_native");
 });
 
