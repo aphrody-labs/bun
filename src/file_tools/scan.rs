@@ -307,12 +307,12 @@ fn parse_source(path: &Path, text: &str, limits: &Limits, cancel: &AtomicBool) -
 
 fn triage(_bytes: &[u8], _limits: &Limits) -> Result<Value> {
     Err(WorkspaceError::Unavailable(
-        "binary triage lives in packages/bun-re, outside the bun binary",
+        "binary triage lives in the OS (aphrody-labs/bun-distribution crates/re), outside the bun binary",
     ))
 }
 
 fn classify(_bytes: &[u8]) -> Result<Value> {
     Err(WorkspaceError::Unavailable(
-        "Magika classification lives in packages/bun-re, outside the bun binary",
+        "Magika classification lives in the OS (aphrody-labs/bun-distribution crates/re), outside the bun binary",
     ))
 }

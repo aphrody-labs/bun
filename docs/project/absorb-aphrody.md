@@ -117,7 +117,7 @@ Statuts : `fait` (déjà dans Bun), `en cours (autre agent)`, `à faire`,
 3. Terminal : term-caps et terminal-backend dans src/vt.
 4. Site/shell web dans packages/web (après l'autre agent).
 5. Tauri : réconcilier bun-os/packages/bun-tauri avec aphrody, plugins et API JS.
-6. OS : kernel/ostd vers bun:linux, @aphrody/os vers packages/bun-os.
+6. OS : kernel/ostd vers bun:linux ; moteurs système (proc, guard, capture, fsindex) et RE dans aphrody-labs/bun-distribution.
 7. Rendu : taffy/render/softraster/svg vers src/browser, m3 vers packages/bun-m3, gpu-backend vers bun-video.
 8. Paquets système : aphrody-pkg vers src/install, toolchains vers scripts/build.
 9. CLI : sous-commandes générales vers `bun …`, suppression des doublons côté aphrody.
