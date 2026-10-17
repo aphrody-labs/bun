@@ -284,7 +284,7 @@ test("the pinned fetch owner receives all Rust sources and stamps are checked af
     }
     return 0;
   });
-  expect(commands.map(command => command[3])).toEqual(["lolhtml", "rust-argon2", "uutils"]);
+  expect(commands.map(command => command[3])).toEqual(["lolhtml", "rust-argon2", "ngx-rust", "uutils"]);
   for (const [index, plan] of plans.entries()) {
     expect(commands[index]).toEqual([
       "bun",
@@ -388,7 +388,7 @@ test("post-fetch qualification checks every generated Cargo path without exempti
       return 0;
     }),
   ).rejects.toThrow();
-  expect(commands.map(command => command[3])).toEqual(["lolhtml", "rust-argon2", "uutils"]);
+  expect(commands.map(command => command[3])).toEqual(["lolhtml", "rust-argon2", "ngx-rust", "uutils"]);
   const secondary = join(String(directory), "vendor/uutils/src/uu/cat/Cargo.toml");
   await mkdir(dirname(secondary), { recursive: true });
   await Bun.write(secondary, '[package]\nname = "wrong_package"\nversion = "0.0.0"\n');
