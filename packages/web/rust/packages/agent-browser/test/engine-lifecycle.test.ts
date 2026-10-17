@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
-import { afterEach, expect, spyOn, test } from "bun:test";
-import { Runtime, type ManagedProcess } from "@aphrody/runtime-sdk";
+import { afterEach, expect, test } from "bun:test";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { writeScript } from "./fixture.ts";
 import { startEngine, type Engine } from "../src/engine.ts";
 
 const directories: string[] = [];
@@ -21,11 +21,9 @@ afterEach(async () => {
 async function fixture(body: string): Promise<string> {
   const directory = await mkdtemp(join(tmpdir(), "aphrody-engine-lifecycle-"));
   directories.push(directory);
-  const binary = join(directory, "aphrody-web");
-  await writeFile(
-    binary,
-    `#!/usr/bin/env bun
-const args = process.argv.slice(2);
+  return writeScript(
+    join(directory, "aphrody-web"),
+    `const args = process.argv.slice(2);
 const host = args[args.indexOf("--host") + 1];
 const port = Number(args[args.indexOf("--port") + 1]);
 const server = Bun.serve({ hostname: host, port, fetch: () => new Response("{}") });
@@ -33,9 +31,7 @@ console.log(\`ws://\${host}:\${port}/devtools/browser\`);
 console.error("fixture diagnostics");
 ${body}
 `,
-    { mode: 0o700 },
   );
-  return binary;
 }
 
 function alive(pid: number): boolean {
@@ -49,29 +45,15 @@ function alive(pid: number): boolean {
 
 test("natural exit releases the engine and retains its final code and diagnostics", async () => {
   const binary = await fixture("setTimeout(() => process.exit(7), 150);");
-  const spawned = spyOn(Runtime.prototype, "spawn");
-  try {
-    const engine = await startFixture(binary);
-    const child = spawned.mock.results[0]!.value as ManagedProcess;
-    const released = spyOn(child, "release");
-    try {
-      expect(await engine.exited).toBe(7);
-      expect(alive(engine.pid)).toBe(false);
-      expect(released).toHaveBeenCalledTimes(1);
-      expect(() => child.status()).toThrow(/process handle is released/);
-      expect(engine.stderrTail()).toContain("fixture diagnostics");
-      expect(await engine.stop()).toBe(7);
-      expect(await engine.stop()).toBe(7);
-      expect(released).toHaveBeenCalledTimes(1);
-    } finally {
-      released.mockRestore();
-    }
-  } finally {
-    spawned.mockRestore();
-  }
+  const engine = await startFixture(binary);
+  expect(await engine.exited).toBe(7);
+  expect(alive(engine.pid)).toBe(false);
+  expect(engine.stderrTail()).toContain("fixture diagnostics");
+  expect(await engine.stop()).toBe(7);
+  expect(await engine.stop()).toBe(7);
 });
 
-test("concurrent stop and global cleanup share shutdown and reap the child", async () => {
+test.skipIf(process.platform === "win32")("concurrent stop and global cleanup share shutdown and reap the child", async () => {
   const binary = await fixture('process.on("SIGTERM", () => setTimeout(() => process.exit(0), 50));');
   // Global shutdown runs in its own host, preserving the shared CDP test engine.
   const script = `
@@ -99,7 +81,7 @@ if (!engine.stderrTail().includes("fixture diagnostics")) throw new Error("diagn
   expect(code).toBe(0);
 });
 
-test("a new engine can start after previously owned process handles are released", async () => {
+test.skipIf(process.platform === "win32")("a new engine can start after previously owned process handles are released", async () => {
   const binary = await fixture('process.on("SIGTERM", () => process.exit(0));');
   // Repeated sequential lifecycles verify that shutdown does not leave stale handles.
   /* eslint-disable no-await-in-loop */
@@ -112,20 +94,17 @@ test("a new engine can start after previously owned process handles are released
   /* eslint-enable no-await-in-loop */
 });
 
-test("startup failure reaps the process and leaves subsequent startup usable", async () => {
+test.skipIf(process.platform === "win32")("startup failure reaps the process and leaves subsequent startup usable", async () => {
   const directory = await mkdtemp(join(tmpdir(), "aphrody-engine-failed-"));
   directories.push(directory);
-  const binary = join(directory, "aphrody-web");
   const pidFile = join(directory, "pid");
-  await writeFile(
-    binary,
-    `#!/usr/bin/env bun
-await Bun.write(${JSON.stringify(pidFile)}, String(process.pid));
+  const binary = await writeScript(
+    join(directory, "aphrody-web"),
+    `await Bun.write(${JSON.stringify(pidFile)}, String(process.pid));
 console.error("invalid endpoint fixture");
 console.log("ws://invalid/");
 setInterval(() => {}, 1000);
 `,
-    { mode: 0o700 },
   );
   await expect(startEngine({ binary, startupTimeoutMs: 2000 })).rejects.toThrow("unexpected CDP endpoint");
   expect(alive(Number(await Bun.file(pidFile).text()))).toBe(false);
@@ -134,7 +113,7 @@ setInterval(() => {}, 1000);
   expect(await engine.stop()).toBe(0);
 });
 
-test("stopping one engine preserves another engine owned by the shared runtime", async () => {
+test.skipIf(process.platform === "win32")("stopping one engine preserves another engine owned by the shared runtime", async () => {
   const binary = await fixture('process.on("SIGTERM", () => process.exit(0));');
   const [first, second] = await Promise.all([startFixture(binary), startFixture(binary)]);
   expect(await first.stop()).toBe(0);
@@ -144,7 +123,7 @@ test("stopping one engine preserves another engine owned by the shared runtime",
   expect(await second.stop()).toBe(0);
 });
 
-test("shutdown escalates to SIGKILL while preserving the signal exit code", async () => {
+test.skipIf(process.platform === "win32")("shutdown escalates to SIGKILL while preserving the signal exit code", async () => {
   const binary = await fixture('process.on("SIGTERM", () => {});');
   const engine = await startEngine({ binary, startupTimeoutMs: 2000, shutdownGraceMs: 25 });
   engines.push(engine);

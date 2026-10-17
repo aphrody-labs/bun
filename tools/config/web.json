@@ -1,0 +1,51 @@
+{
+  "schemaVersion": 1,
+  "engine": {
+    "binary": "aphrody-web",
+    "workerBinary": "aphrody-web-worker",
+    "binaryEnv": "APHRODY_WEB_BIN",
+    "binaryCandidates": [
+      "target/debug/aphrody-web",
+      "target/release/aphrody-web",
+      "~/.local/bin/aphrody-web"
+    ],
+    "host": "127.0.0.1",
+    "port": 9222,
+    "workers": 1,
+    "stealth": false,
+    "allowFileAccess": false,
+    "allowPrivateNetwork": false,
+    "startupTimeoutMs": 30000,
+    "shutdownGraceMs": 5000
+  },
+  "fetch": {
+    "timeoutSecs": 30,
+    "waitUntil": "load",
+    "dump": "markdown",
+    "userAgent": null
+  },
+  "crawl": {
+    "maxDepth": 2,
+    "maxPages": 25,
+    "concurrency": 4,
+    "delayMs": 250,
+    "timeoutSecs": 300,
+    "obeyRobots": true,
+    "sitemaps": false,
+    "userAgent": "AphrodyWeb/1.0",
+    "allowedHosts": []
+  },
+  "network": {
+    "privateNetworkPolicy": "deny",
+    "allowedSchemes": [
+      "http",
+      "https"
+    ]
+  },
+  "storage": {
+    "stateDir": "~/.aphrody/web",
+    "frontierDb": "~/.aphrody/web/frontier.sqlite",
+    "reports": "~/.aphrody/web/reports",
+    "crawlabilityReport": "~/.aphrody/web/reports/crawlability.json"
+  }
+}

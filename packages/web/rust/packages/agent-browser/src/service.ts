@@ -10,8 +10,6 @@
  *
  * The contract is documented in `docs/apis/web/WEB-SERVICE-CONTRACT.md`.
  */
-import { RuntimeError, Status } from "@aphrody/runtime-sdk";
-import { processes } from "@aphrody/runtime-sdk/modules";
 import { WebCdpPage } from "./cdp.ts";
 import { AgentBrowser, AgentPage } from "./client.ts";
 import { loadWebConfig, resolveEngineBinary, type WebConfig } from "./config.ts";
@@ -236,27 +234,65 @@ export class WebService {
     signal?: AbortSignal,
   ): Promise<Uint8Array> {
     signal?.throwIfAborted();
-    using child = processes.spawn({
-      program: this.binary,
-      args,
-      env,
-      stdio: "capture-lossless",
-      maxOutputBytes: this.#maxOutputBytes,
+    const environment: Record<string, string> = {};
+    for (const [key, value] of Object.entries({ ...process.env, ...env })) {
+      if (value !== undefined) environment[key] = value;
+    }
+    const child = Bun.spawn({
+      cmd: [this.binary, ...args],
+      env: environment,
+      stdin: "ignore",
+      stdout: "pipe",
+      stderr: "pipe",
+      windowsHide: true,
     });
     const command = args[0] === "--proxy" ? args[2] : args[0];
     const decoder = new TextDecoder();
     let diagnostics = "";
+    const limit = this.#maxOutputBytes;
+    let total = 0;
+    let overflow = false;
+    let timedOut = false;
+    const chunks: Uint8Array[] = [];
+    const stderrChunks: Uint8Array[] = [];
+    const stop = () => child.kill("SIGKILL");
+    const timer = setTimeout(() => {
+      timedOut = true;
+      stop();
+    }, timeoutMs);
+    const onAbort = () => stop();
+    signal?.addEventListener("abort", onAbort, { once: true });
+    const drain = async (stream: ReadableStream<Uint8Array>, into: Uint8Array[], isStderr: boolean) => {
+      for await (const chunk of stream) {
+        if (isStderr) {
+          diagnostics = (diagnostics + decoder.decode(chunk, { stream: true })).slice(-2000);
+        } else {
+          total += chunk.byteLength;
+          if (total > limit) {
+            overflow = true;
+            stop();
+            return;
+          }
+        }
+        into.push(chunk);
+      }
+    };
     try {
-      const output = await child.collectOutput({
-        timeoutMs,
-        signal,
-        onStderr(bytes) {
-          diagnostics = (diagnostics + decoder.decode(bytes, { stream: true })).slice(-2000);
-        },
-      });
+      await Promise.all([drain(child.stdout, chunks, false), drain(child.stderr, stderrChunks, true), child.exited]);
       signal?.throwIfAborted();
-      const stderr = new TextDecoder().decode(output.stderr);
-      const code = output.status.signal > 0 ? 128 + output.status.signal : output.status.exitCode;
+      diagnostics = (diagnostics + decoder.decode()).slice(-2000);
+      if (timedOut) {
+        throw new WebServiceError(`aphrody-web ${command} timed out after ${timeoutMs} ms`, null, diagnostics);
+      }
+      if (overflow) {
+        throw new WebServiceError(
+          `aphrody-web ${command} exceeded its ${limit} byte output budget`,
+          null,
+          diagnostics,
+        );
+      }
+      const stderr = new TextDecoder().decode(Buffer.concat(stderrChunks));
+      const code = child.exitCode ?? 128 + (child.signalCode === "SIGKILL" ? 9 : 15);
       if (code !== 0) {
         throw new WebServiceError(
           `aphrody-web exited with ${code}: ${(stderr.trim().split("\n").at(-1) ?? "").slice(0, 300)}`,
@@ -264,21 +300,11 @@ export class WebService {
           stderr.slice(-2000),
         );
       }
-      return output.stdout;
-    } catch (error) {
-      signal?.throwIfAborted();
-      diagnostics = (diagnostics + decoder.decode()).slice(-2000);
-      if (error instanceof RuntimeError && error.status === Status.Timeout) {
-        throw new WebServiceError(`aphrody-web ${command} timed out after ${timeoutMs} ms`, null, diagnostics);
-      }
-      if (error instanceof RuntimeError && error.status === Status.OutputLimit) {
-        throw new WebServiceError(
-          `aphrody-web ${command} exceeded its ${this.#maxOutputBytes} byte output budget`,
-          null,
-          diagnostics,
-        );
-      }
-      throw error;
+      return new Uint8Array(Buffer.concat(chunks));
+    } finally {
+      clearTimeout(timer);
+      signal?.removeEventListener("abort", onAbort);
+      if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
     }
   }
 

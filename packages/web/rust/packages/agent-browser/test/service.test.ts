@@ -4,6 +4,7 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
+import { writeScript } from "./fixture.ts";
 import {
   DEFAULT_WEB_CONFIG,
   engineBinaryCandidates,
@@ -135,15 +136,12 @@ describe("validateWebConfig", () => {
 
 test("bounded response delegates its cap to the native owner and preserves metadata", async () => {
   const dir = await mkdtemp(join(tmpdir(), "aphrody-web-response-"));
-  const binary = join(dir, "aphrody-web");
-  await writeFile(
-    binary,
-    `#!/usr/bin/env bun
-const args = process.argv.slice(2);
+  const binary = await writeScript(
+    join(dir, "aphrody-web"),
+    `const args = process.argv.slice(2);
 if (args[0] !== "response" || args[args.indexOf("--max-bytes") + 1] !== "6" || args.includes("--allow-private-network")) process.exit(9);
 console.log(JSON.stringify({ url: "https://example.test/final", status: 206, headers: { "content-type": "text/plain" }, bytes: 6, truncated: true, body: "abcdef" }));
 `,
-    { mode: 0o700 },
   );
   try {
     const service = new WebService({ binary });
@@ -164,15 +162,12 @@ console.log(JSON.stringify({ url: "https://example.test/final", status: 206, hea
 
 test("crawl cancellation stops the owning process and retains AbortError", async () => {
   const dir = await mkdtemp(join(tmpdir(), "aphrody-web-cancel-"));
-  const binary = join(dir, "aphrody-web");
   const ready = join(dir, "ready");
-  await writeFile(
-    binary,
-    `#!/usr/bin/env bun
-await Bun.write(${JSON.stringify(ready)}, "ready");
+  const binary = await writeScript(
+    join(dir, "aphrody-web"),
+    `await Bun.write(${JSON.stringify(ready)}, "ready");
 setInterval(() => {}, 1000);
 `,
-    { mode: 0o700 },
   );
   const abort = new AbortController();
   const service = new WebService({ binary });
@@ -206,15 +201,12 @@ test("cookie files remain path-only native crawl arguments", () => {
 
 test("original native response bytes survive invalid UTF-8 and forward identifying UA", async () => {
   const dir = await mkdtemp(join(tmpdir(), "aphrody-web-bytes-"));
-  const binary = join(dir, "aphrody-web");
-  await writeFile(
-    binary,
-    `#!/usr/bin/env bun
-const args = process.argv.slice(2);
+  const binary = await writeScript(
+    join(dir, "aphrody-web"),
+    `const args = process.argv.slice(2);
 if (args[0] !== "fetch" || !args.includes("--fail-on-http-error") || args[args.indexOf("--dump") + 1] !== "original" || args[args.indexOf("--user-agent") + 1] !== "Fixture/1") process.exit(9);
 await Bun.write(Bun.stdout, new Uint8Array([0, 137, 255, 254, 10]));
 `,
-    { mode: 0o700 },
   );
   try {
     const service = new WebService({ binary });

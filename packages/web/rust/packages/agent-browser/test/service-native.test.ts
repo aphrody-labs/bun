@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 import { afterEach, expect, spyOn, test } from "bun:test";
-import { Runtime, type ManagedProcess } from "@aphrody/runtime-sdk";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { WebService, WebServiceError } from "../src/service.ts";
+import { writeScript } from "./fixture.ts";
 
 const directories: string[] = [];
 afterEach(async () => {
@@ -14,9 +14,7 @@ afterEach(async () => {
 async function fixture(body: string): Promise<string> {
   const directory = await mkdtemp(join(tmpdir(), "aphrody-web-native-"));
   directories.push(directory);
-  const binary = join(directory, "aphrody-web");
-  await writeFile(binary, `#!/usr/bin/env bun\n${body}\n`, { mode: 0o700 });
-  return binary;
+  return writeScript(join(directory, "aphrody-web"), `${body}\n`);
 }
 
 function alive(pid: number): boolean {
@@ -80,14 +78,13 @@ await Bun.sleep(25);
 await Bun.write(Bun.stdout, new Uint8Array(10000));
 setInterval(() => {}, 1000);
 `);
-  const spawned = spyOn(Runtime.prototype, "spawn");
+  const spawned = spyOn(Bun, "spawn");
   try {
     await expect(new WebService({ binary, maxOutputBytes: 1024 }).bytes("https://example.test/")).rejects.toMatchObject(
       { exitCode: null, stderr: "budget diagnostics\n" },
     );
-    const child = spawned.mock.results[0]!.value as ManagedProcess;
+    const child = spawned.mock.results[0]!.value as Bun.Subprocess;
     expect(alive(child.pid)).toBe(false);
-    expect(() => child.status()).toThrow(/released/);
     await expect(new WebService({ binary, maxOutputBytes: 1024 }).version()).rejects.toThrow(
       /exceeded its 1024 byte output budget/,
     );
@@ -106,7 +103,7 @@ setInterval(() => {}, 1000);
 `);
   const controller = new AbortController();
   const reason = new Error("caller cancelled native crawl");
-  const spawned = spyOn(Runtime.prototype, "spawn");
+  const spawned = spyOn(Bun, "spawn");
   const pending = new WebService({ binary }).crawl(["https://example.test/"], { signal: controller.signal }).then(
     () => undefined,
     (error: unknown) => error,
@@ -120,9 +117,8 @@ setInterval(() => {}, 1000);
     expect(await Bun.file(ready).exists()).toBe(true);
     controller.abort(reason);
     expect(await pending).toBe(reason);
-    const child = spawned.mock.results[0]!.value as ManagedProcess;
+    const child = spawned.mock.results[0]!.value as Bun.Subprocess;
     expect(alive(child.pid)).toBe(false);
-    expect(() => child.status()).toThrow(/released/);
   } finally {
     controller.abort(reason);
     await pending;
@@ -131,7 +127,7 @@ setInterval(() => {}, 1000);
 });
 
 test("an already aborted crawl starts no native process", async () => {
-  const spawned = spyOn(Runtime.prototype, "spawn");
+  const spawned = spyOn(Bun, "spawn");
   const reason = new Error("preflight cancelled");
   try {
     await expect(
@@ -149,7 +145,6 @@ test("concurrent one-shot commands preserve the shared engine and supervisor", a
   const binary = await fixture('await Bun.sleep(20); console.log("fixture version");');
   const service = new WebService({ binary });
   expect(await Promise.all([service.version(), service.version()])).toEqual(["fixture version", "fixture version"]);
-  // The preload engine belongs to the same SDK owner and remains available.
   const { endpoint } = await service.engine();
   expect(endpoint).toBe(process.env.APHRODY_BROWSER_CDP_URL!);
   await service.close();
@@ -158,16 +153,15 @@ test("concurrent one-shot commands preserve the shared engine and supervisor", a
 
 test("native timeout preserves WebServiceError and reaps its owning child", async () => {
   const binary = await fixture('console.error("timeout diagnostics"); setInterval(() => {}, 1000);');
-  const spawned = spyOn(Runtime.prototype, "spawn");
+  const spawned = spyOn(Bun, "spawn");
   try {
     await expect(new WebService({ binary }).fetch("https://example.test/", { timeoutSecs: 0 })).rejects.toMatchObject({
       exitCode: null,
       stderr: "timeout diagnostics\n",
       message: "aphrody-web fetch timed out after 15000 ms",
     });
-    const child = spawned.mock.results[0]!.value as ManagedProcess;
+    const child = spawned.mock.results[0]!.value as Bun.Subprocess;
     expect(alive(child.pid)).toBe(false);
-    expect(() => child.status()).toThrow(/released/);
   } finally {
     spawned.mockRestore();
   }

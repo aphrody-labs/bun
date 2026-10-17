@@ -7,8 +7,6 @@
  * can reap it. `process.on("exit")` is not run by `bun test`, so callers that need a guarantee
  * must use `stop()` or the preload helper. The SDK owner closes its shared runtime on host exit.
  */
-import { ProcessExitedError, type ManagedProcess } from "@aphrody/runtime-sdk";
-import { processes } from "@aphrody/runtime-sdk/modules";
 import { loadWebConfig, resolveEngineBinary, type WebConfig } from "./config.ts";
 
 export interface EngineOptions {
@@ -48,11 +46,6 @@ export interface Engine {
 const running = new Set<Engine>();
 const STDERR_TAIL_BYTES = 8192;
 
-/**
- * Supervision (spawn in its own process group, bounded stdout/stderr capture, HTTP readiness,
- * SIGTERM → SIGKILL stop, teardown with the runtime) is provided by the native YOLO runtime
- * (`runtime:process`); this module only decides what an engine is and how it is started.
- */
 async function reservePort(host: string): Promise<number> {
   const listener = Bun.listen({ hostname: host, port: 0, socket: { data() {} } });
   const port = listener.port;
@@ -61,8 +54,32 @@ async function reservePort(host: string): Promise<number> {
 }
 
 /** Bun's `exited` convention: the exit code, or 128 + signal when the engine was killed. */
-function exitCode(status: { exitCode: number; signal: number }): number {
-  return status.signal > 0 ? 128 + status.signal : status.exitCode;
+function exitCode(code: number | null, signal: string | null | undefined): number {
+  if (code !== null) return code;
+  return 128 + (signal === "SIGKILL" ? 9 : 15);
+}
+
+/** Reads the child's stderr into a bounded tail and resolves its first stdout line. */
+function supervise(child: Bun.Subprocess<"ignore", "pipe", "pipe">) {
+  let tail = "";
+  void (async () => {
+    const decoder = new TextDecoder();
+    for await (const chunk of child.stderr) {
+      tail = (tail + decoder.decode(chunk, { stream: true })).slice(-STDERR_TAIL_BYTES);
+    }
+  })();
+  const firstLine = (async () => {
+    const decoder = new TextDecoder();
+    let buffer = "";
+    for await (const chunk of child.stdout) {
+      buffer += decoder.decode(chunk, { stream: true });
+      const nl = buffer.indexOf("\n");
+      if (nl >= 0) return buffer.slice(0, nl).replace(/\r$/, "");
+    }
+    throw new Error("engine closed stdout before printing its CDP endpoint");
+  })();
+  firstLine.catch(() => {});
+  return { stderrTail: () => tail, firstLine };
 }
 
 /** Starts an engine and resolves once `/json/version` answers. */
@@ -80,40 +97,37 @@ export async function startEngine(options: EngineOptions = {}): Promise<Engine> 
   if (options.allowFileAccess ?? config.engine.allowFileAccess) args.push("--allow-file-access");
   args.push(...(options.args ?? []));
 
-  const env: Record<string, string | undefined> = { ...options.env };
+  const env: Record<string, string | undefined> = { ...process.env, ...options.env };
   if (allowPrivate) env["OBSCURA_ALLOW_PRIVATE_NETWORK"] = "1";
+  for (const key of Object.keys(env)) if (env[key] === undefined) delete env[key];
 
-  const child: ManagedProcess = processes.spawn({
-    program: binary,
-    args,
-    env,
-    stdio: "capture",
+  const child = Bun.spawn({
+    cmd: [binary, ...args],
+    env: env as Record<string, string>,
+    stdin: "ignore",
+    stdout: "pipe",
+    stderr: "pipe",
+    windowsHide: true,
   });
+  const watch = supervise(child);
   let engine: Engine | undefined;
   let stopping: Promise<number> | undefined;
-  let finalStatus: { exitCode: number; signal: number } | undefined;
-  let tailSnapshot = "";
-  let released = false;
-  const tail = (): string => (released ? tailSnapshot : child.stderrTail(STDERR_TAIL_BYTES));
-  const release = (): void => {
-    if (released) return;
-    tailSnapshot = child.stderrTail(STDERR_TAIL_BYTES);
-    released = true;
-    child.release();
-    if (engine) running.delete(engine);
-  };
+
   const stopChild = (graceMs: number): Promise<number> => {
     stopping ??= (async () => {
-      if (released) return exitCode(finalStatus!);
-      const status = await child.stopAsync(graceMs);
-      finalStatus = status;
-      release();
-      return exitCode(status);
+      if (child.exitCode === null && child.signalCode === null) {
+        child.kill("SIGTERM");
+        const timer = setTimeout(() => child.kill("SIGKILL"), graceMs);
+        await child.exited;
+        clearTimeout(timer);
+      }
+      if (engine) running.delete(engine);
+      return exitCode(child.exitCode, child.signalCode);
     })();
     return stopping;
   };
   const fail = async (reason: string): Promise<never> => {
-    const diagnostics = tail();
+    const diagnostics = watch.stderrTail();
     await stopChild(0);
     throw new Error(`${reason}${diagnostics ? `\n--- engine stderr ---\n${diagnostics}` : ""}`);
   };
@@ -122,7 +136,10 @@ export async function startEngine(options: EngineOptions = {}): Promise<Engine> 
   let endpoint = "";
   try {
     try {
-      endpoint = await child.waitForStdoutLine({ timeoutMs: startupTimeoutMs });
+      endpoint = await Promise.race([
+        watch.firstLine,
+        Bun.sleep(startupTimeoutMs).then(() => Promise.reject(new Error("timeout"))),
+      ]);
     } catch {
       return await fail("engine did not print its CDP endpoint");
     }
@@ -130,39 +147,31 @@ export async function startEngine(options: EngineOptions = {}): Promise<Engine> 
     if (endpoint !== expected)
       return await fail(`unexpected CDP endpoint ${JSON.stringify(endpoint)}, expected ${expected}`);
     const url = `http://${host}:${port}/json/version`;
-    try {
-      await child.waitForHttp({
-        host,
-        port,
-        path: "/json/version",
-        timeoutMs: Math.max(1, deadline - Date.now()),
-        accept: status => status >= 200 && status < 300,
-      });
-    } catch (error) {
-      if (error instanceof ProcessExitedError) {
+    let ready = false;
+    let lastError = "";
+    while (!ready && Date.now() < deadline) {
+      if (child.exitCode !== null || child.signalCode !== null) {
         return await fail("engine exited before it started listening");
       }
-      return await fail(
-        `engine readiness failed for ${url}: ${error instanceof Error ? error.message : String(error)}`,
-      );
+      try {
+        const response = await fetch(url, { signal: AbortSignal.timeout(1_000) });
+        ready = response.status >= 200 && response.status < 300;
+        await response.arrayBuffer();
+      } catch (error) {
+        lastError = error instanceof Error ? error.message : String(error);
+      }
+      if (!ready) await Bun.sleep(25);
     }
+    if (!ready) return await fail(`engine readiness failed for ${url}: ${lastError || "timeout"}`);
   } catch (error) {
-    if (!released) await stopChild(0);
+    await stopChild(0);
     throw error;
   }
 
   const exited = (async (): Promise<number> => {
-    // Yield until the public engine has been registered, even if the child already exited.
     await Bun.sleep(0);
-    for (;;) {
-      if (stopping) return stopping;
-      if (released) return exitCode(finalStatus!);
-      const status = child.status();
-      if (!status.running) return stopChild(0);
-      // Polling is sequential; parallel waits would keep stale handle reads alive.
-      // eslint-disable-next-line no-await-in-loop
-      await Bun.sleep(25);
-    }
+    await child.exited;
+    return exitCode(child.exitCode, child.signalCode);
   })();
 
   engine = {
@@ -171,7 +180,7 @@ export async function startEngine(options: EngineOptions = {}): Promise<Engine> 
     host,
     port,
     pid: child.pid,
-    stderrTail: tail,
+    stderrTail: watch.stderrTail,
     exited,
     stop() {
       return stopChild(shutdownGraceMs);
