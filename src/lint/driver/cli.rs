@@ -94,7 +94,7 @@ const TYPES: &[Param] = &[
     clap::param!("--type-aware                    Also run the rules that need types"),
     clap::param!("--no-type-aware                 Skip the rules that need types"),
     clap::param!(
-        "--tsconfig <path>               Use this tsconfig.json for the rules that need types"
+        "--tsconfig <path>               Use this tsconfig.json instead of the nearest one"
     ),
     clap::param!("--type-check                    With <b>--type-aware<r>, report type errors too"),
     clap::param!(
@@ -107,6 +107,9 @@ const OTHER: &[Param] = &[
     clap::param!("--no-n2b                        Compatibility flag; native rules are unchanged"),
     clap::param!(
         "--threads <n>                   Number of threads <d>(default: one per CPU core)<r>"
+    ),
+    clap::param!(
+        "--no-script                     Run the linter even if the project has a <b>lint<r> script"
     ),
     clap::param!("-v, --version                   Print the version of Bun"),
     clap::param!(
@@ -213,6 +216,7 @@ const OPPOSITES: &[Param] = &[
     clap::param!("--inline-config"),
     clap::param!("--error-on-unmatched-pattern"),
     clap::param!("--eslintrc"),
+    clap::param!("--script"),
 ];
 
 pub const HELP: Help = Help {
@@ -262,6 +266,7 @@ pub const HELP: Help = Help {
         b"max-warnings",
         b"init",
         b"doctor",
+        b"no-script",
     ],
 };
 

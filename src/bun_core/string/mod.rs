@@ -1169,8 +1169,10 @@ impl core::fmt::Display for EncodedSlice<'_> {
 }
 
 // `EncodedSlice` pointer-tag scheme. Flag bits live in the pointer's high
-// byte; untagging truncates to 53 bits. On 32-bit (wasm32) the top three bits
-// are used, which caps tagged addresses at 512 MiB of linear memory.
+// byte; untagging truncates to 53 bits. Never set bit 62: C++ would take
+// ownership of the buffer and free it (`Zig::isTaggedExternalPtr`). On 32-bit
+// (wasm32) the top three bits are used, which caps tagged addresses at 512 MiB
+// of linear memory.
 #[cfg(target_pointer_width = "64")]
 const TAG_SHIFT: u32 = 61;
 #[cfg(target_pointer_width = "64")]
@@ -1180,11 +1182,10 @@ const TAG_SHIFT: u32 = 29;
 #[cfg(target_pointer_width = "32")]
 const UNTAG_MASK: usize = (1usize << 29) - 1;
 const TAG_UTF8_BIT: usize = 1usize << TAG_SHIFT;
-const TAG_GLOBAL_BIT: usize = 1usize << (TAG_SHIFT + 1);
 const TAG_UTF16_BIT: usize = 1usize << (TAG_SHIFT + 2);
 
-/// `{tagged ptr, len}` with encoding bits (Latin-1 / UTF-8 / UTF-16 / global)
-/// in the pointer's high byte; borrows `'a`. Also the [`String`] union arm.
+/// `{tagged ptr, len}` with encoding bits (Latin-1 / UTF-8 / UTF-16) in the
+/// pointer's high byte; borrows `'a`. Also the [`String`] union arm.
 #[repr(C)]
 #[derive(Clone, Copy)]
 pub struct EncodedSlice<'a> {
@@ -1232,10 +1233,6 @@ impl<'a> EncodedSlice<'a> {
         (self._unsafe_ptr_do_not_use as usize) & TAG_UTF8_BIT != 0
     }
     #[inline]
-    pub fn is_globally_allocated(self) -> bool {
-        (self._unsafe_ptr_do_not_use as usize) & TAG_GLOBAL_BIT != 0
-    }
-    #[inline]
     fn mark(&mut self, bit: usize) {
         self._unsafe_ptr_do_not_use = ((self._unsafe_ptr_do_not_use as usize) | bit) as *const u8;
     }
@@ -1262,15 +1259,6 @@ impl<'a> EncodedSlice<'a> {
     pub fn utf16(s: &'a [u16]) -> Self {
         let mut slice = Self::from_tagged_ptr(s.as_ptr().cast(), s.len());
         slice.mark(TAG_UTF16_BIT);
-        slice
-    }
-
-    /// Wrap a globally-allocated UTF-16 buffer whose ownership is being
-    /// handed to C++: sets the 16-bit and global ptr-tags.
-    #[inline]
-    pub fn utf16_global(s: &'a [u16]) -> Self {
-        let mut slice = Self::utf16(s);
-        slice.mark(TAG_GLOBAL_BIT);
         slice
     }
 
@@ -1456,21 +1444,14 @@ impl<'a> EncodedSlice<'a> {
     }
 
     /// Re-wrap a sub-range of the underlying storage, preserving the
-    /// UTF-8/16-bit/global tag bits.
+    /// UTF-8/16-bit tag bits.
     pub fn substring_with_len(self, start_index: usize, end_index: usize) -> Self {
         if self.is_16bit() {
-            let mut out = Self::utf16(&self.utf16_slice()[start_index..end_index]);
-            if self.is_globally_allocated() {
-                out.mark(TAG_GLOBAL_BIT);
-            }
-            return out;
+            return Self::utf16(&self.utf16_slice()[start_index..end_index]);
         }
         let mut out = Self::latin1(&self.slice()[start_index..end_index]);
         if self.is_utf8() {
             out.mark(TAG_UTF8_BIT);
-        }
-        if self.is_globally_allocated() {
-            out.mark(TAG_GLOBAL_BIT);
         }
         out
     }

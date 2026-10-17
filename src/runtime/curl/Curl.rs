@@ -240,7 +240,7 @@ impl Curl {
                 if name == "signal" {
                     continue;
                 }
-                let Some(value) = options.get_own_by_value(global, key)? else {
+                let Some(value) = options.get_own(global, &key.to_bun_string(global)?)? else {
                     continue;
                 };
                 if value.is_undefined() {

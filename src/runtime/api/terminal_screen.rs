@@ -45,7 +45,6 @@ fn validate_dimension(
             min: 1,
             max: MAX_DIMENSION,
             field_name,
-            always_allow_zero: false,
         },
     )?;
     Ok(n as usize)
@@ -81,7 +80,6 @@ impl TerminalScreen {
                         min: 0,
                         max: MAX_SCROLLBACK,
                         field_name: b"scrollback",
-                        always_allow_zero: true,
                     },
                 )? as usize;
             }

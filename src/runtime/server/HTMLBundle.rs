@@ -296,7 +296,7 @@ impl Route {
                             bstr::BStr::new(req.url())
                         );
                     }
-                    // TODO: use the code from DevServer.rs to render the error
+                    // TODO: use the code from bake/dev_server/failures.rs to render the error
                     resp.write_status(b"500 Build Failed");
                     resp.write_header_int(b"Content-Length", 0);
                     resp.end_without_body(true);
@@ -693,7 +693,7 @@ impl Route {
                         .config()
                         .is_development()
                     {
-                        // TODO: use the code from DevServer.rs to render the error
+                        // TODO: use the code from bake/dev_server/failures.rs to render the error
                     } else {
                         // To protect privacy, do not show errors to end users in production.
                         // TODO: Show a generic error page.

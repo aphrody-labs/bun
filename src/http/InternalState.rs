@@ -311,7 +311,7 @@ impl<'a> InternalState<'a> {
                 let format = match self.encoding {
                     Encoding::Gzip => oneshot::Encoding::Gzip,
                     // The streaming zlib alone judges a zlib-wrapped body: the one-shot path accepts more streams.
-                    Encoding::Deflate if has_zlib_header(buffer) => break 'libdeflate,
+                    Encoding::Deflate if has_zlib_header(buffer) => break 'oneshot,
                     Encoding::Deflate => oneshot::Encoding::Deflate,
                     _ => unreachable!(),
                 };

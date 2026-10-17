@@ -420,7 +420,6 @@ impl FetchSession {
                             min: 1,
                             max: i128::from(u16::MAX),
                             field_name: FIELD_NAME,
-                            always_allow_zero: false,
                         },
                     )?;
                 }

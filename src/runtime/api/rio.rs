@@ -102,7 +102,6 @@ fn validate_dimension(
                 min: 1,
                 max: MAX_DIMENSION,
                 field_name: name,
-                always_allow_zero: false,
             },
         )
         .map(|n| n as usize)
@@ -139,7 +138,6 @@ impl RioTerminal {
                         min: 0,
                         max: MAX_SCROLLBACK,
                         field_name: b"scrollback",
-                        always_allow_zero: true,
                     },
                 )? as usize;
             }
@@ -319,7 +317,6 @@ impl RioTerminal {
                 min: 0,
                 max: cols as i128 - 1,
                 field_name: b"col",
-                always_allow_zero: true,
             },
         )?;
         let row = global.validate_integer_range::<u32>(
@@ -329,7 +326,6 @@ impl RioTerminal {
                 min: 0,
                 max: rows as i128 - 1,
                 field_name: b"row",
-                always_allow_zero: true,
             },
         )?;
         let terminal = self.terminal.get();

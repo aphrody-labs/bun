@@ -4,7 +4,6 @@
 // --- Getters ---
 #define FOR_EACH_GETTER(macro) \
     macro(Archive) \
-    macro(CSRF) \
     macro(CryptoHasher) \
     macro(FFI) \
     macro(FetchSession) \
@@ -16,8 +15,6 @@
     macro(Crawl) \
     macro(WebDetect) \
     macro(VectorIndex) \
-    macro(JSON5) \
-    macro(JSONC) \
     macro(MD4) \
     macro(markdown) \
     macro(MD5) \
@@ -28,11 +25,8 @@
     macro(SHA384) \
     macro(SHA512) \
     macro(SHA512_256) \
-    macro(TOML) \
-    macro(XML) \
     macro(HTML) \
     macro(BrowserRealm) \
-    macro(YAML) \
     macro(Terminal) \
     macro(TerminalScreen) \
     macro(RioTerminal) \
@@ -43,50 +37,31 @@
     macro(cwd) \
     macro(embeddedFiles) \
     macro(enableANSIColors) \
-    macro(hash) \
     macro(inspect) \
     macro(isStandaloneExecutable) \
     macro(origin) \
     macro(s3) \
-    macro(semver) \
-    macro(unsafe) \
     macro(valkey) \
 
 // --- Callbacks ---
 #define FOR_EACH_CALLBACK(macro) \
-    macro(allocUnsafe) \
     macro(build) \
     macro(color) \
     macro(connect) \
     macro(createParsedShellScript) \
     macro(createShellInterpreter) \
-    macro(deflateSync) \
     macro(file) \
-    macro(gunzipSync) \
-    macro(gzipSync) \
-    macro(indexOfLine) \
-    macro(inflateSync) \
     macro(jest) \
     macro(listen) \
-    macro(mmap) \
-    macro(openInEditor) \
     macro(registerMacro) \
     macro(resolve) \
     macro(resolveSync) \
     macro(serve) \
     macro(sha) \
-    macro(shellEscape) \
-    macro(shrink) \
-    macro(sleepSync) \
     macro(spawn) \
     macro(spawnSync) \
     macro(udpSocket) \
-    macro(which) \
     macro(write) \
-    macro(zstdCompressSync) \
-    macro(zstdDecompressSync) \
-    macro(zstdCompress) \
-    macro(zstdDecompress) \
 
 #define DECLARE_ZIG_BUN_OBJECT_CALLBACK(name) BUN_DECLARE_HOST_FUNCTION(BunObject_callback_##name);
 FOR_EACH_CALLBACK(DECLARE_ZIG_BUN_OBJECT_CALLBACK);

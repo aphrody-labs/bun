@@ -11,7 +11,7 @@ use windows_sys::Win32::System::Registry::{
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum View {
+pub(crate) enum View {
     Bits32,
     Bits64,
 }
@@ -33,7 +33,7 @@ fn wide(text: &str) -> Vec<u16> {
 }
 
 /// `REG_SZ` value of `HKLM\<key>`.
-pub fn string(view: View, key: &str, value: &str) -> Option<String> {
+pub(crate) fn string(view: View, key: &str, value: &str) -> Option<String> {
     let key = wide(key);
     let value = wide(value);
     let mut buffer = vec![0u16; 2048];
@@ -59,7 +59,7 @@ pub fn string(view: View, key: &str, value: &str) -> Option<String> {
 }
 
 /// `REG_DWORD` value of `HKLM\<key>`.
-pub fn dword(view: View, key: &str, value: &str) -> Option<u32> {
+pub(crate) fn dword(view: View, key: &str, value: &str) -> Option<u32> {
     let key = wide(key);
     let value = wide(value);
     let mut data = 0u32;
@@ -80,7 +80,7 @@ pub fn dword(view: View, key: &str, value: &str) -> Option<u32> {
 }
 
 /// Subkey names of `HKLM\<key>`.
-pub fn subkeys(view: View, key: &str) -> Vec<String> {
+pub(crate) fn subkeys(view: View, key: &str) -> Vec<String> {
     let key = wide(key);
     let mut handle: HKEY = std::ptr::null_mut();
     // SAFETY: NUL-terminated key; handle is writable.
