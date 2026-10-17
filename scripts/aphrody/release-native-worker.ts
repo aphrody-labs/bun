@@ -754,7 +754,10 @@ async function prepareNativeRuntimeToolchain(input: WorkerInput, diagnostics: st
       ])
     ).stdout,
   );
-  if (toolchain.version !== pins.llvm.version) throw new Error(`LLVM must match source pin ${pins.llvm.version}`);
+  const series = (version: string) => version.split(".").slice(0, 2).join(".");
+  // The pinned release series (apt.llvm.org ships the newest patch of it), as findLlvmTool accepts.
+  if (series(toolchain.version) !== series(pins.llvm.version))
+    throw new Error(`LLVM must match source pin series ${series(pins.llvm.version)}.x (${pins.llvm.version})`);
   process.env.BUN_TOOLCHAIN_LLVM = dirname(dirname(toolchain.cc));
   const rust = (await run("rust-pin", ["rustup", "show", "active-toolchain"])).stdout;
   if (!rust.startsWith(pins.rust.channel)) throw new Error("Rust toolchain differs from committed pin");
@@ -1169,7 +1172,8 @@ async function produceMusl(input: WorkerInput, diagnostics: string, component: "
   await Bun.write(archive, response);
   if (Bun.file(archive).size !== bootstrap.bytes || (await hashSDKFile(archive)) !== bootstrap.sha256)
     throw new Error("Native musl bootstrap checksum differs");
-  const binary = join(input.output, "musl-bun");
+  const binary = join(input.output, "musl-bin", "bun");
+  await mkdir(dirname(binary), { recursive: true });
   // The host bootstrap may predate zip support in Bun.Archive; unzip is on every runner.
   const extracted = join(input.output, "musl-bootstrap");
   await command(["unzip", "-o", "-q", archive, "-d", extracted], input.root, join(diagnostics, "native-musl-unzip.log"));
@@ -1179,6 +1183,7 @@ async function produceMusl(input: WorkerInput, diagnostics: string, component: "
   await chmod(binary, 0o755);
   const script = [
     "set -eu",
+    'export PATH="$(dirname "$BUN_BOOTSTRAP"):$PATH"',
     "apk add --no-cache bash git curl unzip tar xz build-base cmake pkgconf linux-headers sudo util-linux",
     `git config --global --add safe.directory '${input.root.replaceAll("'", "'\\''")}'`,
     `"$BUN_BOOTSTRAP" -e 'if(process.arch!==${JSON.stringify(allocation.arch)}||Bun.revision!==${JSON.stringify(bootstrap.source)}||Bun.version!==${JSON.stringify(bootstrap.tag.replace("aphrody-v", "").split("-")[0])})throw new Error("Native musl bootstrap identity differs")'`,
