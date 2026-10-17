@@ -20,7 +20,7 @@
     },
     "apps/desktop": {
       "name": "@aphrody/desktop",
-      "version": "1.4.4",
+      "version": "1.4.6",
       "bin": {
         "aphrody-desktop": "./src/main.ts",
       },
@@ -45,7 +45,7 @@
     },
     "apps/mobile": {
       "name": "@aphrody/mobile",
-      "version": "1.4.4",
+      "version": "1.4.6",
       "dependencies": {
         "@aphrody/desktop": "workspace:*",
         "@aphrody/web": "workspace:*",
@@ -53,14 +53,14 @@
     },
     "packages/bun-fuzzy": {
       "name": "@aphrody/fuzzy",
-      "version": "1.4.4",
+      "version": "1.4.6",
       "devDependencies": {
         "@types/bun": "npm:@aphrody/bun-types@1.4.4",
       },
     },
     "packages/bun-google": {
       "name": "@aphrody/bun-google",
-      "version": "1.4.4",
+      "version": "1.4.6",
       "bin": {
         "bun-google": "./src/cli.ts",
         "bun-google-index-public": "./src/public-index-cli.ts",
@@ -68,14 +68,14 @@
     },
     "packages/bun-m3": {
       "name": "@aphrody/bun-m3",
-      "version": "1.4.4",
+      "version": "1.4.6",
       "dependencies": {
         "@aphrody/web": "workspace:*",
       },
     },
     "packages/bun-next": {
       "name": "@aphrody/next-bun",
-      "version": "1.4.4",
+      "version": "1.4.6",
       "bin": {
         "next-bun": "bin/next-bun.js",
       },
@@ -94,7 +94,7 @@
     },
     "packages/bun-plugin-neon": {
       "name": "@aphrody/bun-plugin-neon",
-      "version": "1.4.4",
+      "version": "1.4.6",
       "dependencies": {
         "@neondatabase/serverless": "1.2.0",
       },
@@ -107,7 +107,7 @@
     },
     "packages/bun-plugin-tailwind": {
       "name": "@aphrody/bun-plugin-tailwind",
-      "version": "1.4.4",
+      "version": "1.4.6",
       "dependencies": {
         "@aphrody/m3-tailwind": "^3.3.7",
         "@aphrody/m3-tokens": "^3.3.7",
@@ -129,7 +129,7 @@
     },
     "packages/bun-qr": {
       "name": "@aphrody/qr",
-      "version": "1.4.4",
+      "version": "1.4.6",
       "devDependencies": {
         "@types/bun": "npm:@aphrody/bun-types@1.4.4",
       },
@@ -140,7 +140,7 @@
     },
     "packages/bun-timeline": {
       "name": "@aphrody/timeline",
-      "version": "1.4.4",
+      "version": "1.4.6",
       "dependencies": {
         "graphql": "17.0.2",
       },
@@ -150,7 +150,7 @@
     },
     "packages/bun-types": {
       "name": "@aphrody/bun-types",
-      "version": "1.4.4",
+      "version": "1.4.6",
       "dependencies": {
         "@types/node": "*",
         "undici-types": "*",
@@ -158,7 +158,7 @@
     },
     "packages/bun-web": {
       "name": "@aphrody/bun-web",
-      "version": "1.4.4",
+      "version": "1.4.6",
       "dependencies": {
         "@aphrody/bun-webview-page": "workspace:*",
         "@aphrody/next-bun": "workspace:*",
@@ -172,7 +172,7 @@
     },
     "packages/bun-webview-page": {
       "name": "@aphrody/bun-webview-page",
-      "version": "1.4.4",
+      "version": "1.4.6",
       "devDependencies": {
         "@types/bun": "../bun-types",
         "happy-dom": "^20.14.5",
@@ -180,7 +180,7 @@
     },
     "packages/bun-x": {
       "name": "@aphrody/x",
-      "version": "1.4.4",
+      "version": "1.4.6",
       "dependencies": {
         "zod": "^4.6.5",
       },
@@ -194,7 +194,7 @@
     },
     "packages/web": {
       "name": "@aphrody/web",
-      "version": "1.4.4",
+      "version": "1.4.6",
       "dependencies": {
         "@aphrody/bun-plugin-neon": "workspace:*",
         "@aphrody/typesafe-sdk": "0.6.2",
