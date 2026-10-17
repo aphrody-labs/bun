@@ -43,6 +43,11 @@
     { "pattern": "wordcraft.aphrody.app", "custom_domain": true },
     { "pattern": "www.aphrody.app", "custom_domain": true },
   ],
+  // Both packages export only "import"/"require" conditions, which the workerd bundling conditions miss.
+  "alias": {
+    "@neondatabase/serverless": "../../bun-plugin-neon/node_modules/@neondatabase/serverless/index.mjs",
+    "@aphrody/typesafe-sdk": "../node_modules/@aphrody/typesafe-sdk/dist/index.mjs"
+  },
   "assets": {
     "directory": "./dist/site",
     "binding": "ASSETS",
