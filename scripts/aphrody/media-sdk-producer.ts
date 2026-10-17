@@ -37,14 +37,13 @@ export interface NativeMediaBootstrapInput {
   sources: string;
   output: string;
   target: MediaSDKTarget;
-  zlibBuild: string;
 }
 
 /** Source recipes remain plans until the existing owners execute their native gates. */
 export function nativeMediaBootstrapPlan(input: NativeMediaBootstrapInput): NativeMediaInputs {
-  if (![input.root, input.sources, input.output, input.zlibBuild].every(isAbsolute))
+  if (![input.root, input.sources, input.output].every(isAbsolute))
     throw new TypeError("Native media bootstrap owners must be absolute");
-  for (const source of [input.root, input.sources, input.zlibBuild]) {
+  for (const source of [input.root, input.sources]) {
     const overlaps = (left: string, right: string) => {
       const local = relative(left, right);
       return !local || (local !== ".." && !local.startsWith("../") && !local.startsWith("..\\") && !isAbsolute(local));
@@ -61,7 +60,7 @@ export function nativeMediaBootstrapPlan(input: NativeMediaBootstrapInput): Nati
     target: input.target,
     dependencies:
       component === "ffmpeg"
-        ? { "zlib-ng": join(input.output, "zlib", "prefix") }
+        ? { zlib: join(input.output, "zlib", "prefix") }
         : { ffmpeg: join(input.output, "ffmpeg", "prefix") },
   });
   const plan: NativeMediaInputs = {
@@ -80,11 +79,7 @@ interface NativeMediaBootstrapPorts {
   hostTarget?: typeof mediaSDKHostTarget;
   capacity?: (parent: string) => Promise<void>;
   sources?: (input: NativeMediaBootstrapInput) => Promise<unknown>;
-  zlib?: (
-    build: string,
-    output: string,
-    target: MediaSDKTarget,
-  ) => Promise<{ prefix: string; sourceReceiptSHA256: string }>;
+  zlib?: (output: string, target: MediaSDKTarget) => Promise<{ prefix: string; sourceReceiptSHA256: string }>;
   prepare?: typeof prepareNativeMedia;
 }
 
@@ -125,11 +120,11 @@ export async function bootstrapNativeMediaInputs(
   await Bun.write(join(diagnostics, "sources.json"), JSON.stringify(sources, null, 2) + "\n");
   const zlib = await (
     ports.zlib ??
-    (async (build, output, target) => {
+    (async (output, target) => {
       const { qualifyZlibNativeSDK } = await import("./native-sdk-factory");
-      return qualifyZlibNativeSDK(build, output, target, input.root);
+      return qualifyZlibNativeSDK(output, target, input.root);
     })
-  )(input.zlibBuild, join(input.output, "zlib"), input.target);
+  )(join(input.output, "zlib"), input.target);
   if (zlib.prefix !== join(input.output, "zlib", "prefix") || !digest(zlib.sourceReceiptSHA256))
     throw new Error("Canonical zlib owner returned a foreign or unpinned prefix");
   const buildInputPath = join(input.output, "native-media-build-inputs.json");

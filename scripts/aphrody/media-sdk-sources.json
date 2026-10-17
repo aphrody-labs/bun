@@ -26,11 +26,6 @@
       "sourceTreeSHA256": "b37546686654d65d0e7af616f2c2bbfb9e1e24230d0d4a82ebfceefa6ccd10ce",
       "licenses": ["LICENSE-APACHE", "LICENSE-BOOST", "LICENSE-MIT"]
     },
-    "zlib-ng": {
-      "repository": "https://github.com/zlib-ng/zlib-ng",
-      "revision": "12731092979c6d07f42da27da673a9f6c7b13586",
-      "licenses": ["LICENSE.md"]
-    },
     "freetype": {
       "version": "2.14.2+dfsg-1ubuntu0.2",
       "sourceTreeSHA256": "842f3e09d793856767b340ed7b3ca82ae5ecdbf9eb4458b8ae46955f28472d8e",

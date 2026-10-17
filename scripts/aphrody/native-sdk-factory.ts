@@ -1,4 +1,4 @@
-import { lstat, mkdir, realpath, stat } from "node:fs/promises";
+import { mkdir, realpath, stat } from "node:fs/promises";
 import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { configOf, type ConfigureInput } from "../build/configure";
 import { allDeps } from "../build/deps";
@@ -7,11 +7,8 @@ import { computeNativeSDKABI, nativeSDKSourceIdentity } from "../build/native-sd
 import { depSource, depSourceDir } from "../build/source";
 import { hashSDKFile } from "../../packages/bun-video/src/sdk";
 import type { MediaSDKTarget } from "../../packages/bun-video/src/sdk";
-import { mediaSourceTree } from "./media-sdk-source";
-import { computeDepFlags, computeDepPICFlags } from "../build/flags";
-import { computeSourceIdentity } from "../build/fetch-cli";
-import { mediaSDKTool } from "./media-sdk-source";
-import { ensureNinja } from "../build/ninja-release";
+import { mediaSDKHostTarget } from "../../packages/bun-video/src/sdk-platform";
+import { mediaSDKTool, mediaSourceTree } from "./media-sdk-source";
 
 const zlibConsumer = `#include <zlib.h>
 #include <string.h>
@@ -38,300 +35,254 @@ const zlibSharedDriver = `int bun_zlib_sdk_roundtrip(void);
 int main(void) { return bun_zlib_sdk_roundtrip(); }
 `;
 
-interface GitSourceTree {
-  sha: string;
-  truncated: boolean;
-  tree: { path: string; mode: string; type: string; sha: string; size?: number }[];
-}
-interface ZlibSourceInput {
-  source: string;
-  archive: string;
-  repository: string;
-  commit: string;
-  patches: readonly string[];
-  fixture: string;
-}
-interface ZlibSourcePorts {
-  tree?: (url: string) => Promise<GitSourceTree>;
-  patch?: (directory: string, path: string, body: string) => void;
-}
+/** The absorbed zlib-rs crate whose `export-symbols` feature is the stock zlib C ABI. */
+export const zlibSDKOwner = "src/zlib_rs";
+export const zlibSDKRepository = "https://github.com/aphrody-labs/bun";
+export const zlibSDKLicense = "share/licenses/zlib-rs/LICENSE";
+export const zlibSDKLibrary = (target: MediaSDKTarget) => (target.startsWith("windows-") ? "lib/z.lib" : "lib/libz.a");
+const objectId = /^[a-f0-9]{40}(?:[a-f0-9]{24})?$/;
+const systemLibrary =
+  /^(?:-l[A-Za-z0-9_.+-]+|-framework|[A-Za-z0-9_.+-]+\.lib|\/defaultlib:[A-Za-z0-9_.-]+|[A-Z][A-Za-z0-9_]*)$/;
 
-/** Authenticate cached bytes against GitHub's pinned Git object inventory, not its cache filename. */
-export async function verifyZlibSDKSource(input: ZlibSourceInput, ports: ZlibSourcePorts = {}) {
-  if (![input.source, input.archive, input.fixture, ...input.patches].every(isAbsolute))
-    throw new TypeError("Zlib source verification paths must be absolute");
-  if (input.patches.length > 16 || Bun.file(join(input.source, ".ref")).size > 128)
-    throw new Error("Canonical zlib source metadata exceeds its bound");
-  const within = (left: string, right: string) => {
-    const path = relative(left, right);
-    return !path || (path !== ".." && !path.startsWith("../") && !path.startsWith("..\\") && !isAbsolute(path));
+/** Provenance is the committed `src/zlib_rs` tree, clean against HEAD; its headers name the crate version. */
+export async function verifyZlibSDKSource(root: string) {
+  if (!isAbsolute(root)) throw new TypeError("Zlib source verification root must be absolute");
+  const owner = join(root, zlibSDKOwner);
+  const git = (argv: string[]) => mediaSDKTool(["git", "--literal-pathspecs", ...argv], owner);
+  if ((await git(["status", "--porcelain", "--untracked-files=all", "--ignored=matching", "--", "."])).trim())
+    throw new Error("Canonical zlib-rs source contains uncommitted or ignored files");
+  const revision = (await git(["rev-parse", "HEAD"])).trim();
+  const gitTree = (await git(["rev-parse", `HEAD:${zlibSDKOwner}`])).trim();
+  if (!objectId.test(revision) || !objectId.test(gitTree)) throw new Error("Canonical zlib-rs Git identity is invalid");
+  const names = (await git(["ls-files", "-z", "--", "."])).split("\0").filter(Boolean);
+  const manifest = Bun.TOML.parse(await Bun.file(join(owner, "Cargo.toml")).text()) as {
+    package?: { name?: string; version?: string; license?: string };
   };
-  if (within(input.source, input.fixture) || within(input.fixture, input.source))
-    throw new Error("Zlib patch fixture overlaps its existing source owner");
-  if (input.repository !== "zlib-ng/zlib-ng" || input.commit !== "12731092979c6d07f42da27da673a9f6c7b13586")
-    throw new Error("Zlib source differs from its canonical pin");
-  const url = `https://api.github.com/repos/${input.repository}/git/trees/${input.commit}?recursive=1`;
-  const tree = await (
-    ports.tree ??
-    (async value => {
-      const response = await fetch(value, {
-        redirect: "error",
-        signal: AbortSignal.timeout(30_000),
-        headers: { accept: "application/vnd.github+json" },
-      });
-      if (!response.ok || !response.body) throw new Error("Pinned GitHub source inventory is unavailable");
-      const parts: Uint8Array[] = [];
-      let size = 0;
-      for await (const part of response.body) {
-        if ((size += part.byteLength) > 4 * 1024 ** 2)
-          throw new Error("Pinned GitHub source inventory exceeds its bound");
-        parts.push(part);
-      }
-      return JSON.parse(new TextDecoder().decode(Buffer.concat(parts))) as GitSourceTree;
-    })
-  )(url);
+  const version = manifest.package?.version;
+  const zlibVersion = (await Bun.file(join(owner, "include/zlib.h")).text()).match(
+    /^#define ZLIB_VERSION "([^"]+)"$/m,
+  )?.[1];
   if (
-    tree.sha !== input.commit ||
-    tree.truncated !== false ||
-    !Array.isArray(tree.tree) ||
-    tree.tree.length < 1 ||
-    tree.tree.length > 10_000
+    manifest.package?.name !== "zlib-rs" ||
+    manifest.package.license !== "Zlib" ||
+    !version ||
+    !/^[0-9]+\.[0-9]+\.[0-9]+$/.test(version) ||
+    zlibVersion !== `1.3.2.zlib-rs-${version}`
   )
-    throw new Error("Pinned GitHub source inventory is incomplete");
-  const expected = new Map<string, { mode: string; sha: string; size: number }>();
-  let expandedBytes = 0;
-  for (const entry of tree.tree) {
-    if (entry.type === "tree") continue;
-    if (
-      entry.type !== "blob" ||
-      !["100644", "100755"].includes(entry.mode) ||
-      !/^[a-f0-9]{40}$/.test(entry.sha) ||
-      !entry.path ||
-      entry.path.split("/").some(part => !part || part === "." || part === "..") ||
-      /[\\:\0]/.test(entry.path) ||
-      expected.has(entry.path) ||
-      !Number.isSafeInteger(entry.size) ||
-      entry.size! < 0 ||
-      entry.size! > 16 * 1024 ** 2 ||
-      (expandedBytes += entry.size!) > 512 * 1024 ** 2
-    )
-      throw new Error("Pinned GitHub source inventory has an unsupported member");
-    expected.set(entry.path, { mode: entry.mode, sha: entry.sha, size: entry.size! });
-  }
-  // This pinned .gitattributes excludes /.github, .gitattributes and .gitignore from git archive.
-  // https://github.com/zlib-ng/zlib-ng/blob/12731092979c6d07f42da27da673a9f6c7b13586/.gitattributes
-  const attributes = expected.get(".gitattributes");
-  if (
-    attributes?.sha !== "38fd673cc9e488e364d27a71102599fcc237bbc4" ||
-    attributes.size !== 288 ||
-    attributes.mode !== "100644"
-  )
-    throw new Error("Pinned zlib archive export policy differs");
-  const excludedMembers: string[] = [];
-  for (const name of expected.keys()) {
-    if (name.startsWith(".github/") || [".gitattributes", ".gitignore"].includes(basename(name))) {
-      excludedMembers.push(name);
-      expected.delete(name);
-    }
-  }
-  if (!expected.has("LICENSE.md") || Bun.file(input.archive).size > 64 * 1024 ** 2)
-    throw new Error("Pinned zlib source archive or notice is missing");
-  const archiveBytes = await Bun.file(input.archive).bytes();
-  const archiveSHA256 = new Bun.CryptoHasher("sha256").update(archiveBytes).digest("hex");
-  const archive = await new Bun.Archive(archiveBytes).files();
-  const prefix = `zlib-ng-${input.commit}/`;
-  if (archive.size !== expected.size) throw new Error("Cached zlib archive has missing or unexpected members");
-  const pristine = new Map<string, Uint8Array>();
-  for (const [name, entry] of expected) {
-    const file = archive.get(prefix + name);
-    if (!file || file.size !== entry.size) throw new Error("Cached zlib archive member is absent or oversized");
-    const bytes = await file.bytes();
-    const sha = new Bun.CryptoHasher("sha1").update(`blob ${bytes.byteLength}\0`).update(bytes).digest("hex");
-    if (sha !== entry.sha) throw new Error("Cached zlib archive differs from its authenticated Git blob");
-    pristine.set(name, bytes);
-  }
-  const patches = await Promise.all(
-    input.patches.map(async path => {
-      if (Bun.file(path).size > 1024 ** 2) throw new Error("Canonical zlib patch exceeds its byte bound");
-      const bytes = await Bun.file(path).bytes();
-      return {
-        path,
-        body: new TextDecoder("utf-8", { fatal: true }).decode(bytes),
-        sha256: new Bun.CryptoHasher("sha256").update(bytes).digest("hex"),
-      };
-    }),
-  );
-  if (
-    (await Bun.file(join(input.source, ".ref")).text()).trim() !==
-    computeSourceIdentity(
-      input.commit,
-      patches.map(patch => patch.body),
-    )
-  )
-    throw new Error("Canonical zlib source stamp differs from its pinned patches");
-  const targets = new Set<string>();
-  for (const patch of patches)
-    for (const match of patch.body.matchAll(/^\+\+\+ b\/(.+)$/gm)) {
-      const path = match[1]!;
-      if (!pristine.has(path)) throw new Error("Zlib patch target is not an authenticated source member");
-      targets.add(path);
-    }
-  if (targets.size > 16) throw new Error("Zlib patch fixture exceeds its member bound");
-  await mkdir(input.fixture, { recursive: false, mode: 0o700 });
-  for (const path of targets) {
-    await mkdir(dirname(join(input.fixture, path)), { recursive: true });
-    await Bun.write(join(input.fixture, path), pristine.get(path)!);
-  }
-  const patchOwner = ports.patch ?? (await import("../build/fetch-cli")).applyPatch;
-  for (const patch of patches) patchOwner(input.fixture, patch.path, patch.body);
-  const source = await mediaSourceTree(input.source);
-  const actualNames = Object.keys(source.files).filter(path => path !== ".ref");
-  if (actualNames.length !== expected.size) throw new Error("Canonical zlib source has missing or unexpected files");
-  for (const name of actualNames) {
-    const entry = expected.get(name),
-      info = await lstat(join(input.source, name));
-    if (
-      !entry ||
-      !info.isFile() ||
-      (process.platform !== "win32" && !!(info.mode & 0o111) !== (entry.mode === "100755"))
-    )
-      throw new Error("Canonical zlib source member mode differs");
-    const bytes = targets.has(name) ? await Bun.file(join(input.fixture, name)).bytes() : pristine.get(name)!;
-    if (new Bun.CryptoHasher("sha256").update(bytes).digest("hex") !== source.files[name]!.sha256)
-      throw new Error("Canonical zlib source contains changes outside its pinned patches");
-  }
-  if (
-    (await hashSDKFile(input.archive)) !== archiveSHA256 ||
-    (await Promise.all(patches.map(patch => hashSDKFile(patch.path)))).some((sha, i) => sha !== patches[i]!.sha256)
-  )
-    throw new Error("Zlib archive or patches changed during source verification");
+    throw new Error("Canonical zlib-rs crate, license or header version differs");
+  for (const name of ["LICENSE", "include/zlib.h", "include/zconf.h", "src/c_exports.rs"])
+    if (!names.includes(name)) throw new Error(`Canonical zlib-rs source lacks its committed ${name}`);
+  const source = await mediaSourceTree(owner, names);
   return {
     schema: 1,
-    repository: input.repository,
-    commit: input.commit,
+    repository: zlibSDKRepository,
+    revision,
+    owner: zlibSDKOwner,
+    gitTree,
     sourceClean: true,
-    gitTree: tree.sha,
-    gitInventorySHA256: new Bun.CryptoHasher("sha256").update(JSON.stringify(tree)).digest("hex"),
-    exportPolicy: { attributesGitBlob: attributes.sha, excludedMembers: excludedMembers.sort() },
-    archiveSHA256,
+    package: "zlib-rs",
+    version,
+    zlibVersion,
     sourceTreeSHA256: source.sourceTreeSHA256,
-    patches: patches.map(({ path, sha256 }) => ({ path, sha256 })),
   };
 }
 
-/** Derives the SDK gate from a linked, executed fixed consumer; no caller-supplied pass receipt. */
-export async function qualifyZlibNativeSDK(
-  buildDirectory: string,
-  outputDirectory: string,
-  target: MediaSDKTarget,
-  root: string,
-) {
-  if (![buildDirectory, outputDirectory].every(isAbsolute))
-    throw new TypeError("Zlib qualification owners must be absolute");
-  const build = await realpath(buildDirectory);
-  const configureFile = join(build, "configure.json"),
-    ninjaFile = join(build, "build.ninja");
-  const configureSHA256 = await hashSDKFile(configureFile),
-    ninjaSHA256 = await hashSDKFile(ninjaFile);
-  const { cfg } = configOf(await Bun.file(configureFile).json());
-  const actualTarget = `${cfg.os}-${cfg.arch === "aarch64" ? "arm64" : cfg.arch}${cfg.abi === "musl" ? "-musl" : ""}`;
+export interface ZlibSDKGate {
+  schema: 1;
+  nativeLink: "passed";
+  runtimeQualification: "native-tests-passed";
+  sourceReceiptSHA256: string;
+  evidence: string[];
+}
+
+export function validateZlibSDKGate(gate: ZlibSDKGate): void {
   if (
-    (!cfg.linux && !cfg.windows) ||
-    !cfg.canRunOnHost ||
-    cfg.asan ||
-    actualTarget !== target ||
-    resolve(cfg.buildDir) !== build ||
-    (await realpath(cfg.cwd)) !== (await realpath(root))
+    !gate ||
+    gate.schema !== 1 ||
+    gate.nativeLink !== "passed" ||
+    gate.runtimeQualification !== "native-tests-passed" ||
+    !/^[a-f0-9]{64}$/.test(gate.sourceReceiptSHA256) ||
+    !Array.isArray(gate.evidence) ||
+    !gate.evidence.length ||
+    gate.evidence.some(value => typeof value !== "string" || !value || value.length > 1024)
   )
-    throw new Error("Zlib consumer requires the matching native Linux or Windows ABI and unsanitized existing build");
-  const dependency = allDeps.find(dep => dep.name === "zlib")!;
-  const specification = dependency.build(cfg);
-  if (specification.kind !== "direct") throw new Error("Zlib consumer requires its canonical direct build");
-  for (const owner of [cfg.cwd, build, depSourceDir(cfg, "zlib")]) {
-    const path = relative(owner, outputDirectory);
-    if (!path || (path !== ".." && !path.startsWith("../") && !path.startsWith("..\\") && !isAbsolute(path)))
-      throw new Error("Zlib qualification output overlaps an existing owner");
-  }
-  const ninja = await ensureNinja(cfg);
-  if ((await mediaSDKTool([ninja, "-n", "zlib"], build)).trim() !== "ninja: no work to do.")
-    throw new Error("Canonical zlib build is not up to date; run its existing build owner first");
-  const source = depSource(cfg, dependency);
-  if (source.kind !== "github-archive") throw new Error("Zlib bootstrap requires its canonical pinned archive source");
-  const url = `https://github.com/${source.repo}/archive/${source.commit}.tar.gz`;
-  const urlHash = new Bun.CryptoHasher("sha256").update(url).digest("hex").slice(0, 16);
-  const patchPaths = (
-    typeof dependency.patches === "function" ? dependency.patches(cfg) : (dependency.patches ?? [])
-  ).map(path => resolve(cfg.cwd, path));
-  await mediaSDKTool(["git", "--literal-pathspecs", "diff", "--exit-code", "HEAD", "--", ...patchPaths], cfg.cwd);
+    throw new Error("Zlib SDK needs its executed native consumer qualification");
+}
+
+/** Static native libraries the Rust standard library needs, as rustc reports them for this staticlib. */
+export function zlibSystemLibraries(message: string): string[] {
+  const libraries = message
+    .replace(/^native-static-libs:/, "")
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean);
+  if (
+    !message.startsWith("native-static-libs:") ||
+    libraries.length > 32 ||
+    libraries.some(name => !systemLibrary.test(name))
+  )
+    throw new Error("Rust staticlib reported unbounded or unsupported native libraries");
+  return libraries;
+}
+
+/** Relocatable pkg-config file; MSVC consumers translate `-lname` to `name.lib`. */
+export function zlibPkgConfig(version: string, systemLibraries: readonly string[]) {
+  const libraries = systemLibraries
+    .filter(name => !name.startsWith("/defaultlib:"))
+    .map(name => (name.endsWith(".lib") ? `-l${name.slice(0, -4)}` : name));
+  return (
+    "prefix=${pcfiledir}/../..\nlibdir=${prefix}/lib\nincludedir=${prefix}/include\n\n" +
+    `Name: zlib\nDescription: zlib-rs ${version} (Bun src/zlib_rs), stock zlib C ABI\nVersion: 1.3.2\n` +
+    `Libs: -L\${libdir} -lz ${libraries.join(" ")}\nCflags: -I\${includedir}\n`
+  ).replace(" \n", "\n");
+}
+
+interface ZlibCargoMessage {
+  reason?: string;
+  target?: { name?: string };
+  filenames?: string[];
+  message?: { level?: string; message?: string };
+}
+
+/** Builds zlib-rs as a C static library and exercises it through fixed native C consumers. */
+export async function qualifyZlibNativeSDK(outputDirectory: string, target: MediaSDKTarget, root: string) {
+  if (![outputDirectory, root].every(isAbsolute)) throw new TypeError("Zlib qualification owners must be absolute");
+  if (mediaSDKHostTarget() !== target) throw new Error("Zlib consumer requires the native target host ABI");
+  const checkout = await realpath(root);
+  const path = relative(checkout, outputDirectory);
+  if (!path || (path !== ".." && !path.startsWith("../") && !path.startsWith("..\\") && !isAbsolute(path)))
+    throw new Error("Zlib qualification output overlaps its source checkout");
+  const provenance = await verifyZlibSDKSource(checkout);
   await mkdir(outputDirectory, { recursive: false, mode: 0o700 });
-  const provenance = await verifyZlibSDKSource({
-    source: await realpath(depSourceDir(cfg, "zlib")),
-    archive: join(cfg.cacheDir, "tarballs", `zlib-${urlHash}.tar.gz`),
-    repository: source.repo,
-    commit: source.commit,
-    patches: patchPaths,
-    fixture: join(outputDirectory, "patch-fixture"),
-  });
   const sourceReceipt = join(outputDirectory, "source-receipt.json");
   await Bun.write(sourceReceipt, JSON.stringify(provenance, null, 2) + "\n");
-  const artifacts = nativeSDKArtifacts(readManifest(await Bun.file(ninjaFile).text()), "zlib");
-  const libraries = await Promise.all(artifacts.map(file => containedFile(build, resolve(build, file))));
-  const hashes = await Promise.all(libraries.map(hashSDKFile));
-  const include = dependency.provides(cfg).includes.map(path => resolve(depSourceDir(cfg, "zlib"), path));
-  const headers: string[] = [];
-  for (const directory of include)
-    for (const name of ["zlib.h", "zconf.h", "zlib_name_mangling.h"])
-      if (await Bun.file(join(directory, name)).exists()) headers.push(join(directory, name));
-  const headerHashes = await Promise.all(headers.map(hashSDKFile));
-  const consumer = join(outputDirectory, "zlib-consumer.c"),
-    executable = join(outputDirectory, cfg.windows ? "zlib-consumer.exe" : "zlib-consumer");
-  const consumerEvidence = await qualifyZlibConsumers({
-    windows: cfg.windows,
-    arch: cfg.arch,
-    cc: cfg.cc,
-    flags: [...computeDepFlags(cfg).cflags, ...computeDepPICFlags(cfg, specification.pic)],
-    includes: include,
-    libraries,
-    consumer,
-    executable,
-  });
-  const sourceTree = await mediaSourceTree(depSourceDir(cfg, "zlib"));
-  if (
-    sourceTree.sourceTreeSHA256 !== provenance.sourceTreeSHA256 ||
-    JSON.stringify(await Promise.all(libraries.map(hashSDKFile))) !== JSON.stringify(hashes) ||
-    JSON.stringify(await Promise.all(headers.map(hashSDKFile))) !== JSON.stringify(headerHashes) ||
-    (await hashSDKFile(configureFile)) !== configureSHA256 ||
-    (await hashSDKFile(ninjaFile)) !== ninjaSHA256 ||
-    (await Promise.all(consumerEvidence.map(({ path }) => hashSDKFile(path)))).some(
-      (hash, i) => hash !== consumerEvidence[i]!.sha256,
-    ) ||
-    (await Promise.all(patchPaths.map(hashSDKFile))).some((hash, i) => hash !== provenance.patches[i]!.sha256)
+  const { mediaBuildTarget } = await import("./media-sdk-build");
+  const selected = mediaBuildTarget(target);
+  const windows = selected.platform === "win32";
+  const native = zlibNativeCommand(windows, selected.arch);
+  const cargoTarget = join(outputDirectory, "cargo");
+  const messages = (
+    await mediaSDKTool(
+      native([
+        "cargo",
+        "rustc",
+        "--package",
+        "zlib-rs",
+        "--release",
+        "--locked",
+        "--features",
+        "export-symbols",
+        "--crate-type",
+        "staticlib",
+        "--target",
+        selected.rust,
+        "--message-format=json",
+        "--",
+        "--print",
+        "native-static-libs",
+      ]),
+      checkout,
+      1_800_000,
+      { ...process.env, CARGO_TARGET_DIR: cargoTarget, RUSTC_WRAPPER: undefined, CARGO_BUILD_RUSTC_WRAPPER: undefined },
+    )
   )
-    throw new Error("Zlib source, patches, library or build changed during qualification");
-  const gate: NativeSDKGate = {
+    .split("\n")
+    .filter(line => line.startsWith("{"))
+    .map(line => JSON.parse(line) as ZlibCargoMessage);
+  const archives = messages
+    .filter(item => item.reason === "compiler-artifact" && item.target?.name === "zlib_rs")
+    .flatMap(item => item.filenames ?? [])
+    .filter(file => /\.(?:a|lib)$/.test(file));
+  const notes = messages
+    .filter(item => item.reason === "compiler-message" && item.message?.level === "note")
+    .map(item => item.message!.message ?? "")
+    .filter(text => text.startsWith("native-static-libs:"));
+  if (archives.length !== 1 || notes.length !== 1)
+    throw new Error("Cargo did not report exactly one zlib-rs staticlib and its native libraries");
+  const archive = await containedFile(cargoTarget, archives[0]!);
+  const systemLibraries = zlibSystemLibraries(notes[0]!);
+  const prefix = join(outputDirectory, "prefix");
+  const owner = join(checkout, zlibSDKOwner);
+  const members: [string, string][] = [
+    [zlibSDKLibrary(target), archive],
+    ["include/zlib.h", join(owner, "include/zlib.h")],
+    ["include/zconf.h", join(owner, "include/zconf.h")],
+    [zlibSDKLicense, join(owner, "LICENSE")],
+  ];
+  for (const [name, file] of members) {
+    await mkdir(dirname(join(prefix, name)), { recursive: true, mode: 0o755 });
+    await Bun.write(join(prefix, name), Bun.file(file));
+  }
+  await mkdir(join(prefix, "lib/pkgconfig"), { recursive: true });
+  await Bun.write(join(prefix, "lib/pkgconfig/zlib.pc"), zlibPkgConfig(provenance.version, systemLibraries));
+  const files: Record<string, string> = {};
+  for (const name of [...members.map(([name]) => name), "lib/pkgconfig/zlib.pc"])
+    files[name] = await hashSDKFile(join(prefix, name));
+  const consumerEvidence = await qualifyZlibConsumers({
+    windows,
+    arch: selected.arch === "arm64" ? "aarch64" : "x64",
+    cc: windows ? "clang-cl" : (Bun.env.CC ?? "cc"),
+    flags: windows ? ["/nologo", "/O2", "/MD"] : ["-O2"],
+    includes: [join(prefix, "include")],
+    libraries: [join(prefix, zlibSDKLibrary(target))],
+    systemLibraries,
+    consumer: join(outputDirectory, "zlib-consumer.c"),
+    executable: join(outputDirectory, windows ? "zlib-consumer.exe" : "zlib-consumer"),
+  });
+  const changed = await Promise.all(
+    Object.entries(files).map(async ([name, sha256]) => (await hashSDKFile(join(prefix, name))) !== sha256),
+  );
+  if (
+    (await verifyZlibSDKSource(checkout)).sourceTreeSHA256 !== provenance.sourceTreeSHA256 ||
+    changed.some(Boolean) ||
+    (await Promise.all(consumerEvidence.map(({ path }) => hashSDKFile(path)))).some(
+      (sha256, i) => sha256 !== consumerEvidence[i]!.sha256,
+    )
+  )
+    throw new Error("Zlib source or SDK bytes changed during qualification");
+  const gate: ZlibSDKGate = {
     schema: 1,
     nativeLink: "passed",
     runtimeQualification: "native-tests-passed",
-    configureSHA256,
-    ninjaSHA256,
     sourceReceiptSHA256: await hashSDKFile(sourceReceipt),
     evidence: consumerEvidence.map(({ kind, sha256 }) => `${kind}:${sha256}`),
   };
-  const gateFile = join(outputDirectory, "native-gate.json");
-  await Bun.write(gateFile, JSON.stringify(gate, null, 2) + "\n");
-  const packaged = await packageNativeSDK("zlib", build, join(outputDirectory, "package"), gateFile);
-  if (
-    JSON.stringify(await Promise.all(libraries.map(hashSDKFile))) !== JSON.stringify(hashes) ||
-    JSON.stringify(await Promise.all(headers.map(hashSDKFile))) !== JSON.stringify(headerHashes)
-  )
-    throw new Error("Zlib consumer inputs changed during SDK packaging");
-  const prefix = join(outputDirectory, "prefix");
-  await mkdir(prefix, { recursive: false, mode: 0o700 });
-  const { extractMediaSDKArchive } = await import("../../packages/bun-video/src/sdk");
-  await extractMediaSDKArchive(packaged.output, prefix);
+  const receipt = {
+    schema: 1,
+    kind: "native-sdk",
+    component: "zlib",
+    package: "zlib-rs",
+    version: provenance.version,
+    zlibVersion: provenance.zlibVersion,
+    sourceRepository: zlibSDKRepository,
+    sourceRevision: provenance.revision,
+    sourceOwner: zlibSDKOwner,
+    sourceTree: provenance.gitTree,
+    sourceTreeSHA256: provenance.sourceTreeSHA256,
+    consumer: "aphrody-bun",
+    target,
+    rustTarget: selected.rust,
+    includes: ["include"],
+    libraries: [zlibSDKLibrary(target)],
+    systemLibraries,
+    licenses: [zlibSDKLicense],
+    files,
+    gate,
+    sourceReceiptSHA256: gate.sourceReceiptSHA256,
+    qualification: gate.runtimeQualification,
+  };
+  await Bun.write(join(prefix, "bun-native-sdk.json"), JSON.stringify(receipt, null, 2) + "\n");
   const { validateMediaDependencyReceipt } = await import("./media-sdk-build");
-  validateMediaDependencyReceipt(await Bun.file(join(prefix, "bun-native-sdk.json")).json(), "zlib-ng", target);
+  validateMediaDependencyReceipt(await Bun.file(join(prefix, "bun-native-sdk.json")).json(), "zlib", target);
   return { prefix, sourceReceiptSHA256: gate.sourceReceiptSHA256 };
+}
+
+function zlibNativeCommand(windows: boolean, arch: string) {
+  const toolset = Bun.env.BUN_MSVC_TOOLSET ? ["--toolset", Bun.env.BUN_MSVC_TOOLSET] : [];
+  return (argv: string[]) =>
+    windows
+      ? [process.execPath, "msvc", "exec", "--arch", arch === "aarch64" ? "arm64" : arch, ...toolset, "--", ...argv]
+      : argv;
 }
 
 interface ZlibConsumerInput {
@@ -341,6 +292,7 @@ interface ZlibConsumerInput {
   flags: string[];
   includes: string[];
   libraries: string[];
+  systemLibraries: string[];
   consumer: string;
   executable: string;
 }
@@ -351,7 +303,7 @@ export async function qualifyZlibConsumers(input: ZlibConsumerInput) {
   await Bun.write(input.consumer, zlibConsumer);
   const files: [string, string][] = [["source", input.consumer]];
   // Windows keeps its MSVC executable gate; this shared-link gate qualifies Linux only.
-  if (!input.windows) {
+  if (!input.windows && process.platform === "linux") {
     const shared = zlibSharedConsumerCommands(input);
     await Bun.write(shared.driver, zlibSharedDriver);
     await mediaSDKTool(shared.compile, directory);
@@ -383,6 +335,7 @@ export async function qualifyZlibConsumers(input: ZlibConsumerInput) {
   if (
     (await hashSDKFile(input.consumer)) !== new Bun.CryptoHasher("sha256").update(zlibConsumer).digest("hex") ||
     (!input.windows &&
+      process.platform === "linux" &&
       (await hashSDKFile(zlibSharedConsumerCommands(input).driver)) !==
         new Bun.CryptoHasher("sha256").update(zlibSharedDriver).digest("hex"))
   )
@@ -391,10 +344,7 @@ export async function qualifyZlibConsumers(input: ZlibConsumerInput) {
 }
 
 export function zlibConsumerCommands(input: ZlibConsumerInput) {
-  const native = (argv: string[]) =>
-    input.windows
-      ? [process.execPath, "msvc", "exec", "--arch", input.arch === "aarch64" ? "arm64" : "x64", "--", ...argv]
-      : argv;
+  const native = zlibNativeCommand(input.windows, input.arch);
   return {
     compile: native([
       input.cc,
@@ -403,21 +353,14 @@ export function zlibConsumerCommands(input: ZlibConsumerInput) {
       input.consumer,
       ...input.libraries,
       ...(input.windows
-        ? [`/Fe:${input.executable}`]
-        : [
-            "-fuse-ld=lld",
-            // Match the dependency objects' explicitly non-PIE code model.
-            ...(input.flags.includes("-fno-pie") ? ["-Wl,-no-pie"] : []),
-            "-lm",
-            "-o",
-            input.executable,
-          ]),
+        ? [`/Fe:${input.executable}`, "/link", ...input.systemLibraries]
+        : [...input.systemLibraries, "-o", input.executable]),
     ]),
     execute: native([input.executable]),
   };
 }
 
-/** Exercise the same roundtrip from an ELF shared library, not just a non-PIE executable. */
+/** Exercise the same roundtrip from an ELF shared library, not just an executable. */
 export function zlibSharedConsumerCommands(input: ZlibConsumerInput) {
   if (input.windows) throw new Error("The shared zlib consumer gate requires a native Linux target");
   const directory = dirname(input.executable),
@@ -435,15 +378,14 @@ export function zlibSharedConsumerCommands(input: ZlibConsumerInput) {
       "-DBUN_ZLIB_SHARED_CONSUMER",
       input.consumer,
       ...input.libraries,
-      "-fuse-ld=lld",
       "-shared",
       "-Wl,-z,defs",
       "-Wl,-soname,libzlib-consumer.so",
-      "-lm",
+      ...input.systemLibraries,
       "-o",
       library,
     ],
-    link: [input.cc, ...flags, driver, library, "-fuse-ld=lld", "-Wl,-rpath,$ORIGIN", "-o", executable],
+    link: [input.cc, ...flags, driver, library, "-Wl,-rpath,$ORIGIN", "-o", executable],
     execute: [executable],
   };
 }

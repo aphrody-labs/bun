@@ -58,14 +58,6 @@
       "visibility": "PUBLIC"
     },
     {
-      "repo": "ebiggers/libdeflate",
-      "kind": "github-archive",
-      "ref": "92e6a0db9fa848d742f9eb286c92afc60f2c3dda",
-      "usedBy": ["build", "scripts/build/deps/libdeflate.ts"],
-      "internal": false,
-      "visibility": "PUBLIC"
-    },
-    {
       "repo": "libjpeg-turbo/libjpeg-turbo",
       "kind": "github-archive",
       "ref": "c85e6b905bf237038faa936dab160ebfc5da0344",
@@ -202,7 +194,7 @@
     {
       "repo": "aphrody-labs/WebKit",
       "kind": "prebuilt",
-      "ref": "autobuild-3d3257150c40a1aabdc5f8b48d5b33d0413674cb",
+      "ref": "autobuild-b1e30d08cb1428688c5f24109fe4f534096ee2ad",
       "usedBy": ["build", "scripts/build/deps/webkit.ts"],
       "note": "release assets bun-webkit-<os>-<arch>[-musl][-debug|-lto][-asan].tar.gz when published for this sha",
       "internal": true,
@@ -211,19 +203,18 @@
     {
       "repo": "oven-sh/WebKit",
       "kind": "prebuilt",
-      "ref": "autobuild-3d3257150c40a1aabdc5f8b48d5b33d0413674cb",
+      "ref": "autobuild-b1e30d08cb1428688c5f24109fe4f534096ee2ad",
       "usedBy": ["build", "scripts/build/deps/webkit.ts"],
       "note": "fallback for the prebuilts aphrody-labs/WebKit does not publish",
       "internal": false,
       "visibility": "PUBLIC"
     },
     {
-      "repo": "zlib-ng/zlib-ng",
-      "kind": "github-archive",
-      "ref": "12731092979c6d07f42da27da673a9f6c7b13586",
+      "repo": "src/zlib_rs/include",
+      "kind": "in-tree",
+      "ref": "checkout",
       "usedBy": ["build", "scripts/build/deps/zlib.ts"],
-      "internal": false,
-      "visibility": "PUBLIC"
+      "internal": false
     },
     {
       "repo": "facebook/zstd",
@@ -270,30 +261,6 @@
       "visibility": "PUBLIC"
     },
     {
-      "repo": "aphrody-labs/aphrody",
-      "kind": "cargo-git",
-      "ref": "4b83ea7f6c2727d67c30d4942501e5b831e559dd",
-      "usedBy": ["packages/bun-google/aphrody/Cargo.toml"],
-      "internal": true,
-      "visibility": "PRIVATE"
-    },
-    {
-      "repo": "aphrody-labs/aphrody",
-      "kind": "cargo-git",
-      "ref": "c58e93d6dc1b4b2d420c3c929a40c67dd071d2f4",
-      "usedBy": ["packages/bun-python-native/Cargo.toml"],
-      "internal": true,
-      "visibility": "PRIVATE"
-    },
-    {
-      "repo": "aphrody-labs/pyo3",
-      "kind": "cargo-git",
-      "ref": "451d99fdcdcddf159e8e0a1186960b332cdb5d7c",
-      "usedBy": ["packages/bun-python-native/Cargo.toml", "packages/bun-runtime-sdk/Cargo.toml"],
-      "internal": true,
-      "visibility": "PUBLIC"
-    },
-    {
       "repo": "aphrody-labs/filmcraft",
       "kind": "cargo-git",
       "ref": "cee1feb185e675a108f78067f71ad86a640ace3d",
@@ -316,14 +283,6 @@
       "usedBy": ["packages/bun-webview-core/Cargo.toml"],
       "internal": true,
       "visibility": "PUBLIC"
-    },
-    {
-      "repo": "aphrody-labs/aphrody",
-      "kind": "cargo-git",
-      "ref": "631434e1aa92291f417a09ee19c41056527402b4",
-      "usedBy": ["../src/bun-os/packages/bun-windows-winclean/Cargo.toml"],
-      "internal": true,
-      "visibility": "PRIVATE"
     },
     {
       "repo": "aphrody-labs/uv",

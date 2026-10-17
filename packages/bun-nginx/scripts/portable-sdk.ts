@@ -199,7 +199,8 @@ export async function finalizeSDK(output: string, zlibPrefix: string) {
       join(zlibPrefix, "include/zlib.h"),
       join(zlibPrefix, "include/zconf.h"),
       join(zlibPrefix, "lib/libz.a"),
-      join(zlibPrefix, "share/licenses/zlib-ng/LICENSE.md"),
+      join(zlibPrefix, "share/licenses/zlib-rs/LICENSE"),
+      join(zlibPrefix, "bun-native-sdk.json"),
     ].map(record),
   );
   const compatibilityObject = join(prefix, "lib/bun-glibc-compat.o");
@@ -233,11 +234,7 @@ export async function finalizeSDK(output: string, zlibPrefix: string) {
         cmake: await record(join(boringssl, "CMakeLists.txt")),
         hooksRequired: false,
       },
-      zlib: {
-        source: join(repository, "vendor/zlib"),
-        revision: "12731092979c6d07f42da27da673a9f6c7b13586",
-        cmake: await record(join(repository, "vendor/zlib/CMakeLists.txt")),
-      },
+      zlib: await Bun.file(join(zlibPrefix, "bun-native-sdk.json")).json(),
       compatibility: {
         source: await record(join(repository, "src/jsc/bindings/workaround-missing-symbols.cpp")),
         behaviouralQualified: false,

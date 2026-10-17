@@ -63,9 +63,8 @@ if [[ $component == ffmpeg ]]; then
   verify_source ffmpeg 7e93014c5bbb61e7c22afebb478bf92f7a08d59a
   zlib=${BUN_MEDIA_ZLIB_PREFIX:?Provide the qualified zlib SDK prefix from its existing source owner}
   [[ $zlib =~ ^/[A-Za-z0-9_./+-]+$ ]]
-  zlib_pc=${BUN_MEDIA_ZLIB_PKGCONFIG:-$zlib/lib/pkgconfig}
-  [[ $zlib_pc =~ ^/[A-Za-z0-9_./+-]+$ && -f $zlib_pc/zlib.pc ]]
-  export PKG_CONFIG_LIBDIR=$zlib_pc:$prefix/lib/pkgconfig
+  [[ -f $zlib/lib/pkgconfig/zlib.pc && -f $zlib/share/licenses/zlib-rs/LICENSE ]]
+  export PKG_CONFIG_LIBDIR=$zlib/lib/pkgconfig:$prefix/lib/pkgconfig
   pkg-config --exists zlib
   zlib_cflags=$(pkg-config --cflags zlib)
   zlib_libs=$(pkg-config --static --libs zlib)
@@ -82,8 +81,7 @@ if [[ $component == ffmpeg ]]; then
   timeout 180 make install
   mkdir -p "$prefix/share/licenses/ffmpeg"
   cp "$sources/ffmpeg/"{COPYING.LGPLv2.1,COPYING.LGPLv3,LICENSE.md} "$prefix/share/licenses/ffmpeg/"
-  if [[ -d $zlib/share/licenses ]]; then cp -a "$zlib/share/licenses/"* "$prefix/share/licenses/"
-  else mkdir -p "$prefix/share/licenses/zlib-ng"; cp -a "$zlib/licenses/"* "$prefix/share/licenses/zlib-ng/"; fi
+  cp -a "$zlib/share/licenses/zlib-rs" "$prefix/share/licenses/"
 elif [[ $component == mpv ]]; then
   verify_source mpv c3ac7f39514c7f45bc38a18e66887240539ee33c
   verify_source libplacebo 1dd022687b9ac1dd996855b51433bf770ae76aab

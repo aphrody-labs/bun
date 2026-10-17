@@ -384,7 +384,7 @@ export async function runMediaSDKFactory(component: MediaSDKComponent): Promise<
       throw new Error("sdk-build-linux requires a Linux target");
     const dependencies = JSON.parse(Bun.env.BUN_MEDIA_DEPENDENCY_PREFIXES ?? "{}");
     if (ffmpegPrefix) dependencies.ffmpeg = resolve(ffmpegPrefix);
-    if (Bun.env.BUN_MEDIA_ZLIB_PREFIX) dependencies["zlib-ng"] = resolve(Bun.env.BUN_MEDIA_ZLIB_PREFIX);
+    if (Bun.env.BUN_MEDIA_ZLIB_PREFIX) dependencies.zlib = resolve(Bun.env.BUN_MEDIA_ZLIB_PREFIX);
     const input = {
       component: action === "sdk-build-avio" ? ("avio" as const) : component,
       target,

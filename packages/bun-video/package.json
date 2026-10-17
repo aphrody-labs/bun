@@ -1179,7 +1179,6 @@
     "native/src/mpv_memory.rs",
     "native/src/owned_process.rs",
     "native/src/windows_provider.rs",
-    "native/zlib/CMakeLists.txt",
     "patches/@types%2Fdom-mediacapture-transform@0.1.11.patch",
     "patches/linkedom@0.18.13.patch",
     "remotion/.aphrody/README.md",

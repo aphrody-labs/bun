@@ -191,48 +191,59 @@ test("dependency bytes, notices, native target and upstream source all stay boun
     expect(() => validateMediaDependencyReceipt({ ...receipt, ...patch }, "ffmpeg", target)).toThrow();
 });
 
-test("the existing Bun native zlib SDK supplies generated headers and an exact libc profile", () => {
+test("the zlib-rs native SDK binds its committed source, static archive, headers and notice", () => {
   const receipt = {
     schema: 1,
     kind: "native-sdk",
     component: "zlib",
-    target: "linux-x64",
+    package: "zlib-rs",
+    version: "0.6.8",
+    zlibVersion: "1.3.2.zlib-rs-0.6.8",
+    sourceRepository: "https://github.com/aphrody-labs/bun",
+    sourceRevision: "a".repeat(40),
+    sourceOwner: "src/zlib_rs",
+    sourceTree: "b".repeat(40),
     consumer: "aphrody-bun",
-    sourceIdentity: digest,
-    sourceRevision: "12731092979c6d07f42da27da673a9f6c7b13586",
-    configureSHA256: digest,
-    ninjaSHA256: digest,
-    buildABI: { os: "linux", arch: "x64", abi: "gnu" },
-    includes: ["generated"],
-    libraries: ["lib/libzlib.a"],
-    files: { "generated/zlib.h": digest, "lib/libzlib.a": digest, "licenses/LICENSE.md": digest },
-    licenses: ["licenses/LICENSE.md"],
+    target: "linux-x64",
+    includes: ["include"],
+    libraries: ["lib/libz.a"],
+    systemLibraries: ["-lpthread", "-ldl"],
+    files: {
+      "include/zlib.h": digest,
+      "include/zconf.h": digest,
+      "lib/libz.a": digest,
+      "share/licenses/zlib-rs/LICENSE": digest,
+    },
+    licenses: ["share/licenses/zlib-rs/LICENSE"],
     gate: {
       schema: 1,
       nativeLink: "passed",
       runtimeQualification: "native-tests-passed",
-      configureSHA256: digest,
-      ninjaSHA256: digest,
       sourceReceiptSHA256: digest,
-      evidence: ["native-zlib-fixture.log"],
+      evidence: ["consumer:" + digest],
     },
   };
-  expect(validateMediaDependencyReceipt(receipt, "zlib-ng", "linux-x64").files["generated/zlib.h"]).toBe(digest);
-  expect(() => validateMediaDependencyReceipt(receipt, "zlib-ng", "linux-x64-musl")).toThrow();
-  expect(() =>
-    validateMediaDependencyReceipt({ ...receipt, sourceRevision: "b".repeat(40) }, "zlib-ng", "linux-x64"),
-  ).toThrow();
-  expect(() => validateMediaDependencyReceipt({ ...receipt, includes: ["include"] }, "zlib-ng", "linux-x64")).toThrow();
-  expect(() =>
-    validateMediaDependencyReceipt({ ...receipt, libraries: ["lib/foreign.a"] }, "zlib-ng", "linux-x64"),
-  ).toThrow();
-  expect(
-    validateMediaDependencyReceipt(
-      { ...receipt, buildABI: { os: "linux", arch: "aarch64", abi: "musl" } },
-      "zlib-ng",
-      "linux-arm64-musl",
-    ).files["generated/zlib.h"],
-  ).toBe(digest);
+  expect(validateMediaDependencyReceipt(receipt, "zlib", "linux-x64").files["include/zlib.h"]).toBe(digest);
+  for (const patch of [
+    { target: "linux-x64-musl" },
+    { sourceOwner: "vendor/zlib" },
+    { sourceRevision: "main" },
+    { zlibVersion: "2.3.3" },
+    { includes: ["generated"] },
+    { libraries: ["lib/libzlib.a"] },
+    { licenses: ["share/licenses/zlib-ng/LICENSE.md"] },
+    { systemLibraries: ["-lm; rm"] },
+    { gate: { ...receipt.gate, evidence: [] } },
+  ])
+    expect(() => validateMediaDependencyReceipt({ ...receipt, ...patch }, "zlib", "linux-x64")).toThrow();
+  const windows = {
+    ...receipt,
+    target: "windows-arm64",
+    libraries: ["lib/z.lib"],
+    files: { ...receipt.files, "lib/z.lib": digest },
+  };
+  expect(validateMediaDependencyReceipt(windows, "zlib", "windows-arm64").files["lib/z.lib"]).toBe(digest);
+  expect(() => validateMediaDependencyReceipt(windows, "zlib", "windows-x64")).toThrow();
 });
 
 function macho(file: string, dependency: string, minimum = "13.0") {

@@ -19,8 +19,10 @@ BUN_MEDIA_VULKAN_HEADERS="$MEDIA_VULKAN_HEADERS" \
 ```
 
 Source roots contain the pinned FFmpeg/MPV owners and their recorded dependency
-sources. Zlib-ng reuses Bun's existing vendor at its configured pin; its static
-SDK prefix must include headers and license notices. The MPV profile builds
+sources. Zlib is Bun's absorbed zlib-rs (`src/zlib_rs`), built as a C static
+library by `qualifyZlibNativeSDK` in `scripts/aphrody/native-sdk-factory.ts`;
+its prefix holds `lib/libz.a`, `include/`, `lib/pkgconfig/zlib.pc` and the
+zlib-rs notice. The MPV profile builds
 FreeType, FriBidi, HarfBuzz, libass and libplacebo with GPU backends and system
 font discovery disabled. Vulkan headers are required by libplacebo's stubs;
 this profile does not link the Vulkan loader. C++ runtime archive sections are
@@ -235,9 +237,8 @@ and GNU Make; it does not use WSL. Outputs and headers install in `build/media`.
 FFmpeg includes its built-in codecs and Windows D3D11/D3D12 acceleration;
 optional external codecs require their own dependencies.
 
-Windows media builds first compile the existing Bun `vendor/zlib` source in
-shared zlib-compatible mode. Its `zlib1.dll` accompanies the FFmpeg libraries,
-enabling PNG and the other codecs requiring zlib. `BUN_MEDIA_JOBS` limits the
+Windows media builds link the zlib-rs SDK statically (`lib/z.lib`, built from
+`src/zlib_rs`), enabling PNG and the other codecs requiring zlib. `BUN_MEDIA_JOBS` limits the
 native build's parallelism (1..16, default at most 4). Compression support is
 required explicitly, so configuration fails if this dependency cannot link.
 

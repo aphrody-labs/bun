@@ -129,7 +129,9 @@ export async function nativeAvailableMemory(
     // os.freemem() counts only never-used pages; inactive, speculative and purgeable pages are reclaimable.
     const text = await read("vm_stat");
     const size = text?.match(/page size of (\d+) bytes/)?.[1];
-    const counts = new Map([...(text ?? "").matchAll(/^Pages ([a-z ]+):\s+(\d+)\./gm)].map(m => [m[1], Number(m[2])] as const));
+    const counts = new Map(
+      [...(text ?? "").matchAll(/^Pages ([a-z ]+):\s+(\d+)\./gm)].map(m => [m[1], Number(m[2])] as const),
+    );
     const pages = (label: string) => counts.get(label) ?? 0;
     if (size) {
       const reclaimable = pages("free") + pages("inactive") + pages("speculative") + pages("purgeable");
@@ -924,7 +926,7 @@ async function produce(input: WorkerInput, component: "media" | "runtime" = "med
       "packages/bun-nginx/scripts/portable-sdk.ts requires its proven focal sysroot and LLVM owner paths",
     );
   const nginxZlib = process.env.BUN_NGINX_ZLIB_PREFIX ?? prefix;
-  for (const name of ["lib/libz.a", "include/zlib.h", "include/zconf.h", "share/licenses/zlib-ng/LICENSE.md"])
+  for (const name of ["lib/libz.a", "include/zlib.h", "include/zconf.h", "share/licenses/zlib-rs/LICENSE"])
     if (!(await Bun.file(join(nginxZlib, name)).exists()))
       throw new Error(`Canonical NGINX zlib SDK prerequisite absent: ${name}; supply the qualified SDK owner prefix`);
   const nginxOwner = join(input.root, "build/native-ci-nginx", input.target);
@@ -1012,7 +1014,7 @@ async function produce(input: WorkerInput, component: "media" | "runtime" = "med
   for (const [name, path] of [
     ["boringssl/LICENSE", join(nginxOwner, "dependencies/prefix/share/licenses/boringssl/LICENSE")],
     ["pcre2/copyright", join(nginxOwner, "dependencies/prefix/usr/share/doc/libpcre2-dev/copyright")],
-    ["zlib-ng/LICENSE.md", join(nginxZlib, "share/licenses/zlib-ng/LICENSE.md")],
+    ["zlib-rs/LICENSE", join(nginxZlib, "share/licenses/zlib-rs/LICENSE")],
     ["gcc-runtime/copyright", join(sysroot!, "usr/share/doc/gcc-13-base/copyright")],
     ["libcrypt/copyright", join(sysroot!, "usr/share/doc/libcrypt1/copyright")],
   ] as const)
@@ -1176,7 +1178,11 @@ async function produceMusl(input: WorkerInput, diagnostics: string, component: "
   await mkdir(dirname(binary), { recursive: true });
   // The host bootstrap may predate zip support in Bun.Archive; unzip is on every runner.
   const extracted = join(input.output, "musl-bootstrap");
-  await command(["unzip", "-o", "-q", archive, "-d", extracted], input.root, join(diagnostics, "native-musl-unzip.log"));
+  await command(
+    ["unzip", "-o", "-q", archive, "-d", extracted],
+    input.root,
+    join(diagnostics, "native-musl-unzip.log"),
+  );
   const member = Bun.file(join(extracted, `bun-${input.target}`, "bun"));
   if (!(await member.exists())) throw new Error("Pinned musl bootstrap has no matching native Bun member");
   await Bun.write(binary, member);
@@ -1351,7 +1357,6 @@ async function bootstrapWorkerMedia(input: WorkerInput) {
     sources: snapshot.sources,
     output: join(input.output, "media-bootstrap"),
     target: target.sdkTarget as MediaSDKTarget,
-    zlibBuild: preparation.buildDir,
   });
   if ((await hashSDKFile(runtime)) !== preparation.runtimeSHA256)
     throw new Error("Candidate changed during SDK bootstrap");

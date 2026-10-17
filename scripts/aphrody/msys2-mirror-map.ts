@@ -229,7 +229,11 @@ const MINGW_TOOLCHAIN: Equivalent[] = [
 ];
 
 const W = (path: string): Equivalent => ({ kind: "windows", path });
-const B = (file: string, pattern?: string): Equivalent => ({ kind: "bun", file, pattern });
+const B = (file: string, pattern?: string): Equivalent => ({
+  kind: "bun",
+  file,
+  ...(pattern === undefined ? {} : { pattern }),
+});
 const BI = (...names: string[]): Equivalent[] => names.map(name => ({ kind: "bun-builtin", name }));
 
 const WINDOWS: Record<string, Equivalent[]> = {
@@ -303,7 +307,7 @@ const BUN: Record<string, Equivalent[]> = {
   "bsdtar": [B("src/runtime/api/Archive.rs"), B("vendor/libarchive")],
   "tar": [B("src/runtime/api/Archive.rs")],
   "gzip": [B("src/js/node/zlib.ts")],
-  "zlib": [B("vendor/zlib")],
+  "zlib": [B("src/zlib_rs")],
   "brotli": [B("vendor/brotli")],
   "zstd": [B("vendor/zstd")],
   "libzstd": [B("vendor/zstd")],
@@ -362,7 +366,9 @@ function build(): Record<string, PackageMapping> {
       alpine.push({ kind: "aport", repo, name });
     }
     if (NA_LINUX[base]) alpine.push({ kind: "na", reason: NA_LINUX[base] });
-    out[base] = { use: USE[base] ?? "", alpine, windows: WINDOWS[base], bun: BUN[base] };
+    const windows = WINDOWS[base],
+      bun = BUN[base];
+    out[base] = { use: USE[base] ?? "", alpine, ...(windows ? { windows } : {}), ...(bun ? { bun } : {}) };
   }
   return out;
 }

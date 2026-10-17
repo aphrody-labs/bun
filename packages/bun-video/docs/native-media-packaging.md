@@ -43,11 +43,11 @@ cible minimale macOS 13. Les options LLVM/Linux restent dans
 présente ne constitue pas une qualification native de cette cible.
 
 `BUN_MEDIA_DEPENDENCY_PREFIXES` contient un objet JSON des préfixes existants,
-par exemple `{"ffmpeg":"/chemin/ffmpeg","zlib-ng":"/chemin/zlib"}`. Le reçu,
-l'ABI native, les fichiers et les licences de chaque dépendance sont vérifiés
-avant compilation. Le SDK zlib canonique de Bun garde ses en-têtes `generated/`
-et son archive `libzlib.a`/`zlib.lib` ; un petit overlay pkg-config les référence,
-sans recopier un vendor ni réimplémenter la compression. MPV réutilise les arbres
+par exemple `{"ffmpeg":"/chemin/ffmpeg","zlib":"/chemin/zlib"}`. Le reçu,
+la cible native, les fichiers et les licences de chaque dépendance sont vérifiés
+avant compilation. Le SDK zlib est zlib-rs (`src/zlib_rs`) compilé en bibliothèque
+statique C : `include/`, `lib/libz.a` ou `lib/z.lib` et un `lib/pkgconfig/zlib.pc`
+relocalisable. MPV réutilise les arbres
 source existants libplacebo, fast_float, FreeType, FriBidi, HarfBuzz et libass.
 Les pins, les hashes des arbres et les notices sont dans
 `scripts/aphrody/media-sdk-sources.json`. Les headers de stubs Vulkan et leur

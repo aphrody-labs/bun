@@ -12,7 +12,6 @@ const entry = (await new Bun.Archive(await tar.bytes()).files()).get("smoke.txt"
 console.log(
   JSON.stringify({
     zlib: same(Bun.gunzipSync(Bun.gzipSync(input))),
-    libdeflate: same(Bun.gunzipSync(Bun.gzipSync(input, { library: "libdeflate" }))),
     zstd: same(Bun.zstdDecompressSync(Bun.zstdCompressSync(input))),
     brotli: same(brotliDecompressSync(brotliCompressSync(input))),
     boringssl:

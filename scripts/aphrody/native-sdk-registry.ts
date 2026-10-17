@@ -38,7 +38,6 @@ const SMOKE = join(import.meta.dir, "native-sdk-smoke.ts");
 export const REGISTRY = "https://registry.npmjs.org";
 export const SMOKE_EXPECTED = {
   zlib: true,
-  libdeflate: true,
   zstd: true,
   brotli: true,
   boringssl: true,

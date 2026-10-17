@@ -440,7 +440,7 @@ const maxRSSSpawner = /* js */ `
 export async function runCommandMaxRSS(options: { cmd: string[]; cwd?: string; env?: NodeJS.Dict<string> }) {
   await using proc = Bun.spawn({
     cmd: [bunExe(), "-e", maxRSSSpawner, JSON.stringify(options.cmd)],
-    cwd: options.cwd,
+    ...(options.cwd === undefined ? {} : { cwd: options.cwd }),
     env: options.env ?? bunEnv,
     stdout: "pipe",
     stderr: "pipe",
@@ -2570,7 +2570,7 @@ export function integersThatNeedRounding(): [string, bigint][] {
     return ((mixed ^ (mixed >>> 14)) >>> 0) % below;
   };
   for (let i = 0; i < 600; i++) {
-    const [prefix, alphabet, longest] = prefixes[random(prefixes.length)];
+    const [prefix, alphabet, longest] = prefixes[random(prefixes.length)]!;
     let digits = "";
     for (let length = 1 + random(longest); length > 0; length--) digits += alphabet[random(alphabet.length)];
     add(prefix, digits);

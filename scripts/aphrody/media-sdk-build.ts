@@ -11,7 +11,14 @@ import {
 import { mediaSDKHostTarget } from "../../packages/bun-video/src/sdk-platform";
 import { targetFor, type HostArch, type HostPlatform } from "../../packages/bun-runtime-sdk/src/target";
 import { mediaSDKTool, mediaSourceTree, verifyMediaSourceOwner, verifyMediaVulkanOwner } from "./media-sdk-source";
-import { validateNativeSDKGate, type NativeSDKGate } from "./native-sdk-factory";
+import {
+  validateZlibSDKGate,
+  zlibSDKLibrary,
+  zlibSDKLicense,
+  zlibSDKOwner,
+  zlibSDKRepository,
+  type ZlibSDKGate,
+} from "./native-sdk-factory";
 
 export type MediaBuildComponent = MediaSDKComponent | "avio";
 export interface MediaBuildInput {
@@ -23,7 +30,7 @@ export interface MediaBuildInput {
   prefix: string;
   source?: string;
   dependencies: Partial<
-    Record<"ffmpeg" | "zlib-ng" | "libplacebo" | "freetype" | "fribidi" | "harfbuzz" | "libass", string>
+    Record<"ffmpeg" | "zlib" | "libplacebo" | "freetype" | "fribidi" | "harfbuzz" | "libass", string>
   >;
 }
 export interface MediaBuildCommand {
@@ -113,7 +120,7 @@ export function mediaBuildPlan(input: MediaBuildInput) {
   const build = join(output, "build");
   if (linux && component !== "avio" && resolve(prefix) !== resolve(output, "prefix"))
     throw new Error("Portable Linux C recipes install into OUTPUT/prefix");
-  const dependencies = component === "ffmpeg" ? (["zlib-ng"] as const) : (["ffmpeg"] as const);
+  const dependencies = component === "ffmpeg" ? (["zlib"] as const) : (["ffmpeg"] as const);
   const sourceDependencies =
     component === "mpv" ? (["libplacebo", "fast_float", "freetype", "fribidi", "harfbuzz", "libass"] as const) : [];
   const missing = dependencies
@@ -226,9 +233,9 @@ export function mediaBuildPlan(input: MediaBuildInput) {
       root,
       10_800_000,
     );
-    if (input.dependencies["zlib-ng"]) env.BUN_MEDIA_ZLIB_PREFIX = input.dependencies["zlib-ng"];
+    if (input.dependencies.zlib) env.BUN_MEDIA_ZLIB_PREFIX = input.dependencies.zlib;
   } else if (component === "ffmpeg") {
-    const zlib = input.dependencies["zlib-ng"] ?? "<qualified-zlib-prefix>";
+    const zlib = input.dependencies.zlib ?? "<qualified-zlib-prefix>";
     const flags = windows
       ? [
           "--toolchain=msvc",
@@ -404,19 +411,11 @@ export function validateMediaDependencyReceipt(value: unknown, component: string
   const r = value as Record<string, unknown>;
   const files = r.files as Record<string, unknown> | undefined,
     licenses = r.licenses;
-  const nativeZlib = component === "zlib-ng" && r.kind === "native-sdk" && r.component === "zlib";
-  const abi = r.buildABI as { os?: string; arch?: string; abi?: string } | undefined;
-  const selected = mediaBuildTarget(target);
-  const matches = nativeZlib
-    ? !!abi &&
-      abi.os === (selected.platform === "win32" ? "windows" : selected.platform) &&
-      (abi.arch === selected.arch || (selected.arch === "arm64" && abi.arch === "aarch64")) &&
-      (selected.platform !== "linux" || abi.abi === selected.abi)
-    : r.target === target;
+  mediaBuildTarget(target);
   if (
     r.schema !== 1 ||
-    (r.component !== component && !nativeZlib) ||
-    !matches ||
+    r.component !== component ||
+    r.target !== target ||
     !files ||
     typeof files !== "object" ||
     !Array.isArray(licenses) ||
@@ -444,28 +443,33 @@ export function validateMediaDependencyReceipt(value: unknown, component: string
   )
     throw new Error("Media dependency source differs from its catalogue pin");
   const qualification = r.nativeQualification as Record<string, unknown> | undefined;
-  if (nativeZlib) {
+  if (component === "zlib") {
+    const objectId = /^[a-f0-9]{40}(?:[a-f0-9]{24})?$/;
     if (
-      r.sourceRevision !== "12731092979c6d07f42da27da673a9f6c7b13586" ||
+      r.kind !== "native-sdk" ||
+      r.package !== "zlib-rs" ||
+      r.sourceRepository !== zlibSDKRepository ||
+      r.sourceOwner !== zlibSDKOwner ||
+      !objectId.test(String(r.sourceRevision)) ||
+      !objectId.test(String(r.sourceTree)) ||
       r.consumer !== "aphrody-bun" ||
-      !r.gate ||
-      !/^[a-f0-9]{64}$/.test(String(r.sourceIdentity)) ||
-      typeof r.configureSHA256 !== "string" ||
-      typeof r.ninjaSHA256 !== "string"
+      r.zlibVersion !== `1.3.2.zlib-rs-${r.version}`
     )
-      throw new Error("Canonical zlib native SDK source, ABI or gates differ");
-    validateNativeSDKGate(r.gate as NativeSDKGate, r.configureSHA256, r.ninjaSHA256);
-    const includes = r.includes,
-      libraries = r.libraries;
+      throw new Error("Canonical zlib-rs native SDK source or identity differs");
+    validateZlibSDKGate(r.gate as ZlibSDKGate);
+    const library = zlibSDKLibrary(target);
     if (
-      !Array.isArray(includes) ||
-      !includes.some(name => typeof name === "string" && Object.hasOwn(files, `${name}/zlib.h`)) ||
-      !Array.isArray(libraries) ||
-      libraries.length !== 1 ||
-      !/^(?:lib\/libzlib\.a|lib\/zlib\.lib)$/.test(String(libraries[0])) ||
-      !Object.hasOwn(files, libraries[0])
+      JSON.stringify(r.includes) !== JSON.stringify(["include"]) ||
+      !Object.hasOwn(files, "include/zlib.h") ||
+      !Object.hasOwn(files, "include/zconf.h") ||
+      JSON.stringify(r.libraries) !== JSON.stringify([library]) ||
+      !Object.hasOwn(files, library) ||
+      !licenses.includes(zlibSDKLicense) ||
+      !Array.isArray(r.systemLibraries) ||
+      r.systemLibraries.length > 32 ||
+      r.systemLibraries.some(name => typeof name !== "string" || !/^[A-Za-z0-9_.+:/-]{1,64}$/.test(name))
     )
-      throw new Error("Canonical zlib native SDK lacks its generated headers or static archive");
+      throw new Error("Canonical zlib-rs native SDK lacks its headers, static archive or notice");
   } else if (
     !qualification ||
     (qualification.status !== "pass" && qualification.passed !== true) ||
@@ -676,19 +680,6 @@ export async function runMediaBuild(input: MediaBuildInput, configureOnly = fals
   try {
     await mkdir(plan.build, { recursive: true });
     await mkdir(input.prefix, { recursive: true });
-    const zlib = verified.dependencies["zlib-ng"] as
-      | { kind?: string; includes?: string[]; libraries?: string[]; files: Record<string, string> }
-      | undefined;
-    if (zlib?.kind === "native-sdk") {
-      const base = input.dependencies["zlib-ng"]!,
-        include = zlib.includes!.find(name => Object.hasOwn(zlib.files, `${name}/zlib.h`))!;
-      const overlay = join(input.output, "dependency-pkgconfig");
-      await mkdir(overlay, { recursive: true });
-      const pc = `prefix=${base.replaceAll("\\", "/")}\nincludedir=\${prefix}/${include}\nName: zlib\nDescription: Existing qualified Bun zlib SDK\nVersion: 2.3.3\nLibs: \${prefix}/${zlib.libraries![0]}\nCflags: -I\${includedir}\n`;
-      await Bun.write(join(overlay, "zlib.pc"), pc);
-      plan.env.PKG_CONFIG_LIBDIR = `${overlay}${delimiter}${plan.env.PKG_CONFIG_LIBDIR}`;
-      plan.env.BUN_MEDIA_ZLIB_PKGCONFIG = overlay;
-    }
     for (const [index, step] of plan.commands.entries()) {
       if (configureOnly && index > 0) break;
       mediaBuildJobs(plan.env.BUN_MEDIA_JOBS, availableParallelism());
@@ -800,14 +791,10 @@ export async function runMediaBuild(input: MediaBuildInput, configureOnly = fals
           for (const [member, digest] of Object.entries(receipt.files)) {
             if (
               !member.startsWith("share/licenses/") &&
-              !member.startsWith("licenses/") &&
               !/^(?:bin|lib)\/[^/]+\.(?:dll|dylib|so(?:\.[0-9.]+)?)$/.test(member)
             )
               continue;
-            const destination = join(
-              input.prefix,
-              member.startsWith("licenses/") ? `share/licenses/${name}/${member.slice(9)}` : member,
-            );
+            const destination = join(input.prefix, member);
             if (await Bun.file(destination).exists()) {
               if ((await hashSDKFile(destination)) !== digest) throw new Error("Media dependency owners collide");
               continue;

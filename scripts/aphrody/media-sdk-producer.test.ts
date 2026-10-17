@@ -20,14 +20,13 @@ test("native media bootstrap plans reuse canonical owners without asserting nati
     root: join(root, "repo"),
     sources: join(root, "sources"),
     output: join(root, "pool"),
-    zlibBuild: join(root, "build"),
     target: "linux-x64" as const,
   };
   const plan = nativeMediaBootstrapPlan(input);
   expect(plan.components.ffmpeg.kind).toBe("source");
   if (plan.components.ffmpeg.kind !== "source" || plan.components.mpv.kind !== "source")
     throw new Error("Expected canonical source recipes");
-  expect(plan.components.ffmpeg.input.dependencies["zlib-ng"]).toBe(join(input.output, "zlib/prefix"));
+  expect(plan.components.ffmpeg.input.dependencies.zlib).toBe(join(input.output, "zlib/prefix"));
   expect(plan.components.mpv.input.dependencies.ffmpeg).toBe(join(input.output, "ffmpeg/prefix"));
   expect(plan.avio?.input.component).toBe("avio");
   expect(JSON.stringify(plan)).not.toContain("sourceClean");
@@ -43,7 +42,6 @@ test("bootstrap capacity and host guards precede all source or compiler work", a
     root: join(root, "repo"),
     sources: join(root, "sources"),
     output: join(root, "pool"),
-    zlibBuild: join(root, "build"),
     target: "linux-x64" as const,
   };
   let sourceCalls = 0;
@@ -78,7 +76,6 @@ test("bootstrap rejects unverified source owners before zlib qualification or na
         root: join(root, "repo"),
         sources: join(root, "sources"),
         output,
-        zlibBuild: join(root, "build"),
         target: "linux-x64",
       },
       {
@@ -112,7 +109,6 @@ test("bootstrap saves measured SDK archives and preserves the canonical AVIO rec
       root: join(root, "repo"),
       sources: join(root, "sources"),
       output,
-      zlibBuild: join(root, "build"),
       target: "linux-x64",
     },
     {
@@ -122,7 +118,7 @@ test("bootstrap saves measured SDK archives and preserves the canonical AVIO rec
         calls.push("sources");
         return [];
       },
-      zlib: async (_build, path) => {
+      zlib: async path => {
         calls.push("zlib");
         return { prefix: join(path, "prefix"), sourceReceiptSHA256: "a".repeat(64) };
       },

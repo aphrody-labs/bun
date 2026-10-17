@@ -4,7 +4,7 @@
     "ffmpeg": {
       "owner": "scripts/aphrody/media-sdk-build.ts",
       "sourcePins": "scripts/aphrody/media-sdk-sources.json",
-      "dependencies": ["zlib-ng"],
+      "dependencies": ["zlib"],
       "nativeSidecar": {
         "owner": "packages/bun-video/native/Cargo.toml",
         "features": ["filmcraft", "libav", "mpv"],
