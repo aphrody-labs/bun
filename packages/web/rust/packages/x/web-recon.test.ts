@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
 import { describe, expect, test } from "bun:test";
-import { nativeAvailable } from "./native-available";
 import { runXWebRecon } from "./src/tools/web-recon";
 
 describe("X recon native transport", () => {
@@ -14,7 +13,7 @@ describe("X recon native transport", () => {
     );
   });
 
-  test.skipIf(!nativeAvailable)("HTTP recon returns a native validation error for an invalid URL", async () => {
+  test("HTTP recon returns a native validation error for an invalid URL", async () => {
     const report = await runXWebRecon("http", ["invalid-url"]);
     expect(report.profile).toBe("http");
     expect(report.results["invalid-url"]?.error).toContain("url must be absolute");

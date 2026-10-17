@@ -1,17 +1,15 @@
 // SPDX-License-Identifier: Apache-2.0
 // Lectures seules sur des comptes publics (Bun, Jarred Sumner, Vercel, Node.js…) avec la session
-// locale (~/.aphrody/x-session.json). Ignoré sans session, sans lib native ou avec SKIP_NETWORK_TESTS.
+// locale (~/.aphrody/x-session.json), sans lib native (fetch Bun). Ignoré sans session ou avec
+// SKIP_NETWORK_TESTS.
 import { describe, expect, test } from "bun:test";
-import { resolveNativeLibraryPath } from "@aphrody/bun/src/library";
 import { XClient, XSession } from "./src/index";
 
 const HANDLES = ["bunjavascript", "jarredsumner", "vercel", "nodejs", "nextjs", "deno_land"];
 
 let client: XClient | undefined;
 try {
-  if (!process.env.SKIP_NETWORK_TESTS && resolveNativeLibraryPath()) {
-    client = new XClient(XSession.load());
-  }
+  if (!process.env.SKIP_NETWORK_TESTS) client = new XClient(XSession.load());
 } catch {
   client = undefined;
 }

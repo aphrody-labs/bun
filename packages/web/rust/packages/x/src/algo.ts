@@ -1,6 +1,16 @@
 // SPDX-License-Identifier: Apache-2.0
 // X ranking is implemented once in aphrody-x (module algorithm) and exposed by aphrody-ffi.
+import { resolveNativeLibraryPath } from "@aphrody/bun/src/library";
 import { webXAlgorithmRank } from "@aphrody/bun/web";
+import { rankPostsLocal } from "./core/bun-local";
+
+function nativeRankAvailable(): boolean {
+  try {
+    return resolveNativeLibraryPath() !== undefined;
+  } catch {
+    return false;
+  }
+}
 
 export interface PostCandidate {
   id: string;
@@ -37,7 +47,9 @@ export interface ScoredPost {
 /** Rank posts in the shared Rust implementation while preserving caller post shapes. */
 export function rankPosts(candidates: PostCandidate[], context: RankingContext = {}, topK = 20): ScoredPost[] {
   if (!candidates?.length) return [];
-  const ranked = webXAlgorithmRank(candidates, { ...context }, topK);
+  const ranked = nativeRankAvailable()
+    ? webXAlgorithmRank(candidates, { ...context }, topK)
+    : rankPostsLocal(candidates, { ...context }, topK);
   if (!Array.isArray(ranked)) {
     const error =
       ranked && typeof ranked === "object" && "error" in ranked

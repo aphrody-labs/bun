@@ -2,6 +2,7 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { webJobWait, webObscuraFetchSubmit } from "@aphrody/bun/web";
+import { nativeAvailable } from "../core/local";
 import { X_RECON_URLS } from "../config/x-surface";
 
 export type WebReconProfile = "static" | "fast" | "http" | "stealth" | "max";
@@ -32,7 +33,26 @@ interface NativeFetchResult {
   transport?: string;
 }
 
+/** Same result shape as the native transport, over Bun's fetch (no native library needed). */
+async function fetchBun(url: string): Promise<NativeFetchResult> {
+  if (!URL.canParse(url)) return { ok: false, error: "url must be absolute (scheme://host/...)" };
+  try {
+    const response = await fetch(url, { signal: AbortSignal.timeout(30_000), redirect: "follow" });
+    return {
+      ok: response.ok,
+      url: response.url,
+      status: response.status,
+      headers: Object.fromEntries(response.headers),
+      body: await response.text(),
+      transport: "bun-fetch",
+    };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) };
+  }
+}
+
 async function fetchNative(url: string): Promise<NativeFetchResult> {
+  if (!nativeAvailable()) return fetchBun(url);
   const id = webObscuraFetchSubmit(url, false, 30_000);
   if (!id) throw new Error("native Obscura fetch did not create a job");
   return JSON.parse(await webJobWait(id, 35_000)) as NativeFetchResult;
