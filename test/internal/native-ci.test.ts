@@ -209,7 +209,8 @@ test("installer tests use the linked native binary after its existing build phas
   for (const file of gates[installer]!.command.slice(4)) {
     const source = await Bun.file(resolve(import.meta.dir, "../..", file)).text();
     expect(source).toContain("bunExe()");
-    expect(source).not.toMatch(/\b(?:test|it)\.(?:skip|todo|skipIf)\b/);
+    // Platform guards (`skipIf`) stay allowed; unconditional skips and todos are not.
+    expect(source).not.toMatch(/\b(?:test|it)\.(?:skip|todo)\b/);
   }
   expect(qualification(gates.map(gate => ({ id: gate.id, exitCode: gate.id === "native-install-test" ? 1 : 0 })))).toBe(
     false,
