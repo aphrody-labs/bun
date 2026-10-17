@@ -1,10 +1,10 @@
 [package]
 name = "librio"
-version.workspace = true
-authors.workspace = true
-edition.workspace = true
-license.workspace = true
-keywords.workspace = true
+version = "0.5.28"
+authors = ["Raphael Amorim <rapha850@gmail.com>"]
+edition = "2021"
+license = "MIT"
+keywords = ["graphics", "terminal", "application"]
 repository = "https://github.com/raphamorim/rio"
 description = "Embeddable terminal core extracted from Rio: PTY, VT state, render-state pull API, exposed as a C ABI"
 readme = "README.md"
@@ -15,15 +15,15 @@ crate-type = ["rlib", "staticlib"]
 
 [dependencies]
 rio-vt = { path = "../rio-vt", version = "0.5.0", default-features = false }
-rio-fonts = { workspace = true, features = ["symbols-nerd-font"] }
-rio-graphics = { workspace = true }
-rustc-hash = { workspace = true }
-bitflags = { workspace = true }
-tracing = { workspace = true }
+rio-fonts = { path = "../rio-fonts", version = "0.5.28", features = ["symbols-nerd-font"] }
+rio-graphics = { path = "../rio-graphics", version = "0.5.28" }
+rustc-hash = { version = "2.1.3" }
+bitflags = { version = "2.9.0" }
+tracing = { version = "0.1.41" }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-teletypewriter = { workspace = true, optional = true }
-corcovado = { workspace = true, optional = true }
+teletypewriter = { path = "../teletypewriter", version = "0.5.28", optional = true }
+corcovado = { path = "../corcovado", version = "0.5.28", optional = true }
 
 [features]
 # PTY on by default: surfaces spawn a shell and pump it on an IO thread.
@@ -37,3 +37,5 @@ pty = ["rio-vt/pty", "dep:teletypewriter", "dep:corcovado"]
 # machinery are most of the binary, and the protocol paths still parse
 # without them; only pixel decode is stubbed out.
 graphics = ["rio-vt/graphics"]
+
+[lints]

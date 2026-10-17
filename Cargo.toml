@@ -3,6 +3,22 @@
 # toolchain can build); feature unification is unchanged.
 resolver = "3"
 members = [
+  "src/rio/sugarloaf",
+  "src/rio/teletypewriter",
+  "src/rio/corcovado",
+  "src/rio/rio-graphics",
+  "src/rio/rio-fonts",
+  "src/rio/rio-vt",
+  "src/rio/rio-backend",
+  "src/rio/rio-grapheme-width",
+  "src/rio/rio-unicode",
+  "src/rio/rio-window",
+  "src/rio/rio-notifier",
+  "src/rio/rio-grid",
+  "src/rio/frontends/rioterm",
+  "src/rio/librio",
+  "src/rio/librio-wasm",
+  "src/rio/libsugarloaf",
   "crates/aphrody-jev",
   "src/browser/crates/api",
   "src/browser/crates/browser",
@@ -257,7 +273,7 @@ members = [
 # heavy dev-dependencies (criterion, html5ever) never enter `Cargo.lock`.
 # `packages/bun-cosmic` is the libcosmic window helper of `bun:cosmic`: its own
 # workspace and lockfile, because libcosmic is a git dependency.
-exclude = ["vendor", "packages/bun-cosmic", "packages/bun-dotnet-native", "packages/bun-native-plugin-rs", "packages/bun-video/native", "src/rio"]
+exclude = ["vendor", "packages/bun-cosmic", "packages/bun-dotnet-native", "packages/bun-native-plugin-rs", "packages/bun-video/native"]
 
 [workspace.package]
 "repository" = "https://github.com/aphrody-labs/bun"

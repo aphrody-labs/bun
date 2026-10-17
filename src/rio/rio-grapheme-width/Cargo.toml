@@ -1,10 +1,10 @@
 [package]
 name = "rio-grapheme-width"
-version.workspace = true
-authors.workspace = true
-edition.workspace = true
-license.workspace = true
-repository.workspace = true
+version = "0.5.28"
+authors = ["Raphael Amorim <rapha850@gmail.com>"]
+edition = "2021"
+license = "MIT"
+repository = "https://github.com/raphamorim/rio"
 description = "Emoji presentation and variation-sequence tables for Rio terminal. Forked from wezterm-char-props."
 
 [dependencies]
@@ -14,3 +14,5 @@ ucd-trie = { version = "0.1.7", default-features = false }
 [features]
 default = ["std"]
 std = ["ucd-trie/std", "phf/std"]
+
+[lints]

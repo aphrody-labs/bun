@@ -54,6 +54,20 @@ impl BunBrowserTransport {
     pub fn new(client: BunBrowserHttpClient) -> Self {
         Self { client }
     }
+
+    /// Scope a dedicated client before use; never replace an existing owner's interceptor.
+    pub async fn scoped(client: BunBrowserHttpClient, domains: &[String]) -> Result<Self, String> {
+        let policy = bun_browser_net::interceptor::DomainAllowlistInterceptor::new(domains)
+            .map_err(str::to_owned)?;
+        {
+            let mut interceptor = client.interceptor.write().await;
+            if interceptor.is_some() {
+                return Err("crawl scope cannot replace an existing request interceptor".into());
+            }
+            *interceptor = Some(Box::new(policy));
+        }
+        Ok(Self { client })
+    }
 }
 
 impl CrawlTransport for BunBrowserTransport {
@@ -783,6 +797,117 @@ mod tests {
     use super::*;
     use crate::FrontierOptions;
     use std::collections::HashMap;
+
+
+    async fn http_fixture(
+        response: String,
+    ) -> (
+        Url,
+        std::sync::Arc<std::sync::atomic::AtomicUsize>,
+        tokio::task::JoinHandle<()>,
+    ) {
+        use tokio::io::{AsyncReadExt, AsyncWriteExt};
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = Url::parse(&format!(
+            "http://localhost:{}/",
+            listener.local_addr().unwrap().port()
+        ))
+        .unwrap();
+        let requests = std::sync::Arc::new(std::sync::atomic::AtomicUsize::new(0));
+        let count = std::sync::Arc::clone(&requests);
+        let server = tokio::spawn(async move {
+            loop {
+                let Ok((mut stream, _)) = listener.accept().await else {
+                    break;
+                };
+                count.fetch_add(1, std::sync::atomic::Ordering::SeqCst);
+                let mut bytes = [0; 4096];
+                if stream.read(&mut bytes).await.unwrap_or(0) == 0 {
+                    continue;
+                }
+                stream.write_all(response.as_bytes()).await.unwrap();
+            }
+        });
+        (url, requests, server)
+    }
+
+    #[tokio::test]
+    async fn scoped_transport_blocks_page_robots_and_sitemap_redirects_before_target_contact() {
+        use std::sync::{Arc, atomic::Ordering};
+        let (mut forbidden, contacted, target_server) = http_fixture(
+            "HTTP/1.1 200 OK\r\nContent-Length: 0\r\nConnection: close\r\n\r\n".into(),
+        )
+        .await;
+        forbidden.set_host(Some("127.0.0.1")).unwrap();
+        let (initial, requested, source_server) = http_fixture(format!(
+            "HTTP/1.1 302 Found\r\nLocation: {forbidden}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+        )).await;
+        let client = BunBrowserHttpClient::with_full_options(
+            Arc::new(bun_browser_net::CookieJar::new()),
+            None,
+            true,
+        );
+        let transport = BunBrowserTransport::scoped(client, &["localhost".into()])
+            .await
+            .unwrap();
+        for path in ["/page", "/robots.txt", "/sitemap.xml"] {
+            let error = transport
+                .fetch(&initial.join(path).unwrap())
+                .await
+                .err()
+                .unwrap();
+            assert!(
+                error.contains("blocked"),
+                "the scope interceptor must reject the redirect"
+            );
+        }
+        tokio::task::yield_now().await;
+        assert_eq!(requested.load(Ordering::SeqCst), 3);
+        assert_eq!(contacted.load(Ordering::SeqCst), 0);
+        source_server.abort();
+        target_server.abort();
+    }
+
+    #[tokio::test]
+    async fn scoped_transport_follows_allowed_redirects_and_refuses_unknown_robot_policy() {
+        use std::sync::{Arc, atomic::Ordering};
+        let (allowed, contacted, target_server) = http_fixture(
+            "HTTP/1.1 200 OK\r\nContent-Type: text/html\r\nContent-Length: 9\r\nConnection: close\r\n\r\npermitted".into(),
+        ).await;
+        let (initial, _, source_server) = http_fixture(format!(
+            "HTTP/1.1 302 Found\r\nLocation: {allowed}\r\nContent-Length: 0\r\nConnection: close\r\n\r\n",
+        )).await;
+        let client = BunBrowserHttpClient::with_full_options(
+            Arc::new(bun_browser_net::CookieJar::new()),
+            None,
+            true,
+        );
+        let transport = BunBrowserTransport::scoped(client, &["localhost".into()])
+            .await
+            .unwrap();
+        assert_eq!(transport.fetch(&initial).await.unwrap().body, "permitted");
+        assert_eq!(contacted.load(Ordering::SeqCst), 1);
+        let mut frontier = Frontier::memory(FrontierOptions::default()).unwrap();
+        frontier
+            .enqueue(AddRequest::seed("https://example.test/"), now_ms())
+            .unwrap();
+        let report = crawl_bounded(
+            &mut frontier,
+            &Fixture(HashMap::new()),
+            &CrawlOptions {
+                allowed_domains: vec!["example.test".into()],
+                obey_robots: true,
+                ..CrawlOptions::default()
+            },
+        )
+        .await
+        .unwrap();
+        assert_eq!(report.pages.len(), 0);
+        assert_eq!(report.robots_blocked, 1);
+        assert_eq!(report.frontier.failed, 1);
+        source_server.abort();
+        target_server.abort();
+    }
 
     struct Fixture(HashMap<String, String>);
     impl CrawlTransport for Fixture {

@@ -1,10 +1,10 @@
 [package]
 name = "rio-grid"
-version.workspace = true
-authors.workspace = true
-edition.workspace = true
-license.workspace = true
-keywords.workspace = true
+version = "0.5.28"
+authors = ["Raphael Amorim <rapha850@gmail.com>"]
+edition = "2021"
+license = "MIT"
+keywords = ["graphics", "terminal", "application"]
 repository = "https://github.com/raphamorim/rio"
 description = "Translates terminal Square cells into CellBg / CellText instances for the grid GPU renderer, decoupled from any frontend via the GridPalette trait"
 readme = "README.md"
@@ -13,8 +13,10 @@ readme = "README.md"
 path = "src/lib.rs"
 
 [dependencies]
-rio-backend = { workspace = true }
-rio-unicode = { workspace = true }
-rustc-hash = { workspace = true }
-smallvec = { workspace = true }
+rio-backend = { path = "../rio-backend", version = "0.5.28" }
+rio-unicode = { path = "../rio-unicode", version = "0.5.28" }
+rustc-hash = { version = "2.1.3" }
+smallvec = { version = "1.15.2", default-features = false }
 rapidhash = { version = "4.4.1", default-features = false }
+
+[lints]

@@ -5,12 +5,12 @@ authors = [
     "Pierre Krieger <pierre.krieger1708@gmail.com>",
     "Raphael Amorim <rapha850@gmail.com>"
 ]
-version.workspace = true
-edition.workspace = true
-license.workspace = true
-keywords.workspace = true
-homepage.workspace = true
-repository.workspace = true
+version = "0.5.28"
+edition = "2021"
+license = "MIT"
+keywords = ["graphics", "terminal", "application"]
+homepage = "https://rioterm.com"
+repository = "https://github.com/raphamorim/rio"
 description = "Winit fork maintained for Rio terminal"
 
 [features]
@@ -37,11 +37,11 @@ cfg_aliases = "0.2.0"
 bindgen = "0.70.1"
 
 [dependencies]
-bitflags = { workspace = true }
+bitflags = { version = "2.9.0" }
 cursor-icon = "1.1.0"
 dpi = { version = "0.1.1" }
-raw-window-handle = { workspace = true }
-smol_str = { workspace = true }
+raw-window-handle = { version = "0.6.2", features = ["std"] }
+smol_str = { version = "0.3.2" }
 tracing = { version = "0.1.40", default-features = false }
 
 [dev-dependencies]
@@ -58,8 +58,8 @@ softbuffer = { version = "0.4.0", default-features = false, features = [
 [target.'cfg(target_os = "macos")'.dependencies]
 core-foundation = "0.10.0"
 objc2 = { version = "0.5.2", features = ["relax-sign-encoding"] }
-objc = { workspace = true }
-libc = { workspace = true }
+objc = { package = "objc-rs", version = "0.3.2" }
+libc = { version = "0.2.189" }
 core-graphics = "0.24.0"
 
 [target.'cfg(target_os = "macos")'.dependencies.objc2-foundation]
@@ -155,9 +155,9 @@ features = [
 ahash = { version = "0.8.7", features = ["no-rng"], optional = true }
 bytemuck = { version = "1.13.1", default-features = false, optional = true }
 calloop = "0.13.0"
-zbus = { workspace = true, features = ["blocking"] }
-libc = { workspace = true }
-memmap2 = { workspace = true, optional = true }
+zbus = { version = "4.4.0", features = ["blocking"] }
+libc = { version = "0.2.189" }
+memmap2 = { version = "0.9.11", optional = true }
 percent-encoding = { version = "2.0", optional = true }
 rustix = { version = "0.38.4", default-features = false, features = [
     "std",
@@ -261,3 +261,5 @@ name = "window"
 
 [[example]]
 name = "child_window"
+
+[lints]

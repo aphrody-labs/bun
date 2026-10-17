@@ -1,6 +1,6 @@
 [package]
 name = "corcovado"
-version = { workspace = true }
+version = "0.5.28"
 license = "MIT"
 edition = "2021"
 authors = ["Raphael Amorim <rapha850@gmail.com>"]
@@ -17,17 +17,17 @@ include = [
 ]
 
 [dependencies]
-tracing = { workspace = true }
+tracing = { version = "0.1.41" }
 
 [target.'cfg(unix)'.dependencies]
-libc = { workspace = true }
+libc = { version = "0.2.189" }
 
 [target.'cfg(windows)'.dependencies]
 windows-sys = "0.42.0"
 miow = "0.5.0"
 
 [dev-dependencies]
-criterion = { workspace = true }
+criterion = { version = "0.6.0", features = ["html_reports"] }
 
 [[test]]
 name = "test"
@@ -37,3 +37,5 @@ path = "test/mod.rs"
 name = "bench_poll"
 path = "benches/bench_poll.rs"
 harness = false
+
+[lints]

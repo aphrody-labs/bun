@@ -1,10 +1,10 @@
 [package]
 name = "libsugarloaf"
-version.workspace = true
-authors.workspace = true
-edition.workspace = true
-license.workspace = true
-keywords.workspace = true
+version = "0.5.28"
+authors = ["Raphael Amorim <rapha850@gmail.com>"]
+edition = "2021"
+license = "MIT"
+keywords = ["graphics", "terminal", "application"]
 repository = "https://github.com/raphamorim/rio"
 description = "Embeddable GPU renderer extracted from Rio's sugarloaf: a glyph atlas + cell-grid compositor over a host window, exposed as a C ABI"
 readme = "README.md"
@@ -18,12 +18,14 @@ crate-type = ["rlib", "staticlib"]
 # GPU-only shim. The host (a Swift/AppKit app) owns the NSView; sugarloaf
 # creates the CAMetalLayer on it and owns the atlas + present.
 [dependencies]
-sugarloaf = { workspace = true }
-raw-window-handle = { workspace = true }
+sugarloaf = { path = "../sugarloaf", version = "0.5.28" }
+raw-window-handle = { version = "0.6.2", features = ["std"] }
 # The grid-emit engine (Square cells → CellBg/CellText) and the terminal
 # core whose RenderState snapshot it consumes. rio-grid pulls rio-backend,
 # whose `crosswords` / `config::colors` / `sugarloaf` modules re-export the
 # same crates librio uses, so the snapshot types unify across the ABI.
-rio-grid = { workspace = true }
-rio-vt = { workspace = true }
+rio-grid = { path = "../rio-grid", version = "0.5.28" }
+rio-vt = { path = "../rio-vt", version = "0.5.28" }
 librio = { path = "../librio" }
+
+[lints]

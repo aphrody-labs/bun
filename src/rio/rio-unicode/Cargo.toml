@@ -1,6 +1,6 @@
 [package]
 name = "rio-unicode"
-version.workspace = true
+version = "0.5.28"
 edition = "2021"
 description = """
 Unicode tables for rio, on a single Unicode version: character width
@@ -16,3 +16,5 @@ repository = "https://github.com/raphamorim/rio"
 [dev-dependencies]
 unicode-segmentation = "1.13"
 unicode-width-16 = "0.1.0"
+
+[lints]

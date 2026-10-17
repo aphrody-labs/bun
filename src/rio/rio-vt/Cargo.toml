@@ -1,10 +1,10 @@
 [package]
 name = "rio-vt"
-version.workspace = true
-authors.workspace = true
-edition.workspace = true
-license.workspace = true
-keywords.workspace = true
+version = "0.5.28"
+authors = ["Raphael Amorim <rapha850@gmail.com>"]
+edition = "2021"
+license = "MIT"
+keywords = ["graphics", "terminal", "application"]
 repository = "https://github.com/raphamorim/rio"
 description = "Embeddable terminal core extracted from Rio: VT state machine, grid, PTY driver, selection, search"
 readme = "README.md"
@@ -13,42 +13,42 @@ readme = "README.md"
 path = "src/lib.rs"
 
 [dependencies]
-tracing = { workspace = true }
-base64 = { workspace = true }
+tracing = { version = "0.1.41" }
+base64 = { version = "0.23.0" }
 memchr = { version = "2.8.3", default-features = false }
-bitflags = { workspace = true }
-rustc-hash = { workspace = true }
-regex = { workspace = true }
-image_rs = { workspace = true, optional = true }
-parking_lot = { workspace = true }
-serde = { workspace = true }
+bitflags = { version = "2.9.0" }
+rustc-hash = { version = "2.1.3" }
+regex = { version = "1.12.3" }
+image_rs = { package = "image", version = "0.25.10", default-features = false, features = ["gif", "jpeg", "ico", "png", "pnm", "webp", "bmp", "tiff"], optional = true }
+parking_lot = { version = "0.12.5", features = ["nightly", "hardware-lock-elision"] }
+serde = { version = "1.0.228", features = ["derive"] }
 serde_json = { version = "1.0.145", optional = true }
-rio-graphics = { workspace = true }
-rio-grapheme-width = { workspace = true }
+rio-graphics = { path = "../rio-graphics", version = "0.5.28" }
+rio-grapheme-width = { path = "../rio-grapheme-width", version = "0.5.28" }
 # Width tables plus the UAX #29 grapheme segmentation used by mode 2027.
-rio-unicode = { workspace = true }
+rio-unicode = { path = "../rio-unicode", version = "0.5.28" }
 regex-automata = "0.4.16"
 cursor-icon = { version = "1.1.0", default-features = false }
-smallvec = { workspace = true }
-flate2 = { workspace = true }
+smallvec = { version = "1.15.2", default-features = false }
+flate2 = { version = "1.1.9" }
 
 # Native-only: SIMD UTF-8/base64 (scalar fallbacks on wasm), the PTY stack,
 # and the system clipboard.
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-corcovado = { workspace = true, optional = true }
-raw-window-handle = { workspace = true, optional = true }
+corcovado = { path = "../corcovado", version = "0.5.28", optional = true }
+raw-window-handle = { version = "0.6.2", features = ["std"], optional = true }
 copypasta = { version = "0.10.2", default-features = false, optional = true }
-teletypewriter = { workspace = true, optional = true }
+teletypewriter = { path = "../teletypewriter", version = "0.5.28", optional = true }
 bun_simdutf_sys = { path = "../../simdutf_sys", optional = true }
 # Optional: only pulled in when the embedder wants the app-level renderer
 # error variant (font-not-found). Off keeps rio-vt free of sugarloaf.
-sugarloaf = { workspace = true, optional = true }
+sugarloaf = { path = "../sugarloaf", version = "0.5.28", optional = true }
 # Optional windowing types (WindowId / event loop proxy). Off gives a
 # standalone `WindowId(u64)`, keeping the core free of the window layer.
-rio-window = { workspace = true, optional = true }
+rio-window = { path = "../rio-window", version = "0.5.28", default-features = false, optional = true }
 
 [target.'cfg(unix)'.dependencies]
-libc = { workspace = true }
+libc = { version = "0.2.189" }
 
 # `Instant` backed by performance.now(); std's panics on wasm32-unknown-unknown.
 [target.'cfg(target_arch = "wasm32")'.dependencies]
@@ -88,8 +88,10 @@ wayland = ["clipboard", "copypasta/wayland"]
 wgpu = ["renderer", "dep:sugarloaf", "sugarloaf/wgpu"]
 
 [dev-dependencies]
-criterion = { workspace = true }
+criterion = { version = "0.6.0", features = ["html_reports"] }
 
 [[bench]]
 name = "vt_input"
 harness = false
+
+[lints]

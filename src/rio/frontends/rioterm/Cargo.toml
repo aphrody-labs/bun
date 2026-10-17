@@ -1,16 +1,16 @@
 [package]
 name = "rioterm"
 description = "Rio terminal is a hardware-accelerated GPU terminal emulator, focusing to run in desktops and browsers."
-version.workspace = true
-authors.workspace = true
-edition.workspace = true
-license.workspace = true
-keywords.workspace = true
-rust-version.workspace = true
-repository.workspace = true
-homepage.workspace = true
-documentation.workspace = true
-readme.workspace = true
+version = "0.5.28"
+authors = ["Raphael Amorim <rapha850@gmail.com>"]
+edition = "2021"
+license = "MIT"
+keywords = ["graphics", "terminal", "application"]
+rust-version = "1.96.1"
+repository = "https://github.com/raphamorim/rio"
+homepage = "https://rioterm.com"
+documentation = "https://github.com/raphamorim/rio#readme"
+readme = "README.md"
 
 [[bin]]
 name = "rio"
@@ -18,49 +18,49 @@ path = "src/main.rs"
 
 [dependencies]
 global-hotkey = "0.8.0"
-base64 = { workspace = true }
-tracing = { workspace = true }
+base64 = { version = "0.23.0" }
+tracing = { version = "0.1.41" }
 tracing-subscriber = { version = "0.3.23", features = ["env-filter", "registry"] }
-wgpu = { workspace = true }
-rio-backend = { workspace = true }
-rio-grid = { workspace = true }
+wgpu = { version = "30.0.1" }
+rio-backend = { path = "../../rio-backend", version = "0.5.28" }
+rio-grid = { path = "../../rio-grid", version = "0.5.28" }
 
 [dev-dependencies]
 pretty_assertions = "1.4.1"
-criterion = { workspace = true }
+criterion = { version = "0.6.0", features = ["html_reports"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
-bitflags = { workspace = true }
-futures = { workspace = true }
-corcovado = { workspace = true }
-regex = { workspace = true }
-onig = { workspace = true }
-onig_sys = { workspace = true }
-raw-window-handle = { workspace = true }
+bitflags = { version = "2.9.0" }
+futures = { version = "0.3.31" }
+corcovado = { path = "../../corcovado", version = "0.5.28" }
+regex = { version = "1.12.3" }
+onig = { version = "6.5.3", default-features = false }
+onig_sys = { version = "69.9.3", default-features = false }
+raw-window-handle = { version = "0.6.2", features = ["std"] }
 clap = { version = "4.6.1", features = ["derive"] }
 dirs = "6.0.0"
 notify = "8.2.0"
-rustc-hash = { workspace = true }
+rustc-hash = { version = "2.1.3" }
 rapidhash = { version = "4.4.1", default-features = false }
-image_rs = { workspace = true }
-libc = { workspace = true }
-parking_lot = { workspace = true }
-serde = { workspace = true }
+image_rs = { package = "image", version = "0.25.10", default-features = false, features = ["gif", "jpeg", "ico", "png", "pnm", "webp", "bmp", "tiff"] }
+libc = { version = "0.2.189" }
+parking_lot = { version = "0.12.5", features = ["nightly", "hardware-lock-elision"] }
+serde = { version = "1.0.228", features = ["derive"] }
 serde_json = { version = "1.0.145", optional = true }
 taffy = { version = "0.10.1", features = ["flexbox","grid"] }
-teletypewriter = { workspace = true }
-rio-unicode = { workspace = true }
-url = { workspace = true }
-smallvec = { workspace = true }
-rio-window = { workspace = true }
+teletypewriter = { path = "../../teletypewriter", version = "0.5.28" }
+rio-unicode = { path = "../../rio-unicode", version = "0.5.28" }
+url = { version = "2.5.4" }
+smallvec = { version = "1.15.2", default-features = false }
+rio-window = { path = "../../rio-window", version = "0.5.28", default-features = false }
 lru = "0.16.0"
-rio-notifier = { workspace = true }
+rio-notifier = { path = "../../rio-notifier", version = "0.5.28" }
 
 [target.'cfg(all(not(target_os = "macos"), not(target_os = "windows")))'.dependencies]
 cpal = { version = "0.15", optional = true }
 
 [target.'cfg(target_os = "macos")'.dependencies]
-objc = { workspace = true }
+objc = { package = "objc-rs", version = "0.3.2" }
 
 [build-dependencies]
 cfg_aliases = "0.2.1"
@@ -90,16 +90,20 @@ windows-sys = { version = "0.60.2", features = [
 # GPU rendering path. Force it on for Windows builds; Linux/macOS
 # builds opt in via `--features wgpu` if they want librashader filters.
 [target.'cfg(windows)'.dependencies.sugarloaf]
-workspace = true
+path = "../../sugarloaf"
+version = "0.5.28"
 features = ["wgpu"]
 [target.'cfg(windows)'.dependencies.rio-backend]
-workspace = true
+path = "../../rio-backend"
+version = "0.5.28"
 features = ["wgpu"]
 [target.'cfg(target_arch = "wasm32")'.dependencies.sugarloaf]
-workspace = true
+path = "../../sugarloaf"
+version = "0.5.28"
 features = ["wgpu"]
 [target.'cfg(target_arch = "wasm32")'.dependencies.rio-backend]
-workspace = true
+path = "../../rio-backend"
+version = "0.5.28"
 features = ["wgpu"]
 
 [features]
@@ -137,3 +141,5 @@ assets = [
 extended-description = """\
 Rio terminal is a hardware-accelerated GPU terminal emulator, focusing to run in desktops and browsers.
 The supported platforms currently consist of BSD, Linux, MacOS and Windows."""
+
+[lints]

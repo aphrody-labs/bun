@@ -4,6 +4,7 @@
 //! Domain records retain their provenance and never imply editorial approval.
 
 mod assets;
+mod catalogue_index;
 mod consolidation;
 mod documents;
 mod runner;
@@ -22,7 +23,7 @@ pub use bun_browser_extract::dragon_ball::{
     parse_miscellaneous, parse_official_articles, parse_plate_inventory, parse_toei_episodes,
 };
 pub use consolidation::{ConsolidatedDragonBallReport, consolidate_bxc};
-pub use documents::{DragonBallDocument, CaptureReprojection, ReprojectionReport, export_bxc, materialize_documents, project_document, reproject_captures};
+pub use documents::{DragonBallDocument, CaptureReprojection, ReprojectionReport, export_bxc, materialize_documents, materialize_documents_with_catalogues, project_document, reproject_captures};
 pub use runner::{DragonBallRunOptions, DragonBallRunReport, run_dragon_ball};
 pub(crate) use runner::{TargetSnapshot, target_policy_sha256};
 pub use sources::{DragonBallPlan, DragonBallTarget, source_registry, validate_source_url};
