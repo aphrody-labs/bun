@@ -106,8 +106,8 @@ runs:
         install() {
         local tag="$1" base="https://github.com/$repo/releases/download/$1"
         rm -rf "$RUNNER_TEMP/.bun/bin"
-        curl -fsSLO --retry 5 "$base/$target.zip"
-        curl -fsSLO --retry 5 "$base/SHA256SUMS.txt"
+        curl -fsSLO --retry 5 "$base/$target.zip" || return 1
+        curl -fsSLO --retry 5 "$base/SHA256SUMS.txt" || return 1
         want=$(awk -v f="$target.zip" '$2 == f || $2 == "*" f { print $1 }' SHA256SUMS.txt)
         if command -v sha256sum >/dev/null; then got=$(sha256sum "$target.zip" | cut -d' ' -f1); else got=$(shasum -a 256 "$target.zip" | cut -d' ' -f1); fi
         [ -n "$want" ] && [ "$want" = "$got" ] || { echo "::error::checksum mismatch for $target.zip ($tag)"; exit 1; }
@@ -132,7 +132,7 @@ runs:
         # tag was not pinned, fall back to the next release instead of failing.
         selected=""
         for candidate in $tag; do
-          install "$candidate"
+          if ! install "$candidate"; then echo "::warning::$repo $candidate has no $target build"; continue; fi
           if revision=$("$RUNNER_TEMP/.bun/bin/bun" --revision 2>bootstrap-error.txt); then selected="$candidate"; break; fi
           echo "::warning::$repo $candidate ($target) does not run on this host: $(head -c 300 bootstrap-error.txt)"
         done
