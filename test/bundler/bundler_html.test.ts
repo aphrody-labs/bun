@@ -479,6 +479,37 @@ export const initNav = () => console.log('Navigation initialized');`,
     },
   });
 
+  itBundled("html/minify-whitespace", {
+    outdir: "out/",
+    minifyWhitespace: true,
+    files: {
+      "/index.html": `
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>  Hello   world </title>
+  </head>
+  <body>
+    <!-- comment -->
+    <!--! license -->
+    <p>  a   <b>bold</b> <i>it</i>  </p>
+    <pre>  keep
+   this </pre>
+    <textarea> x  y </textarea>
+    <span>inline</span>
+    <div title="a  b">x</div>
+  </body>
+</html>`,
+    },
+    entryPoints: ["/index.html"],
+    onAfterBundle(api) {
+      expect(api.readFile("out/index.html")).toBe(
+        '<!DOCTYPE html><html><head><title>Hello world</title></head><body><!--! license --><p>a <b>bold</b> <i>it</i></p><pre>  keep
+   this </pre><textarea> x  y </textarea> <span>inline</span><div title="a  b">x</div></body></html>',
+      );
+    },
+  });
+
   // Test multiple HTML entries with shared chunks
   itBundled("html/shared-chunks", {
     outdir: "out/",

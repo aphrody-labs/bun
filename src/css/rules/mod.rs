@@ -170,7 +170,7 @@ impl<R> Default for CssRuleList<R> {
 // field walk and route those fields through the `dc::*` passthroughs below.
 // Once an upstream type grows its own `deep_clone(&self, &Arena)`, swap the
 // `dc::foo(&x, bump)` call for `x.deep_clone(bump)` and delete the helper.
-mod dc {
+pub(crate) mod dc {
     use bun_alloc::Arena;
 
     /// `DeclarationBlock::deep_clone` — field-walk over both

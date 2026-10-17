@@ -332,7 +332,7 @@ pub fn attr_test(global: &JSGlobalObject, frame: &CallFrame) -> JsResult<JSValue
                 targets,
                 ..Default::default()
             };
-            stylesheet.minify(minify_options);
+            stylesheet.minify(alloc, minify_options);
 
             let result = match stylesheet.to_css(
                 alloc,

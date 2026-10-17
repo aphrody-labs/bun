@@ -2803,8 +2803,17 @@ pub struct StyleAttribute {
 }
 
 impl StyleAttribute {
-    pub fn minify(&mut self, _options: MinifyOptions) {
-        // TODO: IMPLEMENT THIS!
+    /// Merge and minify the declarations for `options.targets`, as a style rule's are.
+    pub fn minify(&mut self, arena: &Bump, options: MinifyOptions) {
+        let mut context = PropertyHandlerContext::new(arena, &options.targets, &options.unused_symbols);
+        context.context = crate::context::DeclarationContext::StyleAttribute;
+        let mut handler = DeclarationHandler::new(arena);
+        let mut important_handler = DeclarationHandler::new(arena);
+        self.declarations.minify(
+            crate::rules::dc::decl_handler_static(&mut handler),
+            crate::rules::dc::decl_handler_static(&mut important_handler),
+            &mut context,
+        );
     }
 }
 

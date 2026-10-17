@@ -388,7 +388,7 @@ fn generate_compile_result_for_html_chunk_impl<'a>(
     let contents: &[u8] = &sources[source_index as usize].contents;
     let records = import_records[source_index as usize].as_slice();
 
-    let _ = (source_index, log, minify_whitespace);
+    let _ = (source_index, log);
     let mut html_loader = HTMLLoader {
         linker: c,
         import_records: records,
@@ -456,9 +456,155 @@ fn generate_compile_result_for_html_chunk_impl<'a>(
         }
     };
 
+    // The dev server's injection offset indexes the unminified output; it never minifies.
+    let code = if minify_whitespace && !has_dev_server {
+        minify_html_whitespace(&html_loader.output)
+    } else {
+        html_loader.output
+    };
+
     CompileResult::Html {
-        code: html_loader.output.into_boxed_slice(),
+        code: code.into_boxed_slice(),
         source_index,
         script_injection_offset,
     }
+}
+
+/// Elements whose surrounding whitespace never renders, so it can be dropped.
+fn is_block_tag(name: &[u8]) -> bool {
+    const BLOCK: &[&[u8]] = &[
+        b"!doctype", b"html", b"head", b"body", b"title", b"meta", b"link", b"base", b"script", b"style",
+        b"noscript", b"template", b"div", b"p", b"ul", b"ol", b"li", b"dl", b"dt", b"dd", b"table",
+        b"thead", b"tbody", b"tfoot", b"tr", b"td", b"th", b"caption", b"colgroup", b"col", b"section",
+        b"article", b"aside", b"header", b"footer", b"nav", b"main", b"figure", b"figcaption", b"form",
+        b"fieldset", b"legend", b"h1", b"h2", b"h3", b"h4", b"h5", b"h6", b"hr", b"blockquote",
+        b"address", b"details", b"summary", b"dialog", b"option", b"optgroup", b"source", b"track", b"pre",
+    ];
+    BLOCK.iter().any(|tag| tag.eq_ignore_ascii_case(name))
+}
+
+/// Elements whose content is copied verbatim.
+fn is_raw_tag(name: &[u8]) -> bool {
+    [b"script".as_slice(), b"style", b"pre", b"textarea"].iter().any(|tag| tag.eq_ignore_ascii_case(name))
+}
+
+fn is_html_space(b: u8) -> bool {
+    matches!(b, b' ' | b'\t' | b'\n' | b'\r' | 0x0c)
+}
+
+/// Name of the tag starting at `input[0] == b'<'`, and whether it closes an element.
+/// `None` when the `<` does not start a tag (a literal `<` in text).
+fn tag_name(input: &[u8]) -> Option<(&[u8], bool)> {
+    let closing = input.get(1) == Some(&b'/');
+    let start = if closing { 2 } else { 1 };
+    let first = *input.get(start)?;
+    if !(first.is_ascii_alphabetic() || (!closing && first == b'!')) {
+        return None;
+    }
+    let len = input[start..]
+        .iter()
+        .take_while(|b| !is_html_space(**b) && **b != b'>' && **b != b'/')
+        .count();
+    Some((&input[start..start + len], closing))
+}
+
+/// End of the tag starting at `input[0] == b'<'` (index after `>`), skipping quoted attribute values.
+fn tag_end(input: &[u8]) -> usize {
+    let mut quote: Option<u8> = None;
+    for (i, &b) in input.iter().enumerate().skip(1) {
+        match quote {
+            Some(q) if b == q => quote = None,
+            Some(_) => {}
+            None if b == b'"' || b == b'\'' => quote = Some(b),
+            None if b == b'>' => return i + 1,
+            None => {}
+        }
+    }
+    input.len()
+}
+
+/// `--minify-whitespace` for an HTML chunk: drops comments (except conditional `<!--[if` and
+/// preserved `<!--!` ones), collapses whitespace runs in text to one space, and removes whitespace
+/// next to block-level tags. Tags, attribute values and the content of `<script>`, `<style>`,
+/// `<pre>` and `<textarea>` are copied unchanged.
+pub(crate) fn minify_html_whitespace(input: &[u8]) -> Vec<u8> {
+    let mut out = Vec::with_capacity(input.len());
+    let mut i = 0;
+    // Whether whitespace before the next tag or text may be dropped.
+    let mut after_block = true;
+    while i < input.len() {
+        let rest = &input[i..];
+        if rest.starts_with(b"<!--") {
+            let end = strings::index_of(&rest[4..], b"-->").map_or(rest.len(), |e| e + 7);
+            if rest.starts_with(b"<!--[if") || rest.starts_with(b"<!--!") || rest.starts_with(b"<!--<![endif") {
+                out.extend_from_slice(&rest[..end]);
+            }
+            i += end;
+            continue;
+        }
+        if rest[0] == b'<' {
+            if let Some((name, closing)) = tag_name(rest) {
+                let end = tag_end(rest);
+                out.extend_from_slice(&rest[..end]);
+                i += end;
+                after_block = is_block_tag(name);
+                if !closing && is_raw_tag(name) && !rest[..end].ends_with(b"/>") {
+                    // Copy up to the matching close tag.
+                    let mut j = i;
+                    let close = loop {
+                        let Some(k) = strings::index_of(&input[j..], b"</") else { break input.len() };
+                        let at = j + k;
+                        match tag_name(&input[at..]) {
+                            Some((close, true)) if close.eq_ignore_ascii_case(name) => break at,
+                            _ => j = at + 2,
+                        }
+                    };
+                    out.extend_from_slice(&input[i..close]);
+                    i = close;
+                }
+                continue;
+            }
+        }
+        // Text up to the next tag.
+        let mut end = i + 1;
+        loop {
+            match strings::index_of_char_usize(&input[end..], b'<') {
+                Some(k) if tag_name(&input[end + k..]).is_some() || input[end + k..].starts_with(b"<!--") => {
+                    end += k;
+                    break;
+                }
+                Some(k) => end += k + 1,
+                None => {
+                    end = input.len();
+                    break;
+                }
+            }
+        }
+        let text = &input[i..end];
+        let before_block = end == input.len()
+            || input[end..].starts_with(b"<!--")
+            || tag_name(&input[end..]).is_some_and(|(name, _)| is_block_tag(name));
+        let mut pending_space = false;
+        let mut wrote = false;
+        for &b in text {
+            if is_html_space(b) {
+                pending_space = true;
+                continue;
+            }
+            if pending_space && (wrote || !after_block) {
+                out.push(b' ');
+            }
+            pending_space = false;
+            out.push(b);
+            wrote = true;
+        }
+        if pending_space && !before_block && (wrote || !after_block) {
+            out.push(b' ');
+        }
+        if wrote || pending_space {
+            after_block = false;
+        }
+        i = end;
+    }
+    out
 }
