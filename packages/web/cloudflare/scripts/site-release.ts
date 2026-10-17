@@ -22,11 +22,10 @@ export async function releaseSite(options: {
 }) {
   const app = resolve(import.meta.dir, "..");
   const site = await Bun.file(join(options.assets, "site.json")).json();
-  if (!/^[a-f0-9]{40}$/.test(site.commit) || !site.home?.provenance?.sha256)
-    throw new Error("Expected a source-qualified native homepage");
-  const provenance = await Bun.file(join(options.assets, "home-provenance.json")).bytes();
-  if (new Bun.CryptoHasher("sha256").update(provenance).digest("hex") !== site.home.provenance.sha256)
-    throw new Error("Homepage provenance differs");
+  if (!/^[a-f0-9]{40}$/.test(site.commit)) throw new Error("Expected a source-pinned site build");
+  const home = Bun.file(join(options.assets, "index.html"));
+  if (home.size < 1) throw new Error("Expected a generated homepage");
+  const homepageSHA256 = new Bun.CryptoHasher("sha256").update(await home.bytes()).digest("hex");
   await prepareAssets(options.assets);
   const env: Record<string, string> = { ...parseEnv(await Bun.file(envFile()).text()), WRANGLER_SEND_METRICS: "false" };
   if (!env.CLOUDFLARE_ACCOUNT_ID || !env.CLOUDFLARE_API_TOKEN) throw new Error("Cloudflare credentials unavailable");
@@ -73,7 +72,7 @@ export async function releaseSite(options: {
     schema: 1,
     date: new Date().toISOString(),
     source: site.commit,
-    homepageSHA256: site.home.provenance.sha256,
+    homepageSHA256,
     dryRun: !!options.dryRun,
     secretsViaStdin: !options.dryRun,
     existingApplicationSecretPreserved: true,

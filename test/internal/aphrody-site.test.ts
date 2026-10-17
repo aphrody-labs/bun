@@ -256,7 +256,9 @@ describe("site build helpers", () => {
       musl: true,
       baseline: true,
       profile: false,
+      format: "zip",
     });
+    expect(describeAsset("bun-windows-x64.exe")).toMatchObject({ os: "windows", format: "exe" });
     expect(describeAsset("SHA256SUMS.txt")).toBeNull();
     const sum = "a".repeat(64);
     expect(
@@ -316,7 +318,8 @@ describe("site build helpers", () => {
     expect(read("robots.txt")).toContain("Sitemap: https://aphrody.test/sitemap.xml");
     expect(JSON.parse(read("docs/search.json")).length).toBeGreaterThanOrEqual(2);
     expect(read("benchmarks/index.html")).toContain("perf-gate.ts");
-    expect(read("blog/index.html")).toContain("url=/release-notes");
+    expect(existsSync(join(out, "blog"))).toBe(false);
+    expect(existsSync(join(out, "guides"))).toBe(false);
     expect(existsSync(join(out, "components"))).toBe(false);
     expect(read("favicon.ico")).toBe("ico");
     expect(JSON.parse(read("site.webmanifest"))).toEqual({
@@ -345,7 +348,6 @@ describe("site build helpers", () => {
       "404.html",
       "downloads/index.html",
       "release-notes/index.html",
-      "blog/index.html",
       "assets/site.css",
       "site.json",
     ])
@@ -637,10 +639,10 @@ describe("runtime site", () => {
     expect(pages.map(p => p.path)).toEqual(["/", "/runtime"]);
     const home = pages[0]!;
     expect(home.title).toBe("Aphrody Bun");
-    expect(home.markdown).toContain("## Patches");
-    expect(home.markdown).toContain("(https://github.com/aphrody-labs/bun/blob/" + sha("a") + "/src/js/dotenv.ts)");
-    expect(home.markdown).toContain("[install](/docs/installation)");
+    expect(home.markdown).toContain("curl -fsSL https://bun.aphrody.test/install | bash");
+    expect(home.markdown).toContain("## Current versions");
     expect(home.markdown).toContain("@aphrody/bun-runtime");
+    expect(home.markdown).not.toContain("## Patches");
     expect(home.markdown).not.toContain("Cargo workspace");
   });
 
@@ -671,10 +673,11 @@ describe("runtime site", () => {
     const index = read("index.html");
     expect(index).toContain("<title>Aphrody Bun</title>");
     expect(index).toContain('<span class="mark">Bun</span>');
-    expect(index).toContain("The Bun runtime of Aphrody");
+    expect(index).toContain("<h1>Bun OS</h1>");
     expect(index).toContain("curl -fsSL https://bun.aphrody.test/install | bash");
-    expect(index).toContain("npm install -g @aphrody/bun-runtime");
-    expect(index).toContain('<a href="/runtime">Runtime</a>');
+    expect(index).toContain('<a href="/runtime">Source</a>');
+    expect(index).toContain('<meta property="og:url" content="https://bun.aphrody.test/">');
+    expect(index).not.toMatch(/bun\.com|bunjavascript/);
     expect(index).not.toContain('href="/components"');
     expect(index).toContain('href="https://github.com/aphrody-labs/bun"');
     expect(index).toContain('aria-labelledby="bun-video"');

@@ -2,17 +2,13 @@ import { mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { homedir } from "node:os";
 import { isAbsolute, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
-import { regenerate, refreshManifest } from "../../../scripts/aphrody/release-surfaces";
-import { applyEditorialPublication } from "./build";
-import { generateEditorial } from "./editorial-generate";
-import { verifyProduction } from "./verify-production";
+import { regenerate } from "../../../scripts/aphrody/release-surfaces";
 import { readProtected, releaseSite } from "../cloudflare/scripts/site-release";
-import { publicRuntimeHomeFact } from "./upstream-home";
+import { publicRuntimeHomeFact } from "./runtime-facts";
 import { publishSiteSnapshotFromFile } from "./site-neon-publish";
 
 export type SiteSyncConfig = {
   checkout: string;
-  captureRoot: string;
   runtimeFactFiles: string[];
   buildRoot: string;
   ownerConnectionFile: string;
@@ -21,15 +17,12 @@ export type SiteSyncConfig = {
   sourceRemote?: string;
   /** Explicit documentation-only publication; empty runtime evidence stays visibly unqualified. */
   allowUnqualifiedRuntime?: boolean;
-  /** Source-derived editorial drafts with structured Jev; never a free-text model fallback. */
-  editorial?: boolean;
 };
 const hash = (bytes: Uint8Array | string) => new Bun.CryptoHasher("sha256").update(bytes).digest("hex");
 
 export function validateSiteSyncConfig(value: SiteSyncConfig): void {
-  for (const field of ["allowUnqualifiedRuntime", "editorial"] as const)
-    if (value[field] !== undefined && typeof value[field] !== "boolean")
-      throw new TypeError("Site synchronization modes must be booleans");
+  if (value.allowUnqualifiedRuntime !== undefined && typeof value.allowUnqualifiedRuntime !== "boolean")
+    throw new TypeError("Site synchronization modes must be booleans");
   if (
     value.sourceRemote !== undefined &&
     (typeof value.sourceRemote !== "string" || !/^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$/.test(value.sourceRemote))
@@ -37,7 +30,6 @@ export function validateSiteSyncConfig(value: SiteSyncConfig): void {
     throw new TypeError("Site source remote reference is invalid");
   for (const field of [
     "checkout",
-    "captureRoot",
     "buildRoot",
     "ownerConnectionFile",
     "readerConnectionFile",
@@ -58,7 +50,6 @@ export function validateSiteSyncConfig(value: SiteSyncConfig): void {
 /** Public input identity includes actual receipt bytes, without exposing local references. */
 export async function siteSyncInputs(config: SiteSyncConfig) {
   validateSiteSyncConfig(config);
-  const capture = await Bun.file(join(config.captureRoot, "manifest.json")).bytes();
   const runtime: { target: string; source: string; sha256: string }[] = [];
   for (const path of config.runtimeFactFiles) {
     const file = Bun.file(path);
@@ -71,9 +62,7 @@ export async function siteSyncInputs(config: SiteSyncConfig) {
   }
   runtime.sort((a, b) => a.target.localeCompare(b.target));
   const inputs = {
-    captureSHA256: hash(capture),
     runtime,
-    ...(config.editorial ? { editorial: "source-derived-bun:yolo-v1" } : {}),
     ...(config.allowUnqualifiedRuntime ? { runtimeQualification: "explicitly-pending" } : {}),
   };
   return { ...inputs, sha256: hash(JSON.stringify(inputs)) };
@@ -122,11 +111,11 @@ async function freshnessJson(response: Response): Promise<Record<string, unknown
 
 /** A saved source receipt alone cannot qualify the current database and public routes. */
 export async function siteSyncFreshness(
-  config: Pick<SiteSyncConfig, "buildRoot" | "editorial">,
+  config: Pick<SiteSyncConfig, "buildRoot">,
   source: string,
   evidence: string,
   origin = "https://aphrody.app",
-): Promise<{ fresh: boolean; production?: Awaited<ReturnType<typeof verifyProduction>> }> {
+): Promise<{ fresh: boolean }> {
   try {
     const file = Bun.file(join(config.buildRoot, "last-sync.json"));
     if (file.size < 1 || file.size > 1024 * 1024) return { fresh: false };
@@ -163,40 +152,6 @@ export async function siteSyncFreshness(
       database.repository !== "aphrody-labs/bun"
     )
       return { fresh: false };
-    if (config.editorial) {
-      const editorial = publicRecord(previous.editorial),
-        qualified = publicRecord(previous.production);
-      if (
-        editorial?.source !== source ||
-        editorial.snapshot !== snapshot.id ||
-        editorial.validator !== "bun:yolo" ||
-        qualified?.qualified !== true ||
-        qualified.expectedSource !== source ||
-        qualified.expectedSnapshot !== snapshot.id ||
-        !Array.isArray(editorial.pages) ||
-        editorial.pages.length < 1 ||
-        editorial.pages.length > 4
-      )
-        return { fresh: false };
-      const paths = editorial.pages.map(page => publicRecord(page)?.path);
-      if (!paths.every((path): path is string => typeof path === "string")) return { fresh: false };
-      // The production owner validates path syntax, duplicates, all metadata and actual HTML routes.
-      const production = await verifyProduction(
-        {
-          origin,
-          expectedSource: source,
-          expectedSnapshot: snapshot.id,
-          editorialRoutes: paths,
-        },
-        signal,
-      );
-      if (!production.qualified) return { fresh: false };
-      await Bun.write(
-        join(config.buildRoot, "last-production-verification.json"),
-        JSON.stringify(production, null, 2) + "\n",
-      );
-      return { fresh: true, production };
-    }
     return { fresh: true };
   } catch {
     // Missing receipts, refused reads or invalid routes must take the regeneration path.
@@ -218,8 +173,7 @@ export async function syncSite(
   const stamp = { schema: 1, commit: source, evidence: inputs.sha256 };
   if (!options.force && !options.dryRun) {
     const current = await siteSyncFreshness(config, source, inputs.sha256);
-    if (current.fresh)
-      return { changed: false, source, ...(current.production ? { production: current.production } : {}) };
+    if (current.fresh) return { changed: false, source };
   }
   mkdirSync(config.buildRoot, { recursive: true });
   const work = mkdtempSync(join(config.buildRoot, "site-"));
@@ -230,7 +184,6 @@ export async function syncSite(
     throw new Error("Unexpected site work directory");
   try {
     const result = await regenerate(config.checkout, source, output, "aphrody-labs/bun", !!options.offline, false, {
-      captureRoot: config.captureRoot,
       runtimeFactFiles: config.runtimeFactFiles,
     });
     const assets = join(output, "site");
@@ -242,34 +195,10 @@ export async function syncSite(
     };
     await Bun.write(join(output, "manifest.json"), JSON.stringify(manifest, null, 2) + "\n");
     let snapshot: { id: string; source: string } | undefined;
-    let editorial: Awaited<ReturnType<typeof applyEditorialPublication>> | undefined;
     if (!options.dryRun) {
       const manifestBytes = await Bun.file(join(output, "manifest.json")).bytes();
       snapshot = await publishSiteSnapshotFromFile(output, hash(manifestBytes), config.ownerConnectionFile);
       if (snapshot.source !== result.manifest.source) throw new Error("Neon and static site source revisions differ");
-      if (config.editorial) {
-        const editorialDirectory = join(work, "editorial");
-        await generateEditorial([
-          "--source",
-          source,
-          "--snapshot",
-          snapshot.id,
-          "--out",
-          editorialDirectory,
-          "--database-url-file",
-          config.readerConnectionFile,
-          "--api-key-file",
-          config.credentialFile,
-        ]);
-        editorial = await applyEditorialPublication({
-          out: assets,
-          origin: "https://aphrody.app",
-          commit: source,
-          editorialDirectory,
-        });
-        // Keep the already validated immutable DB snapshot; the final static manifest includes editorial outputs.
-        refreshManifest(output);
-      }
     }
     const deployment = await releaseSite({
       assets,
@@ -278,7 +207,6 @@ export async function syncSite(
       connectionFile: config.readerConnectionFile,
       credentialFile: config.credentialFile,
     });
-    let production: Awaited<ReturnType<typeof verifyProduction>> | undefined;
     if (!options.dryRun) {
       const response = await fetch("https://aphrody.app/api/site/snapshot", {
         cache: "no-store",
@@ -289,24 +217,8 @@ export async function syncSite(
         : null;
       if ((actual?.snapshot?.source ?? actual?.source) !== source)
         throw new Error("Public Neon API did not confirm the deployed source");
-      if (editorial && snapshot) {
-        production = await verifyProduction(
-          {
-            expectedSource: source,
-            expectedSnapshot: snapshot.id,
-            editorialRoutes: editorial.pages.map(article => article.path),
-          },
-          AbortSignal.timeout(60000),
-        );
-        await Bun.write(
-          join(config.buildRoot, "last-production-verification.json"),
-          JSON.stringify(production, null, 2) + "\n",
-        );
-        if (!production.qualified)
-          throw new Error("Public site routes did not confirm the source and editorial snapshot");
-      }
     }
-    const receipt = { ...stamp, changed: true, inputs, snapshot, editorial, production, deployment };
+    const receipt = { ...stamp, changed: true, inputs, snapshot, deployment };
     await Bun.write(join(config.buildRoot, "last-sync.json"), JSON.stringify(receipt, null, 2) + "\n");
     return receipt;
   } finally {

@@ -51,7 +51,7 @@ test("runtime inventory preserves attribution and distinguishes declarations fro
   expect(page.markdown).toContain("2 since 2026-10-13");
 });
 
-test("public hero and README qualify source claims while preserving upstream authors and licences", () => {
+test("public hero and README preserve upstream authors and licences", () => {
   const hero = renderRuntimeHero(data, {
     src: ".",
     out: ".",
@@ -67,7 +67,9 @@ test("public hero and README qualify source claims while preserving upstream aut
     expect(text).not.toContain("stable release is pending");
     expect(text).not.toContain("stable release remains pending");
   }
-  expect(hero).toContain("requires qualification");
+  expect(hero).toContain("includes code from");
+  expect(hero).toContain("https://github.com/oven-sh/bun");
+  expect(hero).toContain("<code>bun:native-only</code>");
   expect(readme).toContain("includes code derived from oven-sh/Bun");
   expect(readme).toContain("Bun retains its upstream authors, notices");
   expect(readme).toContain("JavaScriptCore");

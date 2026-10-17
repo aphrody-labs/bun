@@ -8,7 +8,13 @@ import { moduleNames } from "./fork-capabilities.ts";
 import { buildReleaseGraph } from "./release-graph.ts";
 import { completeReleaseKnowledge } from "./release-knowledge.ts";
 import { writeGraphView } from "./site-mirror/graph-view.ts";
-import { build, parseHomeBuildOptions, type HomeBuildOptions, type Release } from "../../packages/web/site/build.ts";
+import {
+  build,
+  parseHomeBuildOptions,
+  parseSums,
+  type HomeBuildOptions,
+  type Release,
+} from "../../packages/web/site/build.ts";
 import { collect, GitTree } from "../../packages/web/site/collect.ts";
 import { generateSourceMarkdown } from "./source-markdown.ts";
 
@@ -248,6 +254,17 @@ export async function regenerate(
             size: a.size,
           })),
         }));
+  for (const release of releases) {
+    const sums = release.assets.find(a => /^SHA256SUMS(?:\.txt)?$/.test(a.name));
+    if (!sums) continue;
+    const response = await fetch(sums.url, { signal: AbortSignal.timeout(30000) });
+    if (!response.ok) throw new Error(`${release.tag}: ${sums.name} HTTP ${response.status}`);
+    const map = parseSums(await response.text());
+    for (const asset of release.assets) {
+      const value = map.get(asset.name);
+      if (value !== undefined) asset.sha256 = value;
+    }
+  }
   artifacts.set("releases.json", `${JSON.stringify(releases, null, 2)}\n`);
   const now = new Date(tree.date);
   const data = await collect({
@@ -274,7 +291,10 @@ export async function regenerate(
     releases,
     data,
     now,
-    ...(home ? { home: { ...home, graphFile: home.graphFile ?? join(out, "graph-summary.json") } } : {}),
+    home: {
+      runtimeFactFiles: home?.runtimeFactFiles ?? [],
+      graphFile: home?.graphFile ?? join(out, "graph-summary.json"),
+    },
   });
   cpSync(join(out, "graph-docs"), join(out, "site", "graph", "domains"), { recursive: true });
   cpSync(join(out, "graph.json"), join(out, "site", "graph", "graph.json"));

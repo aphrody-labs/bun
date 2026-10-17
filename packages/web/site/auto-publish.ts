@@ -123,7 +123,6 @@ async function publish(configFile: string, bootstrapBlob: string, dryRun: boolea
     config = (await Bun.file(configFile).json()) as SiteSyncConfig;
     for (const field of [
       "checkout",
-      "captureRoot",
       "buildRoot",
       "ownerConnectionFile",
       "readerConnectionFile",

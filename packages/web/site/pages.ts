@@ -470,9 +470,9 @@ export function runtimePage(d: SiteData, ctx: PageContext): GeneratedPage | null
     );
   return {
     path: "/runtime",
-    title: `Runtime: ${rt.repo}`,
-    description: "Bun OS: Aphrody runtime source, integrated components and qualification boundaries.",
-    tab: "Runtime",
+    title: "Source inventory",
+    description: "Bun OS: source revision, commit history, built-in modules and packages of the Aphrody runtime.",
+    tab: "Source",
     markdown: out.join("\n\n"),
   };
 }
@@ -678,9 +678,6 @@ export function runtimeHomePage(d: SiteData, ctx: PageContext): GeneratedPage | 
       `${code(rt.npm.name)}${rt.npm.version ? ` ${code(rt.npm.version)}` : ""}`,
       link("npmjs.com", `https://www.npmjs.com/package/${rt.npm.name}`),
     ]);
-  const { body } = splitTitle(rt.guide);
-  const productIntroduction = body.indexOf("## What is Bun OS?");
-  const guide = productIntroduction === -1 ? body : body.slice(productIntroduction);
   return {
     path: "/",
     title: "Aphrody Bun",
@@ -688,8 +685,10 @@ export function runtimeHomePage(d: SiteData, ctx: PageContext): GeneratedPage | 
       "Bun OS by Aphrody Labs: JavaScript and TypeScript runtime, package manager, test runner and bundler with native system integrations.",
     tab: "",
     markdown: [
+      `Bun OS is a JavaScript and TypeScript runtime, package manager, test runner and bundler in one executable, built from ${link("Bun", rt.upstream.url)} by Aphrody Labs.`,
+      `## Install\n\n\`\`\`sh\ncurl -fsSL ${ctx.origin}/install | bash\n\`\`\`\n\n\`\`\`powershell\npowershell -c "irm ${new URL(ctx.origin).host}/install.ps1|iex"\n\`\`\``,
       `## Current versions\n\n${table(["Item", "Version", "Source"], rows)}`,
-      publicLinks(forkLinks(guide, rt.repo, rt.commit), ctx.origin),
+      `- [Documentation](/docs)\n- [Downloads](/downloads)\n- [Release notes](/release-notes)\n- [Benchmarks](/benchmarks)`,
       sourceLine(d),
     ]
       .filter(Boolean)

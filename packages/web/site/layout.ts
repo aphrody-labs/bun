@@ -1,4 +1,4 @@
-// Gabarit HTML, feuille de style et script du site aphrody.com. Couleurs : rôles --md-sys-color-* de m3-tokens.css et
+// Gabarit HTML unique (en-tête, navigation, recherche, pied de page), feuille de style et script des sites aphrody.app et aphrody.com. Couleurs : rôles --md-sys-color-* de m3-tokens.css et
 // police Google Sans Flex d'aphrody-fonts.css, servis par cdn.aphrody.com (brand.ts, scripts/aphrody/brand-sync.ts).
 import { BRAND } from "./brand.ts";
 import { WEBMCP_SCRIPT } from "./webmcp.ts";
@@ -48,8 +48,12 @@ export function shell(s: Shell): string {
 ${s.description ? `<meta name="description" content="${escapeHtml(s.description)}">` : ""}
 <link rel="canonical" href="${escapeHtml(canonical)}">
 ${s.alternateMarkdown ? `<link rel="alternate" type="text/markdown" href="${escapeHtml(s.alternateMarkdown)}">` : ""}
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="${escapeHtml(s.brand ?? "Aphrody")}">
 <meta property="og:title" content="${escapeHtml(s.title)}">
 <meta property="og:url" content="${escapeHtml(canonical)}">
+<meta property="og:image" content="${escapeHtml(s.origin)}/icon-512.png">
+<meta name="twitter:card" content="summary">
 ${s.description ? `<meta property="og:description" content="${escapeHtml(s.description)}">` : ""}
 <meta name="theme-color" media="(prefers-color-scheme: light)" content="${BRAND.themeColor.light}">
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="${BRAND.themeColor.dark}">
@@ -63,14 +67,15 @@ ${s.description ? `<meta property="og:description" content="${escapeHtml(s.descr
 </head><body class="${s.bodyClass ?? ""}">
 <header class="top"><div class="bar">
 <a class="brand" href="/"><img src="/icon.svg" alt="" width="28" height="28">${brandHtml(s.brand ?? "Aphrody")}</a>
-<nav class="tabs-nav" aria-label="Sections">${s.tabs
+<button class="menu-btn" type="button" aria-controls="site-nav" aria-expanded="false" aria-label="Menu"><span></span></button>
+<nav class="tabs-nav" id="site-nav" aria-label="Sections">${s.tabs
     .map(t => `<a href="${escapeHtml(t.href)}"${t.active ? ' aria-current="page"' : ""}>${escapeHtml(t.label)}</a>`)
-    .join("")}</nav>
-<div class="search"><input type="search" id="q" placeholder="Search" aria-label="Search the site" autocomplete="off"><div id="results" role="listbox" hidden></div></div>
+    .join("")}<a class="gh-nav" href="${escapeHtml(s.github)}">GitHub</a></nav>
+<div class="search"><input type="search" id="q" placeholder="Search docs" aria-label="Search the site" autocomplete="off"><div id="results" role="listbox" hidden></div></div>
 <a class="gh" href="${escapeHtml(s.github)}" aria-label="GitHub">GitHub</a>
 </div></header>
 <div class="layout${s.sidebar ? " with-sidebar" : ""}${toc ? " with-toc" : ""}">
-${s.sidebar ? `<aside class="sidebar" aria-label="Documentation">${s.sidebar}</aside>` : ""}
+${s.sidebar ? `<aside class="sidebar" aria-label="Documentation"><button class="side-btn" type="button" aria-expanded="false">Browse documentation</button><div class="side-body">${s.sidebar}</div></aside>` : ""}
 <main id="content">${s.body}</main>
 ${toc}
 </div>
@@ -124,7 +129,16 @@ main{min-width:0;padding:2rem 0 4rem;max-width:820px}
 .toc p{font-weight:600;margin:0 0 .5rem}.toc ul{list-style:none;margin:0;padding:0}.toc li{margin:.25rem 0}.toc li.l3{padding-left:.75rem}
 .toc a{color:var(--on-sv);text-decoration:none}.toc a:hover{color:var(--primary)}
 @media (max-width:1200px){.layout.with-sidebar.with-toc{grid-template-columns:240px minmax(0,1fr)}.layout.with-toc:not(.with-sidebar){grid-template-columns:minmax(0,1fr)}.toc{display:none}}
-@media (max-width:860px){.layout.with-sidebar,.layout.with-sidebar.with-toc{grid-template-columns:minmax(0,1fr)}.sidebar{position:static;max-height:none;border-bottom:1px solid var(--outline-v)}.sidebar:not(.open) ul{display:none}.gh{display:none}}
+.menu-btn,.gh-nav,.side-btn{display:none}
+.menu-btn{width:40px;height:40px;border:1px solid var(--outline-v);border-radius:999px;background:none;color:inherit;cursor:pointer;place-items:center;padding:0}
+.menu-btn span,.menu-btn span::before,.menu-btn span::after{display:block;width:16px;height:2px;border-radius:1px;background:currentColor;position:relative;content:""}
+.menu-btn span::before{position:absolute;top:-5px}.menu-btn span::after{position:absolute;top:5px}
+.side-btn{width:100%;height:40px;border:1px solid var(--outline-v);border-radius:999px;background:var(--sc);color:inherit;font:500 .875rem var(--font);cursor:pointer}
+@media (max-width:860px){.bar{flex-wrap:wrap;gap:.5rem}.brand{flex:1}.menu-btn{display:grid;order:2}.search{order:3;flex:1 1 100%}.search input{width:100%}.tabs-nav{order:4;flex:1 1 100%;display:none;flex-direction:column;padding:.25rem 0 .5rem}.top.open .tabs-nav{display:flex}.tabs-nav a{padding:.625rem .75rem;font-size:1rem}.gh-nav{display:block}.gh{display:none}
+.layout.with-sidebar,.layout.with-sidebar.with-toc{grid-template-columns:minmax(0,1fr)}.sidebar{position:static;max-height:none;padding:1rem 0 0}.side-btn{display:block}.sidebar:not(.open) .side-body{display:none}.sidebar.open .side-body{padding-top:.75rem;border-bottom:1px solid var(--outline-v)}main{padding-top:1.25rem}.hero{padding:2rem 0 1rem}.hero h1{font-size:2.5rem;line-height:3rem}h1{font-size:1.875rem;line-height:2.375rem}}
+.chips{list-style:none;padding:0;margin:1rem 0;display:flex;flex-wrap:wrap;gap:.5rem}.chips li{margin:0}.chips a,.chips li>code{display:inline-block;padding:.25rem .75rem;border:1px solid var(--outline-v);border-radius:999px;background:var(--sc-low);text-decoration:none}.chips code{background:none;padding:0}.chips a:hover{background:var(--sc-high)}
+.release-chip{display:inline-block;margin:0 0 1.5rem;padding:.375rem 1rem;border-radius:999px;background:var(--sc);font-size:.875rem}
+.release{border-top:1px solid var(--outline-v);padding-top:.5rem;margin-top:1.5rem}.release h3{margin-top:1rem}
 h1{font-size:2.25rem;line-height:2.75rem;font-weight:400;margin:.25rem 0 .5rem}
 h2{font-size:1.5rem;line-height:2rem;font-weight:500;margin:2.5rem 0 .75rem}
 h3{font-size:1.25rem;font-weight:500;margin:2rem 0 .5rem}h4{font-size:1rem;margin:1.5rem 0 .5rem}
@@ -156,7 +170,7 @@ blockquote{margin:1rem 0;padding:.25rem 1rem;border-left:4px solid var(--outline
 .step-title{font-weight:600;margin:0 0 .25rem}.step::before{content:counter(step);position:absolute;left:0;top:0;width:1.75rem;height:1.75rem;border-radius:50%;background:var(--primary-container);color:var(--on-primary-container);display:grid;place-items:center;font-size:.8125rem;font-weight:600}
 details.accordion{border:1px solid var(--outline-v);border-radius:var(--radius);padding:.5rem 1rem;margin:.75rem 0}
 details.accordion summary{cursor:pointer;font-weight:500}
-.card-group,.columns{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:1rem;margin:1rem 0}
+.card-group,.columns{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(220px,100%),1fr));gap:1rem;margin:1rem 0}
 .card{position:relative;border:1px solid var(--outline-v);border-radius:var(--radius);padding:.25rem 1rem;background:var(--sc-low)}
 .card:hover{background:var(--sc)}.card-title{font-weight:600}.card-title a{color:inherit;text-decoration:none}.card-title a::after{content:"";position:absolute;inset:0}
 figure.frame{margin:1rem 0;padding:.5rem;border:1px solid var(--outline-v);border-radius:var(--radius)}figcaption{font-size:.8125rem;color:var(--on-sv);text-align:center}
@@ -172,14 +186,14 @@ figure.frame{margin:1rem 0;padding:.5rem;border:1px solid var(--outline-v);borde
 .hero h1{font-size:3.5rem;line-height:4rem;margin:0 0 1rem}
 .hero .lead{max-width:44rem;margin:0 auto 2rem}
 .pet{width:96px;height:104px;margin:0 auto 1rem;background:url(/pet.webp) 0 0/768px 1144px no-repeat}
-.cmds{display:grid;gap:.75rem;max-width:40rem;margin:0 auto}
+.cmds{display:grid;gap:.75rem;max-width:40rem;margin:1rem 0}.hero .cmds{margin:0 auto}
 .cmd{display:grid;grid-template-columns:auto 1fr;gap:.25rem 1rem;align-items:center;text-align:left;border:1px solid var(--outline-v);border-radius:var(--radius);background:var(--sc);padding:.75rem 1rem;color:inherit;font:inherit;cursor:pointer}
 .cmd:hover{background:var(--sc-high)}.cmd span{font-size:.75rem;color:var(--on-sv)}.cmd code{background:none;padding:0;word-break:break-all}
 .cmd.ok span::after{content:" · copied";color:var(--primary)}
 .btns{display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap;margin:2rem 0}
 .btn{display:inline-flex;align-items:center;height:40px;padding:0 24px;border-radius:20px;text-decoration:none;font-weight:500;font-size:.875rem;background:var(--primary);color:var(--on-primary)}
 .btn.tonal{background:var(--primary-container);color:var(--on-primary-container)}.btn.outlined{background:none;border:1px solid var(--outline);color:var(--primary)}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:1rem;margin:2rem 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(250px,100%),1fr));gap:1rem;margin:2rem 0}
 .tile{border:1px solid var(--outline-v);border-radius:16px;padding:1.25rem;background:var(--sc-low);text-decoration:none;color:inherit;display:block}
 .tile:hover{background:var(--sc)}.tile h3{margin:0 0 .5rem;font-size:1.125rem}.tile p{margin:0;color:var(--on-sv);font-size:.875rem}
 .tile .tag{font-size:.6875rem;letter-spacing:.5px;text-transform:uppercase;color:var(--primary);font-weight:600}
@@ -197,7 +211,8 @@ for(const b of $$("[data-copy-url]"))b.onclick=()=>fetch(b.dataset.copyUrl).then
 for(const tabs of $$(".tabs")){const panes=$$(":scope>.tab",tabs);if(!panes.length)continue;const bar=document.createElement("div");bar.className="tab-buttons";bar.setAttribute("role","tablist");
 panes.forEach((p,i)=>{const b=document.createElement("button");b.type="button";b.setAttribute("role","tab");b.textContent=p.dataset.title||"Tab "+(i+1);b.onclick=()=>{panes.forEach((q,j)=>q.classList.toggle("on",i===j));$$("button",bar).forEach((c,j)=>c.setAttribute("aria-selected",String(i===j)))};bar.append(b)});
 tabs.prepend(bar);tabs.classList.add("js");bar.firstChild.click()}
-const side=$(".sidebar");if(side){const cur=$("a[aria-current]",side);cur?.scrollIntoView({block:"center"});side.addEventListener("click",e=>{if(e.target===side)side.classList.toggle("open")})}
+const top=$(".top"),menu=$(".menu-btn");if(top&&menu)menu.onclick=()=>menu.setAttribute("aria-expanded",String(top.classList.toggle("open")));
+const side=$(".sidebar");if(side){const cur=$(".side-body a[aria-current]",side);if(cur&&side.offsetParent&&getComputedStyle(side).position==="sticky")side.scrollTop=cur.offsetTop-side.clientHeight/2;const sb=$(".side-btn",side);if(sb)sb.onclick=()=>sb.setAttribute("aria-expanded",String(side.classList.toggle("open")))}
 const q=$("#q"),box=$("#results");if(!q)return;let index=null,sel=-1;
 const load=()=>index??=fetch("/docs/search.json").then(r=>r.json());
 const norm=s=>s.toLowerCase().normalize("NFKD");

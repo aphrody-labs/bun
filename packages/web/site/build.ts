@@ -1,16 +1,15 @@
-// Génère un site statique. Sans données de distribution, c'est le site du runtime, aphrody.app (« Aphrody Bun » :
-// accueil depuis APHRODY.md, /runtime, /docs, téléchargements, notes de version, benchmarks, installateurs) ;
-// avec elles (--data d'un collect.ts --distribution), le site de la distribution Aphrody (accueil produit, /components, /runtime, /m3,
-// /security, /contributing, /about, pages générées par pages.ts depuis site-data.json de collect.ts), la doc du
-// runtime aphrody-labs/bun (/docs depuis docs/docs.json + .mdx, pages .md brutes, recherche), /guides,
-// /benchmarks, /downloads, /release-notes, /install (+ .sh, .ps1), /bun/setup.sh|ps1, /llms.txt,
+// Génère un site statique dans une seule coque (layout.ts). Sans données de distribution, c'est le site du runtime,
+// aphrody.app (« Aphrody Bun » : accueil natif, /runtime, /docs, téléchargements, notes de version, benchmarks,
+// installateurs) ; avec elles (--data d'un collect.ts --distribution), le site de la distribution Aphrody (accueil
+// produit, /components, /runtime, /m3, /security, /contributing, /about, pages générées par pages.ts depuis
+// site-data.json de collect.ts), la doc du runtime aphrody-labs/bun (/docs depuis docs/docs.json + .mdx, pages .md
+// brutes, recherche), /benchmarks, /downloads, /release-notes, /install (+ .sh, .ps1), /bun/setup.sh|ps1, /llms.txt,
 // /llms-full.txt, sitemap.xml, robots.txt.
 //
 //   bun packages/web/site/build.ts --out <dir> [--src <arbre du dépôt>] [--origin https://aphrody.app]
 //       [--commit <sha>] [--repo aphrody-labs/bun] [--perf <dossier des perf-report.json>] [--perf-run <url>]
 //       [--releases <releases.json> | --offline] [--data <site-data.json>]
-//       [--home-capture-root <capture>] [--home-runtime-fact <receipt.json> ...] [--home-graph <graph-summary.json>]
-//       [--editorial-dir <validated-editorial-output>]
+//       [--home-runtime-fact <receipt.json> ...] [--home-graph <graph-summary.json>]
 //
 // --src pointe sur un arbre extrait (git archive) ou sur le dépôt lui-même (défaut). La publication
 // (packages/web/site/publish.ts) extrait origin/main, collecte site-data.json et appelle ce script depuis
@@ -42,8 +41,7 @@ import {
   plainText,
   type GeneratedPage,
 } from "./pages.ts";
-import { buildUpstreamHome, loadRuntimeHomeFacts, type HomeGraphFact } from "./upstream-home.ts";
-import { loadEditorialDirectory, type PublishedEditorial } from "./editorial-publication.ts";
+import { loadRuntimeHomeFacts, RUNTIME_TARGETS, type HomeGraphFact, type RuntimeHomeFact } from "./runtime-facts.ts";
 
 export { formatBytes };
 
@@ -197,9 +195,9 @@ async function fetchReleases(repo: string): Promise<Release[]> {
   return releases;
 }
 
-/** `bun-linux-x64-musl-baseline-profile.zip` -> os, arch, variantes. */
+/** `bun-linux-x64-musl-baseline-profile.zip`, `bun-linux-x64.tar.gz`, `bun-windows-x64.exe` -> os, arch, variantes. */
 export function describeAsset(name: string) {
-  const m = /^bun-(linux|darwin|windows)-(x64|aarch64)((?:-musl|-baseline|-profile)*)\.zip$/.exec(name);
+  const m = /^bun-(linux|darwin|windows)-(x64|aarch64)((?:-musl|-baseline|-profile)*)\.(zip|tar\.gz|exe)$/.exec(name);
   if (!m) return null;
   const flags = m[3]!.split("-").filter(Boolean);
   return {
@@ -208,6 +206,7 @@ export function describeAsset(name: string) {
     musl: flags.includes("musl"),
     baseline: flags.includes("baseline"),
     profile: flags.includes("profile"),
+    format: m[4] as "zip" | "tar.gz" | "exe",
   };
 }
 
@@ -298,169 +297,18 @@ export type BuildOptions = {
   /** Données de la distribution, du runtime et de l'organisation (collect.ts) ; sans elles, pas de pages produit. */
   data?: SiteData | null;
   now?: Date;
-  /** Explicit capture and measured receipts; no runtime inference from the build executable. */
+  /** Measured receipts; no runtime inference from the build executable. */
   home?: HomeBuildOptions;
-  editorialDirectory?: string;
 };
 
-export type HomeBuildOptions = { captureRoot: string; runtimeFactFiles: readonly string[]; graphFile?: string };
-type EditorialPublication = Awaited<ReturnType<typeof loadEditorialDirectory>>;
-export function parseEditorialBuildDirectory(argv: readonly string[]): string | undefined {
-  const positions = argv.flatMap((argument, index) => (argument === "--editorial-dir" ? [index] : []));
-  if (!positions.length) return undefined;
-  if (positions.length > 1) throw TypeError("Duplicate editorial directory option");
-  const value = argv[positions[0]! + 1];
-  if (!value || value.startsWith("--")) throw TypeError("Missing editorial directory option");
-  return resolve(value);
-}
-const editorialHtml = (markdown: string) =>
-  highlightHtml(
-    Bun.markdown.html(mdxToHtmlMarkdown(markdown, { link: href => href, guides: "" }), {
-      headings: { ids: true },
-    } as any),
-  );
-const editorialSummary = (editorial: EditorialPublication) => ({
-  schema: 1,
-  source: editorial.source,
-  snapshot: editorial.snapshot,
-  validator: editorial.validator,
-  receiptSha256: editorial.receiptSha256,
-  authorship: "source-derived-assembly",
-  pages: editorial.pages.map(article => ({
-    path: article.path,
-    mdxSha256: article.manifest.mdxSha256,
-    manifestSha256: article.manifestSha256,
-    models: article.manifest.models,
-    grounding: article.manifest.grounding,
-  })),
-});
-const editorialIndexBody = (kind: "guides" | "blog", articles: readonly PublishedEditorial[]) =>
-  `<h1>${kind === "guides" ? "Guides" : "Blog"}</h1><p>Dossiers assemblés à partir des sources du snapshot, avec jugements structurés Jev et provenance explicite.</p><p><a href="${kind === "guides" ? "/docs/guides" : "/release-notes"}">${kind === "guides" ? "Guides de la documentation" : "Notes de version"}</a></p><ul>${articles.map(article => `<li><a href="${article.path}">${escapeHtml(article.title)}</a><p>${escapeHtml(article.description)}</p></li>`).join("")}</ul>`;
-
-/** Add a qualified editorial batch after the initial immutable DB publication; preserve the existing graph and home. */
-export async function applyEditorialPublication(options: {
-  out: string;
-  origin: string;
-  commit: string;
-  editorialDirectory: string;
-}) {
-  const editorial = await loadEditorialDirectory(options.editorialDirectory, options.commit);
-  const root = resolve(options.out),
-    base = JSON.parse(await Bun.file(join(root, "site.json")).text());
-  if (base.commit !== options.commit) throw Error("Editorial publication base source is stale");
-  const search = JSON.parse(await Bun.file(join(root, "docs/search.json")).text());
-  if (!Array.isArray(search)) throw Error("Invalid editorial publication search index");
-  const sitemap = await Bun.file(join(root, "sitemap.xml")).text();
-  if (!sitemap.includes("</urlset>")) throw Error("Invalid editorial publication sitemap");
-  const llms = await Bun.file(join(root, "llms.txt")).text(),
-    full = await Bun.file(join(root, "llms-full.txt")).text();
-  const written = new Set<string>();
-  const save = (path: string, content: string) => {
-    const file = join(root, path);
-    write(file, content);
-    written.add(file);
-  };
-  const page = (path: string, title: string, body: string, description?: string) =>
-    shell({
-      origin: options.origin,
-      path,
-      title: `${title} - Aphrody Bun`,
-      body,
-      ...(description ? { description } : {}),
-      tabs: [
-        { label: "Docs", href: "/docs" },
-        { label: "Guides", href: "/guides" },
-        { label: "Blog", href: "/blog" },
-        { label: "Downloads", href: "/downloads" },
-      ],
-      footer: '<p>Sources du snapshot · <a href="/editorial-provenance.json">Provenance éditoriale</a></p>',
-      github: "https://github.com/aphrody-labs/bun",
-      brand: "Aphrody Bun",
-      ...(path.includes("/", 1) ? { alternateMarkdown: path + ".md" } : {}),
-    }).replace('<html lang="en">', '<html lang="fr">');
-  const paths = new Set(editorial.pages.map(article => article.path));
-  const updatedSearch = search.filter((entry: { u: string }) => !paths.has(entry.u));
-  for (const article of editorial.pages) {
-    const html = editorialHtml(article.markdown);
-    save(
-      article.path.slice(1) + "/index.html",
-      page(
-        article.path,
-        article.title,
-        `<h1>${escapeHtml(article.title)}</h1><article>${html}</article><p><a href="${article.path}.json">Provenance du dossier</a></p>`,
-        article.description,
-      ),
-    );
-    save(
-      article.path.slice(1) + ".md",
-      pageMarkdown(
-        { title: article.title, description: article.description, markdown: article.markdown },
-        options.origin,
-      ),
-    );
-    save(article.path.slice(1) + ".json", JSON.stringify(article.manifest, null, 2) + "\n");
-    updatedSearch.push({
-      t: article.title,
-      d: article.description,
-      u: article.path,
-      g: article.path.startsWith("/guides/") ? "Guides" : "Blog",
-      h: extractToc(html).map(heading => heading.text),
-      x: textOf(html).slice(0, 240),
-    });
-  }
-  for (const kind of ["guides", "blog"] as const) {
-    const articles = editorial.pages.filter(article => article.path.startsWith("/" + kind + "/"));
-    if (articles.length)
-      save(
-        kind + "/index.html",
-        page("/" + kind, kind === "guides" ? "Guides" : "Blog", editorialIndexBody(kind, articles)),
-      );
-  }
-  save("docs/search.json", JSON.stringify(updatedSearch));
-  const now = new Date().toISOString().slice(0, 10);
-  const additions = ["/guides", "/blog", ...paths]
-    .filter(path => !sitemap.includes(`<loc>${escapeHtml(options.origin + path)}</loc>`))
-    .map(path => `<url><loc>${escapeHtml(options.origin + path)}</loc><lastmod>${now}</lastmod></url>`)
-    .join("\n");
-  save("sitemap.xml", sitemap.replace("</urlset>", additions + "\n</urlset>"));
-  const clean = (text: string) =>
-    text.replace(/\n<!-- editorial:start -->[\s\S]*?<!-- editorial:end -->\n?/g, "\n").trimEnd();
-  save(
-    "llms.txt",
-    clean(llms) +
-      "\n<!-- editorial:start -->\n## Guides et dossiers éditoriaux\n\n" +
-      editorial.pages
-        .map(article => `- [${article.title}](${options.origin}${article.path}.md): ${article.description}`)
-        .join("\n") +
-      "\n<!-- editorial:end -->\n",
-  );
-  save(
-    "llms-full.txt",
-    clean(full) +
-      "\n<!-- editorial:start -->\n" +
-      editorial.pages
-        .map(
-          article =>
-            `# ${article.title}\nSource: ${options.origin}${article.path}\n\n${absolutizeRootLinks(article.markdown, options.origin)}\n`,
-        )
-        .join("\n") +
-      "<!-- editorial:end -->\n",
-  );
-  const summary = editorialSummary(editorial);
-  save("editorial-provenance.json", JSON.stringify(summary, null, 2) + "\n");
-  save("site.json", JSON.stringify({ ...base, editorial: summary }, null, 2) + "\n");
-  for (const file of written) {
-    const bytes = readFileSync(file);
-    write(file + ".gz", Bun.gzipSync(bytes, { level: 9 }));
-  }
-  return summary;
-}
+/** Measured runtime receipts and the source graph receipt; both optional. */
+export type HomeBuildOptions = { runtimeFactFiles: readonly string[]; graphFile?: string };
 type Receipt = { sha256: string; bytes: number };
 const sha256 = (bytes: Uint8Array | string) => new Bun.CryptoHasher("sha256").update(bytes).digest("hex");
 
 export function parseHomeBuildOptions(argv: readonly string[]): HomeBuildOptions | undefined {
-  const flags = new Set(["--home-capture-root", "--home-runtime-fact", "--home-graph"]);
-  let captureRoot: string | undefined, graphFile: string | undefined;
+  const flags = new Set(["--home-runtime-fact", "--home-graph"]);
+  let graphFile: string | undefined;
   const runtimeFactFiles: string[] = [];
   for (let i = 0; i < argv.length; i++) {
     const name = argv[i]!;
@@ -471,23 +319,18 @@ export function parseHomeBuildOptions(argv: readonly string[]): HomeBuildOptions
     const value = argv[++i];
     if (!value || value.startsWith("--")) throw new Error(`Missing value for ${name}`);
     if (name === "--home-runtime-fact") runtimeFactFiles.push(resolve(value));
-    else if (name === "--home-capture-root") {
-      if (captureRoot) throw new Error("Duplicate home capture root");
-      captureRoot = resolve(value);
-    } else {
+    else {
       if (graphFile) throw new Error("Duplicate home graph receipt");
       graphFile = resolve(value);
     }
   }
-  if (!captureRoot && (runtimeFactFiles.length || graphFile))
-    throw new Error("Home receipts require --home-capture-root");
   if (
     runtimeFactFiles.length > 8 ||
     new Set(runtimeFactFiles.map(path => (process.platform === "win32" ? path.toLowerCase() : path))).size !==
       runtimeFactFiles.length
   )
     throw new Error("Duplicate or excessive home runtime receipts");
-  return captureRoot ? { captureRoot, runtimeFactFiles, ...(graphFile ? { graphFile } : {}) } : undefined;
+  return runtimeFactFiles.length || graphFile ? { runtimeFactFiles, ...(graphFile ? { graphFile } : {}) } : undefined;
 }
 
 export async function loadHomeGraphReceipt(path: string) {
@@ -523,22 +366,19 @@ export async function loadHomeGraphReceipt(path: string) {
 }
 
 async function prepareHome(o: BuildOptions) {
-  if (!o.home) return undefined;
-  if (o.repo !== "aphrody-labs/bun") throw new Error("Captured Bun home requires the Bun source repository");
-  const source = resolve(o.src),
-    out = resolve(o.out);
+  if (!o.home) return { facts: [] as RuntimeHomeFact[], receipts: [], graph: undefined };
+  const out = resolve(o.out);
   const contains = (parent: string, child: string) => {
     const path = relative(parent, child);
     return path === "" || (!path.startsWith("..") && !path.startsWith("/") && !/^[A-Za-z]:/.test(path));
   };
   if (
-    contains(out, source) ||
-    contains(out, resolve(o.home.captureRoot)) ||
+    contains(out, resolve(o.src)) ||
     [...o.home.runtimeFactFiles, ...(o.home.graphFile ? [o.home.graphFile] : [])].some(path =>
       contains(out, resolve(path)),
     )
   )
-    throw new Error("Home output must not overwrite its source or input receipts");
+    throw new Error("Site output must not overwrite its source or input receipts");
   const receipts: (Receipt & { source: string; target: string })[] = [];
   const facts = await loadRuntimeHomeFacts(o.home.runtimeFactFiles, {
     onReceipt: ({ index, fact, sha256, bytes }) => {
@@ -546,39 +386,23 @@ async function prepareHome(o: BuildOptions) {
     },
   });
   const graph = o.home.graphFile ? await loadHomeGraphReceipt(o.home.graphFile) : undefined;
-  const home = await buildUpstreamHome({
-    captureRoot: o.home.captureRoot,
-    sourceRoot: o.src,
-    source: o.commit,
-    origin: o.origin,
-    facts,
-    ...(graph ? { graph: graph.fact } : {}),
-  });
-  const provenance = {
-    ...home.provenance,
-    inputReceipts: {
-      runtime: receipts,
-      graph: graph ? { source: graph.fact.source, ...graph.receipt, catalog: graph.catalog } : null,
-    },
-  };
-  const bytes = new TextEncoder().encode(JSON.stringify(provenance, null, 2) + "\n");
-  const assets = home.assets.map(asset =>
-    asset.path === "home-provenance.json" ? { path: asset.path, bytes, sha256: sha256(bytes) } : asset,
-  );
-  return { ...home, provenance, assets, graph };
+  return { facts, receipts, graph };
 }
 
 /** Onglets du haut : les pages de la distribution, puis la doc du runtime et ses pages. */
 const TOP_TABS: [label: string, href: string, needsData: boolean][] = [
   ["Components", "/components", true],
-  ["Runtime", "/runtime", true],
-  ["M3", "/m3", true],
   ["Docs", "/docs", false],
   ["Downloads", "/downloads", false],
   ["Release notes", "/release-notes", false],
   ["Benchmarks", "/benchmarks", false],
+  ["Source", "/runtime", true],
+  ["M3", "/m3", true],
   ["Security", "/security", true],
 ];
+
+/** Runtime releases (`bun-v*`, `aphrody-v*`); SDK, tool and source releases are listed separately. */
+export const isRuntimeRelease = (r: Release) => /^(?:bun-v|aphrody-v)\d/.test(r.tag);
 
 /** Liens racine (`/components`) d'un Markdown généré vers des URL absolues, pour sa variante `.md`. */
 const absolutizeRootLinks = (markdown: string, origin: string) =>
@@ -586,8 +410,8 @@ const absolutizeRootLinks = (markdown: string, origin: string) =>
 
 export async function build(o: BuildOptions) {
   // Reject missing or invalid evidence before writing any site files.
-  const editorial = o.editorialDirectory ? await loadEditorialDirectory(o.editorialDirectory, o.commit) : null;
   const home = await prepareHome(o);
+  const runtimeReleases = o.releases ? o.releases.filter(isRuntimeRelease) : null;
   const docs = join(o.src, "docs");
   const docsJson = JSON.parse(readFileSync(join(docs, "docs.json"), "utf8"));
   const { tabs, pages } = readNavigation(docsJson);
@@ -621,7 +445,7 @@ export async function build(o: BuildOptions) {
   const bySlug = new Map(rendered.map(r => [r.slug, r]));
 
   // Pages générées depuis les données (accueil produit, composants, runtime, M3, documents)
-  const ctx = { origin: o.origin, releases: o.releases };
+  const ctx = { origin: o.origin, releases: runtimeReleases };
   const generated = data ? generatedPages(data, ctx) : [];
   const generatedPaths = new Set(generated.map(g => g.path));
 
@@ -641,11 +465,10 @@ export async function build(o: BuildOptions) {
     }
   };
   const topTabs = (active?: string): NavLink[] =>
-    TOP_TABS.filter(([, href, needsData]) => !needsData || generatedPaths.has(href)).map(([label, href]) => ({
-      label,
-      href,
-      active: label === active,
-    }));
+    TOP_TABS.filter(([, href, needsData]) => !needsData || generatedPaths.has(href)).map(([label, href]) => {
+      const shown = href === "/runtime" && data?.distribution ? "Runtime" : label;
+      return { label: shown, href, active: shown === active || label === active };
+    });
   const docTabs = tabs.filter(t => t.tab !== "Feedback" && !(t.href ?? "").endsWith("/blog"));
 
   const sidebarFor = (tabName: string, current: string) => {
@@ -759,7 +582,9 @@ ${pager}`;
     const mdUrl = g.path === "/" ? "/index.md" : `${g.path}.md`;
     const body =
       g.path === "/"
-        ? `${data?.distribution ? renderHero(data) : renderRuntimeHero(data!, o)}\n<article>${html}</article>`
+        ? data?.distribution
+          ? `${renderHero(data)}\n<article>${html}</article>`
+          : renderRuntimeHero(data!, o, { facts: home.facts, docs: bySlug })
         : `<h1>${escapeHtml(g.title)}</h1>
 ${g.description ? `<p class="lead">${escapeHtml(g.description)}</p>` : ""}
 <div class="page-actions"><button type="button" data-copy-url="${mdUrl}">Copy page</button><a href="${mdUrl}">View as Markdown</a></div>
@@ -786,35 +611,6 @@ ${g.description ? `<p class="lead">${escapeHtml(g.description)}</p>` : ""}
       x: textOf(html).slice(0, 240),
     });
   }
-  for (const article of editorial?.pages ?? []) {
-    const html = editorialHtml(article.markdown);
-    write(
-      join(o.out, article.path.slice(1), "index.html"),
-      page({
-        path: article.path,
-        title: titled(article.title),
-        description: article.description,
-        body: `<h1>${escapeHtml(article.title)}</h1><article>${html}</article><p><a href="${article.path}.json">Provenance du dossier</a></p>`,
-        tabs: topTabs(article.path.startsWith("/guides/") ? "Guides" : "Blog"),
-        alternateMarkdown: article.path + ".md",
-      }),
-    );
-    write(
-      join(o.out, article.path.slice(1) + ".md"),
-      pageMarkdown({ title: article.title, description: article.description, markdown: article.markdown }, o.origin),
-    );
-    write(join(o.out, article.path.slice(1) + ".json"), JSON.stringify(article.manifest, null, 2) + "\n");
-    search.push({
-      t: article.title,
-      d: article.description,
-      u: article.path,
-      g: article.path.startsWith("/guides/") ? "Guides" : "Blog",
-      h: extractToc(html).map(heading => heading.text),
-      x: textOf(html).slice(0, 240),
-    });
-  }
-  if (editorial)
-    write(join(o.out, "editorial-provenance.json"), JSON.stringify(editorialSummary(editorial), null, 2) + "\n");
   if (data) write(join(o.out, "components.json"), JSON.stringify(componentsJson(data), null, 2) + "\n");
   write(join(o.out, "docs", "search.json"), JSON.stringify(search));
 
@@ -871,16 +667,6 @@ ${g.description ? `<p class="lead">${escapeHtml(g.description)}</p>` : ""}
         `- [${p.title}](${o.origin}${markdownUrl(p.slug)})${p.description ? `: ${p.description.replace(/\s+/g, " ")}` : ""}`,
     ),
     "",
-    ...(editorial
-      ? [
-          "## Guides et dossiers éditoriaux",
-          "",
-          ...editorial.pages.map(
-            article => `- [${article.title}](${o.origin}${article.path}.md): ${article.description}`,
-          ),
-          "",
-        ]
-      : []),
     "## Optional",
     "",
     `- [Runtime install script (bash)](${o.origin}/install)`,
@@ -890,17 +676,12 @@ ${g.description ? `<p class="lead">${escapeHtml(g.description)}</p>` : ""}
     `- [Release notes](${o.origin}/release-notes)`,
     ...(data ? [`- [Components (JSON)](${o.origin}/components.json)`] : []),
     `- [Runtime source](https://github.com/${o.repo})`,
-    `- [Upstream Bun API reference](https://bun.com/reference)`,
     "",
   ].join("\n");
   write(join(o.out, "llms.txt"), llms);
   write(
     join(o.out, "llms-full.txt"),
     [
-      ...(editorial?.pages ?? []).map(
-        article =>
-          `# ${article.title}\nSource: ${o.origin}${article.path}\n\n${absolutizeRootLinks(article.markdown, o.origin)}\n`,
-      ),
       ...generated.map(
         g => `# ${g.title}\nSource: ${o.origin}${g.path}\n\n${absolutizeRootLinks(g.markdown, o.origin)}\n`,
       ),
@@ -911,24 +692,8 @@ ${g.description ? `<p class="lead">${escapeHtml(g.description)}</p>` : ""}
     ].join("\n"),
   );
 
-  // /guides -> /docs/guides, /blog -> /release-notes
-  for (const kind of ["guides", "blog"] as const) {
-    const articles = editorial?.pages.filter(article => article.path.startsWith("/" + kind + "/")) ?? [];
-    write(
-      join(o.out, kind, "index.html"),
-      articles.length
-        ? page({
-            path: "/" + kind,
-            title: titled(kind === "guides" ? "Guides" : "Blog"),
-            tabs: topTabs(kind === "guides" ? "Guides" : "Blog"),
-            body: editorialIndexBody(kind, articles),
-          })
-        : redirectPage(o.origin, kind === "guides" ? "/docs/guides" : "/release-notes"),
-    );
-  }
-
   // Téléchargements et notes de version : la distribution (données), puis le runtime (releases GitHub)
-  const releases = o.releases;
+  const releases = runtimeReleases;
   const latest = latestRuntimeRelease(releases);
   const distDownloads = data?.distribution ? renderMarkdown(distributionDownloads(data)) : "";
   write(
@@ -949,7 +714,7 @@ ${g.description ? `<p class="lead">${escapeHtml(g.description)}</p>` : ""}
       path: "/release-notes",
       title: titled("Release notes"),
       description: "Releases of the Aphrody distribution and of its runtime.",
-      body: `<h1>Release notes</h1>${distNotes}${renderRuntimeNotes(releases, o)}`,
+      body: `<h1>Release notes</h1>${distNotes}${renderRuntimeNotes(o.releases, o)}`,
       tabs: topTabs("Release notes"),
     }),
   );
@@ -1010,9 +775,7 @@ ${runtimeInstallCommands(o.origin)}
     );
 
   // 404, robots, sitemap, ressources, manifeste
-  if (home) {
-    write(join(o.out, "index.html"), home.html);
-    for (const asset of home.assets) write(join(o.out, asset.path), asset.bytes);
+  {
     if (home.graph && !generatedPaths.has("/graph")) {
       const { fact, receipt, catalog } = home.graph;
       write(
@@ -1021,7 +784,7 @@ ${runtimeInstallCommands(o.origin)}
           path: "/graph",
           title: titled("Source graph"),
           tabs: topTabs(),
-          body: `<h1>Source graph</h1><p>Source <a href="https://github.com/${o.repo}/tree/${fact.source}">${fact.source}</a>. <a href="/home-provenance.json">Input receipt SHA-256 ${receipt.sha256}</a>.</p><p>${catalog.files === undefined ? "" : `${catalog.files} tracked catalog entries. `}${catalog.domains === undefined ? "" : `${catalog.domains} source domains. `}${catalog.links === undefined ? "" : `${catalog.links} resolved source relationships. `}Source extraction has its own scope and parser limits; these counts do not qualify runtime behavior.</p><p>Use the <a href="/#home-search">read-only docs and graph search</a> for cited answers from its source snapshot.</p>`,
+          body: `<h1>Source graph</h1><p>Source <a href="https://github.com/${o.repo}/tree/${fact.source}">${fact.source}</a>. Graph receipt SHA-256 <code>${receipt.sha256}</code>.</p><p>${catalog.files === undefined ? "" : `${catalog.files} tracked catalog entries. `}${catalog.domains === undefined ? "" : `${catalog.domains} source domains. `}${catalog.links === undefined ? "" : `${catalog.links} resolved source relationships. `}Counts describe the extracted source snapshot.</p>`,
         }),
       );
     }
@@ -1052,7 +815,6 @@ ${runtimeInstallCommands(o.origin)}
     "/downloads",
     "/release-notes",
     ...ordered.map(p => pageUrl(p.slug)),
-    ...(editorial ? ["/guides", "/blog", ...editorial.pages.map(article => article.path)] : []),
     ...(home?.graph ? ["/graph"] : []),
   ];
   write(
@@ -1077,20 +839,15 @@ ${runtimeInstallCommands(o.origin)}
         dataGeneratedAt: data?.generatedAt ?? null,
         pages: ordered.length,
         generated: generated.map(g => g.path),
-        editorial: editorial ? editorialSummary(editorial) : null,
         latestRelease: latest?.tag ?? null,
         perfReports: reports.map(r => r.platform),
         scripts: served,
-        home: home
-          ? {
-              source: o.commit,
-              provenance: {
-                path: "home-provenance.json",
-                sha256: home.assets.find(asset => asset.path === "home-provenance.json")!.sha256,
-              },
-              inputs: home.provenance.inputReceipts,
-            }
-          : null,
+        receipts: {
+          runtime: home.receipts,
+          graph: home.graph
+            ? { source: home.graph.fact.source, ...home.graph.receipt, catalog: home.graph.catalog }
+            : null,
+        },
       },
       null,
       2,
@@ -1110,23 +867,14 @@ ${runtimeInstallCommands(o.origin)}
     latest: latest?.tag ?? null,
     reports: reports.length,
     scripts: served,
-    home: home
-      ? {
-          source: o.commit,
-          assets: home.assets.length,
-          runtimeTargets: home.provenance.runtime.map(fact => fact.target),
-          graphSource: home.graph?.fact.source ?? null,
-        }
-      : null,
+    runtimeTargets: home.facts.map(fact => fact.target),
+    graphSource: home.graph?.fact.source ?? null,
   };
 }
 
 export function pageMarkdown(p: { title: string; description: string; markdown: string }, origin: string): string {
   return `# ${p.title}\n\n${p.description ? `> ${p.description.replace(/\s+/g, " ")}\n\n` : ""}${absolutizeMarkdownLinks(p.markdown, origin)}\n`;
 }
-
-const redirectPage = (origin: string, to: string) =>
-  `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Redirecting</title><link rel="canonical" href="${origin}${to}"><meta http-equiv="refresh" content="0; url=${to}"></head><body><a href="${to}">${origin}${to}</a></body></html>\n`;
 
 const link = (text: string, href: string) => `<a href="${escapeHtml(href)}">${escapeHtml(text)}</a>`;
 
@@ -1158,47 +906,105 @@ ${installers.length ? `<div class="cmds">${installers.map(i => cmd(i.label, i.co
 </section>`;
 }
 
-/** En-tête de Bun OS : rôle du runtime, commandes d'installation, liens. */
-export function renderRuntimeHero(d: SiteData, o: BuildOptions): string {
+/** Built-in modules inherited from upstream Bun; the home page lists the other registry entries. */
+const UPSTREAM_MODULES = new Set([
+  "bun:ffi",
+  "bun:jsc",
+  "bun:main",
+  "bun:sqlite",
+  "bun:test",
+  "bun:wrap",
+  "bun:internal-for-testing",
+]);
+
+const OS_LABEL = { linux: "Linux", darwin: "macOS", windows: "Windows" } as const;
+
+/** Platforms of a release, from its runtime archive names (`bun-linux-x64.zip`, `bun-windows-x64.exe`...). */
+export function releasePlatforms(release: Release): string[] {
+  const seen = new Set<string>();
+  for (const asset of release.assets) {
+    const d = describeAsset(asset.name);
+    if (!d || d.profile) continue;
+    seen.add(`${OS_LABEL[d.os]} ${d.arch === "aarch64" ? "arm64" : "x64"}${d.musl ? " musl" : ""}`);
+  }
+  return [...seen].sort();
+}
+
+/** Accueil du site du runtime : présentation, installation, outils, modules, dernière release, mesures. */
+export function renderRuntimeHero(
+  d: SiteData,
+  o: BuildOptions,
+  extra: { facts?: readonly RuntimeHomeFact[]; docs?: { has(slug: string): boolean } } = {},
+): string {
   const rt = d.runtime!;
-  const latest = latestRuntimeRelease(o.releases);
+  const releases = o.releases?.filter(isRuntimeRelease) ?? null;
+  const latest = latestRuntimeRelease(releases);
   const host = new URL(o.origin).host;
+  const doc = (slug: string, fallback = "/docs") => (!extra.docs || extra.docs.has(slug) ? pageUrl(slug) : fallback);
   const commands = [
-    cmd("Linux and macOS (bash)", `curl -fsSL ${o.origin}/install | bash`),
+    cmd("Linux and macOS", `curl -fsSL ${o.origin}/install | bash`),
     cmd("Windows (PowerShell)", `powershell -c "irm ${host}/install.ps1|iex"`),
-    ...(rt.npm ? [cmd("npm", `npm install -g ${rt.npm.name}`)] : []),
   ];
+  const platforms = latest ? releasePlatforms(latest) : [];
+  const release = latest
+    ? `<p class="release-chip"><a href="/release-notes#${escapeHtml(latest.tag)}">${escapeHtml(latest.name)}</a> <span class="muted">· ${escapeHtml(latest.publishedAt.slice(0, 10))}${platforms.length ? ` · ${escapeHtml(platforms.join(", "))}` : ""}</span></p>`
+    : "";
+  const modules = rt.modules.filter(name => !UPSTREAM_MODULES.has(name));
+  const moduleList = modules
+    .map(name => {
+      const slug = `runtime/${name.slice(4)}`;
+      return extra.docs?.has(slug)
+        ? `<li><a href="${pageUrl(slug)}"><code>${escapeHtml(name)}</code></a></li>`
+        : `<li><code>${escapeHtml(name)}</code></li>`;
+    })
+    .join("");
+  const facts = extra.facts ?? [];
+  const measured = facts.length
+    ? `<section aria-labelledby="measured-builds"><h2 id="measured-builds">Measured builds</h2>
+<p>Receipts recorded for published executables.</p>
+<table><thead><tr><th scope="col">Target</th><th scope="col">Version</th><th scope="col">Source</th><th scope="col" class="num">Tests passed</th><th scope="col" class="num">Failed</th></tr></thead><tbody>${facts
+        .map(fact => {
+          const passed = fact.gates.reduce((sum, gate) => sum + gate.passed, 0);
+          const failed = fact.gates.reduce((sum, gate) => sum + gate.failed, 0);
+          return `<tr><td>${escapeHtml(RUNTIME_TARGETS[fact.target] ?? fact.target)}</td><td><code>${escapeHtml(fact.version)}</code></td><td><a href="https://github.com/${escapeHtml(rt.repo)}/commit/${fact.source}"><code>${fact.source.slice(0, 10)}</code></a></td><td class="num">${passed}</td><td class="num">${failed}</td></tr>`;
+        })
+        .join("")}</tbody></table></section>`
+    : "";
   return `<section class="hero">
-<img class="hero-mark" src="/icon.svg" alt="Aphrody" width="96" height="96">
+<img class="hero-mark" src="/icon.svg" alt="" width="96" height="96">
 <p class="eyebrow">Aphrody Labs</p>
 <h1>Bun OS</h1>
-<p class="lead">The Bun runtime of Aphrody. JavaScript and TypeScript runtime, package manager, test runner and bundler in one executable, with Aphrody's native system integrations.</p>
-<p>Meet <a href="/docs/runtime/video"><code>Bun.Video</code></a>: native video processing with the <code>Bun.Image</code> transformation pipeline.</p>
-<p>${link(rt.repo, `https://github.com/${rt.repo}`)} builds on ${link(rt.upstream.name, rt.upstream.url)} ${escapeHtml(rt.upstream.version)}. Source version and published executables are tracked separately${latest ? `; published release: ${link(latest.tag, latest.url)}` : "; see downloads for available published executables"}.</p>
-<p>Install a published runtime:</p>
+<p class="lead">A JavaScript and TypeScript runtime, package manager, test runner and bundler in one executable. Bun OS is built from ${link("Bun", rt.upstream.url)} ${escapeHtml(rt.upstream.version)} and adds native modules for Windows, Linux, Python, .NET, media and source graphs.</p>
+${release}
 <div class="cmds">${commands.join("")}</div>
-<div class="btns"><a class="btn" href="/docs">Documentation</a><a class="btn tonal" href="/downloads">Downloads</a><a class="btn outlined" href="https://github.com/${escapeHtml(rt.repo)}">GitHub</a></div>
+<div class="btns"><a class="btn" href="${doc("quickstart")}">Get started</a><a class="btn tonal" href="/downloads">Downloads</a><a class="btn outlined" href="https://github.com/${escapeHtml(rt.repo)}">GitHub</a></div>
 </section>
+<section aria-labelledby="runtime-toolkit"><h2 id="runtime-toolkit">One executable for the whole workflow</h2>
+<p>Use each tool on its own in an existing Node.js project, or build the whole application on Bun OS.</p>
+<div class="card-group">
+<div class="card"><p class="card-title"><a href="${doc("runtime/index")}">Runtime</a></p><p class="muted">Run JavaScript, TypeScript and JSX on JavaScriptCore, with Node.js and Web APIs.</p><pre><code>bun run index.tsx</code></pre></div>
+<div class="card"><p class="card-title"><a href="${doc("pm/cli/install")}">Package manager</a></p><p class="muted">Install npm packages, manage workspaces and keep a text lockfile.</p><pre><code>bun install</code></pre></div>
+<div class="card"><p class="card-title"><a href="${doc("test/index")}">Test runner</a></p><p class="muted">Jest-compatible tests with mocks, snapshots and watch mode.</p><pre><code>bun test</code></pre></div>
+<div class="card"><p class="card-title"><a href="${doc("bundler/index")}">Bundler</a></p><p class="muted">Bundle JavaScript, TypeScript, JSX and CSS for browsers or servers.</p><pre><code>bun build ./app.tsx --outdir dist</code></pre></div>
+</div></section>
+${
+  modules.length
+    ? `<section aria-labelledby="native-modules"><h2 id="native-modules">Built-in modules</h2>
+<p>Bun OS keeps Bun's module names and adds these entries to the built-in module registry. Each documentation page lists its platform support.</p>
+<ul class="chips">${moduleList}</ul></section>`
+    : ""
+}
 <section aria-labelledby="bun-video"><h2 id="bun-video">Bun.Video</h2>
-<p>Read media metadata, extract frames and create thumbnails directly in TypeScript. Native Rust decoding feeds the same resize, crop and image encoders as <code>Bun.Image</code>.</p>
+<p>Read media metadata, extract frames and create thumbnails in TypeScript. Native Rust decoding feeds the same resize, crop and encode pipeline as <code>Bun.Image</code>.</p>
 <pre tabindex="0"><code class="language-typescript">const video = new Bun.Video("clip.mp4");
 const metadata = await video.metadata();
 await video.frame(1).resize(320, 180).webp().write("preview.webp");</code></pre>
-<p>Bounded frame batches, WAV audio, GIF export and MP4 remux use native worker jobs. Check the documented codec and platform support for your runtime.</p>
-<div class="btns"><a class="btn" href="/docs/runtime/video">Explore Bun.Video</a><a class="btn tonal" href="/docs/runtime/image">Image transforms</a></div>
+<p><a href="${doc("runtime/video")}">Bun.Video reference</a> · <a href="${doc("runtime/image")}">Bun.Image transforms</a></p>
 </section>
-<section aria-labelledby="runtime-toolkit"><h2 id="runtime-toolkit">One executable for your workflow</h2>
-<p>Use the tools individually in an existing project, or build your application around Bun.</p>
-<div class="card-group">
-<div class="card"><h3>Runtime</h3><p>Run JavaScript, TypeScript and JSX on JavaScriptCore. Explore the documented Node.js and Web APIs.</p><pre><code>bun run index.tsx</code></pre><a href="/docs/runtime">Runtime docs</a></div>
-<div class="card"><h3>Package manager</h3><p>Install npm packages, manage workspaces and keep dependencies in a Bun lockfile.</p><pre><code>bun install</code></pre><a href="/docs/pm/cli/install">Package manager docs</a></div>
-<div class="card"><h3>Test runner</h3><p>Write tests with assertions, mocks and snapshots from <code>bun:test</code>.</p><pre><code>bun test</code></pre><a href="/docs/test">Test runner docs</a></div>
-<div class="card"><h3>Bundler</h3><p>Bundle JavaScript, TypeScript, JSX and CSS for browser or runtime targets.</p><pre><code>bun build ./app.tsx --outdir dist</code></pre><a href="/docs/bundler">Bundler docs</a></div>
-</div></section>
-<section aria-labelledby="native-integrations"><h2 id="native-integrations">Native integrations from Aphrody Labs</h2>
-<p>The source inventory declares system modules, Python and .NET hosting, graph APIs and desktop integration alongside the Bun toolkit. Each surface requires qualification for the selected executable and platform; see the <a href="/runtime">runtime reference</a>.</p>
-<p>Packages use the <code>@aphrody</code> npm scope. Built-in imports keep their identities: <code>bun</code>, <code>bun:sqlite</code>, <code>bun:test</code> and platform modules. Rust crates retain their manifest and ABI names.</p>
-<p>See <a href="/downloads">published releases and checksums</a> for available executables. A source version alone does not qualify a release or every declared capability.</p>
+${measured}
+<section aria-labelledby="open-source"><h2 id="open-source">Open source</h2>
+<p>Bun OS is developed by Aphrody Labs at ${link(rt.repo, `https://github.com/${rt.repo}`)} and includes code from ${link(rt.upstream.name, rt.upstream.url)} under its original licences. Packages are published under the <code>@aphrody</code> npm scope.</p>
+<p><a href="/release-notes">Release notes</a> · <a href="/benchmarks">Benchmarks</a> · <a href="/runtime">Source inventory</a></p>
 </section>`;
 }
 
@@ -1227,7 +1033,9 @@ function siteFooter(d: SiteData | null, o: BuildOptions): string {
     ["Docs", "/docs"],
     ["Downloads", "/downloads"],
     ["Release notes", "/release-notes"],
-    ...(d?.runtime && !d.distribution ? [["Runtime", "/runtime"]] : []),
+    ["Benchmarks", "/benchmarks"],
+    ...(d?.runtime && !d.distribution ? [["Source inventory", "/runtime"]] : []),
+    ["GitHub", `https://github.com/${o.repo}`],
     ...(d?.distribution
       ? [
           ["Components", "/components"],
@@ -1248,78 +1056,100 @@ function renderDownloads(
   o: BuildOptions,
   data: SiteData | null,
 ): string {
-  const head = `<h2 id="runtime">Runtime (${escapeHtml(o.repo)})</h2><p>Release builds from <a href="https://github.com/${o.repo}/releases">GitHub releases</a>, each archive with its SHA-256 from the release <code>SHA256SUMS.txt</code>.</p>
+  const head = `<h2 id="runtime">Runtime (${escapeHtml(o.repo)})</h2><p>Release builds from <a href="https://github.com/${o.repo}/releases">GitHub releases</a>, each file with its SHA-256 from the release checksum file.</p>
 ${runtimeInstallCommands(o.origin)}`;
   if (!releases || !latest)
     return `${head}<p class="banner">The release list could not be read when this page was built. See <a href="https://github.com/${o.repo}/releases">GitHub releases</a>.</p>`;
-  const osName = { linux: "Linux", darwin: "macOS", windows: "Windows" } as const;
   const groups = new Map<string, string[]>();
+  const others: string[] = [];
+  const sums = latest.assets.find(a => /^SHA256SUMS(?:\.txt)?$/.test(a.name));
   for (const a of latest.assets) {
+    if (a === sums) continue;
     const d = describeAsset(a.name);
-    if (!d) continue;
+    const sha = `<td class="sha">${a.sha256 ?? "see checksum file"}</td>`;
+    if (!d) {
+      others.push(
+        `<tr><td><a href="${escapeHtml(a.url)}">${escapeHtml(a.name)}</a></td><td class="num">${formatBytes(a.size)}</td>${sha}</tr>`,
+      );
+      continue;
+    }
     const label = [
       d.arch === "aarch64" ? "arm64" : "x64",
       d.musl ? "musl" : "",
       d.baseline ? "baseline (no AVX2)" : "",
       d.profile ? "profile (debug symbols)" : "",
+      d.format === "exe" ? "executable" : d.format,
     ]
       .filter(Boolean)
       .join(", ");
-    const row = `<tr><td><a href="${escapeHtml(a.url)}">${escapeHtml(a.name)}</a></td><td>${escapeHtml(label)}</td><td class="num">${formatBytes(a.size)}</td><td class="sha">${a.sha256 ?? "n/a"}</td></tr>`;
-    const key = osName[d.os];
+    const row = `<tr><td><a href="${escapeHtml(a.url)}">${escapeHtml(a.name)}</a></td><td>${escapeHtml(label)}</td><td class="num">${formatBytes(a.size)}</td>${sha}</tr>`;
+    const key = OS_LABEL[d.os];
     groups.set(key, [...(groups.get(key) ?? []), row]);
   }
-  const sums = latest.assets.find(a => a.name.startsWith("SHA256SUMS"));
   const tables = ["Linux", "macOS", "Windows"]
     .filter(k => groups.has(k))
     .map(
       k =>
-        `<h4 id="runtime-${k.toLowerCase()}">${k}</h4><table><thead><tr><th>Archive</th><th>Target</th><th class="num">Size</th><th>SHA-256</th></tr></thead><tbody>${groups.get(k)!.join("")}</tbody></table>`,
+        `<h4 id="runtime-${k.toLowerCase()}">${k}</h4><table><thead><tr><th>File</th><th>Target</th><th class="num">Size</th><th>SHA-256</th></tr></thead><tbody>${groups.get(k)!.join("")}</tbody></table>`,
     )
     .join("");
+  const otherTable = others.length
+    ? `<h4 id="runtime-other">Other files</h4><table><thead><tr><th>File</th><th class="num">Size</th><th>SHA-256</th></tr></thead><tbody>${others.join("")}</tbody></table>`
+    : "";
   const older = releases
-    .filter(r => r !== latest)
+    .filter(r => r !== latest && !r.prerelease)
     .map(
       r =>
-        `<li><a href="${escapeHtml(r.url)}">${escapeHtml(r.tag)}</a> <span class="muted">${escapeHtml(r.publishedAt.slice(0, 10))}</span></li>`,
+        `<li><a href="/release-notes#${escapeHtml(r.tag)}">${escapeHtml(r.name)}</a> <span class="muted">${escapeHtml(r.publishedAt.slice(0, 10))}</span></li>`,
     )
     .join("");
-  const base = latest.tag.replace(/^(?:bun-v|aphrody-v)/, "").replace(/-aphrody\.\d+$/, "");
   const npm = data?.runtime?.npm;
+  const sumsName = sums?.name ?? "SHA256SUMS.txt";
   return `${head}
 <p class="banner" data-latest-tag="${escapeHtml(latest.tag)}" data-repo="${escapeHtml(o.repo)}" hidden></p>
 <h3 id="runtime-latest">${escapeHtml(latest.name)}</h3>
 <p class="muted">Tag <a href="${escapeHtml(latest.url)}">${escapeHtml(latest.tag)}</a>, published ${escapeHtml(latest.publishedAt.slice(0, 10))}${sums ? ` · <a href="${escapeHtml(sums.url)}">${escapeHtml(sums.name)}</a>` : ""}.</p>
-${tables}
-<h3 id="runtime-verify">Verify a runtime download</h3>
-<pre><code class="language-bash">curl -fsSLO ${escapeHtml(sums?.url ?? `https://github.com/${o.repo}/releases/download/${latest.tag}/SHA256SUMS.txt`)}
-sha256sum --ignore-missing -c ${escapeHtml(sums?.name ?? "SHA256SUMS.txt")}</code></pre>
-<p>The runtime install scripts (<a href="/install">/install</a>, <a href="/install.ps1">/install.ps1</a>) pick the archive for the machine, check it against <code>SHA256SUMS.txt</code> and refuse a binary that does not run. They accept a version: <code>curl -fsSL ${escapeHtml(o.origin)}/install | bash -s ${escapeHtml(base)}</code> installs the newest <code>-aphrody.N</code> build of ${escapeHtml(base)}.</p>
+${tables}${otherTable}
+<h3 id="runtime-verify">Verify a download</h3>
+<pre><code class="language-bash">curl -fsSLO ${escapeHtml(sums?.url ?? `https://github.com/${o.repo}/releases/download/${latest.tag}/${sumsName}`)}
+sha256sum --ignore-missing -c ${escapeHtml(sumsName)}</code></pre>
+<p>The install scripts (<a href="/install">/install</a>, <a href="/install.ps1">/install.ps1</a>) pick the archive for the machine, check it against the release checksums and refuse a binary that does not run. They also accept a version, for example <code>curl -fsSL ${escapeHtml(o.origin)}/install | bash -s ${escapeHtml(latest.tag)}</code>.</p>
 ${
   npm
     ? `<h3 id="runtime-npm">npm</h3><p><a href="https://www.npmjs.com/package/${escapeHtml(npm.name)}">${escapeHtml(npm.name)}</a>${npm.version ? ` <code>${escapeHtml(npm.version)}</code>` : ""}</p>
-<pre><code class="language-bash">bunx ${escapeHtml(npm.name)} --version
-npm install -g ${escapeHtml(npm.name)}</code></pre>`
+<pre><code class="language-bash">npm install -g ${escapeHtml(npm.name)}</code></pre>`
     : ""
 }
 ${older ? `<h3 id="runtime-older">Older runtime releases</h3><ul>${older}</ul>` : ""}`;
 }
 
 function renderRuntimeNotes(releases: Release[] | null, o: BuildOptions): string {
-  const head = `<h2 id="runtime">Runtime (${escapeHtml(o.repo)})</h2>`;
-  if (!releases?.length)
-    return `${head}<p>See <a href="https://github.com/${o.repo}/releases">GitHub releases</a>.</p>`;
-  return `${head}<p>Releases of the runtime. Upstream Bun release notes are on <a href="https://bun.com/blog">bun.com/blog</a>.</p>
-${releases
+  const head = `<h2 id="runtime">Runtime releases</h2>`;
+  const stable = releases?.filter(r => isRuntimeRelease(r) && !r.prerelease) ?? [];
+  if (!stable.length) return `${head}<p>See <a href="https://github.com/${o.repo}/releases">GitHub releases</a>.</p>`;
+  const others = releases?.filter(r => !isRuntimeRelease(r) && !r.prerelease) ?? [];
+  const notes = (r: Release) =>
+    r.body.trim()
+      ? Bun.markdown.html(r.body, { headings: { ids: false }, tagFilter: true } as any)
+      : '<p class="muted">No notes.</p>';
+  return `${head}<p>Published builds of <a href="https://github.com/${o.repo}">${escapeHtml(o.repo)}</a>. Files and checksums are on <a href="/downloads">Downloads</a>; changes inherited from Bun are described in the <a href="https://bun.com/blog">upstream release notes</a>.</p>
+${stable
+  .map(r => {
+    const platforms = releasePlatforms(r);
+    return `<article class="release"><h3 id="${escapeHtml(r.tag)}"><a href="${escapeHtml(r.url)}">${escapeHtml(r.name)}</a></h3><p class="muted">${escapeHtml(r.publishedAt.slice(0, 10))} · <code>${escapeHtml(r.tag)}</code>${platforms.length ? ` · ${escapeHtml(platforms.join(", "))}` : ""}</p>${notes(r)}</article>`;
+  })
+  .join("\n")}
+${
+  others.length
+    ? `<h2 id="packages">SDK, tool and source releases</h2>
+${others
   .map(
     r =>
-      `<article><h3 id="${escapeHtml(r.tag)}"><a href="${escapeHtml(r.url)}">${escapeHtml(r.name)}</a></h3><p class="muted">${escapeHtml(r.publishedAt.slice(0, 10))} · ${r.assets.length} assets</p>${
-        r.body.trim()
-          ? Bun.markdown.html(r.body, { headings: { ids: false }, tagFilter: true } as any)
-          : '<p class="muted">No notes.</p>'
-      }</article>`,
+      `<article class="release"><h3 id="${escapeHtml(r.tag)}"><a href="${escapeHtml(r.url)}">${escapeHtml(r.name)}</a></h3><p class="muted">${escapeHtml(r.publishedAt.slice(0, 10))} · <code>${escapeHtml(r.tag)}</code></p>${notes(r)}</article>`,
   )
-  .join("\n")}`;
+  .join("\n")}`
+    : ""
+}`;
 }
 
 export function renderProductBenchmarks(report: any, hasGraph = false): string {
@@ -1454,7 +1284,6 @@ if (import.meta.main) {
     releases,
     data: dataFile ? (JSON.parse(readFileSync(dataFile, "utf8")) as SiteData) : null,
     ...(parseHomeBuildOptions(args) ? { home: parseHomeBuildOptions(args)! } : {}),
-    ...(parseEditorialBuildDirectory(args) ? { editorialDirectory: parseEditorialBuildDirectory(args)! } : {}),
   });
   const size = walk(resolve(out)).reduce((n, f) => n + statSync(f).size, 0);
   console.log(
