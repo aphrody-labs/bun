@@ -398,7 +398,7 @@ test("post-fetch qualification checks every generated Cargo path without exempti
       return 0;
     }),
   ).rejects.toThrow("package differs");
-  expect(commands).toHaveLength(3);
+  expect(commands).toHaveLength(4);
 });
 
 test("configure refuses foreign archive identities and unknown Cargo config before invoking the owner", async () => {
