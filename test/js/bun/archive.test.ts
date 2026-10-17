@@ -498,6 +498,44 @@ describe("Bun.Archive", () => {
         new Bun.Archive({ "hello.txt": "Hello, World!" }, { compress: "gzip", level: 13 });
       }).toThrow();
     });
+
+    test("zstd output is a zstd frame that reads back", async () => {
+      const content = Buffer.alloc(64 * 1024, "zstd ").toString();
+      const archive = new Bun.Archive({ "a/b.txt": content, "c.txt": "small" }, { compress: "zstd" });
+      const bytes = await archive.bytes();
+      expect([...bytes.subarray(0, 4)]).toEqual([0x28, 0xb5, 0x2f, 0xfd]);
+      const tar = await new Bun.Archive({ "a/b.txt": content, "c.txt": "small" }).bytes();
+      expect(Bun.zstdDecompressSync(bytes)).toEqual(Buffer.from(tar));
+      expect(bytes.length).toBeLessThan(tar.length);
+
+      const files = await new Bun.Archive(bytes).files();
+      expect([...files.keys()].sort()).toEqual(["a/b.txt", "c.txt"]);
+      expect(await files.get("a/b.txt")!.text()).toBe(content);
+    });
+
+    test("zstd archives extract to disk", async () => {
+      using dir = tempDir("archive-zstd", {});
+      const bytes = await new Bun.Archive({ "x/y.txt": "hello zstd" }, { compress: "zstd", level: 19 }).bytes();
+      const count = await new Bun.Archive(bytes).extract(String(dir));
+      expect(count).toBeGreaterThan(0);
+      expect(await Bun.file(join(String(dir), "x/y.txt")).text()).toBe("hello zstd");
+    });
+
+    test("Bun.Archive.write honors zstd", async () => {
+      using dir = tempDir("archive-zstd-write", {});
+      const path = join(String(dir), "out.tar.zst");
+      await Bun.Archive.write(path, { "f.txt": "written" }, { compress: "zstd" });
+      const files = await new Bun.Archive(await Bun.file(path).bytes()).files();
+      expect(await files.get("f.txt")!.text()).toBe("written");
+    });
+
+    test("rejects invalid zstd levels and data", async () => {
+      expect(() => new Bun.Archive({ "a.txt": "a" }, { compress: "zstd", level: 0 })).toThrow("between 1 and 22");
+      expect(() => new Bun.Archive({ "a.txt": "a" }, { compress: "zstd", level: 23 })).toThrow("between 1 and 22");
+      expect(() => new Bun.Archive({ "a.txt": "a" }, { compress: "brotli" as any })).toThrow('"gzip" or "zstd"');
+      const corrupt = new Uint8Array([0x28, 0xb5, 0x2f, 0xfd, 1, 2, 3]);
+      await expect(new Bun.Archive(corrupt).files()).rejects.toThrow("invalid zstd data");
+    });
   });
 
   describe("archive.bytes()", () => {

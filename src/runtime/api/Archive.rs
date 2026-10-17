@@ -27,6 +27,7 @@ pub(crate) enum Compression {
     #[default]
     None,
     Gzip(GzipOptions),
+    Zstd(ZstdOptions),
 }
 
 /// Container format for archives built from an object of entries.
@@ -50,6 +51,15 @@ pub(crate) struct GzipOptions {
     /// Compression level: 1 (fastest) to 12 (maximum compression). Default is 6.
     pub level: u8,
 }
+
+#[derive(Clone, Copy)]
+pub(crate) struct ZstdOptions {
+    /// Compression level: 1 (fastest) to 22 (maximum compression). Default is 3.
+    pub level: i32,
+}
+
+/// Magic number that opens every zstd frame.
+const ZSTD_MAGIC: [u8; 4] = [0x28, 0xB5, 0x2F, 0xFD];
 
 // Hand-written JS class glue (not the `#[bun_jsc::JsClass]` derive): Archive
 // has no constructor, which the proc-macro does not expose.
@@ -178,6 +188,7 @@ pub(crate) enum SourceError {
     OutOfMemory,
     Unsupported,
     SyncLimit,
+    Zstd,
 }
 
 impl SourceError {
@@ -187,6 +198,7 @@ impl SourceError {
             Self::OutOfMemory => global.create_out_of_memory_error(),
             Self::Unsupported => global.create_error_instance(format_args!("Archive input must be a regular local file or in-memory Blob")),
             Self::SyncLimit => global.create_error_instance(format_args!("Archive synchronous file entries exceed 64 MiB; read their bytes asynchronously before constructing the archive")),
+            Self::Zstd => global.create_error_instance(format_args!("Archive: invalid zstd data")),
         }
     }
 }
@@ -459,7 +471,6 @@ fn parse_compression_options(
 
     // Check for compress option
     if let Some(compress_val) = options_arg.get_truthy(global, "compress")? {
-        // compress must be "gzip"
         if !compress_val.is_string() {
             return Err(global.throw_invalid_arguments(format_args!(
                 "Archive: compress option must be a string"
@@ -468,14 +479,18 @@ fn parse_compression_options(
 
         let compress_str = compress_val.to_utf8(global)?;
 
-        if compress_str.slice() != b"gzip" {
-            return Err(global.throw_invalid_arguments(format_args!(
-                "Archive: compress option must be \"gzip\""
-            )));
-        }
+        let zstd = match compress_str.slice() {
+            b"gzip" => false,
+            b"zstd" => true,
+            _ => {
+                return Err(global.throw_invalid_arguments(format_args!(
+                    "Archive: compress option must be \"gzip\" or \"zstd\""
+                )));
+            }
+        };
 
-        // Parse level option (1-12, default 6)
-        let mut level: u8 = 6;
+        // gzip: 1-12, default 6; zstd: 1-22, default 3.
+        let (max, mut level) = if zstd { (22, 3) } else { (12, 6) };
         if let Some(level_val) = options_arg.get_truthy(global, "level")? {
             if !level_val.is_number() {
                 return Err(
@@ -483,15 +498,20 @@ fn parse_compression_options(
                 );
             }
             let level_num = level_val.to_int64();
-            if level_num < 1 || level_num > 12 {
+            if level_num < 1 || level_num > max {
                 return Err(global.throw_invalid_arguments(format_args!(
-                    "Archive: level must be between 1 and 12"
+                    "Archive: level must be between 1 and {max}"
                 )));
             }
-            level = u8::try_from(level_num).expect("int cast");
+            level = level_num;
         }
 
-        return Ok(Compression::Gzip(GzipOptions { level }));
+        let level = i32::try_from(level).expect("int cast");
+        return Ok(if zstd {
+            Compression::Zstd(ZstdOptions { level })
+        } else {
+            Compression::Gzip(GzipOptions { level: u8::try_from(level).expect("int cast") })
+        });
     }
 
     // No compress option specified in options object means no compression
@@ -1113,7 +1133,7 @@ impl ExtractContext {
     fn do_run(&mut self) -> ExtractResult {
         // Glob patterns and zip archives go through the Bun.Archive reader;
         // the fast path is the tar-only extractor `bun install` uses.
-        let source = match self.store.read(None) {
+        let source = match self.store.read(None).and_then(archive_input) {
             Ok(source) => source,
             Err(error) => return ExtractResult::Source(error),
         };
@@ -1212,6 +1232,10 @@ impl TaskContext for BlobContext {
         };
         self.result = match &self.compress {
             Compression::Gzip(opts) => match compress_gzip(source.slice(), opts.level) {
+                Ok(data) => BlobResult::Compressed(data),
+                Err(e) => BlobResult::Err(e),
+            },
+            Compression::Zstd(opts) => match compress_zstd(source.slice(), opts.level) {
                 Ok(data) => BlobResult::Compressed(data),
                 Err(e) => BlobResult::Err(e),
             },
@@ -1359,6 +1383,13 @@ impl WriteContext {
                 };
                 &compressed_buf
             }
+            Compression::Zstd(opts) => {
+                compressed_buf = match compress_zstd(source_data, opts.level) {
+                    Ok(v) => v,
+                    Err(e) => return WriteResult::Err(e),
+                };
+                &compressed_buf
+            }
             Compression::None => source_data,
         };
         // `defer if (compress != .none) free(data_to_write)` — handled by `compressed_buf: Vec<u8>` Drop.
@@ -1449,7 +1480,7 @@ impl FilesContext {
         let archive = lib::ReadArchive::new();
         configure_archive_reader(&archive);
 
-        let source = match self.store.read(None) {
+        let source = match self.store.read(None).and_then(archive_input) {
             Ok(source) => source,
             Err(error) => return Ok(FilesResult::Source(error)),
         };
@@ -1593,6 +1624,8 @@ enum CompressError {
     GzipInitFailed,
     #[error("GzipCompressFailed")]
     GzipCompressFailed,
+    #[error("ZstdCompressFailed")]
+    ZstdCompressFailed,
     /// The output buffer (sized by the data being compressed) could not be allocated.
     #[error("OutOfMemory")]
     OutOfMemory,
@@ -1621,6 +1654,31 @@ fn compress_gzip(data: &[u8], level: u8) -> Result<Vec<u8>, CompressError> {
         return Err(CompressError::GzipCompressFailed);
     }
     Ok(output)
+}
+
+fn compress_zstd(data: &[u8], level: i32) -> Result<Vec<u8>, CompressError> {
+    let bound = bun_zstd::compress_bound(data.len());
+    if bun_zstd::is_error(bound) {
+        return Err(CompressError::ZstdCompressFailed);
+    }
+    let mut output = Vec::new();
+    output.try_reserve_exact(bound).map_err(|_| CompressError::OutOfMemory)?;
+    match bun_zstd::compress_append(&mut output, data, Some(level)) {
+        bun_zstd::Result::Success(_) => Ok(output),
+        bun_zstd::Result::Err(_) => Err(CompressError::ZstdCompressFailed),
+    }
+}
+
+/// The bytes the tar/zip reader sees: a zstd-compressed archive is decompressed first.
+fn archive_input(source: Utf8Bytes<'_>) -> Result<Utf8Bytes<'_>, SourceError> {
+    if !source.slice().starts_with(&ZSTD_MAGIC) {
+        return Ok(source);
+    }
+    match bun_zstd::decompress_alloc(source.slice()) {
+        Ok(bytes) => Ok(Utf8Bytes::Owned(bytes)),
+        Err(bun_zstd::ZstdError::OutOfMemory) => Err(SourceError::OutOfMemory),
+        Err(_) => Err(SourceError::Zstd),
+    }
 }
 
 /// Check if a path is safe (no absolute paths or path traversal)

@@ -322,13 +322,13 @@ See [Bun.Glob](/runtime/glob) for the full glob syntax including escaping and ad
 
 ## Compression
 
-Bun.Archive creates uncompressed tar archives by default. Use `{ compress: "gzip" }` to enable gzip compression:
+Bun.Archive creates uncompressed tar archives by default. Use `{ compress: "gzip" }` or `{ compress: "zstd" }` to compress the tar:
 
 ```ts
 // Default: uncompressed tar
 const archive = new Bun.Archive({ "hello.txt": "Hello, World!" });
 
-// Reading: automatically detects gzip
+// Reading: automatically detects gzip and zstd
 const gzippedTarball = await Bun.file("archive.tar.gz").bytes();
 const readArchive = new Bun.Archive(gzippedTarball);
 
@@ -337,6 +337,10 @@ const compressed = new Bun.Archive({ "hello.txt": "Hello, World!" }, { compress:
 
 // Gzip with custom level (1-12)
 const maxCompression = new Bun.Archive({ "hello.txt": "Hello, World!" }, { compress: "gzip", level: 12 });
+
+// Zstandard (.tar.zst), level 1-22
+const zstd = new Bun.Archive({ "hello.txt": "Hello, World!" }, { compress: "zstd", level: 19 });
+await Bun.Archive.write("archive.tar.zst", { "hello.txt": "Hello, World!" }, { compress: "zstd" });
 ```
 
 The `options` argument accepts:
@@ -344,6 +348,8 @@ The `options` argument accepts:
 - No options or `undefined` - Uncompressed tar (default)
 - `{ compress: "gzip" }` - Enable gzip compression at level 6
 - `{ compress: "gzip", level: number }` - Gzip with custom level 1-12 (1 = fastest, 12 = smallest)
+- `{ compress: "zstd" }` - Enable Zstandard compression at level 3
+- `{ compress: "zstd", level: number }` - Zstandard with custom level 1-22
 - `{ format: "zip" }` - Zip archive instead of tar (cannot be combined with `compress`)
 - `{ mtime: number | Date }` - Modification time of the entries
 
@@ -434,9 +440,9 @@ type ArchiveInput =
   | ArrayBufferLike;
 
 type ArchiveOptions = {
-  /** Compression algorithm. Currently only "gzip" is supported. */
-  compress?: "gzip";
-  /** Compression level 1-12 (default 6 when gzip is enabled). */
+  /** Compression algorithm. */
+  compress?: "gzip" | "zstd";
+  /** Compression level: gzip 1-12 (default 6), zstd 1-22 (default 3). */
   level?: number;
   /** Container format when building from an object (default "tar"). */
   format?: "tar" | "zip";

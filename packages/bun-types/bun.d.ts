@@ -6458,9 +6458,13 @@ declare module "bun" {
     | "tsx"
     | "json"
     | "jsonc"
+    | "json5"
+    | "jsonl"
+    | "ini"
     | "toml"
     | "yaml"
     | "xml"
+    | "md"
     | "file"
     | "napi"
     | "wasm"
@@ -10841,10 +10845,9 @@ declare module "bun" {
   type ArchiveFormat = "tar" | "zip";
 
   /**
-   * Compression format for archive output.
-   * Only `"gzip"` is supported.
+   * Compression format for archive output. Reading detects gzip and zstd input by itself.
    */
-  type ArchiveCompression = "gzip";
+  type ArchiveCompression = "gzip" | "zstd";
 
   /**
    * Options for creating an Archive instance.
@@ -10865,18 +10868,14 @@ declare module "bun" {
    */
   interface ArchiveOptions {
     /**
-     * Compression algorithm to use.
-     * Only `"gzip"` is supported.
+     * Compression algorithm to use: `"gzip"` or `"zstd"`.
      * If not specified, no compression is applied.
      */
     compress?: ArchiveCompression;
     /**
-     * Compression level (1-12). Only applies when `compress` is set.
-     * - 1: Fastest compression, lowest ratio
-     * - 6: Default balance of speed and ratio
-     * - 12: Best compression ratio, slowest
-     *
-     * @default 6
+     * Compression level. Only applies when `compress` is set.
+     * - gzip: 1 (fastest) to 12 (smallest), default 6
+     * - zstd: 1 (fastest) to 22 (smallest), default 3
      */
     level?: number;
     /**
