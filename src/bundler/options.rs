@@ -364,7 +364,9 @@ impl LoaderExt for Loader {
             | Loader::Json
             | Loader::Jsonc
             | Loader::Json5
-            | Loader::Xml => MimeType::JSON,
+            | Loader::Xml
+            | Loader::Jsonl
+            | Loader::Ini => MimeType::JSON,
             Loader::Wasm => MimeType::WASM,
             Loader::Html | Loader::Md => MimeType::HTML,
             _ => {
@@ -396,6 +398,10 @@ impl LoaderExt for Loader {
             Loader::Ts
         } else if mime_type.value.starts_with(b"application/json5") {
             Loader::Json5
+        } else if mime_type.value.starts_with(b"application/jsonl")
+            || mime_type.value.starts_with(b"application/x-ndjson")
+        {
+            Loader::Jsonl
         } else if mime_type.value.starts_with(b"application/jsonc") {
             Loader::Jsonc
         } else if mime_type.value.starts_with(b"application/json") {
@@ -610,6 +616,9 @@ const DEFAULT_LOADERS_POSIX: &[(&[u8], Loader)] = &[
     (b".jsonc", Loader::Jsonc),
     (b".json5", Loader::Json5),
     (b".xml", Loader::Xml),
+    (b".ini", Loader::Ini),
+    (b".jsonl", Loader::Jsonl),
+    (b".ndjson", Loader::Jsonl),
     (b".md", Loader::Md),
     (b".markdown", Loader::Md),
 ];
@@ -621,8 +630,8 @@ const DEFAULT_LOADERS_WIN32_EXTRA: &[(&[u8], Loader)] = &[(b".sh", Loader::Bunsh
 ///
 /// PERF: deliberately not a hashed map (the old `phf::Map` SipHash-ed the full
 /// key, probed a displacement table, and finished with a memcmp on every
-/// lookup). With only 29 keys bucketing into 5 distinct lengths
-/// (3/4/5/6/9, all `.`-prefixed), a length-gated `match` is cheaper: one
+/// lookup). With only 32 keys bucketing into 6 distinct lengths
+/// (3/4/5/6/7/9, all `.`-prefixed), a length-gated `match` is cheaper: one
 /// `usize` compare rejects every wrong-length probe, and within each bucket
 /// rustc lowers the fixed-width byte-slice arms to single u32/u64 compares (no
 /// memcmp loop). This sits on the resolver hot path (`loaderFromPath` per
@@ -662,6 +671,7 @@ impl DefaultLoaders {
                 b".css" => Some(&Loader::Css),
                 b".yml" => Some(&Loader::Yaml),
                 b".xml" => Some(&Loader::Xml),
+                b".ini" => Some(&Loader::Ini),
                 b".txt" => Some(&Loader::Text),
                 _ => None,
             },
@@ -684,6 +694,11 @@ impl DefaultLoaders {
                 b".cstsx" => Some(&Loader::Tsx),
                 b".jsonc" => Some(&Loader::Jsonc),
                 b".json5" => Some(&Loader::Json5),
+                b".jsonl" => Some(&Loader::Jsonl),
+                _ => None,
+            },
+            7 => match ext {
+                b".ndjson" => Some(&Loader::Jsonl),
                 _ => None,
             },
             9 if ext == b".markdown" => Some(&Loader::Md),

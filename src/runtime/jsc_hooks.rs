@@ -2225,7 +2225,15 @@ fn transpile_source_code_of_any_provenance(
         && !(loader.is_java_script_like()
             || matches!(
                 loader,
-                L::Toml | L::Yaml | L::Json5 | L::Xml | L::Text | L::Json | L::Jsonc
+                L::Toml
+                    | L::Yaml
+                    | L::Json5
+                    | L::Xml
+                    | L::Jsonl
+                    | L::Ini
+                    | L::Text
+                    | L::Json
+                    | L::Jsonc
             ))
     {
         return Ok(ResolvedSource {
@@ -2248,6 +2256,8 @@ fn transpile_source_code_of_any_provenance(
         | L::Yaml
         | L::Json5
         | L::Xml
+        | L::Jsonl
+        | L::Ini
         | L::Text
         | L::Md => {
             // `bun_ast::ASTMemoryAllocator::Scope`.
@@ -2795,10 +2805,10 @@ fn transpile_source_code_of_any_provenance(
                     });
                 }
 
-                // JSON/TOML/YAML/JSON5/XML: export as a JS object.
+                // JSON/TOML/YAML/JSON5/XML/JSONL/INI: export as a JS value.
                 if matches!(
                     loader,
-                    L::Json | L::Jsonc | L::Toml | L::Yaml | L::Json5 | L::Xml
+                    L::Json | L::Jsonc | L::Toml | L::Yaml | L::Json5 | L::Xml | L::Jsonl | L::Ini
                 ) {
                     let jsvalue_for_export = if parse_result.empty {
                         JSValue::create_empty_object(global_object, 0)
@@ -3853,6 +3863,8 @@ fn force_loader_from_api_u8(api_loader: u8) -> Option<Loader> {
         20 => Some(L::Json5),
         21 => Some(L::Md),
         22 => Some(L::Xml),
+        23 => Some(L::Jsonl),
+        24 => Some(L::Ini),
         // 254 = `_none`; everything else is open-tail.
         _ => None,
     }

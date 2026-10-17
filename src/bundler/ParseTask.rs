@@ -988,6 +988,52 @@ pub mod parse_worker {
                 let _ = temp_log.clone_to_with_recycled(log, true);
                 return result;
             }
+            Loader::Jsonl => {
+                let _trace = perf::trace("Bundler.ParseJsonl");
+                let mut temp_log = Log::init();
+                let result = (|| -> core::result::Result<JSAst<'static>, AnyError> {
+                    let root: Expr = bun_parsers::json::parse_jsonl_into_arena(source, &mut temp_log, bump)?;
+                    Ok(JSAst::init(
+                        js_parser::new_lazy_export_ast(
+                            bump,
+                            &mut topts.define,
+                            opts,
+                            &mut temp_log,
+                            root,
+                            source,
+                            b"",
+                        )?
+                        .ok_or(AnyError::ParserError)?,
+                    ))
+                })();
+                let _ = temp_log.clone_to_with_recycled(log, true);
+                return result;
+            }
+            Loader::Ini => {
+                let _trace = perf::trace("Bundler.ParseIni");
+                let mut temp_log = Log::init();
+                let result = (|| -> core::result::Result<JSAst<'static>, AnyError> {
+                    // No ${VAR} expansion: an imported file must not read the build's environment.
+                    let env = bun_dotenv::Loader::init();
+                    let mut parser = bun_ini::Parser::init(source, &env);
+                    parser.parse(bump).map_err(|_| AnyError::ParserError)?;
+                    let root: Expr = parser.out;
+                    Ok(JSAst::init(
+                        js_parser::new_lazy_export_ast(
+                            bump,
+                            &mut topts.define,
+                            opts,
+                            &mut temp_log,
+                            root,
+                            source,
+                            b"",
+                        )?
+                        .ok_or(AnyError::ParserError)?,
+                    ))
+                })();
+                let _ = temp_log.clone_to_with_recycled(log, true);
+                return result;
+            }
             Loader::Text => {
                 // A standalone executable embeds the text as a string body the
                 // runtime aliases without a copy (`encode_text_module`), so the

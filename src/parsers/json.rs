@@ -439,6 +439,44 @@ pub fn parse_jsonc_into_arena(
     parse_to_rows_in(source, log, TSCONFIG_OPTS, arena)
 }
 
+/// JSON Lines (`.jsonl`, `.ndjson`): one JSON value per non-blank line, as an `E::Array`.
+pub fn parse_jsonl_into_arena(
+    source: &bun_ast::Source,
+    log: &mut bun_ast::Log,
+    arena: &Bump,
+) -> crate::Result<Expr> {
+    let contents: &[u8] = source.contents.as_ref();
+    let mut items: js_ast::ExprNodeList = Vec::new_in(bun_alloc::AstAlloc);
+    let mut start = 0usize;
+    while start <= contents.len() {
+        let end = bun_core::strings::index_of_char_usize(&contents[start..], b'\n').map_or(contents.len(), |i| start + i);
+        let line = &contents[start..end];
+        let line = line.strip_suffix(b"\r").unwrap_or(line);
+        if !bun_core::strings::trim(line, b" \t").is_empty() {
+            // SAFETY: `line` is a subslice of `source.contents`, which the caller keeps alive as long
+            // as the returned `Expr` — the contract every parser here has, since strings borrow it.
+            let line: &'static [u8] = unsafe { &*core::ptr::from_ref(line) };
+            let line_source = bun_ast::Source {
+                path: source.path.clone(),
+                contents: std::borrow::Cow::Borrowed(line),
+                ..Default::default()
+            };
+            let value = parse_to_rows_in(&line_source, log, JSON_OPTS, arena)?;
+            let mut value = materialize(&value, &line_source, log, arena)?;
+            value.loc = bun_ast::usize2loc(start);
+            items.push(value);
+        }
+        start = end + 1;
+    }
+    Ok(Expr::init(
+        E::Array {
+            items,
+            ..Default::default()
+        },
+        bun_ast::Loc { start: 0 },
+    ))
+}
+
 fn parse_to_rows(
     source: &bun_ast::Source,
     log: &mut bun_ast::Log,

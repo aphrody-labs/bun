@@ -132,6 +132,50 @@ describe("bundler", async () => {
         },
         run: { stdout: '{"hello":"world"}' },
       });
+      itBundled("bun/loader-jsonl-file", {
+        target,
+        files: {
+          "/entry.ts": /* js */ `
+        import rows from './rows.log' with {type: "jsonl"};
+        import byExtension from './rows.jsonl';
+        import ndjson from './rows.ndjson';
+        console.write(JSON.stringify([rows, byExtension, ndjson]));
+      `,
+          "/rows.log": '{"a":1}
+
+[2,3]
+',
+          "/rows.jsonl": '{"a":1}
+"b"',
+          "/rows.ndjson": "null
+true
+",
+        },
+        run: { stdout: '[[{"a":1},[2,3]],[{"a":1},"b"],[null,true]]' },
+      });
+      itBundled("bun/loader-ini-file", {
+        target,
+        files: {
+          "/entry.ts": /* js */ `
+        import conf from './conf.cfg' with {type: "ini"};
+        import byExtension from './conf.ini';
+        console.write(JSON.stringify([conf, byExtension]));
+      `,
+          "/conf.cfg": "name = demo
+[server]
+port = 8080
+secure = true
+",
+          "/conf.ini": "list[] = a
+list[] = b
+[a.b]
+c = ${HOME}
+",
+        },
+        run: {
+          stdout: '[{"name":"demo","server":{"port":"8080","secure":true}},{"list":["a","b"],"a":{"b":{"c":"${HOME}"}}}]',
+        },
+      });
       itBundled("bun/loader-xml-file", {
         target,
         files: {

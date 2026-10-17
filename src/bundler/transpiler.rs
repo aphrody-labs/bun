@@ -1700,7 +1700,9 @@ impl<'a> Transpiler<'a> {
             | options::Loader::Json
             | options::Loader::Jsonc
             | options::Loader::Json5
-            | options::Loader::Xml => {
+            | options::Loader::Xml
+            | options::Loader::Jsonl
+            | options::Loader::Ini => {
                 return parse_data_loader(
                     source,
                     loader,
@@ -1808,7 +1810,20 @@ fn parse_data_loader<'a>(
                 Err(_) => return None,
             }
         }
-        // SAFETY: outer match arm guarantees one of the six.
+        options::Loader::Jsonl => match bun_parsers::json::parse_jsonl_into_arena(source, log, arena) {
+            Ok(e) => e,
+            Err(_) => return None,
+        },
+        options::Loader::Ini => {
+            // No ${VAR} expansion: an imported file must not read the build's environment.
+            let env = bun_dotenv::Loader::init();
+            let mut parser = bun_ini::Parser::init(source, &env);
+            if parser.parse(arena).is_err() {
+                return None;
+            }
+            parser.out
+        }
+        // SAFETY: outer match arm guarantees one of the eight.
         _ => unsafe { core::hint::unreachable_unchecked() },
     };
     let mut expr = value_expr;
@@ -2818,6 +2833,8 @@ impl<'a> Transpiler<'a> {
             | options::Loader::Yaml
             | options::Loader::Json5
             | options::Loader::Xml
+            | options::Loader::Jsonl
+            | options::Loader::Ini
             | options::Loader::Text
             | options::Loader::Md => {
                 // borrowck — `parse` consumes `&mut self`, so capture

@@ -274,13 +274,17 @@ OnLoadResult handleOnLoadResultNotPromise(Zig::GlobalObject* globalObject, JSC::
                     loader = BunLoaderTypeMD;
                 } else if (loaderString == "xml"_s) {
                     loader = BunLoaderTypeXML;
+                } else if (loaderString == "jsonl"_s) {
+                    loader = BunLoaderTypeJSONL;
+                } else if (loaderString == "ini"_s) {
+                    loader = BunLoaderTypeINI;
                 }
             }
         }
     }
 
     if (loader == BunLoaderTypeNone) [[unlikely]] {
-        throwException(globalObject, scope, createError(globalObject, "Expected loader to be one of \"js\", \"jsx\", \"object\", \"ts\", \"tsx\", \"toml\", \"yaml\", \"json\", \"xml\", or \"md\""_s));
+        throwException(globalObject, scope, createError(globalObject, "Expected loader to be one of \"js\", \"jsx\", \"object\", \"ts\", \"tsx\", \"toml\", \"yaml\", \"json\", \"jsonl\", \"ini\", \"xml\", or \"md\""_s));
         result.value.error = scope.exception();
         (void)scope.tryClearException();
         return result;

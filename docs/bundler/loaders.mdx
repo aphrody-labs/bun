@@ -7,7 +7,7 @@ The Bun bundler has a set of built-in loaders.
 
 > As a rule of thumb: **the bundler and the runtime both support the same set of file types by default.**
 
-`.js` `.cjs` `.mjs` `.mts` `.cts` `.ts` `.tsx` `.jsx` `.css` `.json` `.jsonc` `.json5` `.toml` `.yaml` `.yml` `.xml` `.txt` `.text` `.md` `.markdown` `.wasm` `.node` `.html` `.sh`
+`.js` `.cjs` `.mjs` `.mts` `.cts` `.ts` `.tsx` `.jsx` `.css` `.json` `.jsonc` `.json5` `.jsonl` `.ndjson` `.ini` `.toml` `.yaml` `.yml` `.xml` `.txt` `.text` `.md` `.markdown` `.wasm` `.node` `.html` `.sh`
 
 Bun uses the file extension to choose which built-in loader parses the file. Every loader has a name, such as `js`, `tsx`, or `json`. Plugins that extend Bun with custom loaders refer to these names.
 
@@ -278,6 +278,43 @@ export default {
 ```
 
 </CodeGroup>
+
+---
+
+### `jsonl`
+
+**JSON Lines loader.** Default for `.jsonl` and `.ndjson`.
+
+Each non-blank line is one JSON value; the module's default export is the array of those values, in order.
+
+```ts
+import events from "./events.jsonl";
+console.log(events.length, events[0].type);
+
+// via import attribute:
+import rows from "./export.log" with { type: "jsonl" };
+```
+
+During bundling, Bun inlines the parsed array into the bundle, like the `json` loader does for an array.
+
+---
+
+### `ini`
+
+**INI loader.** Default for `.ini`.
+
+INI files are parsed with the same parser as `.npmrc`: `[section]` headers become nested objects (`[a.b]` nests `b` under `a`), `key = value` pairs become string properties, `key[] = value` appends to an array, and `true`/`false`/`null` become their JavaScript values. An imported file does not read the environment: `${VAR}` stays as written and `${VAR?}` becomes an empty string.
+
+```ini settings.ini
+name = demo
+[server]
+port = 8080
+```
+
+```ts
+import settings from "./settings.ini";
+console.log(settings.server.port); // "8080"
+```
 
 ---
 

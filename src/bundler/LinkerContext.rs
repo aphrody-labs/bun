@@ -3404,6 +3404,8 @@ impl<'a> LinkerContext<'a> {
                         | Loader::Jsonc
                         | Loader::Json5
                         | Loader::Xml
+                        | Loader::Jsonl
+                        | Loader::Ini
                         | Loader::Yaml
                         | Loader::Html
                         | Loader::SqliteEmbedded
