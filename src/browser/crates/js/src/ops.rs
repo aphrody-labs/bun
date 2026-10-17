@@ -2256,7 +2256,7 @@ fn op_dom_inner(shared: SharedState, cmd: String, arg1: String, arg2: String) ->
                 "remove_attribute" => arg2.as_str(),
                 _ => "",
             };
-            eprintln!(
+            bun_core::output::print_errorln(format_args!(
                 "[timing] render-cache mutation sequence={} cmd={} node={} detail={} connected={} \
                  actual_change={} invalidated={}",
                 sequence,
@@ -2266,7 +2266,7 @@ fn op_dom_inner(shared: SharedState, cmd: String, arg1: String, arg2: String) ->
                 impact.connected,
                 impact.actual_change,
                 invalidate_geometry
-            );
+            ));
         }
     }
     let gs = shared.borrow();

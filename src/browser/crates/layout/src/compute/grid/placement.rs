@@ -137,8 +137,6 @@ pub(super) fn place_grid_items<'a, S, ChildIter>(
         })
         .for_each(|(index, child_node, child_placement, style)| {
             idx += 1;
-            #[cfg(test)]
-            println!("Definite Item {idx}\n==============");
 
             let (row_span, col_span) = place_definite_grid_item(
                 child_placement,
@@ -171,8 +169,6 @@ pub(super) fn place_grid_items<'a, S, ChildIter>(
         })
         .for_each(|(index, child_node, child_placement, style)| {
             idx += 1;
-            #[cfg(test)]
-            println!("Definite Secondary Item {idx}\n==============");
 
             let (primary_span, secondary_span) = place_definite_secondary_axis_item(
                 &*cell_occupancy_matrix,
@@ -250,8 +246,6 @@ pub(super) fn place_grid_items<'a, S, ChildIter>(
         .filter(|(_, _, placement, _)| !placement.get(secondary_axis).is_definite())
         .for_each(|(index, child_node, child_placement, style)| {
             idx += 1;
-            #[cfg(test)]
-            println!("\nAuto Item {idx}\n==============");
 
             // Compute placement
             let (primary_span, secondary_span) = place_indefinitely_positioned_item(
@@ -537,10 +531,6 @@ fn record_grid_placement<S: GridItemStyle>(
     secondary_span: Line<OriginZeroLine>,
     placement_type: CellOccupancyState,
 ) {
-    #[cfg(test)]
-    println!("BEFORE placement:");
-    #[cfg(test)]
-    println!("{cell_occupancy_matrix:?}");
 
     // Mark area of grid as occupied
     cell_occupancy_matrix.mark_area_as(primary_axis, primary_span, secondary_span, placement_type);
@@ -560,12 +550,6 @@ fn record_grid_placement<S: GridItemStyle>(
         index as u16,
     ));
 
-    #[cfg(test)]
-    println!("AFTER placement:");
-    #[cfg(test)]
-    println!("{cell_occupancy_matrix:?}");
-    #[cfg(test)]
-    println!("\n");
 }
 
 #[cfg(test)]

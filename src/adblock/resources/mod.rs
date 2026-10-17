@@ -254,8 +254,6 @@ impl MimeType {
                 "txt" => MimeType::TextPlain,
                 "xml" => MimeType::TextXml,
                 _ => {
-                    #[cfg(test)]
-                    eprintln!("Unrecognized file extension on: {resource_path:?}");
                     MimeType::Unknown
                 }
             }

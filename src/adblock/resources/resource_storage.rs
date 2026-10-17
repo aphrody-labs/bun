@@ -123,11 +123,7 @@ impl InMemoryResourceStorage {
         let mut self_ = Self::default();
 
         resources.into_iter().for_each(|resource| {
-            #[allow(clippy::unnecessary_lazy_evaluations)]
-            self_.add_resource(resource).unwrap_or_else(|_e| {
-                #[cfg(test)]
-                eprintln!("Failed to add resource: {_e:?}")
-            })
+            let _ = self_.add_resource(resource);
         });
 
         self_

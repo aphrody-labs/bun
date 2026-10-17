@@ -12,7 +12,7 @@ description = "Bun's Google SDK: public search (SERP, discovery, cache, browser 
 
 [features]
 default = []
-search = ["dep:tokio", "dep:rustls", "dep:bun_browser_dom", "dep:regex", "dep:reqwest", "dep:url", "dep:chrono"]
+search = ["dep:bun_core", "dep:tokio", "dep:rustls", "dep:bun_browser_dom", "dep:regex", "dep:reqwest", "dep:url", "dep:chrono"]
 search-cache = ["search", "dep:rusqlite"]
 browser-search = ["search", "dep:bun_browser"]
 
@@ -21,6 +21,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+bun_core = { workspace = true, optional = true }
 tokio = { workspace = true, optional = true, features = ["macros", "rt-multi-thread", "time"] }
 rustls = { workspace = true, optional = true }
 bun_browser_dom = { workspace = true, optional = true }

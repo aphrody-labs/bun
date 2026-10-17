@@ -7,7 +7,7 @@ pub fn print_tree(tree: &impl PrintTree, root: NodeId) {
     // Buffer into a string so that output can be captured in tests
     let mut buffer = Vec::<u8>::new();
     write_tree(&mut buffer, tree, root).expect("Wrote tree debug representation to Stdout");
-    println!("{}", std::str::from_utf8(&buffer).unwrap());
+    bun_core::output::print(format_args!("{}\n", std::str::from_utf8(&buffer).unwrap()));
 }
 
 /// Writes a debug representation of the computed layout to the writer, starting with the passed root node.

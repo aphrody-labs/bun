@@ -7783,10 +7783,10 @@ mod tests {
             black_box((&style, effective));
         }
         let elapsed = started.elapsed();
-        eprintln!(
+        bun_core::output::print_errorln(format_args!(
             "sparse cascade: {ITERATIONS} iterations, {} ns/apply ({elapsed:?})",
             elapsed.as_nanos() / ITERATIONS as u128,
-        );
+        ));
     }
 
     #[test]

@@ -2398,6 +2398,7 @@ dependencies = [
  "bun_browser_dom",
  "bun_browser_net",
  "bun_browser_render",
+ "bun_core",
  "cbc 0.2.1",
  "ctr",
  "deno_core",
@@ -2425,6 +2426,7 @@ name = "bun_browser_layout"
 version = "1.4.6"
 dependencies = [
  "arrayvec",
+ "bun_core",
  "cssparser 0.37.0",
  "document-features",
  "grid",
@@ -2489,6 +2491,7 @@ dependencies = [
  "bun_browser_dom",
  "bun_browser_layout",
  "bun_browser_ssrf",
+ "bun_core",
  "bun_css",
  "cssparser 0.37.0",
  "image",
@@ -4183,6 +4186,7 @@ version = "1.4.6"
 dependencies = [
  "bun_browser",
  "bun_browser_dom",
+ "bun_core",
  "chrono",
  "regex",
  "reqwest 0.13.5",

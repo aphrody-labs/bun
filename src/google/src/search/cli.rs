@@ -123,12 +123,12 @@ where
 pub fn main(args: Vec<OsString>) -> i32 {
     let command = match parse(&args) {
         Ok(None) => {
-            print!("{HELP}");
+            bun_core::output::print(format_args!("{HELP}"));
             return 0;
         }
         Ok(Some(command)) => command,
         Err(error) => {
-            eprintln!("bun search: {error}");
+            bun_core::output::print_errorln(format_args!("bun search: {error}"));
             return 2;
         }
     };
@@ -138,7 +138,7 @@ pub fn main(args: Vec<OsString>) -> i32 {
     {
         Ok(runtime) => runtime,
         Err(_) => {
-            eprintln!("bun search: native executor unavailable");
+            bun_core::output::print_errorln(format_args!("bun search: native executor unavailable"));
             return 2;
         }
     };
@@ -146,15 +146,15 @@ pub fn main(args: Vec<OsString>) -> i32 {
         tokio::select! {
             result = execute(&command) => match result {
                 Ok(value) => {
-                    if command.json { println!("{value}"); }
+                    if command.json { bun_core::output::print(format_args!("{value}\n")); }
                     else if let Some(rows) = value["organic"].as_array() {
-                        for row in rows { println!("{}\n{}\n{}\n", row["title"].as_str().unwrap_or_default(), row["url"].as_str().unwrap_or_default(), row["snippet"].as_str().unwrap_or_default()); }
+                        for row in rows { bun_core::output::print(format_args!("{}\n{}\n{}\n\n", row["title"].as_str().unwrap_or_default(), row["url"].as_str().unwrap_or_default(), row["snippet"].as_str().unwrap_or_default())); }
                     }
                     0
                 },
-                Err(error) => { eprintln!("bun search: {error}"); 2 },
+                Err(error) => { bun_core::output::print_errorln(format_args!("bun search: {error}")); 2 },
             },
-            _ = tokio::signal::ctrl_c() => { eprintln!("bun search: cancelled"); 130 },
+            _ = tokio::signal::ctrl_c() => { bun_core::output::print_errorln(format_args!("bun search: cancelled")); 130 },
         }
     })
 }

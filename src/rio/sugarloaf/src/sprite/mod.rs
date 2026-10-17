@@ -200,7 +200,6 @@ mod tests {
 
         let path = std::env::temp_dir().join(name);
         pm.save_png(&path).unwrap();
-        println!("wrote {} ({}x{})", path.display(), img_w, img_h);
     }
 
     #[test]

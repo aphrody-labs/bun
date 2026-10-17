@@ -87,6 +87,7 @@ parse_faster = [
 profile = ["std"]
 serde = ["dep:serde"]
 std = [
+    "dep:bun_core",
     "grid?/std",
     "serde?/std",
     "slotmap?/std",
@@ -97,6 +98,10 @@ taffy_tree = ["dep:slotmap"]
 [lib]
 name = "taffy"
 path = "src/lib.rs"
+
+[dependencies.bun_core]
+workspace = true
+optional = true
 
 [dependencies.arrayvec]
 version = "0.7"

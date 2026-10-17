@@ -1595,13 +1595,6 @@ mod tests {
             m.strikeout_offset < m.ascent,
             "strikeout offset should be below ascent"
         );
-        // A pure x_height/2 fallback would give exactly x_height/2. OS/2
-        // values rarely coincide exactly with that — if they do, the test
-        // is weaker but still passes (since both yield sensible output).
-        eprintln!(
-            "CascadiaMono @24px: strikeout offset={} size={} x_height={}",
-            m.strikeout_offset, m.strikeout_thickness, m.x_height
-        );
     }
 
     #[test]

@@ -21,6 +21,7 @@ render = ["dep:bun_browser_render", "bun_browser_render/paint"]
 deno_core = "0.412"
 
 [dependencies]
+bun_core = { workspace = true }
 bun_browser_dom = { workspace = true }
 bun_browser_net = { workspace = true }
 deno_core = "0.412"
