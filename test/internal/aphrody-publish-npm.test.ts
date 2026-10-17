@@ -309,20 +309,8 @@ describe("publishManifest", () => {
     ).toThrow("private packages cannot be published");
   });
 
-  test("Windows projections have a platform qualification contract and metadata dependency pin", () => {
-    expect(spec("bun-windows-win32").platform).toBe("win32");
-    expect(spec("bun-windows-advapi32").platform).toBe("win32");
-    const out = publishManifest(
-      {
-        name: "@aphrody/bun-windows-advapi32",
-        version: "1.4.4",
-        dependencies: { "@aphrody/bun-windows-win32": "1.4.4" },
-      },
-      spec("bun-windows-advapi32"),
-      "1.4.4",
-      new Map([["bun-windows-win32", "1.4.4"]]),
-    );
-    expect(out.dependencies).toEqual({ "@aphrody/bun-windows-win32": "1.4.4" });
+  test("Windows projections are not published as separate npm packages", () => {
+    expect(PACKAGES.some(candidate => candidate.dir.startsWith("bun-windows-"))).toBe(false);
     expect(PACKAGES.some(candidate => candidate.dir === "bun-dotnet")).toBe(false);
     expect(PACKAGES.some(candidate => candidate.dir === "bun-vscode")).toBe(false);
   });
