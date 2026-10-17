@@ -32,7 +32,9 @@ runs:
         got=$(sha256sum "$dest.dl/llvm.tar.xz" | cut -d' ' -f1 | tr -d '\\')
         [ "$got" = "$digest" ] || { echo "::error::LLVM sha256 differs: got $got want $digest ($(wc -c < "$dest.dl/llvm.tar.xz") bytes)"; exit 1; }
         mkdir -p "$dest"
-        tar -xf "$dest.dl/llvm.tar.xz" -C "$dest" --strip-components=1
+        # Git for Windows' tar would take "D:" of the path for a remote host; System32 bsdtar reads .tar.xz.
+        tar=tar; [ "$RUNNER_OS" = Windows ] && tar="$(cygpath -u "$SYSTEMROOT")/System32/tar.exe"
+        "$tar" -xf "$dest.dl/llvm.tar.xz" -C "$dest" --strip-components=1
         rm -rf "$dest.dl"
         if [ "$RUNNER_OS" = Linux ]; then
           # lld and llvm-mt of this release link against ICU 70 (Ubuntu 22.04), which 24.04 does not ship.
