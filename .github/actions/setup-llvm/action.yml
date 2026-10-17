@@ -24,7 +24,7 @@ runs:
           *) echo "::error::unsupported runner OS $RUNNER_OS"; exit 1;;
         esac
         digest=$(gh api "repos/llvm/llvm-project/releases/tags/llvmorg-${LLVM_VERSION}" \
-          --jq ".assets[] | select(.name == \"$name\") | .digest" | sed 's/^sha256://')
+          --jq ".assets[] | select(.name == \"$name\") | .digest" | tr -d '\r' | sed 's/^sha256://')
         [ -n "$digest" ] || { echo "::error::llvmorg-${LLVM_VERSION} has no $name with a digest"; exit 1; }
         dest="$RUNNER_TEMP/llvm"
         mkdir -p "$dest.dl"
