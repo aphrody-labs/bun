@@ -169,12 +169,12 @@ impl Decompressor {
         result
     }
 
-    /// [`decompress_to_vec`](Self::decompress_to_vec) with a doubling retry loop.
+    /// Decompress `input` into `out`, growing it as needed instead of
+    /// restarting a one-shot call per size (which costs about twice the work).
     ///
-    /// Clears `out` first, then doubles its capacity on
-    /// [`Status::InsufficientSpace`] — clamped at `max_capacity` — until
-    /// success, hard error, or `out.capacity() >= max_capacity` (returned as
-    /// the final `InsufficientSpace`). On success, `out.len() == result.written`.
+    /// Clears `out` first and grows its capacity by doubling, clamped at
+    /// `max_capacity`; output that would exceed it returns
+    /// [`Status::InsufficientSpace`]. On success, `out.len() == result.written`.
     /// `Err` when a growth step cannot be allocated.
     pub fn decompress_to_vec_grow(
         &mut self,
@@ -183,16 +183,39 @@ impl Decompressor {
         encoding: Encoding,
         max_capacity: usize,
     ) -> core::result::Result<Result, AllocError> {
-        loop {
-            out.clear();
-            let result = self.decompress_to_vec(input, out, encoding);
-            if result.status != Status::InsufficientSpace || out.capacity() >= max_capacity {
-                return Ok(result);
+        out.clear();
+        let mut inflater = match encoding {
+            Encoding::Deflate => zlib_rs::Inflate::new(false, 15),
+            Encoding::Zlib => zlib_rs::Inflate::new(true, 15),
+            Encoding::Gzip => zlib_rs::Inflate::new(true, 31),
+        };
+        let mut read = 0usize;
+        let status = loop {
+            if out.len() == out.capacity() {
+                if out.capacity() >= max_capacity {
+                    break Status::InsufficientSpace;
+                }
+                let new_cap = out.capacity().max(4096).saturating_mul(2).min(max_capacity);
+                out.try_reserve_exact(new_cap - out.len()).map_err(|_| AllocError)?;
             }
-            let new_cap = out.capacity().max(1).saturating_mul(2).min(max_capacity);
-            out.try_reserve_exact(new_cap.saturating_sub(out.len()))
-                .map_err(|_| AllocError)?;
+            let before_in = inflater.total_in();
+            let before_out = inflater.total_out();
+            let rc = inflater.decompress_uninit(&input[read..], out.spare_capacity_mut(), zlib_rs::InflateFlush::NoFlush);
+            read += (inflater.total_in() - before_in) as usize;
+            let produced = (inflater.total_out() - before_out) as usize;
+            // SAFETY: inflate initialized the first `produced` spare bytes.
+            unsafe { out.set_len(out.len() + produced) };
+            match rc {
+                Ok(zlib_rs::Status::StreamEnd) => break Status::Success,
+                Ok(_) if produced == 0 && read == input.len() => break Status::BadData,
+                Ok(_) => {}
+                Err(_) => break Status::BadData,
+            }
+        };
+        if status != Status::Success {
+            out.clear();
         }
+        Ok(Result { read, written: out.len(), status })
     }
 }
 

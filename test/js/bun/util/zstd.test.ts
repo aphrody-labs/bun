@@ -9,7 +9,7 @@ import {
   zstdDecompressSync,
 } from "bun";
 import { afterAll, beforeAll, describe, expect, it } from "bun:test";
-import { bunEnv, bunExe, isASAN, isLinux, libcPathForDlopen, rss } from "harness";
+import { bunEnv, bunExe, isASAN, isDebug, isLinux, libcPathForDlopen, rss } from "harness";
 import { readFileSync } from "node:fs";
 import zlib from "node:zlib";
 import path from "path";
@@ -762,10 +762,11 @@ describe("sync compression argument handling", () => {
     }
   });
 
-  // libdeflate is one-shot, so Bun retries with a doubling output buffer; the
-  // retry cap must not be tighter than the zlib backend's (ArrayBuffer max).
-  // Spawned so the multi-GB buffer is released with the child.
-  it("gunzipSync({library:'libdeflate'}) decompresses output larger than 1 GiB", async () => {
+  // The libdeflate path grows its output buffer by doubling; the growth cap
+  // must not be tighter than the zlib backend's (ArrayBuffer max).
+  // Spawned so the multi-GB buffer is released with the child. Debug builds compile
+  // zlib-rs unoptimized: gzipping the 1 GiB input alone takes minutes there.
+  it.skipIf(isDebug)("gunzipSync({library:'libdeflate'}) decompresses output larger than 1 GiB", async () => {
     const MiB = 1024 * 1024;
     const expected = 17 * 64 * MiB; // 1088 MiB
     const script = `

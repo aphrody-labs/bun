@@ -311,7 +311,7 @@ impl<'a> ZlibReaderArrayList<'a> {
                 //   flush parameter).
 
                 if self.zlib.avail_out == 0 {
-                    let produced = self.zlib.total_out as usize;
+                    let produced = self.written();
                     let remaining_budget = self.max_output_size.saturating_sub(produced);
                     if remaining_budget == 0 {
                         self.state = ZlibReaderArrayListState::Error;
@@ -343,14 +343,11 @@ impl<'a> ZlibReaderArrayList<'a> {
                             // SAFETY: the preceding avail_in > 0 guard makes next_in an unread input byte.
                             unsafe { *self.zlib.next_in == 0x1f }
                         } {
-                            // inflateReset zeroes total_out, which the epilogue uses as the list length.
-                            let total_out = self.zlib.total_out;
                             // SAFETY: self.zlib was initialized via inflateInit2_.
                             if unsafe { inflateReset(&raw mut self.zlib) } != ReturnCode::Ok {
                                 self.state = ZlibReaderArrayListState::Error;
                                 return Err(ZlibError::ZlibError);
                             }
-                            self.zlib.total_out = total_out;
                             continue;
                         }
                         self.end();
@@ -388,7 +385,7 @@ impl<'a> ZlibReaderArrayList<'a> {
             Ok(())
         })();
 
-        let total_out = self.zlib.total_out as usize;
+        let total_out = self.written();
         if self.list_ptr.len() > total_out {
             self.list_ptr.truncate(total_out);
         } else if total_out < self.list_ptr.capacity() {
@@ -397,6 +394,13 @@ impl<'a> ZlibReaderArrayList<'a> {
         }
 
         result
+    }
+
+    /// Bytes written into `list_ptr`. `total_out` restarts at each member's
+    /// `inflateReset` (zlib-rs recomputes it from its own counter) and is a
+    /// 32-bit `uLong` on Windows, so measure from `next_out` instead.
+    fn written(&self) -> usize {
+        self.zlib.next_out as usize - self.list_ptr.as_ptr() as usize
     }
 }
 
