@@ -135,8 +135,13 @@ pub fn cli(args: &[String]) -> i32 {
             }
         };
     }
-    if command == Command::Login {
-        let account = match cli_input::read_account(std::io::stdin().lock()) {
+    if matches!(command, Command::Login | Command::LoginEnv) {
+        let read = if command == Command::LoginEnv {
+            cli_input::account_from_env(&args[2])
+        } else {
+            cli_input::read_account(std::io::stdin().lock())
+        };
+        let account = match read {
             Ok(account) => account,
             Err(error) => {
                 let _ =

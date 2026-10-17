@@ -1,6 +1,6 @@
 use std::io::Read;
 
-pub(crate) const USAGE: &str = "usage: bun vpn <daemon|status|connect|disconnect|login --stdin>";
+pub(crate) const USAGE: &str = "usage: bun vpn <daemon|status|connect|disconnect|login --stdin|login --from-env NAME>";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Command {
@@ -9,6 +9,7 @@ pub(crate) enum Command {
     Connect,
     Disconnect,
     Login,
+    LoginEnv,
 }
 
 pub(crate) fn command(args: &[String]) -> Result<Command, &'static str> {
@@ -23,8 +24,23 @@ pub(crate) fn command(args: &[String]) -> Result<Command, &'static str> {
         ["connect"] => Ok(Command::Connect),
         ["disconnect"] => Ok(Command::Disconnect),
         ["login", "--stdin"] => Ok(Command::Login),
+        ["login", "--from-env", name] if valid_env_name(name) => Ok(Command::LoginEnv),
         _ => Err(USAGE),
     }
+}
+
+fn valid_env_name(name: &str) -> bool {
+    !name.is_empty()
+        && name.len() <= 64
+        && name
+            .bytes()
+            .all(|b| b.is_ascii_uppercase() || b.is_ascii_digit() || b == b'_')
+}
+
+/// Reads the account from the named environment variable, never echoing its value.
+pub(crate) fn account_from_env(name: &str) -> Result<String, &'static str> {
+    let value = std::env::var_os(name).ok_or("VPN account environment variable is not set")?;
+    read_account(value.as_encoded_bytes())
 }
 
 /// An account is a bounded stdin payload, never a command argument or diagnostic.
@@ -82,6 +98,36 @@ mod tests {
             let error = read_account(invalid).unwrap_err();
             assert!(!error.contains("123456789012345"));
         }
+    }
+
+    #[test]
+    fn login_from_env_takes_only_an_env_name() {
+        assert_eq!(
+            command(&args(&["login", "--from-env", "MULLVAD_ACCOUNT"])),
+            Ok(Command::LoginEnv)
+        );
+        for values in [
+            vec!["login", "--from-env"],
+            vec!["login", "--from-env", "1234567890123456 "],
+            vec!["login", "--from-env", "lower"],
+            vec!["login", "--from-env", "A", "B"],
+        ] {
+            assert_eq!(command(&args(&values)), Err(USAGE));
+        }
+    }
+
+    #[test]
+    fn env_account_errors_never_echo_the_value() {
+        unsafe { std::env::set_var("BUN_VPN_TEST_ACCOUNT_BAD", "12345678901234x6") };
+        let error = account_from_env("BUN_VPN_TEST_ACCOUNT_BAD").unwrap_err();
+        assert!(!error.contains("1234567890"));
+        unsafe { std::env::set_var("BUN_VPN_TEST_ACCOUNT_OK", "1234567890123456
+") };
+        assert_eq!(
+            account_from_env("BUN_VPN_TEST_ACCOUNT_OK").unwrap(),
+            "1234567890123456"
+        );
+        assert!(account_from_env("BUN_VPN_TEST_ACCOUNT_UNSET").is_err());
     }
 
     #[test]

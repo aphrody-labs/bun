@@ -13,11 +13,12 @@ bun vpn status       # print the tunnel state reported by the daemon
 bun vpn connect      # request a connection using the current Mullvad settings
 bun vpn disconnect   # request a disconnect
 echo 1234567890123456 | bun vpn login --stdin   # log in with a Mullvad account number
+bun vpn login --from-env MULLVAD_ACCOUNT        # same, read from an environment variable
 ```
 
 `bun vpn` accepts exactly one subcommand. `status`, `connect`, `disconnect` and `login` talk to a running Mullvad daemon (either `bun vpn daemon` or an installed Mullvad app) over its local management endpoint. They do not bypass the daemon's IPC authorization.
 
-`login --stdin` reads the 16-digit account number from standard input, never from the command line, so it does not appear in the process list or shell history.
+`login --stdin` reads the 16-digit account number from standard input, never from the command line, so it does not appear in the process list or shell history. `login --from-env NAME` reads the same value from the named environment variable (upper-case letters, digits and `_`); only the variable name is an argument, and the value is never printed.
 
 `connect` and `disconnect` are requests: they print `connect requested: <changed>` or `disconnect requested: <changed>` and return before the tunnel state changes. Run `bun vpn status` afterwards to see the resulting state.
 
