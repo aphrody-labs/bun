@@ -127,7 +127,8 @@
           },
           "ecosystem": {
             "type": "string",
-            "enum": ["npm", "cargo", "vendor"]
+            "enum": ["npm", "cargo", "vendor"],
+            "description": "Disambiguate when the name exists in several ecosystems."
           }
         },
         "required": ["name"],
@@ -165,7 +166,8 @@
           },
           "ecosystem": {
             "type": "string",
-            "enum": ["npm", "cargo", "vendor"]
+            "enum": ["npm", "cargo", "vendor"],
+            "description": "Disambiguate when the name exists in several ecosystems."
           }
         },
         "required": ["name", "path"],

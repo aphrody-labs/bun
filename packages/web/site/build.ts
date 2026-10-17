@@ -50,7 +50,31 @@ export { formatBytes };
 
 export type NavGroup = { group: string; items: (string | NavGroup)[] };
 export type NavTab = { tab: string; href?: string; groups: NavGroup[] };
-export type PageInfo = { slug: string; tab: string; group: string };
+export type PageInfo = { slug: string; tab: string; group: string; unlisted?: boolean };
+
+/**
+ * Pages de règles de `bun lint` (docs/lint/rules/<plugin>/<règle>.mdx) absentes de la navigation : publiées sans
+ * encombrer la barre latérale, atteintes depuis /lint/rules.
+ */
+export function readRulePages(docsDir: string, known: ReadonlySet<string>): PageInfo[] {
+  const root = join(docsDir, "lint", "rules");
+  if (!existsSync(root)) return [];
+  const out: PageInfo[] = [];
+  const visit = (dir: string) => {
+    for (const e of readdirSync(dir, { withFileTypes: true }).sort((a, b) => (a.name < b.name ? -1 : 1))) {
+      const path = join(dir, e.name);
+      if (e.isDirectory()) visit(path);
+      else if (/\.mdx?$/.test(e.name)) {
+        const slug = relative(docsDir, path)
+          .replaceAll("\\", "/")
+          .replace(/\.mdx?$/, "");
+        if (!known.has(slug)) out.push({ slug, tab: "Linter", group: "Rules", unlisted: true });
+      }
+    }
+  };
+  visit(root);
+  return out;
+}
 
 export function readNavigation(docsJson: any): { tabs: NavTab[]; pages: PageInfo[] } {
   const tabs: NavTab[] = [];
@@ -415,6 +439,7 @@ export async function build(o: BuildOptions) {
   const docs = join(o.src, "docs");
   const docsJson = JSON.parse(readFileSync(join(docs, "docs.json"), "utf8"));
   const { tabs, pages } = readNavigation(docsJson);
+  pages.push(...readRulePages(docs, new Set(pages.map(p => p.slug))));
   const now = (o.now ?? new Date()).toISOString();
   const data = o.data ?? null;
   /** Nom du site : la distribution (aphrody.com) ou le runtime seul (aphrody.app). */
@@ -535,8 +560,9 @@ export async function build(o: BuildOptions) {
     const toc = extractToc(html);
     const url = pageUrl(p.slug);
     const mdUrl = markdownUrl(p.slug);
-    const prev = ordered[i - 1];
-    const next = ordered[i + 1];
+    const sibling = (q?: Rendered) => (q && !!q.unlisted === !!p.unlisted ? q : undefined);
+    const prev = sibling(ordered[i - 1]);
+    const next = sibling(ordered[i + 1]);
     const pager = `<nav class="pager">${prev ? `<a href="${pageUrl(prev.slug)}"><small>Previous</small>${escapeHtml(prev.title)}</a>` : ""}${next ? `<a class="next" href="${pageUrl(next.slug)}"><small>Next</small>${escapeHtml(next.title)}</a>` : ""}</nav>`;
     const body = `<p class="muted">Runtime docs · ${escapeHtml(p.tab)} · ${escapeHtml(p.group)}</p>
 <h1>${escapeHtml(p.title)}</h1>
@@ -662,10 +688,12 @@ ${g.description ? `<p class="lead">${escapeHtml(g.description)}</p>` : ""}
       : []),
     `## Runtime docs (${o.repo})`,
     "",
-    ...ordered.map(
-      p =>
-        `- [${p.title}](${o.origin}${markdownUrl(p.slug)})${p.description ? `: ${p.description.replace(/\s+/g, " ")}` : ""}`,
-    ),
+    ...ordered
+      .filter(p => !p.unlisted)
+      .map(
+        p =>
+          `- [${p.title}](${o.origin}${markdownUrl(p.slug)})${p.description ? `: ${p.description.replace(/\s+/g, " ")}` : ""}`,
+      ),
     "",
     "## Optional",
     "",

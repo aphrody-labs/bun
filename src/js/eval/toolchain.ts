@@ -65,7 +65,7 @@ const WASM_HELP = `Usage: bun wasm <command> [flags]
 
 Commands:
   build [crate]          cargo build for wasm32, wasm-bindgen, wasm-opt, package with .js and .d.ts
-  opt <in.wasm>          Run wasm-opt (-Oz by default) on a module
+  opt <in.wasm>          Run wasm-opt (-Oz by default) on a module: [-o out.wasm] [--level=<O>] [-g]
 
 Flags of build:
   -o, --outdir=<dir>     Output package (default: <crate>/pkg)
@@ -76,6 +76,7 @@ Flags of build:
       --wasi=<p1|p2>     wasm32-wasip1 (node:wasi loader) or wasm32-wasip2 (component, jco transpile)
       --triple=<triple>  Any Rust target triple
       --dev              Debug profile, no wasm-opt
+      --release          Release profile (default)
       --profile=<name>   Cargo profile (default: release)
       --opt-level=<O>    wasm-opt level: Oz (default), Os, O0 to O4
       --no-opt           Skip wasm-opt
@@ -88,6 +89,7 @@ Flags of build:
       --max-bytes=<n>    Fail when the .wasm is larger
   -- <cargo args>        Passed to cargo build
 
+If package.json has a \`wasm\` script, \`bun wasm\` runs it.
 Same as \`bun build --target=wasm [crate] --outdir <dir>\`. In code: import { build, plugin } from "bun:wasm".
 
 Full documentation is available at https://bun.com/docs/bundler/wasm

@@ -31,7 +31,7 @@ pub const DEPS_TREE: ToolSchema = ToolSchema {
     name: "deps_tree",
     title: "Dependency tree",
     description: "List a directory of a dependency's installed sources.",
-    input_schema: "{\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\",\"description\":\"Package, crate or vendor directory name.\"},\"path\":{\"type\":\"string\",\"description\":\"Directory inside the dependency. Defaults to its root.\"},\"depth\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":8,\"description\":\"Levels to descend. Default 2.\"},\"root\":{\"type\":\"string\",\"description\":\"Project root. Defaults to the working directory.\"},\"ecosystem\":{\"type\":\"string\",\"enum\":[\"npm\",\"cargo\",\"vendor\"]}},\"required\":[\"name\"],\"additionalProperties\":false}",
+    input_schema: "{\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\",\"description\":\"Package, crate or vendor directory name.\"},\"path\":{\"type\":\"string\",\"description\":\"Directory inside the dependency. Defaults to its root.\"},\"depth\":{\"type\":\"integer\",\"minimum\":1,\"maximum\":8,\"description\":\"Levels to descend. Default 2.\"},\"root\":{\"type\":\"string\",\"description\":\"Project root. Defaults to the working directory.\"},\"ecosystem\":{\"type\":\"string\",\"enum\":[\"npm\",\"cargo\",\"vendor\"],\"description\":\"Disambiguate when the name exists in several ecosystems.\"}},\"required\":[\"name\"],\"additionalProperties\":false}",
 };
 
 /// Read a dependency file.
@@ -39,7 +39,7 @@ pub const DEPS_READ: ToolSchema = ToolSchema {
     name: "deps_read",
     title: "Read a dependency file",
     description: "Read one file of a dependency's installed sources. Text past max_bytes is cut and the result is flagged truncated.",
-    input_schema: "{\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\",\"description\":\"Package, crate or vendor directory name.\"},\"path\":{\"type\":\"string\",\"description\":\"File inside the dependency, e.g. \\\"README.md\\\" or \\\"src/lib.rs\\\".\"},\"offset\":{\"type\":\"integer\",\"minimum\":0,\"description\":\"Byte offset to start at. Default 0.\"},\"max_bytes\":{\"type\":\"integer\",\"minimum\":1,\"description\":\"Bytes to return. Default 262144.\"},\"root\":{\"type\":\"string\",\"description\":\"Project root. Defaults to the working directory.\"},\"ecosystem\":{\"type\":\"string\",\"enum\":[\"npm\",\"cargo\",\"vendor\"]}},\"required\":[\"name\",\"path\"],\"additionalProperties\":false}",
+    input_schema: "{\"type\":\"object\",\"properties\":{\"name\":{\"type\":\"string\",\"description\":\"Package, crate or vendor directory name.\"},\"path\":{\"type\":\"string\",\"description\":\"File inside the dependency, e.g. \\\"README.md\\\" or \\\"src/lib.rs\\\".\"},\"offset\":{\"type\":\"integer\",\"minimum\":0,\"description\":\"Byte offset to start at. Default 0.\"},\"max_bytes\":{\"type\":\"integer\",\"minimum\":1,\"description\":\"Bytes to return. Default 262144.\"},\"root\":{\"type\":\"string\",\"description\":\"Project root. Defaults to the working directory.\"},\"ecosystem\":{\"type\":\"string\",\"enum\":[\"npm\",\"cargo\",\"vendor\"],\"description\":\"Disambiguate when the name exists in several ecosystems.\"}},\"required\":[\"name\",\"path\"],\"additionalProperties\":false}",
 };
 
 /// Search dependency sources.

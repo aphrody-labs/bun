@@ -119,6 +119,7 @@ const { exports } = await init({ args: ["tool"], env: {}, preopens: { "/": "." }
 | `--wasi=<p1\|p2>`        | Build for WASI preview 1 or preview 2                                             |
 | `--triple=<triple>`      | Any Rust target triple                                                            |
 | `--dev`                  | Debug profile, no `wasm-opt`                                                      |
+| `--release`              | Release profile (default)                                                         |
 | `--profile=<name>`       | Cargo profile. Defaults to `release`                                              |
 | `--opt-level=<level>`    | `wasm-opt` level: `Oz` (default), `Os`, `O0` to `O4`                              |
 | `--no-opt`               | Skip `wasm-opt`                                                                   |
@@ -131,6 +132,6 @@ const { exports } = await init({ args: ["tool"], env: {}, preopens: { "/": "." }
 | `--max-bytes=<n>`        | Fail when the optimized `.wasm` is larger                                         |
 | `-- <cargo args>`        | Passed to `cargo build`                                                           |
 
-`bun wasm opt <in.wasm>` runs `wasm-opt` (`-Oz` by default) on a module.
+`bun wasm opt <in.wasm> [-o out.wasm] [--level=<level>] [-g]` runs `wasm-opt` (`-Oz` by default) on a module; `-g` keeps debug info.
 
 If `package.json` has a `wasm` script, `bun wasm` runs that script. Inside the script, `bun wasm` is the command.

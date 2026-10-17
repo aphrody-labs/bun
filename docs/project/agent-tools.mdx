@@ -51,7 +51,7 @@ List a directory of a dependency's installed sources.
 | `path` | string | Directory inside the dependency. Defaults to its root. |
 | `depth` | integer, min 1, max 8 | Levels to descend. Default 2. |
 | `root` | string | Project root. Defaults to the working directory. |
-| `ecosystem` | "npm" \| "cargo" \| "vendor" |  |
+| `ecosystem` | "npm" \| "cargo" \| "vendor" | Disambiguate when the name exists in several ecosystems. |
 
 ## `deps_read`: Read a dependency file
 
@@ -64,7 +64,7 @@ Read one file of a dependency's installed sources. Text past max_bytes is cut an
 | `offset` | integer, min 0 | Byte offset to start at. Default 0. |
 | `max_bytes` | integer, min 1 | Bytes to return. Default 262144. |
 | `root` | string | Project root. Defaults to the working directory. |
-| `ecosystem` | "npm" \| "cargo" \| "vendor" |  |
+| `ecosystem` | "npm" \| "cargo" \| "vendor" | Disambiguate when the name exists in several ecosystems. |
 
 ## `deps_search`: Search dependency sources
 

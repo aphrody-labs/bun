@@ -63,7 +63,7 @@ impl From<StateArg> for audit::ItemState {
 #[command(
     name = "n2b",
     version,
-    about = "n2b — outils de dev Rust + migration Node → Bun.",
+    about = "n2b — find and rewrite Node.js APIs that have a Bun equivalent; `bun migrate` is `n2b migrate`.",
     long_about = "n2b : scaffold Rust (bin/lib/axum/discord/cdylib/workspace…), migration Node → \
                   Bun, WASM, MUI → MD3, llmstxt, analyse GitHub."
 )]
@@ -243,9 +243,8 @@ pub(crate) enum Cmd {
         sub: LinuxSub,
     },
 
-    /// Workflow Rust → WASM → Bun complet :
-    /// `init` (scaffold), `doctor` (check tools), `build` (wasm-pack wrapper),
-    /// `opt` (wasm-opt), `size` (twiggy top).
+    /// Rust → WASM scaffolding and tools: `init`, `doctor`, `build`, `opt`, `size`.
+    /// To build a crate into a package without wasm-pack, use `bun wasm build`.
     Wasm {
         #[command(subcommand)]
         sub: WasmSub,
