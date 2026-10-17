@@ -1,9 +1,10 @@
 import { describe, expect, test } from "bun:test";
+import { nativeAvailable } from "./native-available";
 import { findAndUpsertUsers } from "./src/db/ingest";
 import { Store } from "./src/db/store";
 
 describe("findAndUpsertUsers", () => {
-  test("walks nested payloads and deduplicates users", () => {
+  test.skipIf(!nativeAvailable)("walks nested payloads and deduplicates users", () => {
     const store = new Store(":memory:");
     const result = {
       entries: [

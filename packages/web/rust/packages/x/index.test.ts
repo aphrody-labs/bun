@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { expect, test, describe } from "bun:test";
+import { nativeAvailable } from "./native-available";
 import { XSession } from "./src/core/session";
 import { XClient } from "./src/core/client";
 import { getOperation, allOperations } from "./src/config/catalog";
@@ -28,7 +29,7 @@ describe("X Client Unit Tests", () => {
     expect(all.length).toBeGreaterThan(100);
   });
 
-  test("feature flag lookup", () => {
+  test.skipIf(!nativeAvailable)("feature flag lookup", () => {
     const op = getOperation("CreateTweet");
     expect(op).toBeDefined();
     const feat = featuresFor(op!);
@@ -36,7 +37,7 @@ describe("X Client Unit Tests", () => {
     expect(feat.responsive_web_graphql_timeline_navigation_enabled).toBe(true);
   });
 
-  test("post count parsing", () => {
+  test.skipIf(!nativeAvailable)("post count parsing", () => {
     expect(parsePostCount("12.3K posts")).toBe(12300);
     expect(parsePostCount("5M posts")).toBe(5000000);
     expect(parsePostCount("42 posts")).toBe(42);
@@ -50,7 +51,7 @@ describe("X Client Unit Tests", () => {
     expect(session.ct0).toBe("csrf456tuv");
   });
 
-  test("SQLite store operations", () => {
+  test.skipIf(!nativeAvailable)("SQLite store operations", () => {
     const store = new Store(":memory:");
     const sampleTweet = {
       id: "999888",
@@ -83,7 +84,7 @@ describe("X Client Unit Tests", () => {
     store.close();
   });
 
-  test("archive parsing and conversion", () => {
+  test.skipIf(!nativeAvailable)("archive parsing and conversion", () => {
     const raw = `window.YTD.tweets.part0 = [
       { "tweet" : { "id_str": "12345", "full_text": "hello archive", "favorite_count": "12", "created_at": "Wed May 22 10:00:00 +0000 2026" } }
     ]`;
@@ -119,7 +120,7 @@ describe("X Algo (For You ranking - from x-algorithm)", () => {
     in_network: true,
   };
 
-  test("rankPosts applies filters and scores correctly", () => {
+  test.skipIf(!nativeAvailable)("rankPosts applies filters and scores correctly", () => {
     const candidates: PostCandidate[] = [
       { ...baseCandidate, id: "1", author_id: "u1", in_network: true },
       {
@@ -168,7 +169,7 @@ describe("X Algo (For You ranking - from x-algorithm)", () => {
     expect(ranked.some(r => r.post.id === "4")).toBe(false); // muted filtered
   });
 
-  test("author diversity attenuates repeats", () => {
+  test.skipIf(!nativeAvailable)("author diversity attenuates repeats", () => {
     // Clean low-base candidates: c1 high, c2 same-author medium, c3 other-author slightly lower; pen drops c2 below c3
     const make = (id: string, author: string, like: number) =>
       ({
@@ -247,7 +248,7 @@ describe("X Algo (For You ranking - from x-algorithm)", () => {
     expect(fromTypedRaw!.author_id).toBe("au2");
   });
 
-  test("rankTweets converts and ranks", () => {
+  test.skipIf(!nativeAvailable)("rankTweets converts and ranks", () => {
     const tweets: Tweet[] = [
       {
         id: "rt1",
@@ -281,7 +282,7 @@ describe("X Algo (For You ranking - from x-algorithm)", () => {
     expect(ranked[0].score).toBeGreaterThan(ranked[1].score);
   });
 
-  test("algo ranks results from mock XClient search (integration unit)", async () => {
+  test.skipIf(!nativeAvailable)("algo ranks results from mock XClient search (integration unit)", async () => {
     // Simulate fetching from XClient then ranking locally (no network)
     const mockSearchResults: Tweet[] = [
       {
@@ -322,7 +323,7 @@ describe("X Algo (For You ranking - from x-algorithm)", () => {
 });
 
 describe("X Client Integration Tests", () => {
-  test("whoami & getNews integration", async () => {
+  test.skipIf(!nativeAvailable)("whoami & getNews integration", async () => {
     if (process.env.SKIP_NETWORK_TESTS) {
       return;
     }
