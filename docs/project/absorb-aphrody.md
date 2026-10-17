@@ -35,7 +35,7 @@ Statuts : `fait` (déjà dans Bun), `en cours (autre agent)`, `à faire`,
 
 | Source aphrody                          | Cible Bun                                              | Statut                                                        |
 | --------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------- |
-| packages/web/agent-browser              | packages/web/rust/packages/agent-browser               | en cours (autre agent) ; supprimer côté aphrody après bascule |
+| packages/web/agent-browser, packages/web/aphrody-web-test | packages/bun-web (`@aphrody/bun-web`, `/testing`) | fait |
 | packages/web/fuzzy                      | packages/web/rust/packages/fuzzy                       | en cours (autre agent)                                        |
 | packages/web/qr                         | packages/web/rust/packages/qr                          | en cours (autre agent)                                        |
 | packages/web/timeline                   | packages/web/rust/packages/timeline                    | en cours (autre agent)                                        |

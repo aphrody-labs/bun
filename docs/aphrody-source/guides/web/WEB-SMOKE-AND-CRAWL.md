@@ -2,7 +2,7 @@
 
 # Running the web smoke and crawling a site
 
-Prerequisites: a built engine (`cargo build -p aphrody-web-engine --bins`) and Bun 1.4.2. See
+Prerequisites: a built engine (`cargo build -p bun_browser_engine --bins`) and Bun 1.4.2. See
 [automation](../../operations/web/AUTOMATION.md) for configuration and the service unit.
 
 ## Smoke
@@ -14,7 +14,7 @@ bun scripts/audit/web-smoke.ts --json --out /tmp/web-smoke.json
 
 Expected: `web smoke: 11 passed, 0 failed`. A failing check prints its name and reason, for example
 a binary built before the `crawl` subcommand: `binary lacks crawl; rebuild with cargo build -p
-aphrody-web-engine`.
+bun_browser_engine`.
 
 ## Crawl a site
 
@@ -30,7 +30,7 @@ needs `--allow-private-network`. The JSON report is `aphrody-web.crawl/1`; pages
 ## From Bun
 
 ```ts
-import { WebService } from "@aphrody/agent-browser/service";
+import { WebService } from "@aphrody/bun-web/service";
 const web = new WebService();
 const report = await web.crawl(["https://example.com/"], { maxPages: 10 });
 const page = await web.session("https://example.com/");

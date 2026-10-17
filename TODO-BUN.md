@@ -248,7 +248,7 @@ plans Drive absents ne deviennent pas des chemins actifs par citation.
       local supprimé encore utilisé par les outils.
 - [ ] Générer Cargo.lock par Cargo sur VPS sans bulk update; vérifier toutes les
       versions externes ajoutées/modifiées et les expliquer.
-- [ ] Qualifier consommateurs Aphrody CLI/service/FFI/MCP et `@aphrody/web-test`
+- [ ] Qualifier consommateurs Aphrody CLI/service/FFI/MCP et `@aphrody/bun-web/testing`
       sur VPS avec le provider publié; check/test/strict Clippy et gates TS ciblées.
 - [ ] Retirer les 11 arbres moteur et patches dupliqués d'Aphrody après qualification;
       conserver les sources rollback dans Git, les notices et les liens de provenance.

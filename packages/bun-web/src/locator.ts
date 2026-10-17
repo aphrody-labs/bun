@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 /**
- * @module @aphrody/web-test/locator
+ * @module @aphrody/bun-web/locator
  *
  * `WebLocator` — a Playwright-shaped Locator resolved over Aphrody's native CDP DOM
  * domain (`src/cdp/domains/DOM.ts`). Like Playwright's Locator

@@ -155,7 +155,7 @@ Consequences:
 
 - CEF is the only runtime where CDP is first-class and identical on every OS
   (Tauri 3, `tauri-runtime-cef` 3.0.0-alpha.4), and `aphrody-web` already speaks CDP
-  (`tools/config/web.json` engine endpoint, [`packages/web/aphrody-web-test`](../../../packages/web/aphrody-web-test)).
+  (`tools/config/web.json` engine endpoint, [`packages/bun-web/src/testing`](../../../packages/bun-web/src/testing)).
   For koharu no bridge plugin is needed.
 - Windows wry apps get CDP too, but the Runtime 150 elevated-host regression
   makes an API-passed argument (or the in-process DevTools call) the only

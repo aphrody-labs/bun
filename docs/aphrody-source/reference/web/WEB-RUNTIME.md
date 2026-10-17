@@ -136,7 +136,7 @@ lane above.
 
 | Surface           | Capacités maintenues                                                                                                              | Propriétaire canonique                                                                                                                                                                                                     |
 | ----------------- | --------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Web/Chrome        | fetch, scrape concurrent, `--eval`, proxy, stealth, V8 flags, CDP, serveur MCP, sortie HTML/texte/liens/Markdown/brute            | `aphrody-web-engine` (`aphrody-web`) + Obscura                                                                                                                                                                             |
+| Web/Chrome        | fetch, scrape concurrent, `--eval`, proxy, stealth, V8 flags, CDP, serveur MCP, sortie HTML/texte/liens/Markdown/brute            | `bun_browser_engine` (`aphrody-web`) + Obscura                                                                                                                                                                             |
 | Extraction        | HTML, contenu principal, métadonnées/canonical, Markdown, blocs, chunks, SimHash/déduplication                                    | `aphrody-web-extract`                                                                                                                                                                                                      |
 | ABI compatibilité | pages persistantes, navigation, évaluation, cookies, headers, blocage de ressources, délais et réseau privé                       | `aphrody-web-render`; conservé tant que chaque contrat ABI n'est pas migré et testé                                                                                                                                        |
 | Browser OS        | navigation, snapshot, formulaire, extraction, capture, PDF, cookies, onglets et scripts via les outils `browser_*`                | `aphrody-browser` via `aphrody-web-service`                                                                                                                                                                                |
@@ -182,6 +182,6 @@ Validation ciblée :
 
 ```powershell
 $env:RUSTC_WRAPPER=''
-cargo test -p aphrody-web-service -p aphrody-browser -p aphrody-web-engine --locked
+cargo test -p aphrody-web-service -p aphrody-browser -p bun_browser_engine --locked
 bun run runtime:check
 ```

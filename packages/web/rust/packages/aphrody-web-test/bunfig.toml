@@ -1,6 +1,0 @@
-[install]
-linker = "isolated"
-globalStore = true
-
-[test]
-preload = ["../agent-browser/src/test-preload.ts"]

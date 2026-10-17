@@ -11,7 +11,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { repositoryRoot, validateWebConfig } from "../../../packages/web/rust/packages/agent-browser/src/config.ts";
+import { repositoryRoot, validateWebConfig } from "../../../packages/bun-web/src/config.ts";
 
 export const WEB_CRATES = [
   "bun_browser",
@@ -70,19 +70,11 @@ export function planStages(options: { stages?: StageId[]; rust?: boolean; crawla
     {
       id: "bun",
       steps: [
-        ...["@aphrody/agent-browser", "@aphrody/web-test"].flatMap(pkg =>
-          ["typecheck", "lint", "test"].map(script => ({
-            name: `${pkg} ${script}`,
-            command: [
-              "bun",
-              "run",
-              "--cwd",
-              `../bun/packages/web/rust/packages/${pkg === "@aphrody/web-test" ? "aphrody-web-test" : "agent-browser"}`,
-              script,
-            ],
-            timeoutMs: 10 * MINUTE,
-          })),
-        ),
+        ...["typecheck", "lint", "test"].map(script => ({
+          name: `@aphrody/bun-web ${script}`,
+          command: ["bun", "run", "--cwd", "packages/bun-web", script],
+          timeoutMs: 10 * MINUTE,
+        })),
         {
           name: "web script tests",
           command: [

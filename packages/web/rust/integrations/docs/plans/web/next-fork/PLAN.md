@@ -12,4 +12,4 @@ jalons J0..J6 avec leurs tests, constats Turbopack/`node`.
 Côté aphrody restent les intégrations M3 : `m3/packages/m3-next` (withM3, M3Html/M3Root, thème, crawl, et
 `m3-next` qui réexporte le runner de `@aphrody/next-bun/run`) et `m3/packages/m3-next-migrate` (migrateur
 Next → hôte Bun/Tauri via `@aphrody/scaffold`, shims, codemod `mui-to-m3`, codemods next16/tailwind4 composés
-depuis `@aphrody/next-bun/codemods`). `@aphrody/web-test/next` réexporte `@aphrody/next-bun/testing`.
+depuis `@aphrody/next-bun/codemods`). `@aphrody/bun-web/testing/next` réexporte `@aphrody/next-bun/testing`.

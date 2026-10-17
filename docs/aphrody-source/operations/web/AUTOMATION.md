@@ -2,7 +2,7 @@
 
 # Aphrody Web: automation, configuration and services
 
-Owner: `crates/web`, `packages/web/agent-browser`. Contract:
+Owner: `crates/web`, `packages/bun-web`. Contract:
 [`docs/apis/web/WEB-SERVICE-CONTRACT.md`](../../apis/web/WEB-SERVICE-CONTRACT.md).
 Architecture and gaps: [`docs/architecture/web/ARCHITECTURE.md`](../../architecture/web/ARCHITECTURE.md).
 
@@ -10,7 +10,7 @@ Architecture and gaps: [`docs/architecture/web/ARCHITECTURE.md`](../../architect
 
 | Command                                      | What it does                                                                                                                                         |
 | -------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `bun run web:verify`                         | Stages `config`, `bun`, `build`, `smoke`: config contract, typecheck/lint/test of `@aphrody/agent-browser` and `@aphrody/web-test`, engine build, loopback smoke. Each failing step prints its command and the tail of its output. |
+| `bun run web:verify`                         | Stages `config`, `bun`, `build`, `smoke`: config contract, typecheck/lint/test of `@aphrody/bun-web` and `@aphrody/bun-web/testing`, engine build, loopback smoke. Each failing step prints its command and the tail of its output. |
 | `bun run web:verify:rust`                    | The same plus `cargo check --all-targets`, `cargo clippy -D warnings` and `cargo test` over the 21 web crates (long; do not run while other builds hold the target lock). |
 | `bun run web:smoke`                          | Starts `aphrody-web launch` on an ephemeral port, serves a local fixture site and checks version, subcommands, fetch (Markdown, artifact, V8 script execution), crawl with robots, CDP discovery, DOM, accessibility refs, click/fill, screenshot, PDF and clean shutdown. 11 checks, about 1 s. |
 | `bun run web:crawl -- <seed>... [options]`   | Native crawl through `WebService.crawl` with the defaults of `tools/config/web.json`.                                                                       |
@@ -20,7 +20,7 @@ Architecture and gaps: [`docs/architecture/web/ARCHITECTURE.md`](../../architect
 `--stage a,b` limits `web:verify`; `--json` and `--out FILE` write a machine-readable report
 (`aphrody-web.verify/1`, `aphrody-web.smoke/1`).
 
-Use a freshly built engine: `cargo build -p aphrody-web-engine --bins`. The Bun client picks the
+Use a freshly built engine: `cargo build -p bun_browser_engine --bins`. The Bun client picks the
 most recently built of `target/debug` (not in repo), `target/release` (not in repo), or
 `~/.local/bin` (not in repo), unless `APHRODY_WEB_BIN` is set. Availability of generated and
 machine-local artifacts depends on the build host.
@@ -29,7 +29,7 @@ A binary without the `crawl` subcommand fails the smoke with the rebuild command
 ## Configuration
 
 One file, [`tools/config/web.json`](../../../tools/config/web.json), read by
-`@aphrody/agent-browser/config` (`loadWebConfig`). Precedence: defaults, file, environment
+`@aphrody/bun-web/config` (`loadWebConfig`). Precedence: defaults, file, environment
 (`APHRODY_WEB_PORT`, `OBSCURA_ALLOW_PRIVATE_NETWORK`, `APHRODY_WEB_BIN`, endpoint variables),
 explicit options. `validateWebConfig` is part of `web:verify` and rejects: a non-loopback engine
 host, `allowPrivateNetwork`/`allowFileAccess` true in the shared file, unbounded crawl limits,
@@ -60,8 +60,8 @@ only warranted for long-lived agents that share one browser.
 
 `tools/config/pipeline.json` is generated from the package manifests by
 `yolo ops pipeline-catalog --root . [--apply]`. The web stage
-(`bun-web`) now includes `lint`, `typecheck` and `test` of `@aphrody/agent-browser` (a `lint` script
-was added) next to `@aphrody/web-test` and `@aphrody/x`. Rust gates stay in the `rust-foundation`
+(`bun-web`) now includes `lint`, `typecheck` and `test` of `@aphrody/bun-web` (a `lint` script
+was added) next to `@aphrody/bun-web/testing` and `@aphrody/x`. Rust gates stay in the `rust-foundation`
 stage; the web-only Rust gate is `web:verify:rust`.
 
 ## Tests: deterministic versus external
@@ -72,6 +72,6 @@ stage; the web-only Rust gate is `web:verify:rust`.
   `#[ignore = "network"]`) or gated by an explicit environment variable; none of the new tests
   reaches the network.
 - `bun test` does not run `process.on("exit")`: engines are owned by
-  `@aphrody/agent-browser/engine`, stopped by the `[test] preload` hook
-  (`@aphrody/agent-browser/test-preload`) and by `afterAll`, with a 2 s grace so a slow shutdown ends
+  `@aphrody/bun-web/engine`, stopped by the `[test] preload` hook
+  (`@aphrody/bun-web/test-preload`) and by `afterAll`, with a 2 s grace so a slow shutdown ends
   in `SIGKILL` instead of a failed hook.

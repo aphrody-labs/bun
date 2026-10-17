@@ -30,9 +30,9 @@ Obscura's DOM/CDP build is the default. Its Taffy layout and raster/text rendere
 are opt-in because they add a substantial dependency graph:
 
 ```sh
-cargo build -p aphrody-web-engine --release
-cargo build -p aphrody-web-engine --release --features render
-cargo build -p aphrody-web-engine --release --features stealth
+cargo build -p bun_browser_engine --release
+cargo build -p bun_browser_engine --release --features render
+cargo build -p bun_browser_engine --release --features stealth
 ```
 
 The `stealth` profile also enables `render`, as required by Obscura's runtime

@@ -3,14 +3,42 @@
   "version": "1.4.4",
   "private": true,
   "type": "module",
-  "description": "Internal browser SDK modules using Bun.WebView and the Bun browser provider.",
+  "description": "Bun browser SDK: CDP pages over Bun.WebView, the bun_browser engine lifecycle and web service (fetch, scrape, crawl), agent-browser client, Tauri bridge and the Playwright-compatible test runner.",
   "license": "Apache-2.0",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
     "./cdp": "./src/cdp.ts",
+    "./client": "./src/client.ts",
+    "./config": "./src/config.ts",
+    "./engine": "./src/engine.ts",
     "./locator": "./src/locator.ts",
+    "./runtime": "./src/runtime.ts",
     "./selectors": "./src/selectors.ts",
+    "./service": "./src/service.ts",
+    "./tauri": "./src/tauri.ts",
+    "./test-preload": "./src/test-preload.ts",
+    "./testing": "./src/testing/index.ts",
+    "./testing/config": "./src/testing/config.ts",
+    "./testing/next": "./src/testing/next/index.ts",
+    "./testing/sites": "./src/testing/sites/index.ts",
     "./types": "./src/types.ts"
+  },
+  "scripts": {
+    "typecheck": "bun check --noEmit",
+    "lint": "bun lint",
+    "test": "bun test test/"
+  },
+  "dependencies": {
+    "@aphrody/bun-webview-page": "workspace:*",
+    "@aphrody/next-bun": "workspace:*"
+  },
+  "peerDependencies": {
+    "@aphrody/runtime-sdk": "0.1.2"
+  },
+  "devDependencies": {
+    "@types/bun": "npm:@aphrody/bun-types@1.4.4"
   },
   "engines": {
     "bun": ">=1.4.4"

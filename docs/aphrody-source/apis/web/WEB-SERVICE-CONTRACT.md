@@ -2,7 +2,7 @@
 
 # Aphrody Web service contract
 
-Status: 2026-10-03. Owner: `crates/web` (engine) and `packages/web/agent-browser`
+Status: 2026-10-03. Owner: `crates/web` (engine) and `packages/bun-web`
 (Bun client). Machine-readable configuration:
 [`tools/config/web.json`](../../../tools/config/web.json). Architecture and consumers:
 [`docs/architecture/web/ARCHITECTURE.md`](../../architecture/web/ARCHITECTURE.md).
@@ -16,7 +16,7 @@ HTML parser for remote pages.
 
 ## Capability map
 
-| Capability               | CLI (`aphrody-web`)                       | Bun (`@aphrody/agent-browser/service`) | MCP (`aphrody-mcp`, feature `native-browser`) | Rust                                   |
+| Capability               | CLI (`aphrody-web`)                       | Bun (`@aphrody/bun-web/service`) | MCP (`aphrody-mcp`, feature `native-browser`) | Rust                                   |
 | ------------------------ | ----------------------------------------- | --------------------------------------- | --------------------------------------------- | -------------------------------------- |
 | Fetch a rendered page    | `fetch URL --dump html\|text\|links`      | `service.fetch(url, { dump })`          | `aphrody_browser_navigate`                    | `WebSession::call("browser_navigate")` |
 | Markdown                 | `fetch URL --dump markdown`               | `service.markdown(url)`                 | `aphrody_browser_markdown`                    | `aphrody_web_service::html_to_markdown` |
@@ -26,13 +26,13 @@ HTML parser for remote pages.
 | Screenshot / PDF         | CDP `Page.captureScreenshot`, `printToPDF` | `service.screenshot(url)`, `page.pdf()` | `aphrody_browser_screenshot`, `_pdf`          | `obscura-render` (feature `render`)    |
 | DOM query                | `fetch URL --selector S --eval JS`        | `service.query(url, selector)`          | `aphrody_browser_extract`, `_count`, `_links` | `obscura-dom`                          |
 | CDP session              | `launch --port P`                         | `service.session(url)`, `service.cdp()` | n/a                                           | `obscura-cdp`                          |
-| Test run                 | n/a                                       | `@aphrody/web-test` (`bun test`)        | n/a                                           | n/a                                    |
+| Test run                 | n/a                                       | `@aphrody/bun-web/testing` (`bun test`)        | n/a                                           | n/a                                    |
 
 ## 1. CLI: `aphrody-web`
 
-Package `aphrody-web-engine`, binaries `aphrody-web` and `aphrody-web-worker`
+Package `bun_browser_engine`, binaries `aphrody-web` and `aphrody-web-worker`
 (the worker must sit next to `aphrody-web` for `scrape`). Build:
-`cargo build -p aphrody-web-engine` (default feature `render`).
+`cargo build -p bun_browser_engine` (default feature `render`).
 
 | Subcommand           | Purpose and stable flags                                                                                                                                                                                                                                                                |
 | -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -78,10 +78,10 @@ Desktop webviews are a separate surface: `aphrody-mcp` publishes
 [Tauri debug guide](../../guides/web/TAURI-DEBUG.md)). They are never mixed with
 `aphrody_browser_*`, which only drive remote pages.
 
-## 4. Bun client: `@aphrody/agent-browser`
+## 4. Bun client: `@aphrody/bun-web`
 
 ```ts
-import { WebService } from "@aphrody/agent-browser/service";
+import { WebService } from "@aphrody/bun-web/service";
 
 const web = new WebService();               // reads tools/config/web.json, env, then overrides
 const md = await web.markdown("https://example.com/");
@@ -93,12 +93,12 @@ await web.close();                            // stops the private engine, if on
 
 | Module                                | Contents                                                                                                    |
 | ------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
-| `@aphrody/agent-browser`              | `AgentBrowser`, `AgentPage`, `WebCdpPage` (CDP client), types.                                              |
-| `@aphrody/agent-browser/service`      | `WebService` (fetch, markdown, artifact, scrape, crawl, session, cdp, screenshot, query), argument builders. |
-| `@aphrody/agent-browser/engine`       | `startEngine`, `withEngine`, `ensureTestEngine`, `stopAllEngines`: engine lifecycle on an ephemeral port.   |
-| `@aphrody/agent-browser/config`       | `loadWebConfig`, `resolveEngineBinary`, typed `tools/config/web.json`.                                            |
-| `@aphrody/agent-browser/test-preload` | `bun test` preload that owns one engine per test run and stops it afterwards.                               |
-| `@aphrody/web-test`                   | Playwright-compatible `test`, `expect`, locators on the same engine.                                        |
+| `@aphrody/bun-web`              | `AgentBrowser`, `AgentPage`, `BrowserPage` (CDP client), types.                                              |
+| `@aphrody/bun-web/service`      | `WebService` (fetch, markdown, artifact, scrape, crawl, session, cdp, screenshot, query), argument builders. |
+| `@aphrody/bun-web/engine`       | `startEngine`, `withEngine`, `ensureTestEngine`, `stopAllEngines`: engine lifecycle on an ephemeral port.   |
+| `@aphrody/bun-web/config`       | `loadWebConfig`, `resolveEngineBinary`, typed `tools/config/web.json`.                                            |
+| `@aphrody/bun-web/test-preload` | `bun test` preload that owns one engine per test run and stops it afterwards.                               |
+| `@aphrody/bun-web/testing`                   | Playwright-compatible `test`, `expect`, locators on the same engine.                                        |
 
 One-shot calls run the CLI with a hard timeout (fetch timeout plus 15 s, crawl
 timeout plus 15 s) and raise `WebServiceError` with the exit code and the tail

@@ -5,8 +5,8 @@
  * bridge or the CDP port of the CEF app. Both run `PARITY_SNAPSHOT_BODY` so the snapshots are
  * comparable.
  */
-import { WebCdpPage } from "@aphrody/agent-browser/cdp";
-import { TauriBridge } from "@aphrody/agent-browser/tauri";
+import { BrowserPage } from "@aphrody/bun-web/cdp";
+import { TauriBridge } from "@aphrody/bun-web/tauri";
 import {
   buildReport,
   compareSnapshots,
@@ -27,7 +27,7 @@ export interface SnapshotDriver {
 
 /** Evaluates in a CDP page (`Runtime.evaluate` takes an expression, not a function body). */
 export async function cdpDriver(endpoint?: string, label = "cdp"): Promise<SnapshotDriver> {
-  const page = await WebCdpPage.connect(endpoint);
+  const page = await BrowserPage.connect(endpoint);
   return {
     label,
     async capture(url) {

@@ -9,7 +9,7 @@
     "./packages/*": "./packages/*"
   },
   "dependencies": {
-    "@aphrody/agent-browser": "workspace:*",
+    "@aphrody/bun-web": "workspace:*",
     "@aphrody/bun-webview-page": "file:../bun-webview-page",
     "@aphrody/material-web": "3.3.3",
     "@lit/react": "^1.0.8",

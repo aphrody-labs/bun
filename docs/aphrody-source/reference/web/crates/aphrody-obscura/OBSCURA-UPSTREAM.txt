@@ -51,7 +51,7 @@ glyphs and defeated the variable-fallback premise of those tests.
 Feature policy (2026-09-28): Aphrody Web's service and browser subsystem no longer enable
 `obscura-mcp/render` unconditionally. `render` opts into Obscura's Taffy layout and raster/text
 dependencies; `stealth` implies `render` per upstream's `skills/obscura/SKILL.md` and activates
-the transport feature. `aphrody-web-engine` and `aphrody-browser` expose opt-in `render` and
+the transport feature. `bun_browser_engine` and `aphrody-browser` expose opt-in `render` and
 `stealth` features so DOM/CDP/MCP-only consumers avoid the renderer graph. The upstream skill was
 read from main at repository commit `22d3f2d495d1308b4718ae174159c5ce50c6c0b3` (GitHub API,
 2026-09-28).

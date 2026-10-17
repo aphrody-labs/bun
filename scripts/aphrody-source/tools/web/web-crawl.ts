@@ -7,12 +7,8 @@
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { repositoryRoot } from "../../../../packages/web/rust/packages/agent-browser/src/config.ts";
-import {
-  WebService,
-  type CrawlOptions,
-  type CrawlReport,
-} from "../../../../packages/web/rust/packages/agent-browser/src/service.ts";
+import { repositoryRoot } from "../../../../packages/bun-web/src/config.ts";
+import { WebService, type CrawlOptions, type CrawlReport } from "../../../../packages/bun-web/src/service.ts";
 
 export function parseCrawlArgs(argv: string[]): {
   seeds: string[];

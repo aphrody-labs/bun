@@ -11,7 +11,7 @@ Workspace deps pin each crate (`Cargo.toml:156-165, 219-226, 505`).
 
 | Crate (package) | Kind | deps | test files | todo!/unimpl! | wasm/windows cfg |
 |---|---|---|---|---|---|
-| web-engine (aphrody-web-engine) | bin `aphrody-web` + `aphrody-web-worker` (`Cargo.toml:12-18`) | 16 | 2 | 0 | 0 |
+| web-engine (bun_browser_engine) | bin `aphrody-web` + `aphrody-web-worker` (`Cargo.toml:12-18`) | 16 | 2 | 0 | 0 |
 | web-bridge (aphrody-web-bridge) | lib, fetch/profiles/FFI glue | 11 | 9 | 0 | 0 |
 | web-crawl | lib, crawl runner/scoring/blocking | 12 | 10 | 0 | 0 |
 | web-detect | lib | 7 | 4 | 0 | 0 |
@@ -31,8 +31,8 @@ Only web-chromium has wasm/windows cfg gates; the rest have none (unverified for
 No `todo!`/`unimplemented!` in any web crate. Stub-like "not implemented" strings were not searched (unverified).
 
 Bun packages (`packages/web/*`; there is no `apps/web*`, `ls` failed):
-- `@aphrody/agent-browser` (`packages/web/agent-browser/package.json`): CDP client, engine lifecycle, service client, config, tauri; command line `yolo browser` (no bin). Has `test/`.
-- `aphrody-web-test` (`packages/web/aphrody-web-test`): Playwright-like runner (cdp, locator, expect, page). Has `test/`.
+- `@aphrody/bun-web` (`packages/bun-web/package.json`): CDP client, engine lifecycle, service client, config, tauri; command line `yolo browser` (no bin). Has `test/`.
+- `aphrody-web-test` (`packages/bun-web/src/testing`): Playwright-like runner (cdp, locator, expect, page). Has `test/`.
 - `x` (`packages/web/x`): X client, tools, db; tests at package root.
 
 Installed binaries (`~/.local/bin`):
@@ -56,7 +56,7 @@ MCP (`crates/ai/mcp`):
 
 FFI (`crates/interop/ffi/src/web`, `no_mangle` counts per file): cookies 1, dom 13, embed 4, extract 9, index 36, jobs 5, media 4, mod 46, native_http 5, net 15, net_aliases 30, text 6 (total about 174). Grep pattern also matches `extern "C"`, so counts are upper bounds.
 
-Bun APIs: `@aphrody/agent-browser` exports `./client ./types ./cdp ./config ./engine ./service ./test-preload ./tauri` (`package.json`); `tools/config/web.json:4` names owner as `crates/web (aphrody-web-engine)` and agent-browser.
+Bun APIs: `@aphrody/bun-web` exports `./client ./types ./cdp ./config ./engine ./service ./test-preload ./tauri` (`package.json`); `tools/config/web.json:4` names owner as `crates/web (bun_browser_engine)` and agent-browser.
 
 ## 3. Duplication
 
@@ -65,7 +65,7 @@ Bun APIs: `@aphrody/agent-browser` exports `./client ./types ./cdp ./config ./en
 - Link extraction: `web-crawl/src/runner.rs:401` vs obscura-mcp `browser_links` vs FFI `web/dom.rs`.
 - Cookies: obscura-cdp (`cookie_params.rs`, domains/network/storage), obscura-net `CookieJar`, obscura-mcp get/set/clear, `web-chromium`, `x/src/session.rs`, FFI `web/cookies.rs`, web-index sqlite table `cookie_jars`. Six implementations.
 - Fetch clients: reqwest in obscura-js, obscura-net, web-bridge, web-detect, web-frames, x (workspace dep); wreq (stealth) only in obscura-net, pinned `=6.0.0-rc.31` and `wreq-util =3.0.0-rc.14` (`obscura-net/Cargo.toml:37-57`). The 8 `wreq` hits above are in obscura-net/obscura-js only. Two TLS stacks (reqwest rustls and wreq/boring).
-- CDP clients: server in obscura-cdp; clients in `packages/web/agent-browser/src/cdp.ts` and `packages/web/aphrody-web-test/src/cdp.ts` (two TS clients), plus web-chromium.
+- CDP clients: server in obscura-cdp; clients in `packages/bun-web/src/cdp.ts` and `packages/bun-web/src/testing/cdp.ts` (two TS clients), plus web-chromium.
 - Crawl frontiers: `web-crawl` runner/frontier, `web-engine/src/crawl.rs`, `native_crawl_tools.rs`, FFI dom.rs; Bun `shenron:packages/pipeline/scripts/aphrody-web-corpus-crawl.ts`. Runtime store `frontier.sqlite` exists.
 - Lightpanda/obscura/aphrody-web: three browser engines with no shared trait found.
 
@@ -91,7 +91,7 @@ Security:
 Licences: obscura* Apache-2.0 manifests; taffy MIT with local patches (`docs/reference/web/VENDOR.md`). Upstream licences of wreq, obscura upstream not verified. `sd-server` (drive-server) is Spacedrive-derived (AGPL upstream; unverified), excluded from the workspace.
 Stale docs: `docs/reference/web/VENDOR.md` still points at `crates/aphrody-obscura/vendor/taffy` (not in repo) and `crates/aphrody-obscura/crates/obscura-render` (not in repo), and "latest published taffy 0.12.2" (dated 2026-09-25); current path is `crates/web/taffy` (not in repo). Also `docs/reference/web/_source` (not in repo), `apps`, `chromium` subdirs not reviewed.
 Dead code:
-- `aphrody-web-engine`: zero Cargo consumers, but it is the binary package (fine).
+- `bun_browser_engine`: zero Cargo consumers, but it is the binary package (fine).
 - `drive-server` (sd-server): excluded, zero consumers, no tests.
 - `web-chromium`, `web-frames`, `web-index`, `obscura-mcp`: one consumer each (not dead).
 - `obscura` crate consumed? 4 consumers counted for obscura-browser; obscura itself unverified.
@@ -99,7 +99,7 @@ Dead code:
 ## 6. Recommendations (priority order)
 
 1. Rebuild and reinstall `aphrody-web` (stale versus bridge/crawl/engine commits); then re-test. Lead runs serially:
-   `scripts/build/rust/cargo-serial.sh check -p aphrody-web-engine` then
+   `scripts/build/rust/cargo-serial.sh check -p bun_browser_engine` then
    `scripts/build/rust/cargo-serial.sh test -p aphrody-web-bridge -p aphrody-web-crawl -p aphrody-web-extract`.
 2. Fix `chunks_fts` schema mismatch: inspect `web-index` schema (`heading` column) and migrate or recreate `index.sqlite`; gate:
    `scripts/build/rust/cargo-serial.sh test -p aphrody-web-index`.
@@ -118,7 +118,7 @@ Dead code:
 - Cookies: no further code to merge. `obscura_net::CookieJar` is already the single jar (obscura, obscura-cdp, obscura-browser,
   obscura-mcp, web-engine use it). `web-chromium` reads browser profile cookies via rookie (different purpose) and `x::XSession`
   only formats two header values; neither is a jar. The FFI and the `cookie_jars` sqlite table are out of this file family.
-- TS CDP: already a single client, `@aphrody/agent-browser/cdp`; `aphrody-web-test/src/cdp.ts` is a 1-line re-export.
+- TS CDP: already a single client, `@aphrody/bun-web/cdp`; `aphrody-web-test/src/cdp.ts` is a 1-line re-export.
 - obscura-mcp `browser_*`: not a duplicate catalogue. `web-service` and `crates/ai/mcp` consume `obscura_mcp::aphrody::tools()/call()`,
   so the 40 tools are declared once. Nothing removed, no aliases needed.
 - drive-server: retired 2026-10-02. Zero consumers (excluded crate, no member/dep lines, no tests); the 9 tracked files were

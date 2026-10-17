@@ -11,14 +11,10 @@
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { AgentBrowser } from "../../../packages/web/rust/packages/agent-browser/src/client.ts";
-import { loadWebConfig, repositoryRoot } from "../../../packages/web/rust/packages/agent-browser/src/config.ts";
-import {
-  installEngineCleanup,
-  startEngine,
-  stopAllEngines,
-} from "../../../packages/web/rust/packages/agent-browser/src/engine.ts";
-import { WebService } from "../../../packages/web/rust/packages/agent-browser/src/service.ts";
+import { AgentBrowser } from "../../../packages/bun-web/src/client.ts";
+import { loadWebConfig, repositoryRoot } from "../../../packages/bun-web/src/config.ts";
+import { installEngineCleanup, startEngine, stopAllEngines } from "../../../packages/bun-web/src/engine.ts";
+import { WebService } from "../../../packages/bun-web/src/service.ts";
 
 export interface Check {
   name: string;
