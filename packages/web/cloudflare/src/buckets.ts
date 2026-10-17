@@ -1,7 +1,7 @@
-export const buckets = ["aphrody-assets"] as const;
-export type BucketName = (typeof buckets)[number];
+import { buckets, isBucket } from "./core.ts";
 
-export const isBucket = (name: string): name is BucketName => (buckets as readonly string[]).includes(name);
+export { buckets, isBucket };
+export type BucketName = (typeof buckets)[number];
 
 export function bucketFor(env: Env, name: BucketName): R2Bucket {
   if (!isBucket(name)) throw new TypeError("Unknown public asset bucket");

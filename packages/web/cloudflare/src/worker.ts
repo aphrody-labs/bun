@@ -1,108 +1,11 @@
-import { bucketFor, buckets, isBucket } from "./buckets.ts";
+import { bucketFor } from "./buckets.ts";
 import type { IngestParams } from "./ingest.ts";
 import { createNeonHTTPClient } from "@aphrody/bun-plugin-neon/http";
-import { publicSiteAPI } from "../../site/site-api.ts";
+import { createAphrodyHandler, log, type AphrodyPlatform, type FileStore } from "./core.ts";
 import { siteRag } from "./site-rag.ts";
-import { yoloAPI } from "./yolo-api.ts";
 
 export { Ingest } from "./ingest.ts";
 export { Room } from "./room.ts";
-
-const json = (data: unknown, init?: ResponseInit) => Response.json(data, init);
-const error = (status: number, message: string) => json({ error: message }, { status });
-
-function log(level: "info" | "error", message: string, fields: Record<string, unknown> = {}) {
-  (level === "error" ? console.error : console.log)(JSON.stringify({ message, ...fields }));
-}
-
-/** Constant-time bearer check: both sides are hashed so timingSafeEqual sees equal lengths. */
-async function authorized(request: Request, env: Env, secret = env.APP_SECRET): Promise<boolean> {
-  const header = request.headers.get("Authorization") ?? "";
-  if (!header.startsWith("Bearer ") || !secret) return false;
-  const encoder = new TextEncoder();
-  const [given, expected] = await Promise.all([
-    crypto.subtle.digest("SHA-256", encoder.encode(header.slice(7))),
-    crypto.subtle.digest("SHA-256", encoder.encode(secret)),
-  ]);
-  return crypto.subtle.timingSafeEqual(given, expected);
-}
-
-async function guardWrite(request: Request, env: Env): Promise<Response | null> {
-  if (!(await authorized(request, env))) return error(401, "unauthorized");
-  const ip = request.headers.get("CF-Connecting-IP") ?? "local";
-  const { success } = await env.WRITE_LIMITER.limit({ key: ip });
-  return success ? null : error(429, "rate limited");
-}
-
-async function files(request: Request, env: Env, bucketName: string, key: string): Promise<Response> {
-  if (!isBucket(bucketName)) return error(404, `unknown bucket, expected one of ${buckets.join(", ")}`);
-  const bucket = bucketFor(env, bucketName);
-
-  if (!key) {
-    if (request.method !== "GET") return error(405, "method not allowed");
-    const url = new URL(request.url);
-    const prefix = url.searchParams.get("prefix"),
-      cursor = url.searchParams.get("cursor");
-    const listing = await bucket.list({
-      ...(prefix === null ? {} : { prefix }),
-      ...(cursor === null ? {} : { cursor }),
-      limit: 100,
-    });
-    return json({
-      objects: listing.objects.map(o => ({
-        key: o.key,
-        size: o.size,
-        etag: o.etag,
-        uploaded: o.uploaded,
-      })),
-      cursor: listing.truncated ? listing.cursor : null,
-    });
-  }
-
-  switch (request.method) {
-    case "GET":
-    case "HEAD": {
-      const object = await bucket.get(key, { range: request.headers, onlyIf: request.headers });
-      if (!object) return error(404, "not found");
-      const headers = new Headers();
-      object.writeHttpMetadata(headers);
-      headers.set("ETag", object.httpEtag);
-      headers.set("Cache-Control", headers.get("Cache-Control") ?? "public, max-age=300");
-      if (!("body" in object)) return new Response(null, { status: 304, headers });
-      if (object.range && "offset" in object.range) {
-        const { offset = 0, length = object.size - offset } = object.range;
-        headers.set("Content-Range", `bytes ${offset}-${offset + length - 1}/${object.size}`);
-        return new Response(request.method === "HEAD" ? null : object.body, {
-          status: 206,
-          headers,
-        });
-      }
-      return new Response(request.method === "HEAD" ? null : object.body, { headers });
-    }
-    case "PUT": {
-      const denied = await guardWrite(request, env);
-      if (denied) return denied;
-      if (!request.body) return error(400, "empty body");
-      const object = await bucket.put(key, request.body, {
-        httpMetadata: {
-          contentType: request.headers.get("Content-Type") ?? "application/octet-stream",
-        },
-      });
-      await env.JOBS.send({ bucket: bucketName, key } satisfies IngestParams);
-      log("info", "object stored", { bucket: bucketName, key, size: object.size });
-      return json({ key: object.key, size: object.size, etag: object.etag }, { status: 201 });
-    }
-    case "DELETE": {
-      const denied = await guardWrite(request, env);
-      if (denied) return denied;
-      await bucket.delete(key);
-      await env.DB.prepare("DELETE FROM files WHERE bucket = ? AND key = ?").bind(bucketName, key).run();
-      return new Response(null, { status: 204 });
-    }
-    default:
-      return error(405, "method not allowed");
-  }
-}
 
 type BunExample = {
   id: string;
@@ -115,133 +18,105 @@ type BunExample = {
   version: string;
 };
 
-/**
- * /api/bun/search?q=&k=&kind=: the bun-native dataset entries (scripts/aphrody/dataset) nearest to the query,
- * embedded with the model publish.ts used. Results are cached in KV for an hour per query.
- */
-async function bunSearch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-  const url = new URL(request.url);
-  const q = (url.searchParams.get("q") ?? "").trim();
-  if (!q) return error(400, "missing q");
-  if (q.length > 500) return error(400, "q is longer than 500 characters");
-  const k = Math.min(20, Math.max(1, Number(url.searchParams.get("k")) || 5));
-  const kind = url.searchParams.get("kind") ?? "";
-  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(`${kind}\0${k}\0${q}`));
-  const key = `bun-search:${Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, "0")).join("")}`;
-  const cached = await env.CACHE.get(key, "json");
-  if (cached) return json(cached, { headers: { "X-Cache": "HIT" } });
-  const ip = request.headers.get("CF-Connecting-IP") ?? "local";
-  const { success } = await env.WRITE_LIMITER.limit({ key: `search:${ip}` });
-  if (!success) return error(429, "rate limited");
-  const embedded = (await env.AI.run(
-    env.EMBEDDING_MODEL as keyof AiModels,
-    {
-      text: [q],
-    } as never,
-  )) as unknown as { data: number[][] };
-  const found = await env.BUN_NATIVE.query(embedded.data[0]!, {
-    topK: k,
-    returnMetadata: "all",
-    ...(kind ? { filter: { kind } } : {}),
-  });
-  const body = {
-    query: q,
-    results: found.matches.map(m => ({ score: Number(m.score.toFixed(4)), ...(m.metadata as BunExample) })),
-  };
-  ctx.waitUntil(env.CACHE.put(key, JSON.stringify(body), { expirationTtl: 3600 }));
-  return json(body, { headers: { "X-Cache": "MISS" } });
-}
-
-async function api(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-  const url = new URL(request.url);
-  const parts = url.pathname.split("/").slice(2).map(decodeURIComponent);
-  const [section, name = "", ...rest] = parts;
-
-  switch (section) {
-    case "site": {
-      const connectionString = env.NEON_DATABASE_URL;
-      if (!connectionString) return error(503, "public site database unavailable");
-      if (url.pathname === "/api/site/rag" && request.method === "GET") {
-        const ip = request.headers.get("CF-Connecting-IP") ?? "local";
-        const { success } = await env.RAG_LIMITER.limit({ key: ip });
-        if (!success) return error(429, "rate limited");
+function r2Files(env: Env): FileStore {
+  const bucketName = "aphrody-assets" as const;
+  const bucket = () => bucketFor(env, bucketName);
+  return {
+    async list(prefix, cursor) {
+      const listing = await bucket().list({
+        ...(prefix === null ? {} : { prefix }),
+        ...(cursor === null ? {} : { cursor }),
+        limit: 100,
+      });
+      return {
+        objects: listing.objects.map(o => ({ key: o.key, size: o.size, etag: o.etag, uploaded: o.uploaded })),
+        cursor: listing.truncated ? listing.cursor : null,
+      };
+    },
+    async get(request, key) {
+      const object = await bucket().get(key, { range: request.headers, onlyIf: request.headers });
+      if (!object) return null;
+      const headers = new Headers();
+      object.writeHttpMetadata(headers);
+      headers.set("ETag", object.httpEtag);
+      headers.set("Cache-Control", headers.get("Cache-Control") ?? "public, max-age=300");
+      if (!("body" in object)) return new Response(null, { status: 304, headers });
+      if (object.range && "offset" in object.range) {
+        const { offset = 0, length = object.size - offset } = object.range;
+        headers.set("Content-Range", `bytes ${offset}-${offset + length - 1}/${object.size}`);
+        return new Response(request.method === "HEAD" ? null : object.body, { status: 206, headers });
       }
-      const sql = createNeonHTTPClient({ connectionString, expectedDatabase: "bun_site" });
-      return publicSiteAPI(request, sql, request.method === "GET" ? { rag: siteRag(env) } : {});
-    }
-    case "health":
-      return json({ ok: true, version: env.VERSION.id, tag: env.VERSION.tag, buckets });
-
-    case "files":
-      return files(request, env, name, rest.join("/"));
-
-    case "bun":
-      if (name !== "search" || request.method !== "GET") return error(404, "not found");
-      return bunSearch(request, env, ctx);
-
-    case "index": {
-      const cached = await env.CACHE.get("index:recent", "json");
-      if (cached) return json(cached, { headers: { "X-Cache": "HIT" } });
+      return new Response(request.method === "HEAD" ? null : object.body, { headers });
+    },
+    async put(key, body, contentType) {
+      const object = await bucket().put(key, body, { httpMetadata: { contentType } });
+      await env.JOBS.send({ bucket: bucketName, key } satisfies IngestParams);
+      return { key: object.key, size: object.size, etag: object.etag };
+    },
+    async delete(key) {
+      await bucket().delete(key);
+      await env.DB.prepare("DELETE FROM files WHERE bucket = ? AND key = ?").bind(bucketName, key).run();
+    },
+    async recent() {
       const { results } = await env.DB.prepare(
         "SELECT bucket, key, size, etag, content_type, uploaded_at FROM files ORDER BY uploaded_at DESC LIMIT 50",
       ).all();
-      ctx.waitUntil(env.CACHE.put("index:recent", JSON.stringify(results), { expirationTtl: 60 }));
-      return json(results, { headers: { "X-Cache": "MISS" } });
-    }
+      return results;
+    },
+  };
+}
 
-    case "rooms": {
-      if (!/^[\w-]{1,64}$/.test(name)) return error(400, "invalid room name");
-      const room = env.ROOMS.getByName(name);
-      if (rest[0] === "ws") return room.fetch(request);
-      if (request.method === "POST") {
-        const denied = await guardWrite(request, env);
-        if (denied) return denied;
-        const { body } = await request.json<{ body?: string }>();
-        if (!body) return error(400, "missing body");
-        return json(await room.post(body), { status: 201 });
-      }
-      return json(await room.history(Number(url.searchParams.get("limit") ?? 50)));
-    }
-
-    case "ai": {
-      if (request.method !== "POST") return error(405, "method not allowed");
-      const denied = await guardWrite(request, env);
-      if (denied) return denied;
-      const { prompt } = await request.json<{ prompt?: string }>();
-      if (!prompt) return error(400, "missing prompt");
+function platform(env: Env, ctx: ExecutionContext): AphrodyPlatform {
+  const site = () =>
+    env.NEON_DATABASE_URL
+      ? createNeonHTTPClient({ connectionString: env.NEON_DATABASE_URL, expectedDatabase: "bun_site" })
+      : null;
+  return {
+    appSecret: env.APP_SECRET,
+    version: { id: env.VERSION.id, tag: env.VERSION.tag },
+    clientIP: r => r.headers.get("CF-Connecting-IP") ?? "local",
+    writeLimiter: env.WRITE_LIMITER,
+    ragLimiter: env.RAG_LIMITER,
+    cache: {
+      get: key => env.CACHE.get(key, "json"),
+      put: (key, value, ttl) => env.CACHE.put(key, value, { expirationTtl: ttl }),
+    },
+    files: r2Files(env),
+    site,
+    rag: () => siteRag(env),
+    async bunSearch(q, k, kind) {
+      const embedded = (await env.AI.run(env.EMBEDDING_MODEL as keyof AiModels, { text: [q] } as never)) as unknown as {
+        data: number[][];
+      };
+      const found = await env.BUN_NATIVE.query(embedded.data[0]!, {
+        topK: k,
+        returnMetadata: "all",
+        ...(kind ? { filter: { kind } } : {}),
+      });
+      return {
+        query: q,
+        results: found.matches.map(m => ({ score: Number(m.score.toFixed(4)), ...(m.metadata as BunExample) })),
+      };
+    },
+    async ai(prompt) {
       const stream = await env.AI.run(env.AI_MODEL as keyof AiModels, { prompt, stream: true } as never, {
         gateway: { id: env.AI_GATEWAY },
       });
-      return new Response(stream as ReadableStream, {
-        headers: { "Content-Type": "text/event-stream" },
-      });
-    }
-
-    default:
-      return error(404, "not found");
-  }
+      return stream as ReadableStream;
+    },
+    rooms: {
+      history: (name, limit) => env.ROOMS.getByName(name).history(limit),
+      post: (name, body) => env.ROOMS.getByName(name).post(body),
+      socket: (r, name) => env.ROOMS.getByName(name).fetch(r),
+    },
+    yolo: env,
+    defer: promise => ctx.waitUntil(promise),
+  };
 }
 
 export default {
-  async fetch(request, env, ctx) {
-    try {
-      const decision = await yoloAPI(request, env, {
-        authorized: (request, secret) => authorized(request, env, secret),
-        async siteRead(query) {
-          if (!env.NEON_DATABASE_URL) return error(503, "public site database unavailable");
-          const sql = createNeonHTTPClient({ connectionString: env.NEON_DATABASE_URL, expectedDatabase: "bun_site" });
-          return publicSiteAPI(query, sql);
-        },
-      });
-      if (decision) return decision;
-      return await api(request, env, ctx);
-    } catch (e) {
-      log("error", "request failed", {
-        path: new URL(request.url).pathname,
-        error: e instanceof Error ? e.message : String(e),
-      });
-      return error(500, "internal error");
-    }
+  fetch(request, env, ctx) {
+    return createAphrodyHandler(platform(env, ctx))(request);
   },
 
   async queue(batch, env) {
@@ -250,9 +125,7 @@ export default {
         await env.INGEST.create({ params: message.body });
         message.ack();
       } catch (e) {
-        log("error", "ingest enqueue failed", {
-          error: e instanceof Error ? e.message : String(e),
-        });
+        log("error", "ingest enqueue failed", { error: e instanceof Error ? e.message : String(e) });
         message.retry({ delaySeconds: 30 });
       }
     }

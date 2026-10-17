@@ -218,6 +218,7 @@
               "/project/bindgen",
               "/project/agent-plugin",
               "/project/agent-tools",
+              "/project/aphrody-server",
               "/project/license"
             ]
           }

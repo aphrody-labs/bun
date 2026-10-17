@@ -1,0 +1,47 @@
+---
+title: Aphrody self-hosted server
+description: One executable that serves the aphrody.app site and its API, with the same request handler as the Cloudflare Worker.
+---
+
+`packages/web/server` compiles the aphrody.app site (static pages, `/install*`, `/llms.txt`) and its routes into a single executable. The Cloudflare Worker (`packages/web/cloudflare/src/worker.ts`) and the binary share one handler, `createAphrodyHandler` in `packages/web/cloudflare/src/core.ts`; each only supplies an `AphrodyPlatform` (storage, cache, limiters, AI).
+
+## Build
+
+```bash
+bun packages/web/server/build.ts --out build/aphrody-server [--assets <built site>] [--target bun-linux-x64] [--origin https://example.org]
+```
+
+The script builds the site with `packages/web/site/build.ts`, embeds every file with `bun build --compile`, and writes `<out>/aphrody`.
+
+## Run
+
+```bash
+APP_SECRET=change-me APHRODY_PORT=8080 ./aphrody
+```
+
+Configuration is read from environment variables, over an optional JSON file (`APHRODY_CONFIG`, default `./aphrody.json`) with the same keys.
+
+| Key                                     | Default           | Role                                                           |
+| --------------------------------------- | ----------------- | -------------------------------------------------------------- |
+| `APHRODY_HOST`, `APHRODY_PORT`          | `0.0.0.0`, `8080` | Listen address                                                 |
+| `APHRODY_TLS_CERT`, `APHRODY_TLS_KEY`   | none              | PEM paths; both enable HTTPS                                   |
+| `APHRODY_DATA_DIR`                      | `./aphrody-data`  | SQLite database (`aphrody.db`) and uploaded files              |
+| `APHRODY_ASSETS_DIR`                    | embedded          | Serve the site from a directory instead                        |
+| `APP_SECRET`                            | none              | Bearer token for writes (`PUT`/`DELETE` files, room posts, AI) |
+| `NEON_DATABASE_URL`                     | none              | Public site database (`/api/site/*`); Neon HTTP only           |
+| `TYPESAFE_API_KEY`                      | none              | Grounded answers on `/api/site/rag`                            |
+| `AI_BASE_URL`, `AI_API_KEY`, `AI_MODEL` | none              | OpenAI-compatible backend for `/api/ai` and grounded answers   |
+| `BUN_SEARCH_UPSTREAM`                   | none              | Host proxied for `/api/bun/search`                             |
+| `YOLO_*`                                | disabled          | Same keys as the Worker's `vars` and secrets                   |
+
+## Routes
+
+Identical to the Worker: `/api/health`, `/api/files/*`, `/api/index`, `/api/rooms/*`, `/api/ai`, `/api/bun/search`, `/api/site/*`, `/mcp`, `/a2a`, `/message:send`, `/v1/*`. Everything else is the static site.
+
+## Limits
+
+- `/api/site/*` needs `NEON_DATABASE_URL`: the queries are PostgreSQL and do not run on SQLite (503 otherwise).
+- `/api/bun/search` needs Vectorize on the Worker; the binary only proxies `BUN_SEARCH_UPSTREAM` (501 otherwise).
+- Rate limits and caches are per process. Room WebSockets are Worker-only (501); history and posts work.
+- Cloudflare Workers AI (`YOLO` provider path) is not available in the binary.
+- Services under `~/apps` (Gitea, Komodo, control plane) and the `bun-edge` nginx origin remain separate.
