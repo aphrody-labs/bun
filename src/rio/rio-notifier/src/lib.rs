@@ -1,3 +1,5 @@
+#![allow(unreachable_pub)] // imported crate: its public items are its own API surface
+
 /// Request notification authorization from the OS.
 /// On macOS this triggers the permission prompt on first call.
 /// No-op on other platforms.

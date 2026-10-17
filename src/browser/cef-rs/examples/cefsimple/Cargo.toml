@@ -45,3 +45,4 @@ winres = { version = "0.1" }
 x11-dl = { version = "2", optional = true }
 
 [lints]
+workspace = true

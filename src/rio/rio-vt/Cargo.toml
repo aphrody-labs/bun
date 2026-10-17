@@ -95,3 +95,4 @@ name = "vt_input"
 harness = false
 
 [lints]
+workspace = true

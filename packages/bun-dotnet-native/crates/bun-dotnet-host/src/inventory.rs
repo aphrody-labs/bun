@@ -169,7 +169,7 @@ pub fn scan_root(root: &Path, source: String) -> Option<Install> {
     let muxer = muxer.is_file().then_some(muxer);
     let arch = muxer
         .as_deref()
-        .or(hostfxr.last().map(|component| component.path.as_path()))
+        .or_else(|| hostfxr.last().map(|component| component.path.as_path()))
         .and_then(binary_arch);
     Some(Install {
         root: root.to_path_buf(),

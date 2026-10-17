@@ -28,7 +28,7 @@ pub fn default_index_path() -> PathBuf {
         std::env::var_os("APHRODY_FRAMES_DB").map(PathBuf::from),
         std::env::var_os("BXC_FRAMES_DB").map(PathBuf::from),
         std::env::var_os("APHRODY_WORKSPACE").map(PathBuf::from),
-        home,
+        &home,
         legacy.exists(),
     )
 }
@@ -37,7 +37,7 @@ fn resolve_index_path(
     aphrody: Option<PathBuf>,
     legacy_override: Option<PathBuf>,
     workspace: Option<PathBuf>,
-    home: PathBuf,
+    home: &Path,
     legacy_exists: bool,
 ) -> PathBuf {
     if let Some(path) = aphrody {
@@ -84,7 +84,7 @@ pub struct MediaRow {
     pub indexed_at: i64,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "camelCase")]
 pub struct FramesStats {
     pub path: String,
@@ -471,7 +471,7 @@ mod tests {
                 Some("/owner/frames.db".into()),
                 Some("/legacy/env.db".into()),
                 None,
-                home.clone(),
+                &home,
                 true
             ),
             PathBuf::from("/owner/frames.db")
@@ -481,17 +481,17 @@ mod tests {
                 None,
                 None,
                 Some("/home/test-user/.aphrody/workspaces/dbfr".into()),
-                home.clone(),
+                &home,
                 true
             ),
             PathBuf::from("/home/test-user/.cache/bxc/frames.db")
         );
         assert_eq!(
-            resolve_index_path(None, None, Some("/configured/dbfr".into()), home.clone(), false),
+            resolve_index_path(None, None, Some("/configured/dbfr".into()), &home, false),
             PathBuf::from("/configured/dbfr/indexes/frames.sqlite")
         );
         assert_eq!(
-            resolve_index_path(None, None, None, home, false),
+            resolve_index_path(None, None, None, &home, false),
             PathBuf::from("/home/test-user/.aphrody/workspaces/dbfr/indexes/frames.sqlite")
         );
     }

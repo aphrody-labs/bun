@@ -1,3 +1,5 @@
+#![allow(unreachable_pub, unused_variables)] // imported crate: its public items are its own API surface
+
 extern crate libc;
 
 #[cfg(not(windows))]

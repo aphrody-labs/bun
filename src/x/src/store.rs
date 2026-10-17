@@ -535,7 +535,11 @@ fn from_sql_value(value: rusqlite::types::ValueRef<'_>) -> Value {
         Ref::Real(f) => serde_json::Number::from_f64(f).map_or(Value::Null, Value::Number),
         Ref::Text(bytes) => Value::String(String::from_utf8_lossy(bytes).into_owned()),
         Ref::Blob(bytes) => {
-            Value::String(bytes.iter().map(|b| format!("{b:02x}")).collect::<String>())
+            Value::String(bytes.iter().fold(String::new(), |mut hex, b| {
+                use std::fmt::Write as _;
+                let _ = write!(hex, "{b:02x}");
+                hex
+            }))
         },
     }
 }

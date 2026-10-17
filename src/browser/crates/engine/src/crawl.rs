@@ -20,14 +20,14 @@ use tokio::time::{Duration, timeout};
 use url::Url;
 
 /// Schema identifier of the JSON report. Bump the suffix on breaking changes.
-pub const CRAWL_SCHEMA: &str = "aphrody-web.crawl/1";
+pub(crate) const CRAWL_SCHEMA: &str = "aphrody-web.crawl/1";
 /// Hard ceiling accepted for `--max-pages`; larger crawls belong to the persistent frontier API.
 const MAX_PAGES_LIMIT: usize = 10_000;
 /// Per-page cap on the number of links reported with `--include-links`.
 const MAX_REPORTED_LINKS: usize = 500;
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, ValueEnum)]
-pub enum CrawlFormat {
+pub(crate) enum CrawlFormat {
     /// One JSON document with `pages`, `errors` and `stats`.
     #[default]
     Json,
@@ -38,7 +38,7 @@ pub enum CrawlFormat {
 }
 
 #[derive(Args, Debug)]
-pub struct CrawlArgs {
+pub(crate) struct CrawlArgs {
     /// Seed URLs (http or https).
     #[arg(required = true)]
     pub urls: Vec<String>,
@@ -123,7 +123,7 @@ pub struct CrawlArgs {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct PageOut {
+pub(crate) struct PageOut {
     pub url: String,
     pub depth: u32,
     pub status: u16,
@@ -147,14 +147,14 @@ pub struct PageOut {
 }
 
 #[derive(Debug, Serialize)]
-pub struct ErrorOut {
+pub(crate) struct ErrorOut {
     pub url: String,
     pub error: String,
 }
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct StatsOut {
+pub(crate) struct StatsOut {
     pub attempts: usize,
     pub pages: usize,
     pub exact_duplicates: usize,
@@ -171,7 +171,7 @@ pub struct StatsOut {
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct CrawlReportOut {
+pub(crate) struct CrawlReportOut {
     pub schema: &'static str,
     pub seeds: Vec<String>,
     pub allowed_domains: Vec<String>,
@@ -205,7 +205,7 @@ impl CrawlTransport for CapturingTransport {
                 self.inner.fetch(url).await?
             } else {
                 bun_browser_service::validate_page_url(url.as_str())?;
-                let mut page = Page::new("crawl-page".into(), context.clone());
+                let mut page = Page::new("crawl-page".into(), std::sync::Arc::clone(context));
                 page.navigate_with_wait(url.as_str(), bun_browser_browser::lifecycle::WaitUntil::Load)
                     .await
                     .map_err(|error| error.to_string())?;
@@ -251,7 +251,7 @@ impl CrawlTransport for CapturingTransport {
 }
 
 /// Seed hosts, lower-cased and de-duplicated, used when no `--allowed-domain` is given.
-pub fn seed_hosts(seeds: &[String]) -> Result<Vec<String>, String> {
+pub(crate) fn seed_hosts(seeds: &[String]) -> Result<Vec<String>, String> {
     let mut hosts = Vec::new();
     for seed in seeds {
         let url = normalize_page_url(seed, None, UrlNormalizationOptions::default())
@@ -266,7 +266,7 @@ pub fn seed_hosts(seeds: &[String]) -> Result<Vec<String>, String> {
 }
 
 /// Resolved, de-duplicated anchor targets of `html`, in document order.
-pub fn page_links(html: &str, page_url: &Url) -> Vec<String> {
+pub(crate) fn page_links(html: &str, page_url: &Url) -> Vec<String> {
     bun_browser_crawl::extract_links_opts(html, page_url, false)
         .into_iter()
         .take(MAX_REPORTED_LINKS)
@@ -344,7 +344,7 @@ fn build_report(
 }
 
 /// Renders the report in the requested format.
-pub fn render_report(report: &CrawlReportOut, format: CrawlFormat) -> Result<String, String> {
+pub(crate) fn render_report(report: &CrawlReportOut, format: CrawlFormat) -> Result<String, String> {
     match format {
         CrawlFormat::Json => serde_json::to_string_pretty(report).map_err(|e| e.to_string()),
         CrawlFormat::Ndjson => {
@@ -391,7 +391,7 @@ fn load_cookie_files(paths: &[std::path::PathBuf]) -> anyhow::Result<Arc<CookieJ
     Ok(jar)
 }
 
-pub async fn run_crawl(args: CrawlArgs, proxy: Option<String>) -> anyhow::Result<()> {
+pub(crate) async fn run_crawl(args: CrawlArgs, proxy: Option<String>) -> anyhow::Result<()> {
     let allowed = if args.allowed_domains.is_empty() {
         seed_hosts(&args.urls).map_err(anyhow::Error::msg)?
     } else {
@@ -400,7 +400,7 @@ pub async fn run_crawl(args: CrawlArgs, proxy: Option<String>) -> anyhow::Result
 
     let cookie_jar = load_cookie_files(&args.cookie_files)?;
     let client = BunBrowserHttpClient::with_full_options(
-        cookie_jar.clone(),
+        std::sync::Arc::clone(&cookie_jar),
         proxy.as_deref(),
         args.allow_private_network,
     );
@@ -432,9 +432,9 @@ pub async fn run_crawl(args: CrawlArgs, proxy: Option<String>) -> anyhow::Result
             None,
             args.allow_private_network,
         );
-        context.cookie_jar = cookie_jar.clone();
+        context.cookie_jar = std::sync::Arc::clone(&cookie_jar);
         context.http_client = Arc::new(BunBrowserHttpClient::with_full_options(
-            cookie_jar.clone(),
+            std::sync::Arc::clone(&cookie_jar),
             proxy.as_deref(),
             args.allow_private_network,
         ));

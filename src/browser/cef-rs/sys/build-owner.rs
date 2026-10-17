@@ -1,3 +1,5 @@
+#![allow(unreachable_pub)] // imported crate: its public items are its own API surface
+
 use anyhow::{Context, bail};
 use serde_json::Value;
 use sha2::{Digest, Sha256};

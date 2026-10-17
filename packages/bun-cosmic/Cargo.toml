@@ -41,5 +41,5 @@ rev = "7f715bc5d2d383a070fd8c760aa52c5627df96b6"
 default-features = false
 features = ["winit", "tokio", "wayland", "x11"]
 
-
 [lints]
+workspace = true

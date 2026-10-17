@@ -17,5 +17,5 @@ bun-native-plugin = { path = "../bun-native-plugin-rs" }
 [build-dependencies]
 napi-build = "2.0.1"
 
-
 [lints]
+workspace = true

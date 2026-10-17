@@ -28,7 +28,7 @@ bitflags::bitflags! {
   /// Features that are properties used to classify the filter, but not stored
   /// in the flatbuffer serialized format. For that reason, not available
   /// for FlatNetworkFilter (use NetworkFilterMask instead).
-  #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Default)]
+  #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Default)]
   pub struct NetworkFilterFeaturesMask: u32 {
     const BAD_FILTER = 1 << 0;
     const IS_REMOVEPARAM = 1 << 1;
@@ -102,7 +102,7 @@ pub enum NetworkFilterError {
 }
 
 bitflags::bitflags! {
-    #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq)]
+    #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq)]
     #[serde(transparent)]
     pub struct NetworkFilterMask: u32 {
         const FROM_IMAGE = 1; // 1 << 0;

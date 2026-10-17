@@ -54,3 +54,4 @@ wayland = ["rio-vt/wayland"]
 wgpu = ["renderer", "dep:wgpu", "sugarloaf/wgpu", "rio-vt/wgpu"]
 
 [lints]
+workspace = true

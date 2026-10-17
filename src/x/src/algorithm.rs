@@ -43,7 +43,7 @@ pub enum AlgoError {
 pub type Result<T> = std::result::Result<T, AlgoError>;
 
 /// Minimal post candidate for ranking (enriched subset of what X client surfaces).
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub struct PostCandidate {
     pub id: String,
     pub author_id: String,

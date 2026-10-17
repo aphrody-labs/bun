@@ -37,7 +37,7 @@ pub(super) fn drain_releases(api: &Api) {
         let view = host().as_mut().and_then(|h| h.buffers.remove(&lease));
         if let Some(mut view) = view {
             // SAFETY: caller holds the GIL; this is a matching retained Py_buffer.
-            unsafe { (api.release_buffer)(&mut *view) };
+            unsafe { (api.release_buffer)(&raw mut *view) };
         }
     }
 }
@@ -125,7 +125,7 @@ pub unsafe extern "C" fn bun_py_buffer_acquire(
             // the exporting object; moving the box does not move the Py_buffer.
             let mut view = uninitialized.assume_init();
             if view.length < 0 || view.readonly != 0 {
-                (api.release_buffer)(&mut *view);
+                (api.release_buffer)(&raw mut *view);
                 set_error("exporter did not provide a writable contiguous buffer");
                 return APHRODY_PY_ERR_PYTHON;
             }
@@ -133,7 +133,7 @@ pub unsafe extern "C" fn bun_py_buffer_acquire(
             let h = slot.as_mut().expect("active call retains the interpreter");
             let lease = h.next_buffer;
             let Some(next) = lease.checked_add(1) else {
-                (api.release_buffer)(&mut *view);
+                (api.release_buffer)(&raw mut *view);
                 set_error("shared buffer lease identity exhausted");
                 return APHRODY_PY_ERR_STATE;
             };
@@ -165,7 +165,7 @@ pub extern "C" fn bun_py_buffer_release(lease: u64) -> i32 {
             view
         };
         // SAFETY: matching live Py_buffer obtained under the same CPython GIL.
-        unsafe { (api.release_buffer)(&mut *view) };
+        unsafe { (api.release_buffer)(&raw mut *view) };
         APHRODY_PY_OK
     })
 }

@@ -2,6 +2,13 @@
 //! language detection atlas and the non-secret Google project contract. Model clients and
 //! credentials stay in the OS (`aphrody-google` in aphrody-labs/bun-distribution).
 
+// Standalone host outside Bun's event loop: std I/O, collections and strings are intended here, as in bun_host and bun_docker.
+#![allow(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros,
+)]
+
 pub mod atlas;
 pub mod language_detect;
 pub mod languages;

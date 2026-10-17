@@ -1,3 +1,5 @@
+#![allow(unexpected_cfgs)] // define_bun_plugin! expands cfgs of the destination crate
+
 use bun_native_plugin::{anyhow, bun, define_bun_plugin, BunLoader, Result};
 use mdxjs::{compile, Options as CompileOptions};
 use napi_derive::napi;

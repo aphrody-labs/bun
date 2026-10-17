@@ -25,7 +25,7 @@ pub fn fb_vector_to_slice<T>(vector: flatbuffers::Vector<'_, T>) -> &[T] {
     assert!((bytes.as_ptr() as usize).is_multiple_of(std::mem::align_of::<T>()));
     unsafe {
         std::slice::from_raw_parts(
-            bytes.as_ptr() as *const T,
+            bytes.as_ptr().cast::<T>(),
             bytes.len() / std::mem::size_of::<T>(),
         )
     }

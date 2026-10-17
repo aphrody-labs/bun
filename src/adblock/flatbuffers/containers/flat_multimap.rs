@@ -102,7 +102,6 @@ impl<I: Ord + std::hash::Hash, V> FlatMultiMapBuilder<I, V> {
         }
     }
 
-    #[allow(dead_code)] // Unused code is allowed during cosmetic filter migration
     pub fn insert(&mut self, key: I, value: V) {
         self.entries.push((key, value));
     }

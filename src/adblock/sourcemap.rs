@@ -37,7 +37,7 @@ impl fmt::Display for FilterRuleDebugInfo {
 }
 
 /// Location of a filter rule within sources compiled to a [crate::FilterSet].
-#[derive(Debug, Default, PartialEq, Serialize)]
+#[derive(Debug, Default, PartialEq, Eq, Serialize)]
 pub struct SourceLocation {
     /// The numeric index of the source as per [crate::lists::AddedFiltersRecord::source_index].
     pub source_index: u32,

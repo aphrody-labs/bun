@@ -5,6 +5,13 @@
 //! called on the thread that entered `bun_cosmic_window_run`; if iced boots the application on
 //! another thread the call is deferred until the event loop returns.
 
+// Standalone host outside Bun's event loop: std I/O, collections and strings are intended here, as in bun_host and bun_docker.
+#![allow(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros,
+)]
+
 use std::ffi::{CStr, c_char};
 use std::panic::AssertUnwindSafe;
 use std::sync::Mutex;

@@ -15,6 +15,20 @@
 //!
 //! Check the [`Engine`] documentation to get started with adblocking.
 
+// Absorbed from Brave adblock-rust: upstream visibility, std collections and std I/O are kept verbatim.
+#![allow(
+    unreachable_pub,
+    clippy::needless_pass_by_value,
+    clippy::trivially_copy_pass_by_ref,
+    clippy::undocumented_unsafe_blocks,
+    clippy::derive_partial_eq_without_eq,
+    clippy::or_fun_call,
+    clippy::box_collection,
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros,
+)]
+
 extern crate alloc;
 
 // Own modules, currently everything is exposed, will need to limit
@@ -44,7 +58,6 @@ pub mod utils;
 pub use engine::Engine;
 #[doc(inline)]
 pub use lists::FilterSet;
-
 
 #[cfg(test)]
 mod sync_tests {

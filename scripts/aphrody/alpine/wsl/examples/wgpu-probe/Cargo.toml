@@ -13,3 +13,4 @@ winit = "0.30.13"
 pollster = "0.4"
 
 [lints]
+workspace = true

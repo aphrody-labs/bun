@@ -1,4 +1,12 @@
 //! A real NGINX HTTP module. Requests, buffers and timers remain on its worker event loop.
+
+// Standalone host outside Bun's event loop: std I/O, collections and strings are intended here, as in bun_host and bun_docker.
+#![allow(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros,
+)]
+
 use core::cell::Cell;
 use core::ffi::{c_char, c_void};
 use core::ptr;
@@ -168,15 +176,14 @@ unsafe extern "C" fn configure(
 #[repr(C)]
 struct DelayedRequest {
     // ngx_event_ident casts event.data to the configured C connection ABI.
-    #[allow(dead_code)] // Only the C debug logger reads this pool-owned prefix.
-    connection: ngx_connection_t,
+    _connection: ngx_connection_t,
     event: ngx_event_t,
     request: *mut ngx_http_request_t,
     delay_ms: u16,
     main: *const MainConfig,
     pending: bool,
 }
-const _: () = assert!(core::mem::offset_of!(DelayedRequest, connection) == 0);
+const _: () = assert!(core::mem::offset_of!(DelayedRequest, _connection) == 0);
 impl Drop for DelayedRequest {
     fn drop(&mut self) {
         // SAFETY: cleanup and callbacks both execute on the NGINX worker loop.
@@ -303,7 +310,7 @@ impl HttpRequestHandler for Content {
                 pool_value(
                     (*raw).pool,
                     DelayedRequest {
-                        connection: {
+                        _connection: {
                             let mut identity: ngx_connection_t = core::mem::zeroed();
                             identity.fd = (*(*raw).connection).fd;
                             identity

@@ -38,3 +38,4 @@ path = "benches/bench_poll.rs"
 harness = false
 
 [lints]
+workspace = true

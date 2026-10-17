@@ -88,7 +88,7 @@ impl Backend for Mock {
     fn screenshot(&mut self, id: u32, format: ImageFormat, quality: u8, cb: Callback<Vec<u8>>) {
         let r = self.view(id).and_then(|v| {
             let (w, h) = (v.width.max(1), v.height.max(1));
-            crate::encode_rgba(vec![255; (w * h * 4) as usize], w, h, format, quality)
+            crate::encode_rgba(&vec![255; (w * h * 4) as usize], w, h, format, quality)
         });
         cb(r);
     }

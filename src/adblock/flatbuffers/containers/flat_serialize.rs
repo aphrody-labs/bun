@@ -106,7 +106,6 @@ where
 
 // A helper function to serialize a vector of items if T implements FlatSerialize.
 // It returns None if the vector is empty, otherwise it returns the vector of offsets.
-#[allow(dead_code)] // Unused code is allowed during cosmetic filter migration
 pub(crate) fn serialize_vec_opt<'b, B: FlatBuilder<'b>, T: FlatSerialize<'b, B>>(
     value: Vec<T>,
     builder: &mut B,

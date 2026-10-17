@@ -7,6 +7,13 @@
 //! stdin/stdout instead of fd 3/4), `--list-backends`, `--version`. Every other Chrome switch
 //! Bun passes (`--remote-debugging-pipe`, `--no-first-run`, …) is accepted and ignored.
 
+// Standalone host outside Bun's event loop: std I/O, collections and strings are intended here, as in bun_host and bun_docker.
+#![allow(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros,
+)]
+
 use bun_webview_core::{BackendKind, HostConfig, backend, pipe};
 
 fn main() {

@@ -38,3 +38,4 @@ pty = ["rio-vt/pty", "dep:teletypewriter", "dep:corcovado"]
 graphics = ["rio-vt/graphics"]
 
 [lints]
+workspace = true

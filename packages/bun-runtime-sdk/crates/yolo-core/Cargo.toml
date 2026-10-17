@@ -47,3 +47,4 @@ repository-tools = ["dep:anyhow", "dep:blake3", "dep:chrono", "dep:dashmap", "de
 libc = { version = "0.2.189" }
 
 [lints]
+workspace = true

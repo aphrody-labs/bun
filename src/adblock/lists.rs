@@ -136,7 +136,7 @@ impl Default for FilterSet {
 }
 
 /// Corresponds to the `expires` field of `FilterListMetadata`.
-#[derive(Debug, PartialEq, Clone, Serialize)]
+#[derive(Debug, PartialEq, Eq, Clone, Serialize)]
 pub enum ExpiresInterval {
     Hours(u16),
     Days(u8),
@@ -406,7 +406,7 @@ impl Default for FilterFormat {
 }
 
 /// Describes the type of a single filter.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum FilterType {
     /// A network filter, used for changing the behavior of network requests
     Network,

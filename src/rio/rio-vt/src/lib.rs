@@ -1,3 +1,5 @@
+#![allow(unreachable_pub)] // imported crate: its public items are its own API surface
+
 // Copyright (c) 2023-present, Raphael Amorim.
 //
 // This source code is licensed under the MIT license found in the

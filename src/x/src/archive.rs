@@ -69,7 +69,7 @@ pub fn archive_tweet_to_tweet(elem: &Value, owner: &Author) -> Option<Tweet> {
         .unwrap_or_default()
         .to_owned();
     Some(Tweet {
-        id: id.clone(),
+        id,
         text,
         author: owner.clone(),
         author_id: None,

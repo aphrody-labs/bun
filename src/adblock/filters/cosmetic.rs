@@ -10,7 +10,7 @@ use crate::utils::Hash;
 
 use css_validation::{is_valid_css_style, validate_css_selector};
 
-#[derive(Debug, Error, PartialEq)]
+#[derive(Debug, Error, PartialEq, Eq)]
 pub enum CosmeticFilterError {
     #[error("punycode error")]
     PunycodeError,
@@ -45,7 +45,7 @@ pub enum CosmeticFilterError {
 }
 
 /// Refer to <https://github.com/uBlockOrigin/uBlock-issues/wiki/Static-filter-syntax#action-operators>
-#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
+#[derive(PartialEq, Eq, Debug, Clone, Serialize, Deserialize)]
 #[serde(tag = "type", content = "arg")]
 #[serde(rename_all = "kebab-case")]
 pub enum CosmeticFilterAction {
@@ -130,7 +130,7 @@ pub struct CosmeticFilter {
 
 /// Individual parts of a cosmetic filter's selector. Most rules have a CSS selector; some may also
 /// have one or more procedural operators.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "type", content = "arg")]
 #[serde(rename_all = "kebab-case")]
 pub enum CosmeticFilterOperator {

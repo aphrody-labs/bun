@@ -425,7 +425,7 @@ pub struct OpContext<'a> {
 }
 
 impl<'a> OpContext<'a> {
-    fn client(&self) -> Result<&'a XClient> {
+    fn client(self) -> Result<&'a XClient> {
         self.client.ok_or_else(|| invalid("this operation needs an open client (a session)"))
     }
 }
@@ -637,7 +637,7 @@ pub fn run_local(ctx: OpContext<'_>, op: &str, args: &Value) -> Result<Value> {
                 None => RankingContext::default(),
             };
             let top_k = usize::try_from(arg_u64(args, "top_k", 20)?).unwrap_or(usize::MAX);
-            to_json(&crate::rank_tweets(&tweets, context, top_k))
+            to_json(&crate::rank_tweets(&tweets, &context, top_k))
         },
 
         // -- client state ---------------------------------------------------
@@ -1584,7 +1584,7 @@ fn millis(elapsed: Duration) -> u64 {
 pub fn ok_envelope(
     op: &str,
     id: Option<&str>,
-    data: Value,
+    data: &Value,
     rate_limit: Option<RateLimit>,
     attempts: u32,
     elapsed: Duration,
@@ -1655,7 +1655,7 @@ pub fn execute_local(client: Option<&XClient>, id: Option<&str>, op: &str, args:
         Some(_) => run_local(OpContext { client }, op, args),
     };
     match outcome {
-        Ok(data) => ok_envelope(op, id, data, None, 1, started.elapsed()),
+        Ok(data) => ok_envelope(op, id, &data, None, 1, started.elapsed()),
         Err(error) => error_envelope(op, id, &classify(&error), None, 1, started.elapsed()),
     }
 }
@@ -1711,7 +1711,7 @@ pub async fn execute(
             pacer.acquire().await;
         }
         let scope = Arc::new(CallScope::new(soft_wait).with_request_timeout(options.timeout));
-        let call = with_call_scope(scope.clone(), run(OpContext { client }, op, args));
+        let call = with_call_scope(std::sync::Arc::clone(&scope), run(OpContext { client }, op, args));
         let outcome = match tokio::time::timeout(attempt_timeout, call).await {
             Ok(result) => result.map_err(|error| classify(&error)),
             Err(_) => Err(ErrorInfo::timeout(attempt_timeout.as_millis())),
@@ -1724,7 +1724,7 @@ pub async fn execute(
         }
         let mut info = match outcome {
             Ok(data) => {
-                return ok_envelope(op, id, data, last_rate_limit, attempts, started.elapsed());
+                return ok_envelope(op, id, &data, last_rate_limit, attempts, started.elapsed());
             },
             Err(info) => info,
         };

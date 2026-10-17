@@ -21,3 +21,4 @@ thiserror = { version = "2" }
 toml_edit = { version = "0.25" }
 
 [lints]
+workspace = true

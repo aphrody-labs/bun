@@ -1,3 +1,5 @@
+#![allow(unreachable_pub, function_casts_as_integer)] // imported crate: its public items are its own API surface
+
 //! Winit is a cross-platform window creation and event loop management library.
 //!
 //! # Building windows

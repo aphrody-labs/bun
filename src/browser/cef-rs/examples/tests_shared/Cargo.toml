@@ -35,3 +35,4 @@ glib = { version = "0.22" }
 glib-unix = { version = "0.22" }
 
 [lints]
+workspace = true

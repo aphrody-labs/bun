@@ -110,7 +110,7 @@ impl TraceMoeClient {
         let response = self.send_rate_limited(request).await?;
         let status = response.status();
         if !status.is_success() {
-            return Err(trace_status_error(status, response.text().await.unwrap_or_default()));
+            return Err(trace_status_error(status, &response.text().await.unwrap_or_default()));
         }
         let response: TraceSearchResponse =
             response.json().await.map_err(|e| FramesError::TraceMoe(e.to_string()))?;
@@ -128,7 +128,7 @@ impl TraceMoeClient {
         let response = self.send_rate_limited(request).await?;
         let status = response.status();
         if !status.is_success() {
-            return Err(trace_status_error(status, response.text().await.unwrap_or_default()));
+            return Err(trace_status_error(status, &response.text().await.unwrap_or_default()));
         }
         response.json().await.map_err(|e| FramesError::TraceMoe(e.to_string()))
     }
@@ -162,7 +162,7 @@ impl TraceMoeClient {
                         .and_then(|value| value.to_str().ok())
                         .and_then(|value| value.parse::<u64>().ok())
                         .map(Duration::from_secs)
-                        .unwrap_or(Duration::from_millis(300 * (attempt + 1)));
+                        .unwrap_or_else(|| Duration::from_millis(300 * (attempt + 1)));
                     tokio::time::sleep(delay.min(Duration::from_secs(3))).await;
                 },
                 Ok(response) => return Ok(response),
@@ -183,7 +183,7 @@ impl TraceMoeClient {
 fn should_retry(status: StatusCode) -> bool {
     status == StatusCode::TOO_MANY_REQUESTS || status.is_server_error()
 }
-fn trace_status_error(status: StatusCode, body: String) -> FramesError {
+fn trace_status_error(status: StatusCode, body: &str) -> FramesError {
     let detail = if body.trim().is_empty() {
         status.to_string()
     } else {

@@ -287,7 +287,7 @@ fn encode_texture(tex: &gdk::Texture, format: ImageFormat, quality: u8) -> Resul
     // CAIRO_FORMAT_ARGB32: native-endian premultiplied ARGB = BGRA bytes on little endian.
     tex.download(&mut bgra, stride);
     let mut rgba = Vec::with_capacity(bgra.len());
-    for p in bgra.chunks_exact(4) {
+    for p in bgra.as_chunks::<4>().0 {
         let a = p[3];
         let un = |c: u8| if a == 0 || a == 255 { c } else { ((u32::from(c) * 255 + u32::from(a) / 2) / u32::from(a)).min(255) as u8 };
         if cfg!(target_endian = "little") {
@@ -296,5 +296,5 @@ fn encode_texture(tex: &gdk::Texture, format: ImageFormat, quality: u8) -> Resul
             rgba.extend_from_slice(&[un(p[1]), un(p[2]), un(p[3]), p[0]]);
         }
     }
-    crate::encode_rgba(rgba, w as u32, h as u32, format, quality)
+    crate::encode_rgba(&rgba, w as u32, h as u32, format, quality)
 }

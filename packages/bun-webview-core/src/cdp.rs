@@ -25,24 +25,26 @@ impl Out {
         Self(tx)
     }
 
-    fn send(&self, v: Value) {
+    fn send(&self, v: &Value) {
         let _ = self.0.send(v.to_string());
     }
 
     pub fn event(&self, session: Option<&str>, method: &str, params: Value) {
-        let mut m = json!({ "method": method, "params": params });
+        let mut m = json!({ "method": method });
+        m["params"] = params;
         if let Some(s) = session {
             m["sessionId"] = Value::String(s.to_owned());
         }
-        self.send(m);
+        self.send(&m);
     }
 
     fn result(&self, id: &Value, session: Option<&str>, result: Value) {
-        let mut m = json!({ "id": id, "result": result });
+        let mut m = json!({ "id": id });
+        m["result"] = result;
         if let Some(s) = session {
             m["sessionId"] = Value::String(s.to_owned());
         }
-        self.send(m);
+        self.send(&m);
     }
 
     fn error(&self, id: &Value, session: Option<&str>, code: i64, message: &str) {
@@ -50,7 +52,7 @@ impl Out {
         if let Some(s) = session {
             m["sessionId"] = Value::String(s.to_owned());
         }
-        self.send(m);
+        self.send(&m);
     }
 }
 

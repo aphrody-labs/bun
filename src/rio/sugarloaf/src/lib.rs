@@ -1,3 +1,6 @@
+#![allow(unreachable_pub)] // imported crate: its public items are its own API surface
+#![recursion_limit = "256"]
+
 pub mod components;
 pub mod context;
 pub mod font;

@@ -190,7 +190,7 @@ pub fn load(cwd: &Path, refresh: bool) -> Result<(Snapshot, Origin)> {
     let snapshot = compute(cwd)?;
     if let Some(file) = file {
         let write = || -> std::io::Result<()> {
-            std::fs::create_dir_all(file.parent().unwrap_or(Path::new(".")))?;
+            std::fs::create_dir_all(file.parent().unwrap_or_else(|| Path::new(".")))?;
             let temporary = file.with_extension(format!("json.{}", std::process::id()));
             std::fs::write(&temporary, serde_json::to_vec_pretty(&snapshot.to_json()).unwrap_or_default())?;
             std::fs::rename(&temporary, &file)

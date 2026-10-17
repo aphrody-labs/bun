@@ -22,6 +22,5 @@ export-modules = []
 # Negative gate only: NGINX must reject this deliberately incompatible fixture.
 abi-mismatch-fixture = []
 
-[lints.rust]
-unsafe_op_in_unsafe_fn = "deny"
-
+[lints]
+workspace = true

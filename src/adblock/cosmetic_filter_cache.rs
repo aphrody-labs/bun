@@ -89,12 +89,12 @@ impl ProceduralOrActionFilter {
     pub fn as_css(&self) -> Option<(String, String)> {
         match (&self.selector[..], &self.action) {
             ([CosmeticFilterOperator::CssSelector(selector)], None) => {
-                Some((selector.to_string(), "display: none !important".to_string()))
+                Some((selector.clone(), "display: none !important".to_string()))
             }
             (
                 [CosmeticFilterOperator::CssSelector(selector)],
                 Some(CosmeticFilterAction::Style(style)),
-            ) => Some((selector.to_string(), style.to_string())),
+            ) => Some((selector.clone(), style.clone())),
             _ => None,
         }
     }
@@ -186,7 +186,7 @@ impl CosmeticFilterCache {
                 let selector = &scratch;
 
                 if !exceptions.contains(selector) {
-                    selectors.push(selector.to_string());
+                    selectors.push(selector.clone());
                 }
             }
             if let Some(values) = complex_class_rules.get(class) {
@@ -207,7 +207,7 @@ impl CosmeticFilterCache {
                 let selector = &scratch;
 
                 if !exceptions.contains(selector) {
-                    selectors.push(selector.to_string());
+                    selectors.push(selector.clone());
                 }
             }
             if let Some(values) = complex_id_rules.get(id) {

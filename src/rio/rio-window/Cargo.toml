@@ -263,3 +263,4 @@ name = "window"
 name = "child_window"
 
 [lints]
+workspace = true
