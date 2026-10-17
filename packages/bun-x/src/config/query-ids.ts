@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// The queryId cache of the X client, owned by Rust (crates/x/src/runtime_query_ids.rs): a
+// The queryId cache of the X client, owned by Rust (src/x/src/runtime_query_ids.rs): a
 // disk snapshot refreshed from the live responsive-web bundles, merged (a refresh of one operation
 // never drops the others) and coalesced across concurrent callers. This class reads and refreshes
 // the cache of one client through the native operations `query_ids_*`.

@@ -1,10 +1,7 @@
 #!/usr/bin/env bun
 // SPDX-License-Identifier: Apache-2.0
 /** Sync the shared Rust X GraphQL catalog from live bundles. */
-import {
-  DEFAULT_CATALOG_PATH,
-  syncCatalogFromBundles,
-} from "../../../../packages/x/src/tools/bundle-catalog.ts";
+import { DEFAULT_CATALOG_PATH, syncCatalogFromBundles } from "../../../../packages/bun-x/src/tools/bundle-catalog.ts";
 
 function pathArg(flag: string, fallback: string): string {
   const index = process.argv.indexOf(flag);

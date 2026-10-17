@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // X Pro (TweetDeck) decks and columns. The GraphQL calls and the account-sync parser are aphrody-x
-// (crates/x/src/x_pro_deck.rs and ops.rs); this file keeps the public names and types over the
+// (src/x/src/x_pro_deck.rs and ops.rs); this file keeps the public names and types over the
 // native operations.
 
 import type { XClient } from "../core/client";

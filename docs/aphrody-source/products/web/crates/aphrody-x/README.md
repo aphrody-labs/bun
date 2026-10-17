@@ -16,7 +16,7 @@ A high-performance headless client (one Rust implementation, `aphrody-x`, with a
 - `crates/web/x/src/` — the Rust crate `aphrody-x` (library `aphrody_x` and the `aphrody x` CLI): client, parsers, store, policy, ops, batch.
 - `crates/interop/ffi/src/web/x.rs` — the native job API (`aphrody_web_x_client_*`, `_call`, `_submit`, `_batch_*`).
 - `packages/interop/native/src/x.ts` — `@aphrody/bun/x`, the bun:ffi marshalling.
-- `packages/web/x` — `@aphrody/x`, a thin Bun import (`XClient`, `xBatch`, `Store`, function tools) plus the purge, radar and crawler orchestration.
+- `packages/bun-x` — `@aphrody/x`, a thin Bun import (`XClient`, `xBatch`, `Store`, function tools) plus the purge, radar and crawler orchestration.
 - `data/` — GraphQL operation catalogs.
 
 ## Installation & Build
@@ -31,7 +31,7 @@ A high-performance headless client (one Rust implementation, `aphrody-x`, with a
 cargo build --release
 ```
 
-See sibling crate `../x-algorithm` (and `packages/web/x/src/algo.ts`) for the native port of the X For You recommendation algorithm (candidate pipeline, filters, weighted scorer, diversity) from xai-org/x-algorithm. Exposed as `aphrody_web_x_algorithm_rank` in the cdylib and `rankPosts()` in the TS client. Use to locally re-rank search/timeline results the X way.
+See sibling crate `../x-algorithm` (and `packages/bun-x/src/algo.ts`) for the native port of the X For You recommendation algorithm (candidate pipeline, filters, weighted scorer, diversity) from xai-org/x-algorithm. Exposed as `aphrody_web_x_algorithm_rank` in the cdylib and `rankPosts()` in the TS client. Use to locally re-rank search/timeline results the X way.
 
 ### Install TypeScript dependencies:
 ```bash
@@ -44,7 +44,7 @@ bun install
 cargo test
 
 # TypeScript/Bun (needs the aphrody-ffi library: APHRODY_FFI_DEV=1 or APHRODY_FFI_LIB=...)
-bun test packages/web/x packages/interop/native/test/x.test.ts
+bun test packages/bun-x packages/interop/native/test/x.test.ts
 ```
 
 Using `just` task runner:

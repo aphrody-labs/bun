@@ -104,7 +104,7 @@ This surpasses birdclaw's launchd-only schedulers with cross-OS coverage.
 
 ## Vector Embeddings & RAG Search
 
-`packages/web/x` integrates local SQLite database storage with vector embedding generation and Redis-backed similarity search to build a high-performance Hybrid RAG engine:
+`packages/bun-x` integrates local SQLite database storage with vector embedding generation and Redis-backed similarity search to build a high-performance Hybrid RAG engine:
 
 1. **Embedding Generation**: Text content is passed to `gemini-embedding-001` (requesting `outputDimensionality: 768`) to yield 768-dimensional normalized float32 vectors, stored directly as BLOBs in the SQLite `tweet_embeddings` table.
 2. **Redis Vector Sync**: Stored embeddings are continuously synchronized to the Redis vector set (`tweet_embeddings`) under key-value indices via the `VADD` command.

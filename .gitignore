@@ -217,11 +217,10 @@ src/runtime/bake/generated.ts
 Heap-*.json
 Heap-*.json.*
 isolate-*.log
+# Core dumps are files; directories named core are source.
 core
 core.[0-9]*
-!src/pkg/core/
-!src/bun-os/pkg/core/
-!src/quality/format_cli/src/core/
+!core/
 !src/migrate/
 !src/migrate/engine/github/
 !src/migrate/tests/fixtures/node-project/package-lock.json

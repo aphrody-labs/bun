@@ -62,7 +62,7 @@ function webBinary(): string {
   if (Bun.env.APHRODY_WEB_BIN) return Bun.env.APHRODY_WEB_BIN;
   const installed = Bun.which("aphrody-web");
   if (installed) return installed;
-  const workspaceBinary = resolve(import.meta.dir, "../../../../../target/debug/aphrody-web");
+  const workspaceBinary = resolve(import.meta.dir, "../../../../target/debug/aphrody-web");
   return existsSync(workspaceBinary) ? workspaceBinary : "aphrody-web";
 }
 

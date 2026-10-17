@@ -15,6 +15,7 @@
     "./packages/bun-next",
     "./packages/web",
     "./packages/bun-webview-page",
+    "./packages/bun-x",
     "./packages/web/rust/packages/*",
     "./packages/web/rust/integrations/m3",
     "./apps/desktop",

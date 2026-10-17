@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 //
-// X Explore news. Parsing and fetching are aphrody-x (crates/x/src/news.rs); this file keeps
+// X Explore news. Parsing and fetching are aphrody-x (src/x/src/news.rs); this file keeps
 // the public names and types over the native operations.
 
 import type { XClient } from "../core/client";

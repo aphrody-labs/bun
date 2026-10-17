@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 //
 // Import of a Twitter data archive (`tweets.js`) into the store. Locating the file, stripping the
-// `window.YTD.*` prefix and converting the tweets are aphrody-x (crates/x/src/archive.rs).
+// `window.YTD.*` prefix and converting the tweets are aphrody-x (src/x/src/archive.rs).
 
 import { local } from "../core/local";
 import type { Tweet } from "../core/parse";

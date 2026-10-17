@@ -40,7 +40,7 @@ Statuts : `fait` (déjà dans Bun), `en cours (autre agent)`, `à faire`,
 | packages/web/qr                         | packages/web/rust/packages/qr                          | en cours (autre agent)                                        |
 | packages/web/timeline                   | packages/web/rust/packages/timeline                    | en cours (autre agent)                                        |
 | packages/web/webos-wasm                 | packages/web/rust/packages/webos-wasm                  | en cours (autre agent)                                        |
-| packages/web/x                          | packages/web/rust/packages/x                           | en cours (autre agent)                                        |
+| packages/web/x | packages/bun-x (`@aphrody/x`), Rust `src/x` (`bun_x`) | fait |
 | packages/google/google, crates/google/* | packages/bun-google/aphrody                            | en cours (autre agent)                                        |
 | CLI `aphrody web`, `aphrody search`     | `bun web` / src/browser/crates/{crawl,extract,service} | en cours (autre agent)                                        |
 | crates/shell/web, packages/shell/web    | packages/web (site, worker)                            | à faire (lot 4)                                               |

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 // The catalogs are the data files of aphrody-x, read by Rust (include_str!) and here: no copy.
-import catalogData from "../../data/x-graphql-catalog.json";
-import gryphonCatalog from "../../data/gryphon-graphql-catalog.json";
+import catalogData from "../../../../src/x/data/x-graphql-catalog.json";
+import gryphonCatalog from "../../../../src/x/data/gryphon-graphql-catalog.json";
 
 export interface Operation {
   name: string;

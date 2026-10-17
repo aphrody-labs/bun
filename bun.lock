@@ -166,6 +166,20 @@
         "happy-dom": "^20.14.5",
       },
     },
+    "packages/bun-x": {
+      "name": "@aphrody/x",
+      "version": "1.4.4",
+      "dependencies": {
+        "zod": "^4.6.5",
+      },
+      "devDependencies": {
+        "@types/bun": "npm:@aphrody/bun-types@1.4.4",
+      },
+      "peerDependencies": {
+        "@aphrody/bun": "3.3.8",
+        "@aphrody/paths": "0.1.2",
+      },
+    },
     "packages/web": {
       "name": "@aphrody/web",
       "version": "1.4.4",
@@ -231,20 +245,6 @@
       "version": "1.4.4",
       "devDependencies": {
         "@types/bun": "npm:@aphrody/bun-types@1.4.4",
-      },
-    },
-    "packages/web/rust/packages/x": {
-      "name": "@aphrody/x",
-      "version": "1.4.4",
-      "dependencies": {
-        "zod": "^4.6.5",
-      },
-      "devDependencies": {
-        "@types/bun": "npm:@aphrody/bun-types@1.4.4",
-      },
-      "peerDependencies": {
-        "@aphrody/bun": "3.3.8",
-        "@aphrody/paths": "0.1.2",
       },
     },
   },
@@ -383,7 +383,7 @@
 
     "@aphrody/webos-wasm": ["@aphrody/webos-wasm@workspace:packages/web/rust/packages/webos-wasm"],
 
-    "@aphrody/x": ["@aphrody/x@workspace:packages/web/rust/packages/x"],
+    "@aphrody/x": ["@aphrody/x@workspace:packages/bun-x"],
 
     "@babel/runtime": ["@babel/runtime@8.0.7", "", {}, "sha512-k0hagDDq/6w4v+0Sp4wFvIz/yswH5O7Va6aRTnD7N62Tnborp4X+YB+H3XUcWVSR4aE47WPEXiIIZchBs0GmYg=="],
 

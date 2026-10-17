@@ -13,13 +13,13 @@
     "x"
   ],
   "bugs": {
-    "url": "https://github.com/aphrody-labs/aphrody/issues"
+    "url": "https://github.com/aphrody-labs/bun/issues"
   },
   "license": "Apache-2.0",
   "repository": {
     "type": "git",
-    "url": "https://github.com/aphrody-labs/aphrody.git",
-    "directory": "packages/x"
+    "url": "https://github.com/aphrody-labs/bun.git",
+    "directory": "packages/bun-x"
   },
   "files": [
     "src/",
@@ -39,12 +39,12 @@
     "access": "public"
   },
   "scripts": {
-    "build": "bun ../../../../../scripts/aphrody/emit-typescript.ts",
+    "build": "bun ../../scripts/aphrody/emit-typescript.ts",
     "typecheck": "bun check --noEmit",
     "lint": "bun lint",
     "test": "bun test",
-    "catalog:sync": "bun ../../../scripts/tools/web/x-catalog-sync.ts",
-    "coverage": "bun ../../../scripts/tools/web/x-coverage.ts"
+    "catalog:sync": "bun ../../scripts/aphrody-source/tools/web/x-catalog-sync.ts",
+    "coverage": "bun ../../scripts/aphrody-source/tools/web/x-coverage.ts"
   },
   "dependencies": {
     "zod": "^4.6.5"

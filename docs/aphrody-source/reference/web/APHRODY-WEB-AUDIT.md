@@ -33,12 +33,12 @@ No `todo!`/`unimplemented!` in any web crate. Stub-like "not implemented" string
 Bun packages (`packages/web/*`; there is no `apps/web*`, `ls` failed):
 - `@aphrody/bun-web` (`packages/bun-web/package.json`): CDP client, engine lifecycle, service client, config, tauri; command line `yolo browser` (no bin). Has `test/`.
 - `aphrody-web-test` (`packages/bun-web/src/testing`): Playwright-like runner (cdp, locator, expect, page). Has `test/`.
-- `x` (`packages/web/x`): X client, tools, db; tests at package root.
+- `x` (`packages/bun-x`): X client, tools, db; tests at package root.
 
 Installed binaries (`~/.local/bin`):
 - `aphrody-web` and `aphrody-web-worker` are symlinks to `~/.local/lib/aphrody/installed-20261001/` (link time Oct 1 01:24).
 - `obscura` and `obscura-worker` (Sep 29 08:45), `lightpanda` (Sep 29 08:43).
-- Lightpanda wiring in repo: only `packages/web/x/examples/*.ts` mention it (3 files). No Rust/config code references lightpanda (grep over crates, apps, config).
+- Lightpanda wiring in repo: only `packages/bun-x/examples/*.ts` mention it (3 files). No Rust/config code references lightpanda (grep over crates, apps, config).
 
 ## 2. Surfaces
 
