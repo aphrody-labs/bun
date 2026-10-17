@@ -13,7 +13,6 @@ extern crate alloc;
 
 // Absorbed upstream modules keep their original item visibility and helpers.
 #[allow(
-    dead_code,
     deprecated,
     unreachable_pub,
     clippy::all,
@@ -22,7 +21,6 @@ extern crate alloc;
 )]
 mod ppoprf;
 #[allow(
-    dead_code,
     deprecated,
     unreachable_pub,
     clippy::all,
@@ -31,7 +29,6 @@ mod ppoprf;
 )]
 mod privacy_pass;
 #[allow(
-    dead_code,
     deprecated,
     unreachable_pub,
     clippy::all,
@@ -40,7 +37,6 @@ mod privacy_pass;
 )]
 mod star;
 #[allow(
-    dead_code,
     deprecated,
     unreachable_pub,
     clippy::all,

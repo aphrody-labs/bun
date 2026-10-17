@@ -5,8 +5,8 @@
 // (used by brave-core components/challenge_bypass_ristretto).
 
 #[cfg(test)]
-/// Implement the encode_base64 / decode_base64 functions for a struct which implements to_bytes / from_bytes
-macro_rules! impl_base64 {
+/// Implement encode_base64 for a struct which implements to_bytes
+macro_rules! impl_encode_base64 {
     ($t:ident) => {
         impl $t {
             /// Encode to a base64 string
@@ -14,7 +14,15 @@ macro_rules! impl_base64 {
                 use base64::Engine;
                 base64::prelude::BASE64_STANDARD.encode(&self.to_bytes().to_vec())
             }
+        }
+    };
+}
 
+#[cfg(test)]
+/// Implement decode_base64 for a struct which implements from_bytes
+macro_rules! impl_decode_base64 {
+    ($t:ident) => {
+        impl $t {
             /// Decode from a base64 string
             pub fn decode_base64(s: &str) -> Result<Self, TokenError> {
                 use base64::Engine;

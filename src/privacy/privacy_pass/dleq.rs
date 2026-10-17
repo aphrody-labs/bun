@@ -36,7 +36,7 @@ pub struct DLEQProof {
 }
 
 #[cfg(test)]
-impl_base64!(DLEQProof);
+impl_encode_base64!(DLEQProof);
 
 #[allow(non_snake_case)]
 impl DLEQProof {
@@ -72,31 +72,6 @@ impl DLEQProof {
         let s = t - c * k.k;
 
         DLEQProof { c, s }
-    }
-
-    /// Construct a new `DLEQProof`
-    pub fn new<D, T>(
-        rng: &mut T,
-        blinded_token: &BlindedToken,
-        signed_token: &SignedToken,
-        k: &SigningKey,
-    ) -> Result<Self, TokenError>
-    where
-        D: Digest<OutputSize = U64> + Default,
-        T: Rng + CryptoRng,
-    {
-        Ok(Self::_new::<D, T>(
-            rng,
-            blinded_token
-                .0
-                .decompress()
-                .ok_or(TokenError(InternalError::PointDecompressionError))?,
-            signed_token
-                .0
-                .decompress()
-                .ok_or(TokenError(InternalError::PointDecompressionError))?,
-            k,
-        ))
     }
 
     /// Verify the `DLEQProof`
@@ -141,28 +116,6 @@ impl DLEQProof {
         }
     }
 
-    /// Verify the `DLEQProof`
-    pub fn verify<D>(
-        &self,
-        blinded_token: &BlindedToken,
-        signed_token: &SignedToken,
-        public_key: &PublicKey,
-    ) -> Result<(), TokenError>
-    where
-        D: Digest<OutputSize = U64> + Default,
-    {
-        self._verify::<D>(
-            blinded_token
-                .0
-                .decompress()
-                .ok_or(TokenError(InternalError::PointDecompressionError))?,
-            signed_token
-                .0
-                .decompress()
-                .ok_or(TokenError(InternalError::PointDecompressionError))?,
-            public_key,
-        )
-    }
 }
 
 impl DLEQProof {
@@ -210,7 +163,7 @@ impl DLEQProof {
 pub struct BatchDLEQProof(DLEQProof);
 
 #[cfg(test)]
-impl_base64!(BatchDLEQProof);
+impl_encode_base64!(BatchDLEQProof);
 
 #[allow(non_snake_case)]
 impl BatchDLEQProof {

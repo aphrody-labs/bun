@@ -71,6 +71,7 @@ impl Sharks {
     /// let dealer = sharks.dealer(&[1, 2]).unwrap();
     /// // Get 3 shares
     /// let shares: Vec<Share> = dealer.take(3).collect();
+    #[cfg(test)]
     pub fn dealer(&self, secret: &[u8]) -> Result<Evaluator, &str> {
         let mut rng = rand::thread_rng();
         self.dealer_rng(secret, &mut rng)

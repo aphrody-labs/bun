@@ -124,7 +124,6 @@ use zeroize::{Zeroize, ZeroizeOnDrop};
 use adss::{Commune, recover};
 pub use {adss::Share as InternalShare, adss::load_bytes, adss::store_bytes};
 
-pub const AES_BLOCK_LEN: usize = 24;
 pub const DIGEST_LEN: usize = 32;
 
 // A `Measurement` provides the wrapper for a client-generated value in
@@ -143,17 +142,6 @@ impl SingleMeasurement {
         self.0.as_slice()
     }
 
-    pub fn as_vec(&self) -> Vec<u8> {
-        self.0.clone()
-    }
-
-    pub fn byte_len(&self) -> usize {
-        self.0.len()
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
 }
 
 impl From<&str> for SingleMeasurement {
@@ -176,9 +164,6 @@ impl AssociatedData {
         self.0.as_slice()
     }
 
-    pub fn as_vec(&self) -> Vec<u8> {
-        self.0.clone()
-    }
 }
 impl From<&str> for AssociatedData {
     fn from(s: &str) -> Self {
@@ -337,20 +322,6 @@ impl Message {
     }
 }
 
-// The `WASMSharingMaterial` consists of all data that is passed to
-// higher-level applications using the star-wasm API. This allows
-// encrypting and sending the client measurements in higher-level
-// implementations of the STAR protocol.
-#[derive(Zeroize)]
-pub struct WASMSharingMaterial {
-    /// 16-byte AES encryption key
-    pub key: [u8; 16],
-    /// Secret share of key derivation randomness
-    pub share: Share,
-    /// 32-byte random tag associated with client measurement
-    pub tag: [u8; 32],
-}
-
 // In the STAR protocol, the `MessageGenerator` is the entity which
 // samples and sends `Measurement` to the `AggregationServer`. The
 // measurements will only be revealed if a `threshold` number of
@@ -377,20 +348,6 @@ impl MessageGenerator {
             threshold,
             epoch: epoch.into(),
         }
-    }
-
-    // Share with OPRF randomness (STARLite)
-    pub fn share_with_local_randomness(&self) -> Result<WASMSharingMaterial, Box<dyn Error>> {
-        let mut rnd = vec![0u8; 32];
-        self.sample_local_randomness(&mut rnd);
-        let r = self.derive_random_values(&rnd);
-
-        // key is then used for encrypting measurement and associated
-        // data
-        let key = self.derive_key(&r[0]);
-        let share = self.share(&r[0], &r[1])?;
-        let tag = r[2];
-        Ok(WASMSharingMaterial { key, share, tag })
     }
 
     fn derive_random_values(&self, randomness: &[u8]) -> Vec<[u8; 32]> {
