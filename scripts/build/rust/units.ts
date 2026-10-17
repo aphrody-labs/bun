@@ -589,8 +589,10 @@ function rustcUnitManifest(ctx: ManifestContext, unit: RustUnit): RustcUnitManif
     );
     providedStaticLibraries = ["zstd"];
   }
-  // Bun's final link supplies SQLite (the in-tree amalgamation), archived or not; rustc must not look for it.
-  if (unit.kind === "lib" && unit.platform !== "host" && unit.pkg.name === "libsqlite3-sys" && cfg.staticSqlite) {
+  // On Windows the build script names a static sqlite3 that Bun's final link supplies (the in-tree amalgamation),
+  // archived or not; rustc must not look for it.
+  const windowsSqlite = cfg.windows && cfg.staticSqlite;
+  if (unit.kind === "lib" && unit.platform !== "host" && unit.pkg.name === "libsqlite3-sys" && windowsSqlite) {
     providedStaticLibraries = ["sqlite3"];
   }
 
