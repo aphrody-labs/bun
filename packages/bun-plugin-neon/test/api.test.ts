@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { fetchNeonConnectionUri } from "../src/api";
+import { fetchNeonConnectionUri, listNeonProjects } from "../src/api";
 
 test("reads the connection URI with the bearer key and explicit database and role", async () => {
   const seen: { auth: string | null; path: string; query: string }[] = [];
@@ -32,4 +32,20 @@ test("fails closed on a missing key or a refused request", async () => {
   await expect(
     fetchNeonConnectionUri({ apiKey: "k", projectId: "p", database: "d", role: "r", baseUrl: `http://localhost:${server.port}/api/v2/` }),
   ).rejects.toThrow("Neon API returned 403");
+});
+
+test("lists the projects of the organization named by orgId", async () => {
+  const seen: string[] = [];
+  using server = Bun.serve({
+    port: 0,
+    fetch(req) {
+      const url = new URL(req.url);
+      seen.push(`${url.pathname}${url.search}|${req.headers.get("authorization")}`);
+      return Response.json({ projects: [{ id: "p1" }, { id: "p2" }, {}] });
+    },
+  });
+  const baseUrl = `http://localhost:${server.port}/api/v2/`;
+  expect(await listNeonProjects({ apiKey: "k", orgId: "org-1", baseUrl })).toEqual(["p1", "p2"]);
+  expect(seen).toEqual(["/api/v2/projects?org_id=org-1|Bearer k"]);
+  await expect(listNeonProjects({ apiKey: "k", orgId: "", baseUrl })).rejects.toThrow("NEON_ORG_ID is required");
 });

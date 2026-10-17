@@ -4,7 +4,7 @@ import { resolveNeonConnection, type NeonDestination } from "./connection";
 import { applyMigrations, type MigrationOptions, type MigrationReport } from "./migrations";
 
 export { applyMigrations, type MigrationOptions, type MigrationReport };
-export { fetchNeonConnectionUri, type NeonApiOptions } from "./api";
+export { fetchNeonConnectionUri, listNeonProjects, type NeonApiOptions, type NeonProjectsOptions } from "./api";
 
 export type NeonClientOptions = NeonDestination & {
   connectionString?: string | URL;

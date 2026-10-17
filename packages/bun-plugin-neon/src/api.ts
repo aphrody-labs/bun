@@ -28,3 +28,20 @@ export async function fetchNeonConnectionUri(options: NeonApiOptions): Promise<s
   if (typeof body.uri !== "string" || !body.uri) throw new Error("Neon API response has no connection URI");
   return body.uri;
 }
+
+export type NeonProjectsOptions = { apiKey?: string; orgId?: string; baseUrl?: string };
+
+/** Lists the project ids of the organization named by NEON_ORG_ID (or `orgId`); the API key is read from NEON_API_KEY. */
+export async function listNeonProjects(options: NeonProjectsOptions = {}): Promise<string[]> {
+  const apiKey = options.apiKey ?? Bun.env.NEON_API_KEY;
+  const orgId = options.orgId ?? Bun.env.NEON_ORG_ID;
+  if (!apiKey) throw new Error("NEON_API_KEY is required");
+  if (!orgId) throw new Error("NEON_ORG_ID is required");
+
+  const url = new URL("projects", options.baseUrl ?? "https://console.neon.tech/api/v2/");
+  url.searchParams.set("org_id", orgId);
+  const response = await fetch(url, { headers: { authorization: `Bearer ${apiKey}`, accept: "application/json" } });
+  if (!response.ok) throw new Error(`Neon API returned ${response.status} for the project list`);
+  const body = (await response.json()) as { projects?: { id?: unknown }[] };
+  return (body.projects ?? []).flatMap(project => (typeof project.id === "string" ? [project.id] : []));
+}

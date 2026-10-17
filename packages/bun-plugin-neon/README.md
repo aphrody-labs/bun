@@ -11,7 +11,7 @@ bun add @aphrody/bun-plugin-neon
 
 Set `NEON_DATABASE_URL` from the Neon Connect panel, read it with
 `fetchNeonConnectionUri({ database, role })` (uses `NEON_API_KEY` and
-`NEON_PROJECT_ID`; database and role are never guessed), or pass the connection
+`NEON_PROJECT_ID`; database and role are never guessed), list the projects of `NEON_ORG_ID` with `listNeonProjects()`, or pass the connection
 string directly. The helper requires PostgreSQL over TLS with hostname and
 certificate verification. It defaults to one pooled connection and disabled
 prepared statements, which also works with Neon pooler endpoints.
