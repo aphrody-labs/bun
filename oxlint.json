@@ -214,7 +214,6 @@
     },
     {
       "files": [
-        "packages/web/rust/integrations/crates/tauri/aphrody-tauri/scripts/process-ipc-message-fn.js",
         "packages/bun-webview-core/src/input.js"
       ],
       "rules": {

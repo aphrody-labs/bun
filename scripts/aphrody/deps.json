@@ -318,22 +318,6 @@
       "visibility": "PRIVATE"
     },
     {
-      "repo": "aphrody-labs/material",
-      "kind": "cargo-git",
-      "ref": "default branch",
-      "usedBy": ["packages/web/rust/Cargo.toml"],
-      "internal": true,
-      "visibility": "PRIVATE"
-    },
-    {
-      "repo": "aphrody-labs/aphrody",
-      "kind": "cargo-git",
-      "ref": "default branch",
-      "usedBy": ["packages/web/rust/Cargo.toml"],
-      "internal": true,
-      "visibility": "PRIVATE"
-    },
-    {
       "repo": "aphrody-labs/uv",
       "kind": "in-tree",
       "ref": "f3e56e16e0302e26ea456cb51b676b35958572a0",

@@ -61,7 +61,6 @@ docs/chromium/sources/
 packages/bun-video/remotion/
 packages/bun-video/yt-dlp/
 packages/bun-oxc/adapters/
-packages/web/rust/
 src/browser/
 src/rio/
 src/parsers/

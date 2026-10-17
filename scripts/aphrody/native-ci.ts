@@ -78,20 +78,6 @@ export const gates: Gate[] = [
     ],
   })),
   ...["check", "test", "clippy"].map(action => ({
-    id: `rust-web-${action}`,
-    ...(action === "clippy" ? { env: { CLIPPY_CONF_DIR: "packages/web/rust" } } : {}),
-    command: [
-      ...cargo,
-      action,
-      "--manifest-path",
-      "packages/web/rust/Cargo.toml",
-      "-p",
-      "aphrody-web-source",
-      "--locked",
-      ...(action === "clippy" ? ["--no-deps", "--", "-D", "warnings"] : []),
-    ],
-  })),
-  ...["check", "test", "clippy"].map(action => ({
     id: `rust-browser-${action}`,
     ...(action === "clippy" ? { env: { CLIPPY_CONF_DIR: "src/browser" } } : {}),
     command: [

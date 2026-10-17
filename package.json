@@ -19,8 +19,6 @@
     "./packages/bun-fuzzy",
     "./packages/bun-qr",
     "./packages/bun-timeline",
-    "./packages/web/rust/packages/*",
-    "./packages/web/rust/integrations/m3",
     "./apps/desktop",
     "./apps/mobile"
   ],
