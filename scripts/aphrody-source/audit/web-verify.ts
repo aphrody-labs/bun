@@ -14,24 +14,24 @@ import { dirname, join, resolve } from "node:path";
 import { repositoryRoot, validateWebConfig } from "../../../packages/web/rust/packages/agent-browser/src/config.ts";
 
 export const WEB_CRATES = [
-  "aphrody-obscura",
-  "obscura-browser",
-  "obscura-cdp",
-  "obscura-dom",
-  "obscura-js",
-  "obscura-mcp",
-  "obscura-net",
-  "obscura-render",
-  "obscura-ssrf",
-  "aphrody-taffy",
-  "aphrody-web-crawl",
-  "aphrody-web-detect",
-  "aphrody-web-engine",
-  "aphrody-web-extract",
-  "aphrody-web-frames",
-  "aphrody-web-index",
-  "aphrody-web-service",
-  "aphrody-x",
+  "bun_browser",
+  "bun_browser_browser",
+  "bun_browser_cdp",
+  "bun_browser_dom",
+  "bun_browser_js",
+  "bun_browser_mcp",
+  "bun_browser_net",
+  "bun_browser_render",
+  "bun_browser_ssrf",
+  "bun_browser_layout",
+  "bun_browser_crawl",
+  "bun_browser_detect",
+  "bun_browser_engine",
+  "bun_browser_extract",
+  "bun_browser_frames",
+  "bun_browser_index",
+  "bun_browser_service",
+  "bun_x",
 ] as const;
 
 export type StageId = "config" | "bun" | "build" | "smoke" | "crawlability" | "rust";
@@ -100,8 +100,8 @@ export function planStages(options: { stages?: StageId[]; rust?: boolean; crawla
       id: "build",
       steps: [
         {
-          name: "cargo build aphrody-web-engine",
-          command: ["scripts/build/rust/cargo-serial.sh", "build", "-p", "aphrody-web-engine", "--bins", "--locked"],
+          name: "cargo build bun_browser_engine",
+          command: ["bun", "scripts/build/rust/cargo-serial.ts", "build", "-p", "bun_browser_engine", "--locked"],
           timeoutMs: 40 * MINUTE,
         },
       ],

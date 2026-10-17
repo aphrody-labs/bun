@@ -14,7 +14,7 @@ serde_json = { workspace = true }
 
 [workspace]
 resolver = "3"
-members = ["crates/x", "crates/webos-wasm", "crates/web-service", "crates/web-index", "crates/web-frames", "crates/web-extract", "crates/web-engine", "crates/web-crawl", "crates/site", "crates/obscura-ssrf", "crates/obscura-render", "crates/obscura-net", "crates/obscura-mcp", "crates/obscura-js", "crates/obscura-dom", "crates/obscura-cdp", "crates/obscura-browser", "crates/obscura", "integrations/crates/shell/session", "integrations/crates/shell/vfs", "integrations/crates/shell/terminal-core", "integrations/crates/shell/web"]
+members = ["crates/webos-wasm", "crates/site", "integrations/crates/shell/session", "integrations/crates/shell/vfs", "integrations/crates/shell/terminal-core", "integrations/crates/shell/web"]
 
 [workspace.package]
 version = "1.4.4"
@@ -96,17 +96,20 @@ version = "1.4.4"
 features = []
 
 [workspace.dependencies.aphrody-web-crawl]
-path = "crates/web-crawl"
+path = "../../../src/browser/crates/crawl"
+package = "bun_browser_crawl"
 version = "1.4.4"
 features = []
 
 [workspace.dependencies.aphrody-web-extract]
-path = "crates/web-extract"
+path = "../../../src/browser/crates/extract"
+package = "bun_browser_extract"
 version = "1.4.4"
 features = []
 
 [workspace.dependencies.aphrody-web-service]
-path = "crates/web-service"
+path = "../../../src/browser/crates/service"
+package = "bun_browser_service"
 version = "1.4.4"
 features = []
 
@@ -183,47 +186,55 @@ version = "=0.4.34"
 version = "=0.9.11"
 
 [workspace.dependencies.obscura]
-path = "crates/obscura"
+path = "../../../src/browser/crates/api"
 version = "1.4.4"
-package = "aphrody-obscura"
+package = "bun_browser"
 
 [workspace.dependencies.obscura-browser]
-path = "crates/obscura-browser"
+path = "../../../src/browser/crates/browser"
+package = "bun_browser_browser"
 version = "1.4.4"
 features = []
 
 [workspace.dependencies.obscura-cdp]
-path = "crates/obscura-cdp"
+path = "../../../src/browser/crates/cdp"
+package = "bun_browser_cdp"
 version = "1.4.4"
 features = []
 
 [workspace.dependencies.obscura-dom]
-path = "crates/obscura-dom"
+path = "../../../src/browser/crates/dom"
+package = "bun_browser_dom"
 version = "1.4.4"
 features = []
 
 [workspace.dependencies.obscura-js]
-path = "crates/obscura-js"
+path = "../../../src/browser/crates/js"
+package = "bun_browser_js"
 version = "1.4.4"
 features = []
 
 [workspace.dependencies.obscura-mcp]
-path = "crates/obscura-mcp"
+path = "../../../src/browser/crates/mcp"
+package = "bun_browser_mcp"
 version = "1.4.4"
 features = []
 
 [workspace.dependencies.obscura-net]
-path = "crates/obscura-net"
+path = "../../../src/browser/crates/net"
+package = "bun_browser_net"
 version = "1.4.4"
 features = []
 
 [workspace.dependencies.obscura-render]
-path = "crates/obscura-render"
+path = "../../../src/browser/crates/render"
+package = "bun_browser_render"
 version = "1.4.4"
 features = []
 
 [workspace.dependencies.obscura-ssrf]
-path = "crates/obscura-ssrf"
+path = "../../../src/browser/crates/ssrf"
+package = "bun_browser_ssrf"
 version = "1.4.4"
 features = []
 

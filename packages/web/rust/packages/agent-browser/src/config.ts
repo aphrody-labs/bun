@@ -212,7 +212,7 @@ export function resolveEngineBinary(
   const onPath = Bun.which(config.engine.binary);
   if (onPath) return realpathSync(onPath);
   throw new Error(
-    `aphrody-web binary not found. Build it with \`cargo build -p aphrody-web-engine\` or set ${config.engine.binaryEnv}.`,
+    `aphrody-web binary not found. Build it with \`cargo build -p bun_browser_engine\` or set ${config.engine.binaryEnv}.`,
   );
 }
 

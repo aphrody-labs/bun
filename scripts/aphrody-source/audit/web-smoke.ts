@@ -7,7 +7,7 @@
 //!   bun scripts/audit/web-smoke.ts [--bin <aphrody-web>] [--json] [--out <file>]
 //!
 //! Exit code 0 only when every check passes; a binary without `crawl` fails the run (build it
-//! with `cargo build -p aphrody-web-engine`).
+//! with `cargo build -p bun_browser_engine`).
 
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -159,7 +159,7 @@ export async function runSmoke(binaryOverride?: string): Promise<SmokeReport> {
         if (!(await service.supports(name))) missing.push(name);
       expect(
         missing.length === 0,
-        `binary lacks ${missing.join(", ")}; rebuild with cargo build -p aphrody-web-engine`,
+        `binary lacks ${missing.join(", ")}; rebuild with cargo build -p bun_browser_engine`,
       );
       return "launch fetch scrape crawl";
     });

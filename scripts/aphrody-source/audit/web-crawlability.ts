@@ -1285,7 +1285,7 @@ if (import.meta.main) {
       const service = new WebService({ config, binary: value("--bin") });
       if (!(await service.supports("crawl"))) {
         console.error(
-          `web-crawlability: ${service.binary} has no \`crawl\` subcommand; build it with \`cargo build -p aphrody-web-engine\` or pass --no-crawl`,
+          `web-crawlability: ${service.binary} has no \`crawl\` subcommand; build it with \`cargo build -p bun_browser_engine\` or pass --no-crawl`,
         );
         process.exit(2);
       }

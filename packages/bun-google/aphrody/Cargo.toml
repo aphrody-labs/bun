@@ -36,8 +36,8 @@ dirs = { version = "=7.0.0" }
 futures = { version = "=0.3.34" }
 futures-util = { version = "=0.3.34", features = [] }
 getrandom = { version = "=0.4.3" }
-obscura = { version = "1.4.4", package = "aphrody-obscura", path = "../../web/rust/crates/obscura" }
-obscura-dom = { version = "1.4.4", features = [], path = "../../web/rust/crates/obscura-dom" }
+obscura = { version = "1.4.4", package = "bun_browser", path = "../../../src/browser/crates/api" }
+obscura-dom = { version = "1.4.4", package = "bun_browser_dom", path = "../../../src/browser/crates/dom" }
 pretty_assertions = { version = "=1.4.1", features = [] }
 prost = { version = "=0.14.4", features = [] }
 protoc-bin-vendored = { version = "=3.2.0", features = [] }

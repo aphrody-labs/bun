@@ -20,9 +20,9 @@ export type Gate = {
 const cargo = ["bun", "scripts/build/rust/cargo-serial.ts", ...(process.platform === "win32" ? ["--msvc"] : [])];
 // btls-sys currently emits Apple/Linux assembly objects into its MSVC project.
 // Keep Windows render coverage green while non-Windows workers exercise stealth.
-const obscuraWebFeatures =
+const browserFeatures =
   process.platform === "win32"
-    ? ["--features", "aphrody-web-engine/render,aphrody-web-service/render"]
+    ? ["--features", "bun_browser_engine/render,bun_browser_service/render"]
     : ["--all-features"];
 export const gates: Gate[] = [
   ...["check", "test", "clippy"].map(action => ({
@@ -92,30 +92,30 @@ export const gates: Gate[] = [
     ],
   })),
   ...["check", "test", "clippy"].map(action => ({
-    id: `rust-obscura-web-${action}`,
-    ...(action === "clippy" ? { env: { CLIPPY_CONF_DIR: "packages/web/rust" } } : {}),
+    id: `rust-browser-${action}`,
+    ...(action === "clippy" ? { env: { CLIPPY_CONF_DIR: "src/browser" } } : {}),
     command: [
       ...cargo,
       action,
-      "--manifest-path",
-      "packages/web/rust/Cargo.toml",
       ...[
-        "aphrody-obscura",
-        "obscura-browser",
-        "obscura-cdp",
-        "obscura-dom",
-        "obscura-js",
-        "obscura-mcp",
-        "obscura-net",
-        "obscura-render",
-        "obscura-ssrf",
-        "aphrody-web-crawl",
-        "aphrody-web-engine",
-        "aphrody-web-extract",
-        "aphrody-web-index",
-        "aphrody-web-service",
+        "bun_browser",
+        "bun_browser_browser",
+        "bun_browser_cdp",
+        "bun_browser_dom",
+        "bun_browser_js",
+        "bun_browser_mcp",
+        "bun_browser_net",
+        "bun_browser_render",
+        "bun_browser_ssrf",
+        "bun_browser_crawl",
+        "bun_browser_engine",
+        "bun_browser_extract",
+        "bun_browser_frames",
+        "bun_browser_index",
+        "bun_browser_service",
+        "bun_x",
       ].flatMap(packageName => ["-p", packageName]),
-      ...obscuraWebFeatures,
+      ...browserFeatures,
       "--all-targets",
       "--locked",
       "--jobs",

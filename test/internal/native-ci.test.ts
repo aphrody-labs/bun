@@ -222,7 +222,7 @@ test("Clippy selects each source owner's configuration without changing strict w
   const directories = {
     "rust-google-clippy": "packages/bun-google/aphrody",
     "rust-web-clippy": "packages/web/rust",
-    "rust-obscura-web-clippy": "packages/web/rust",
+    "rust-browser-clippy": "src/browser",
     "rust-install-clippy": ".",
   };
   for (const [id, directory] of Object.entries(directories)) {
@@ -246,7 +246,7 @@ test("Clippy selects each source owner's configuration without changing strict w
     "rust-google-clippy",
     "rust-install-clippy",
     "rust-web-clippy",
-    "rust-obscura-web-clippy",
+    "rust-browser-clippy",
   ]);
   expect(gateEnvironment(gates[0]!, checkout, inherited)).toEqual(inherited);
 });

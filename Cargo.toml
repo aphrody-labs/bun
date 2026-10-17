@@ -19,6 +19,9 @@ members = [
   "src/browser/crates/crawl",
   "src/browser/crates/detect",
   "src/browser/crates/index",
+  "src/browser/crates/engine",
+  "src/browser/crates/frames",
+  "src/x",
   "src/bun_vpn",
   "src/opaque",
   "src/adblock",
@@ -594,6 +597,13 @@ bun_workspace = { path = "src/workspace" }
 "bun_browser_crawl" = { "path" = "src/browser/crates/crawl", "version" = "1.4.4" }
 "bun_browser_detect" = { "path" = "src/browser/crates/detect", "version" = "1.4.4", "default-features" = false }
 "bun_browser_index" = { "path" = "src/browser/crates/index", "version" = "1.4.4" }
+"bun_browser_engine" = { "path" = "src/browser/crates/engine", "version" = "1.4.4" }
+"bun_browser_frames" = { "path" = "src/browser/crates/frames", "version" = "1.4.4" }
+"bun_x" = { "path" = "src/x", "version" = "1.4.4" }
+"dirs" = "7.0.0"
+"json5" = "1.3.1"
+"time" = { "version" = "0.3.55", "features" = ["macros", "formatting", "parsing", "serde"] }
+"tracing-subscriber" = { "version" = "0.3.23", "features" = ["env-filter", "fmt", "json", "regex", "registry"] }
 
 rust-argon2 = { path = "vendor/rust-argon2" }
 bcrypt = "0.19"

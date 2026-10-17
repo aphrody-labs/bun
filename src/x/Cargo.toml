@@ -1,0 +1,60 @@
+# SPDX-License-Identifier: Apache-2.0
+[package]
+name = "bun_x"
+repository.workspace = true
+description = "X / Twitter native GraphQL + REST client (cookie auth, no API key required)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license = "Apache-2.0"
+
+[lib]
+name = "bun_x"
+path = "src/lib.rs"
+
+[features]
+# A loopback HTTP server (src/mock.rs) for tests of this crate and of its consumers:
+# the X client is pointed at it through XClientOptions::api_base, so no test reaches a real host.
+test-support = []
+
+[dependencies]
+# HTTP uses the root reqwest version to avoid a parallel client stack.
+reqwest.workspace = true
+# Shared with the workspace (single resolved version across the bridge).
+tokio       = { workspace = true }
+serde       = { workspace = true }
+serde_json  = { workspace = true, features = ["std"] }
+thiserror   = { workspace = true }
+anyhow      = { workspace = true }
+regex       = { workspace = true }
+rustls      = { workspace = true }
+# SQLite follows the root workspace's one linked sqlite3 version.
+rusqlite    = { workspace = true }
+# Additive features on top of the workspace declaration.
+uuid        = { workspace = true, features = ["fast-rng"] }
+clap        = { workspace = true, features = ["env"] }
+# X-client-specific (not used elsewhere in the workspace).
+dirs.workspace = true
+json5.workspace = true
+time.workspace = true
+
+# The X For You algorithm (native ranking, `bun_x::algorithm`, formerly the
+# standalone algorithm crate) needs nothing beyond serde, serde_json and thiserror above.
+# It is used for optional local re-ranking of this crate's Tweet/User results (timelines,
+# search, etc). See `rank_tweets`, `tweet_to_algo_candidate` and the re-exported
+# `AlgoPostCandidate`/`AlgoRankingContext`/`AlgoScoredPost` types.
+[dev-dependencies]
+tokio       = { workspace = true }
+
+# Retained library lint baseline during native graph integration.
+[lints.rust]
+"unsafe_op_in_unsafe_fn" = "deny"
+"unused_must_use" = "deny"
+"non_ascii_idents" = "deny"
+
+[lints.clippy]
+"todo" = "deny"
+"unimplemented" = "deny"
+"dbg_macro" = "deny"
+"correctness" = { "level" = "warn", "priority" = -1 }
+"perf" = { "level" = "warn", "priority" = -1 }
