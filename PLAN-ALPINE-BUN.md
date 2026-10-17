@@ -527,10 +527,9 @@ cargo build --target wasm32-wasip1-threads -p bun_wasm --profile wasm
 
 # Aphrody (C:\aphrody)
 cargo test -p aphrody-webos-wasm
-bun build --target=wasm crates/web/webos-wasm/Cargo.toml --outdir apps/web/dist/wasm/webos
 bun build --target=wasm crates/infra/aphrody-command-wasm/Cargo.toml --outdir apps/web/dist/wasm/cli
 #   repli tant que Y n'a pas fini :
-bun scripts/build/rust/wasm-package.ts --crate aphrody-webos-wasm --out apps/web/dist/wasm/webos
+wasm-pack build crates/aphrody-webos-wasm --target web  # dépôt bun-os (propriétaire OS)
 bun scripts/build/rust/wasm-package.ts --crate aphrody-command-wasm --out apps/web/dist/wasm/cli
 bun scripts/webos/rootfs-seed.ts
 bun test scripts/webos/webos.test.ts

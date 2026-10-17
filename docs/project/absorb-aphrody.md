@@ -40,7 +40,7 @@ Statuts : `fait` (déjà dans Bun), `en cours (autre agent)`, `à faire`,
 | packages/web/qr | packages/bun-qr | fait |
 | packages/web/timeline | packages/bun-timeline | fait |
 | crates/web/{web-engine,web-frames,x}, obscura facade | src/browser/crates/{engine,frames}, src/x ; facade supprimée (doublon de `bun_browser`) | fait |
-| packages/web/webos-wasm                 | packages/web/rust/packages/webos-wasm                  | en cours (autre agent)                                        |
+| packages/web/webos-wasm | bun-os `crates/aphrody-webos-wasm` + `packages/webos-wasm` (propriétaire OS) ; Bun garde `bun_wasm` et apps/desktop | fait |
 | packages/web/x | packages/bun-x (`@aphrody/x`), Rust `src/x` (`bun_x`) | fait |
 | packages/google/google, crates/google/* | packages/bun-google/aphrody                            | en cours (autre agent)                                        |
 | CLI `aphrody web`, `aphrody search`     | `bun web` / src/browser/crates/{crawl,extract,service} | en cours (autre agent)                                        |
