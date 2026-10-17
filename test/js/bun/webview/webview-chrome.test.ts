@@ -1179,6 +1179,45 @@ it("chrome: press() with modifiers", async () => {
   expect(await view.evaluate("__ev")).toEqual({ key: "ArrowLeft", shift: true, ctrl: true });
 });
 
+// The noVNC console shape: a focused canvas forwards keydown over a WebSocket.
+it("chrome: press() reaches a canvas keydown handler that forwards over a WebSocket", async () => {
+  const received: string[] = [];
+  const { promise: done, resolve } = Promise.withResolvers<void>();
+  await using server = Bun.serve({
+    port: 0,
+    fetch(req, srv) {
+      if (srv.upgrade(req)) return;
+      return new Response(
+        `<body style="margin:0"><canvas id="screen" tabindex="0" width="100" height="100" style="display:block"></canvas><script>
+          const ws = new WebSocket("ws://" + location.host + "/rfb");
+          ws.binaryType = "arraybuffer";
+          ws.onopen = () => { document.title = "open"; };
+          const c = document.getElementById("screen");
+          c.getContext("2d").fillRect(0, 0, 10, 10);
+          c.addEventListener("keydown", e => { ws.send(e.key); e.preventDefault(); });
+        </script></body>`,
+        { headers: { "content-type": "text/html" } },
+      );
+    },
+    websocket: {
+      message(_ws, msg) {
+        received.push(String(msg));
+        if (msg === "Enter") resolve();
+      },
+    },
+  });
+  await using view = new Bun.WebView({ backend: chrome, width: 200, height: 200 });
+  await view.navigate(server.url.href);
+  await view.evaluate(
+    "new Promise(r => { const t = () => document.title === 'open' ? r(true) : requestAnimationFrame(t); t(); })",
+  );
+  await view.click("#screen");
+  for (const ch of "ls -a") await view.press(ch);
+  await view.press("Enter");
+  await done;
+  expect(received).toEqual(["l", "s", " ", "-", "a", "Enter"]);
+});
+
 it("chrome: goBack/goForward navigates history", async () => {
   await using view = new Bun.WebView({ backend: chrome, width: 200, height: 200 });
   await view.navigate(html("<body>A</body>"));

@@ -36,13 +36,7 @@ test runner and package manager.
   needed for the requested task, including recursive cleanup, without further confirmation.
 - Verify absolute deletion paths. Preserve unrelated work and protected data unless
   explicitly included in the request. Tool and platform restrictions still apply.
-- Use the existing checkout. Do not create extra worktrees, workspaces or vendor
-  copies unless requested. Reuse existing sources, dependencies and build outputs.
 - Use native Windows tools on this workstation; do not start WSL.
-- Use the measured host budget instead of historical two-CPU or low-parallelism
-  limits. On `vps`, the owner authorizes 12 build jobs and 12 linker threads on
-  its 12 allocated CPUs and 45.93 GiB RAM. Recheck available memory, affinity and
-  free disk before execution. The VPS runs in multi-build mode: 3 slots of 4 CPUs
   (`heavy.lock`, `heavy.1.lock`, `heavy.2.lock`); run each native build through
   `bun factory run [--slots n] -- <command>` and reuse compiled outputs.
 - Read repository guidance before changes; preserve concurrent edits and staged work.

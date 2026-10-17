@@ -386,6 +386,14 @@ await view.type("hello@example.com");
 
 `type()` uses the browser's `InsertText` editing command (the same path as paste), not per-character keystrokes. It fires `beforeinput`/`input` events with `isTrusted: true`, but **no `keydown`/`keyup` events**. There's no IME processing and no smart-quote substitution — the text lands exactly as given.
 
+Pages that read `keydown` instead of `input`, such as a noVNC remote console drawing into a `<canvas>`, need one `press()` per character. Click the canvas first so it has focus:
+
+```ts
+await view.click("canvas");
+for (const ch of "systemctl restart ssh") await view.press(ch);
+await view.press("Enter");
+```
+
 ### Pressing keys
 
 ```ts

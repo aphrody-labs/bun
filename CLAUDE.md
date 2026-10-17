@@ -27,11 +27,7 @@ test runner and package manager.
   needed for the requested task, including recursive cleanup, without further confirmation.
 - Verify absolute deletion paths. Preserve unrelated work and protected data unless
   explicitly included in the request. Tool and platform restrictions still apply.
-- Use the existing checkout. Do not create extra worktrees, workspaces or vendor
-  copies unless requested. Reuse existing sources, dependencies and build outputs.
 - Use native Windows tools on this workstation; do not start WSL.
-- Keep CPU usage bounded: no native build on the workstation, no unnecessary rebuilds. On the VPS,
-  concurrent builds share its CPUs through the factory build slots.
 - Read repository guidance before changes; preserve concurrent edits and staged work.
 - Report actual results and qualification limits. Never print or commit secrets.
 

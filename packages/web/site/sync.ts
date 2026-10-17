@@ -222,7 +222,10 @@ export async function syncSite(
     await Bun.write(join(config.buildRoot, "last-sync.json"), JSON.stringify(receipt, null, 2) + "\n");
     return receipt;
   } finally {
-    rmSync(target, { recursive: true, force: true });
+    // Windows may still hold SQLite or archive handles briefly; never mask the publication result or error.
+    try {
+      rmSync(target, { recursive: true, force: true, maxRetries: 10, retryDelay: 500 });
+    } catch {}
   }
 }
 

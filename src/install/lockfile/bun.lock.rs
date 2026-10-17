@@ -3384,6 +3384,22 @@ fn parse_append_dependencies(
                     ..Default::default()
                 };
                 if !catalogs_apply {
+                    // A flat root override also applies when reloading a catalog edge
+                    // from a local file provider. Unoverridden external catalogs keep
+                    // their existing unresolved/optional-peer behavior.
+                    if dep.version.tag == DependencyVersionTag::Catalog
+                        && !dep.behavior.is_workspace()
+                    {
+                        if let Some(override_dep) = lockfile.overrides.map.get(&dep.name_hash) {
+                            dep.version = lockfile
+                                .catalogs
+                                .resolve_range(
+                                    lockfile.buffers.string_bytes.as_slice(),
+                                    override_dep,
+                                )
+                                .clone();
+                        }
+                    }
                     CatalogMap::strip_reference(&mut dep);
                 }
 
