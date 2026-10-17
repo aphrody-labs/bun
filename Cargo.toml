@@ -1585,6 +1585,79 @@ opt-level = "z"
 opt-level = "z"
 
 
+
+# The hyper/reqwest client stack serves only those subsystems (and bun_docker): bun's own HTTP is uSockets.
+[profile.release.package.hyper]
+opt-level = "s"
+
+[profile.release.package.hyper-util]
+opt-level = "s"
+
+[profile.release.package.h2]
+opt-level = "s"
+
+[profile.release.package.reqwest]
+opt-level = "s"
+
+[profile.release.package.tonic]
+opt-level = "s"
+
+[profile.release.package.tower]
+opt-level = "s"
+
+# Cold CLI subsystems of the fork: `bun mcp`, `bun just`, `bun n2b` migration, `bun ssh`, `bun docker`, `bun vpn`, crawling,
+# MSVC/.NET discovery, SBOM export.
+[profile.release.package.bun_migrate]
+opt-level = "z"
+
+[profile.release.package.bun_mcp]
+opt-level = "z"
+
+[profile.release.package.bun_just]
+opt-level = "z"
+
+[profile.release.package.bun_ssh]
+opt-level = "z"
+
+[profile.release.package.russh]
+opt-level = "z"
+
+[profile.release.package.russh-sftp]
+opt-level = "z"
+
+[profile.release.package.ssh-key]
+opt-level = "z"
+
+[profile.release.package.bun_docker]
+opt-level = "z"
+
+[profile.release.package.bun_vpn]
+opt-level = "z"
+
+[profile.release.package.find-msvc-tools]
+opt-level = "z"
+
+[profile.release.package.bun-dotnet-host]
+opt-level = "z"
+
+[profile.release.package.aphrody-jev]
+opt-level = "z"
+
+[profile.release.package.bun_agent_tools]
+opt-level = "z"
+
+[profile.release.package.reqsign]
+opt-level = "z"
+
+[profile.release.package.bun_browser_crawl]
+opt-level = "z"
+
+[profile.release.package.bun_browser_net]
+opt-level = "z"
+
+[profile.release.package.cyclonedx-bom]
+opt-level = "z"
+
 [patch.crates-io]
 # zlib-rs is absorbed in src/zlib_rs; every crate shares it.
 zlib-rs = { path = "src/zlib_rs" }
