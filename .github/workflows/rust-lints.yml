@@ -63,6 +63,11 @@ jobs:
           components: clippy
           ninja-targets: codegen clone-lolhtml clone-rust-argon2 clone-uutils
 
+      - name: single Cargo workspace
+        # Every crate is a member of the root workspace: no committed Cargo.toml
+        # outside its `exclude` may declare a [workspace] of its own.
+        run: bun scripts/aphrody/flatten-workspace.ts --check
+
       - name: cargo clippy
         env:
           BUN_CODEGEN_DIR: ${{ github.workspace }}/build/debug/codegen
@@ -75,7 +80,7 @@ jobs:
         # tests, nothing builds the rest.
         env:
           BUN_CODEGEN_DIR: ${{ github.workspace }}/build/debug/codegen
-        run: cargo check --workspace --all-targets --keep-going
+        run: cargo check --all-targets --keep-going
 
   miri:
     name: cargo miri test
