@@ -6,14 +6,37 @@
 mod cli_input;
 
 use bun_sys::{Fd, File};
+use std::path::PathBuf;
 
 pub use mullvad_management_interface::Error;
 pub use mullvad_types::states::TunnelState;
 pub type EmbeddedDaemon = mullvad_daemon::Daemon;
 
+/// Mullvad keeps its settings in the system profile and its cache in ProgramData (/etc and
+/// /var/cache on Unix), which only an elevated session can create. Any other session gets
+/// per-user directories; MULLVAD_SETTINGS_DIR and MULLVAD_CACHE_DIR still win when set.
+#[allow(clippy::disallowed_methods)]
+fn user_dir(kind: &str) -> Result<PathBuf, String> {
+    let base = if cfg!(windows) {
+        std::env::var_os("LOCALAPPDATA").map(PathBuf::from)
+    } else {
+        std::env::var_os("XDG_STATE_HOME")
+            .map(PathBuf::from)
+            .or_else(|| std::env::var_os("HOME").map(|home| PathBuf::from(home).join(".local/state")))
+    }
+    .ok_or("no per-user data directory (LOCALAPPDATA or HOME is unset)")?;
+    let dir = base.join("Bun").join("vpn").join(kind);
+    std::fs::create_dir_all(&dir).map_err(|error| format!("{}: {error}", dir.display()))?;
+    Ok(dir)
+}
+
 pub async fn start_embedded_daemon() -> Result<EmbeddedDaemon, String> {
-    let settings_dir = mullvad_paths::settings_dir().map_err(|error| error.to_string())?;
-    let cache_dir = mullvad_paths::cache_dir().map_err(|error| error.to_string())?;
+    let settings_dir = mullvad_paths::settings_dir()
+        .or_else(|_| user_dir("settings"))
+        .map_err(|error| error.to_string())?;
+    let cache_dir = mullvad_paths::cache_dir()
+        .or_else(|_| user_dir("cache"))
+        .map_err(|error| error.to_string())?;
     let log_handle =
         mullvad_daemon::logging::detached_log_handle().map_err(|error| error.to_string())?;
     let config = mullvad_daemon::DaemonConfig {
