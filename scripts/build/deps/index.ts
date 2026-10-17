@@ -18,7 +18,6 @@ import { hdrhistogram } from "./hdrhistogram.ts";
 import { highway } from "./highway.ts";
 import { libarchive } from "./libarchive.ts";
 import { curl } from "./curl.ts";
-import { libdeflate } from "./libdeflate.ts";
 import { libjpegTurbo } from "./libjpeg-turbo.ts";
 import { libspng } from "./libspng.ts";
 import { libuv } from "./libuv.ts";
@@ -56,7 +55,6 @@ export const allDeps: readonly Dependency[] = [
   zlib,
   zstd,
   brotli,
-  libdeflate,
   libarchive,
   // Image codecs — libspng has fetchDeps:["zlib"], so after zlib.
   libjpegTurbo,
@@ -96,7 +94,6 @@ export {
   hdrhistogram,
   highway,
   libarchive,
-  libdeflate,
   libjpegTurbo,
   libspng,
   libuv,

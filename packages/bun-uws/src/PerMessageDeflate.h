@@ -64,7 +64,6 @@ namespace uWS {
 #include <zlib.h>
 #include <string>
 #include <optional>
-#include "libdeflate.h"
 
 namespace uWS {
 
@@ -78,27 +77,20 @@ struct ZlibContext {
     std::string dynamicInflationBuffer;
     char *deflationBuffer;
     char *inflationBuffer;
-    libdeflate_decompressor *decompressor;
-    libdeflate_compressor *compressor;
 
     ZlibContext() {
         deflationBuffer = (char *) malloc(LARGE_BUFFER_SIZE);
         inflationBuffer = (char *) malloc(LARGE_BUFFER_SIZE);
-        decompressor = libdeflate_alloc_decompressor();
-        compressor = libdeflate_alloc_compressor(6);
     }
 
     ~ZlibContext() {
         free(deflationBuffer);
         free(inflationBuffer);
-        libdeflate_free_decompressor(decompressor);
-        libdeflate_free_compressor(compressor);
     }
 };
 
 struct DeflationStream {
     z_stream deflationStream = {};
-    unsigned char reset_buffer[4096 + 1];
 
     DeflationStream(CompressOptions compressOptions) {
 
@@ -114,17 +106,6 @@ struct DeflationStream {
 
     /* Deflate and optionally reset. You must not deflate an empty string. */
     std::string_view deflate(ZlibContext *zlibContext, std::string_view raw, bool reset) {
-        /* Run a fast path in case of shared_compressor */
-        if (reset) {
-            size_t written = 0;
-            written = libdeflate_deflate_compress(zlibContext->compressor, raw.data(), raw.length(), reset_buffer, 4096);
-
-            if (written) {
-                memcpy(&reset_buffer[written], "\x00", 1);
-                return std::string_view((char *) reset_buffer, written + 1);
-            }
-        }
-
         /* Odd place to clear this one, fix */
         zlibContext->dynamicDeflationBuffer.clear();
 
@@ -174,7 +155,6 @@ struct DeflationStream {
 
 struct InflationStream {
     z_stream inflationStream = {};
-    char buf[4096];
 
     InflationStream(CompressOptions compressOptions) {
         /* Inflation windowBits are the top 8 bits of the 16 bit compressOptions */
@@ -187,29 +167,6 @@ struct InflationStream {
 
     /* Zero length inflates are possible and valid */
     std::optional<std::string_view> inflate(ZlibContext *zlibContext, std::string_view compressed, size_t maxPayloadLength, bool reset) {
-        /* The libdeflate fast path is stateless: it cannot resolve back-references into a
-         * previous message's sliding window, and whatever it inflates never reaches the zlib
-         * stream's window. Both are only correct without context takeover, i.e. when reset is set. */
-        if (reset) {
-            /* Try fast path first */
-            size_t written = 0;
-
-            /* We have to pad 9 bytes and restore those bytes when done since 9 is more than 6 of next WebSocket message */
-            char tmp[9];
-            memcpy(tmp, (char *) compressed.data() + compressed.length(), 9);
-            memcpy((char *) compressed.data() + compressed.length(), "\x00\x00\xff\xff\x01\x00\x00\xff\xff", 9);
-            libdeflate_result res = libdeflate_deflate_decompress(zlibContext->decompressor, compressed.data(), compressed.length() + 9, buf, 4096, &written);
-            memcpy((char *) compressed.data() + compressed.length(), tmp, 9);
-
-            if (res == 0) {
-                /* Fast path wins */
-                if (written > maxPayloadLength) {
-                    return std::nullopt;
-                }
-                return std::string_view(buf, written);
-            }
-        }
-
         /* Save off the bytes we're about to overwrite */
         char* tailLocation = (char*)compressed.data() + compressed.length();
         char preTailBytes[4];

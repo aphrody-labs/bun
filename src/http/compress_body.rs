@@ -64,11 +64,11 @@ pub(crate) fn compress_into(
         CompressEncoding::Gzip | CompressEncoding::Deflate => {
             let gzip = opt.encoding == CompressEncoding::Gzip;
             let enc = if gzip {
-                bun_libdeflate_sys::libdeflate::Encoding::Gzip
+                bun_zlib::oneshot::Encoding::Gzip
             } else {
                 // HTTP "deflate" is the zlib-wrapped DEFLATE stream (RFC 9110
                 // §8.4.1.2); libdeflate's `Deflate` is the raw stream.
-                bun_libdeflate_sys::libdeflate::Encoding::Zlib
+                bun_zlib::oneshot::Encoding::Zlib
             };
             match compress_libdeflate_fast(state, input, enc, opt.level) {
                 Some(n) => Ok(CompressOutput::Shared(n)),
@@ -89,10 +89,10 @@ pub(crate) fn compress_into(
 fn compress_libdeflate_fast(
     state: &mut LibdeflateState,
     input: &[u8],
-    enc: bun_libdeflate_sys::libdeflate::Encoding,
+    enc: bun_zlib::oneshot::Encoding,
     level: Option<i32>,
 ) -> Option<usize> {
-    use bun_libdeflate_sys::libdeflate::{Compressor, OwnedCompressor};
+    use bun_zlib::oneshot::{Compressor, OwnedCompressor};
 
     // Split-borrow so the compressor handle and `shared_buffer` can be used
     // together.

@@ -16,10 +16,10 @@ patches without a prebuilt. Everything else is fetched at a pinned revision.
 ## Fetched by the build (gitignored clones)
 
 `scripts/build/deps/*.ts` fetch the native dependencies (boringssl, brotli,
-cares, highway, libarchive, libdeflate, libjpeg-turbo, libspng, libuv, libwebp,
+cares, highway, libarchive, libjpeg-turbo, libspng, libuv, libwebp,
 lolhtml, lshpack, lsqpack, lsquic, mimalloc, nginx, ngx-rust, picohttpparser,
-rust-argon2, tinycc, uutils, zlib, zstd, hdrhistogram) as archives at the commits
-listed in `scripts/aphrody/deps.json`. WebKit comes as a prebuilt identified by
+rust-argon2, tinycc, uutils, zstd, hdrhistogram) as archives at the commits
+listed in `scripts/aphrody/deps.json`. zlib is zlib-rs, absorbed in `src/zlib_rs`. WebKit comes as a prebuilt identified by
 its release URL (`.identity` stamp), without a checksum pin. A direct C/C++
 dependency downloads instead of compiling once a matching registry pack is
 indexed (`scripts/build/deps/README.md`, "Qualified native SDKs").

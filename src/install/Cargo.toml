@@ -54,7 +54,6 @@ aphrody-pkg-system = { path = "../../packages/aphrody-pkg-system" }
 bun_zstd.workspace = true
 libc.workspace = true
 lzma-rust2 = { version = "0.16", default-features = false, features = ["std"] }
-bun_libdeflate_sys.workspace = true
 bun_ast.workspace = true
 bun_options_types.workspace = true
 bun_patch.workspace = true

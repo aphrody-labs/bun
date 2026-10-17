@@ -31,7 +31,7 @@ export const curl: Dependency = {
       CURL_ZSTD: "ON",
       CURL_USE_PKGCONFIG: "OFF",
       CURL_USE_CMAKECONFIG: "OFF",
-      ZLIB_INCLUDE_DIR: depBuildDir(cfg, "zlib"),
+      ZLIB_INCLUDE_DIR: resolve(cfg.cwd, "src/zlib_rs/include"),
       ZLIB_LIBRARY: resolve(depBuildDir(cfg, "zlib"), `${cfg.libPrefix}zlib${cfg.libSuffix}`),
       BROTLI_INCLUDE_DIR: resolve(depSourceDir(cfg, "brotli"), "c/include"),
       BROTLIDEC_LIBRARY: resolve(depBuildDir(cfg, "brotli"), `${cfg.libPrefix}brotli${cfg.libSuffix}`),

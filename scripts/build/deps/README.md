@@ -13,8 +13,7 @@ libraries/headers it provides.
 5. `bun run scripts/build/phase3-test.ts` to verify it builds
 
 That's it. For most deps you're done. If the dep's build is too entangled
-to list sources by hand (zlib-ng's per-file SIMD flags are about the
-limit), use `kind: "nested-cmake"` instead — see `NestedCmakeBuild` in
+to list sources by hand (per-file SIMD flags are about the limit), use `kind: "nested-cmake"` instead — see `NestedCmakeBuild` in
 `../source.ts` for the fields.
 
 **`name` must match the directory on disk** (`vendor/<name>/`). If your repo
@@ -144,10 +143,10 @@ export const mydep: Dependency = {
 
 ## Worked examples
 
-- **hdrhistogram.ts** / **libdeflate.ts** — simplest direct deps
+- **hdrhistogram.ts** — simplest direct dep
 - **mimalloc.ts** — direct build, single unity TU compiled as C++
 - **tinycc.ts** — direct build with a build-time codegen tool
-- **zlib.ts** — direct build with per-source SIMD `-m` flags + `.h.in` substitution
+- **zlib.ts** — headers only (`in-tree`, `build: none`): zlib-rs is a Rust crate of the workspace
 - **libarchive.ts** / **cares.ts** — direct build with hand-written per-target config.h
 - **boringssl.ts** — direct build with NASM assembly (win-x64) and a large gen/ manifest; `forbidUndefined` (with libuv.ts) keeps a dep that bun points at mimalloc from calling libc's allocator behind its back
 - **sqlite.ts** — direct build, in-tree source (lives in `src/`, not `vendor/`)
@@ -217,7 +216,7 @@ bun scripts/aphrody/native-sdk-registry.ts status --build build/release
 ```
 
 `pack` requires every dependency up to date in that build and the linked bun to
-pass `native-sdk-smoke.ts` (zlib, libdeflate, zstd, brotli, BoringSSL,
+pass `native-sdk-smoke.ts` (zlib, zstd, brotli, BoringSSL,
 libarchive and SQLite roundtrips); it skips a dependency the build already
 downloaded. `publish` skips a version already on the registry. `record` adds an
 asset to the index only once the registry serves its exact bytes. Builds then

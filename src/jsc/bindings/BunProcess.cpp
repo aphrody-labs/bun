@@ -284,13 +284,10 @@ static JSValue constructVersions(VM& vm, JSObject* processObject)
         { "uwebsockets", BUN_VERSION_UWS },
         { "webkit", BUN_VERSION_WEBKIT },
         { "zig", BUN_VERSION_ZIG },
-        // Use commit hash for zlib to match test expectations
-        { "zlib", BUN_VERSION_ZLIB_HASH },
+        { "zlib", ZLIB_VERSION },
         { "tinycc", BUN_VERSION_TINYCC },
         { "lolhtml", BUN_VERSION_LOLHTML },
         { "ares", BUN_VERSION_C_ARES },
-        // Use commit hash for libdeflate to match test expectations
-        { "libdeflate", BUN_VERSION_LIBDEFLATE_HASH },
         { "usockets", BUN_VERSION_USOCKETS },
         { "lshpack", BUN_VERSION_LSHPACK },
         // Use commit hash for zstd (semantic version extraction not working yet)

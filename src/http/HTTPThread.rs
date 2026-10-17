@@ -229,8 +229,8 @@ pub struct CertCheckResumeMessage {
 pub(crate) const LIBDEFLATE_SHARED_BUFFER_LEN: usize = 512 * 1024;
 
 pub struct LibdeflateState {
-    pub(crate) decompressor: Option<bun_libdeflate_sys::libdeflate::OwnedDecompressor>,
-    pub(crate) compressor: Option<bun_libdeflate_sys::libdeflate::OwnedCompressor>,
+    pub(crate) decompressor: Option<bun_zlib::oneshot::OwnedDecompressor>,
+    pub(crate) compressor: Option<bun_zlib::oneshot::OwnedCompressor>,
     pub(crate) shared_buffer: [u8; LIBDEFLATE_SHARED_BUFFER_LEN],
 }
 
@@ -245,7 +245,7 @@ impl LibdeflateState {
     /// `decompressor` is set once in [`HttpThread::deflater`] (panics on OOM)
     /// and is never `None` after that, so the unwrap is infallible.
     #[inline]
-    pub(crate) fn decompressor_mut(&mut self) -> &mut bun_libdeflate_sys::libdeflate::Decompressor {
+    pub(crate) fn decompressor_mut(&mut self) -> &mut bun_zlib::oneshot::Decompressor {
         self.decompressor
             .as_deref_mut()
             .expect("set in HttpThread::deflater()")
@@ -359,7 +359,7 @@ impl HttpThread {
 
     pub(crate) fn deflater(&mut self) -> &mut LibdeflateState {
         if self.lazy_libdeflater.is_none() {
-            let decompressor = bun_libdeflate_sys::libdeflate::OwnedDecompressor::new()
+            let decompressor = bun_zlib::oneshot::OwnedDecompressor::new()
                 .unwrap_or_else(|| bun_core::out_of_memory());
             let mut state: Box<LibdeflateState> = bun_core::boxed_zeroed();
             state.decompressor = Some(decompressor);
@@ -1233,7 +1233,6 @@ mod _event_loop_draft {
             (*crate::HTTP_THREAD.get()).write(HttpThread::new());
         }
         crate::HTTP_THREAD_INIT.store(true, core::sync::atomic::Ordering::Release);
-        bun_libdeflate_sys::libdeflate::load();
         let opts_copy = opts.clone();
         let thread = std::thread::Builder::new()
             .stack_size(bun_threading::thread_pool::DEFAULT_THREAD_STACK_SIZE as usize)

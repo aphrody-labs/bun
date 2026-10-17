@@ -148,17 +148,17 @@ private:
                     if (webSocketData->compressionStatus == WebSocketData::CompressionStatus::COMPRESSED_FRAME) {
                             webSocketData->compressionStatus = WebSocketData::CompressionStatus::ENABLED;
 
-                            /* 9 bytes of padding for libdeflate, 4 for zlib */
-                            webSocketData->fragmentBuffer.append("123456789");
+                            /* 4 bytes of padding for the zlib sync-flush tail */
+                            webSocketData->fragmentBuffer.append("1234");
 
                             LoopData *loopData = (LoopData *) us_loop_ext(us_socket_group_loop(us_socket_group((us_socket_t *) s)));
 
                             /* Decompress using shared or dedicated decompressor */
                             std::optional<std::string_view> inflatedFrame;
                             if (webSocketData->inflationStream) {
-                                inflatedFrame = webSocketData->inflationStream->inflate(loopData->zlibContext, {webSocketData->fragmentBuffer.data(), webSocketData->fragmentBuffer.length() - 9}, webSocketContextData->maxPayloadLength, false);
+                                inflatedFrame = webSocketData->inflationStream->inflate(loopData->zlibContext, {webSocketData->fragmentBuffer.data(), webSocketData->fragmentBuffer.length() - 4}, webSocketContextData->maxPayloadLength, false);
                             } else {
-                                inflatedFrame = loopData->inflationStream->inflate(loopData->zlibContext, {webSocketData->fragmentBuffer.data(), webSocketData->fragmentBuffer.length() - 9}, webSocketContextData->maxPayloadLength, true);
+                                inflatedFrame = loopData->inflationStream->inflate(loopData->zlibContext, {webSocketData->fragmentBuffer.data(), webSocketData->fragmentBuffer.length() - 4}, webSocketContextData->maxPayloadLength, true);
                             }
 
                             if (!inflatedFrame.has_value()) {

@@ -65,8 +65,7 @@ async function main(): Promise<void> {
       // fetch-cli.ts subst <in> <out> [<from> <to>]...
       // Replaces every literal occurrence of <from> with <to>. Used by
       // DirectBuild deps to materialize *.h.in templates without running
-      // the upstream configure (e.g. zlib-ng's zlib.h.in → zlib.h, where
-      // the only substitution is `@ZLIB_SYMBOL_PREFIX@` → ``).
+      // the upstream configure (e.g. libjpeg-turbo's jconfig.h.in).
       const [inPath, outPath, ...pairs] = args;
       assert(inPath !== undefined && outPath !== undefined, "subst: missing in/out");
       assert(pairs.length % 2 === 0, "subst: replacements must be <from> <to> pairs");

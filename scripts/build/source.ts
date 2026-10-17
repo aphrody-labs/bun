@@ -455,7 +455,6 @@ export type DepName =
   | "hdrhistogram"
   | "highway"
   | "libarchive"
-  | "libdeflate"
   | "libjpeg-turbo"
   | "libspng"
   | "libuv"
@@ -502,10 +501,9 @@ export interface Dependency {
 
   /**
    * Other deps that must be BUILT before this dep's configure runs.
-   * Used for header-level dependencies — e.g. libarchive needs zlib's
-   * headers at configure time (`check_include_file("zlib.h")`). zlib-ng
-   * generates `zlib.h` during its own cmake configure, so libarchive must
-   * wait for zlib's full build, not just its source fetch.
+   * Used for header-level dependencies — e.g. libarchive and libspng need
+   * zlib's headers before they compile, and a dep whose headers are generated
+   * must be built, not just fetched.
    *
    * Resolves to the named dep's build outputs (lib files for nested-cmake,
    * source stamp for header-only). Order-only on configure, implicit on
@@ -957,9 +955,8 @@ export function resolveDep(
 
   // ─── Resolve fetchDeps → extra inputs on configure + build ───
   // These are deps that must be BUILT before we configure (not link).
-  // E.g. libarchive's configure runs check_include_file("zlib.h"), and
-  // zlib-ng generates zlib.h during its own cmake configure — so we depend
-  // on zlib's lib output (which implies its configure ran).
+  // E.g. a dep that generates its headers during its own build must have
+  // built before a dependent compiles against them.
   //
   // On CONFIGURE: order-only. Configure needs the headers to exist, but
   //   doesn't track their content — feature detection is cached in

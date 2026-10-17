@@ -664,11 +664,9 @@ it("process.versions", async () => {
     libarchive: "libarchive",
     mimalloc: "mimalloc",
     picohttpparser: "picohttpparser",
-    zlib: "zlib",
     tinycc: "tinycc",
     lolhtml: "lolhtml",
     ares: "cares",
-    libdeflate: "libdeflate",
     zstd: "zstd",
     lshpack: "lshpack",
   };
@@ -676,7 +674,7 @@ it("process.versions", async () => {
   const expectedVersions = {};
   for (const [key, file] of Object.entries(deps)) {
     const src = await Bun.file(join(depsDir, `${file}.ts`)).text();
-    // No $ anchor: some pins carry a trailing comment (zlib.ts: `"; // 2.3.3`)
+    // No $ anchor: some pins carry a trailing comment.
     const match = src.match(/^const [A-Z_]+_COMMIT = "([0-9a-f]{40})";/m);
     expect(match, `failed to extract commit from ${file}.ts`).not.toBeNull();
     expectedVersions[key] = match[1];
@@ -686,6 +684,11 @@ it("process.versions", async () => {
     expect(process.versions).toHaveProperty(name);
     expect(process.versions[name]).toBe(expectedHash);
   }
+
+  // zlib is zlib-rs, absorbed in src/zlib_rs; its header names the version.
+  const zlibHeader = await Bun.file(resolve(import.meta.dir, "../../../../src/zlib_rs/include/zlib.h")).text();
+  expect(process.versions.zlib).toBe(zlibHeader.match(/^#define ZLIB_VERSION "([^"]+)"/m)[1]);
+  expect(process.versions).not.toHaveProperty("libdeflate");
 
   expect(process.versions).toHaveProperty("usockets");
   expect(process.versions).toHaveProperty("uwebsockets");

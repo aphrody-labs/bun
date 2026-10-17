@@ -16,3 +16,4 @@ bun_alloc.workspace = true
 bun_collections.workspace = true
 bun_core.workspace = true
 bun_zlib_sys.workspace = true
+zlib-rs = { workspace = true, features = ["__internal-api"] }

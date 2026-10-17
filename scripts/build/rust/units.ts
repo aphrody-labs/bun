@@ -589,6 +589,10 @@ function rustcUnitManifest(ctx: ManifestContext, unit: RustUnit): RustcUnitManif
     );
     providedStaticLibraries = ["zstd"];
   }
+  // Bun's final link supplies SQLite (the in-tree amalgamation), archived or not; rustc must not look for it.
+  if (unit.kind === "lib" && unit.platform !== "host" && unit.pkg.name === "libsqlite3-sys" && cfg.staticSqlite) {
+    providedStaticLibraries = ["sqlite3"];
+  }
 
   return {
     kind: unit.kind,

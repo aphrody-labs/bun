@@ -299,7 +299,7 @@ impl<'a> InternalState<'a> {
             // Fast-path: use libdeflate
 
             'libdeflate: {
-                use bun_libdeflate_sys::libdeflate as bun_libdeflate;
+                use bun_zlib::oneshot;
                 if !(is_final_chunk
                     && !self.flags.is_libdeflate_fast_path_disabled
                     && matches!(self.decompressor, Decompressor::None)
@@ -309,10 +309,10 @@ impl<'a> InternalState<'a> {
                     break 'libdeflate;
                 }
                 let format = match self.encoding {
-                    Encoding::Gzip => bun_libdeflate::Encoding::Gzip,
+                    Encoding::Gzip => oneshot::Encoding::Gzip,
                     // zlib-ng alone judges a zlib-wrapped body: libdeflate accepts more streams.
                     Encoding::Deflate if has_zlib_header(buffer) => break 'libdeflate,
-                    Encoding::Deflate => bun_libdeflate::Encoding::Deflate,
+                    Encoding::Deflate => oneshot::Encoding::Deflate,
                     _ => unreachable!(),
                 };
                 self.flags.is_libdeflate_fast_path_disabled = true;
@@ -345,12 +345,12 @@ impl<'a> InternalState<'a> {
                         let result = deflater.decompressor_mut().decompress_to_vec(
                             buffer,
                             &mut self.decoded_body.list,
-                            bun_libdeflate::Encoding::Gzip,
+                            oneshot::Encoding::Gzip,
                         );
                         // libdeflate decodes a single gzip member; unconsumed
                         // input means this is a multi-member stream (RFC 1952
                         // §2.2). Let the zlib path handle it.
-                        if result.status == bun_libdeflate::Status::Success
+                        if result.status == oneshot::Status::Success
                             && result.read == buffer.len()
                         {
                             still_needs_to_decompress = false;
@@ -370,7 +370,7 @@ impl<'a> InternalState<'a> {
 
                 // libdeflate decodes a single member; unconsumed input means
                 // a multi-member gzip stream. Let the zlib path handle it.
-                if result.status == bun_libdeflate::Status::Success && result.read == buffer.len() {
+                if result.status == oneshot::Status::Success && result.read == buffer.len() {
                     if self
                         .decoded_body
                         .list

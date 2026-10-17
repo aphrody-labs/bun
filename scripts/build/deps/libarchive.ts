@@ -17,7 +17,7 @@
 
 import type { Config } from "../config.ts";
 import type { Dependency } from "../source.ts";
-import { depBuildDir } from "../source.ts";
+import { resolve } from "node:path";
 
 const LIBARCHIVE_COMMIT = "27cbc7827172698143e440801fc0ba39ccb4f1f5";
 
@@ -121,19 +121,16 @@ export const libarchive: Dependency = {
     "patches/libarchive/tar-npm-compat.patch",
   ],
 
-  // zlib-ng generates zlib.h during its own build; libarchive's gzip filter
-  // includes it. We don't link zlib here (bun's final link does), just need
-  // the header on -I.
+  // The gzip filter includes <zlib.h>; zlib-rs provides the header (src/zlib_rs/include)
+  // and bun's final link provides the symbols.
   fetchDeps: ["zlib"],
 
   build: cfg => ({
     kind: "direct",
     sources: [...SOURCES, ...(cfg.windows ? SOURCES_WIN : [])].map(s => `libarchive/${s}.c`),
-    // zlib's build dir holds the generated zlib.h (subst'd from .in) that
-    // the gzip filter includes. Absolute path → emitDirect quotes it.
     // android: archive.h does `#include <android_lf.h>` under __ANDROID__;
     // that header lives under contrib/android/include.
-    includes: ["libarchive", depBuildDir(cfg, "zlib"), ...(cfg.abi === "android" ? ["contrib/android/include"] : [])],
+    includes: ["libarchive", resolve(cfg.cwd, "src/zlib_rs/include"), ...(cfg.abi === "android" ? ["contrib/android/include"] : [])],
     pic: true,
     defines: {
       HAVE_CONFIG_H: 1,

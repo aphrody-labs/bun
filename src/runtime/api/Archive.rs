@@ -1608,17 +1608,16 @@ impl CompressError {
 }
 
 fn compress_gzip(data: &[u8], level: u8) -> Result<Vec<u8>, CompressError> {
-    use bun_libdeflate_sys::libdeflate;
-    libdeflate::load();
+    use bun_zlib::oneshot;
 
     let mut compressor =
-        libdeflate::OwnedCompressor::new(i32::from(level)).ok_or(CompressError::GzipInitFailed)?;
+        oneshot::OwnedCompressor::new(i32::from(level)).ok_or(CompressError::GzipInitFailed)?;
 
     let mut output = Vec::new();
     let result = compressor
-        .compress_to_vec(data, &mut output, libdeflate::Encoding::Gzip)
+        .compress_to_vec(data, &mut output, oneshot::Encoding::Gzip)
         .map_err(|_| CompressError::OutOfMemory)?;
-    if result.status != libdeflate::Status::Success {
+    if result.status != oneshot::Status::Success {
         return Err(CompressError::GzipCompressFailed);
     }
     Ok(output)

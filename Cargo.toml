@@ -148,7 +148,6 @@ members = [
   "src/js_parser",
   "src/js_parser_jsc",
   "src/js_printer",
-  "src/libdeflate_sys",
   "src/libuv_sys",
   "src/ast",
   "src/ast_jsc",
@@ -162,6 +161,7 @@ members = [
   "src/privacy",
   "src/sys_jsc",
   "src/zlib_sys",
+  "src/zlib_rs",
   "src/dispatch",
   "src/brotli",
   "src/bundler_jsc",
@@ -413,7 +413,6 @@ default-members = [
   "src/js_parser",
   "src/js_parser_jsc",
   "src/js_printer",
-  "src/libdeflate_sys",
   "src/libuv_sys",
   "src/ast",
   "src/ast_jsc",
@@ -427,6 +426,7 @@ default-members = [
   "src/privacy",
   "src/sys_jsc",
   "src/zlib_sys",
+  "src/zlib_rs",
   "src/dispatch",
   "src/brotli",
   "src/bundler_jsc",
@@ -976,6 +976,7 @@ const_format = "0.2"
 enum-map = "2"
 enumset = "1"
 libc = "0.2"
+zlib-rs = { path = "src/zlib_rs", default-features = false, features = ["std", "rust-allocator"] }
 rustix = { version = "0.38", default-features = false, features = ["std", "fs", "event", "process", "net"] }
 bitflags = "2"
 thiserror = "2"
@@ -1054,7 +1055,6 @@ bun_install_types = { path = "src/install_types" }
 bun_js_parser = { path = "src/js_parser" }
 bun_js_parser_jsc = { path = "src/js_parser_jsc" }
 bun_js_printer = { path = "src/js_printer" }
-bun_libdeflate_sys = { path = "src/libdeflate_sys" }
 bun_libuv_sys = { path = "src/libuv_sys" }
 bun_ast = { path = "src/ast" }
 bun_ast_jsc = { path = "src/ast_jsc" }
@@ -1195,6 +1195,8 @@ opt-level = "z"
 opt-level = "z"
 
 [patch.crates-io]
+# zlib-rs is absorbed in src/zlib_rs; every crate shares it.
+zlib-rs = { path = "src/zlib_rs" }
 # PyO3 comes from the aphrody-labs fork, same pin as packages/buv/vendor.json.
 pyo3 = { git = "https://github.com/aphrody-labs/pyo3", rev = "451d99fdcdcddf159e8e0a1186960b332cdb5d7c" }
 pyo3-build-config = { git = "https://github.com/aphrody-labs/pyo3", rev = "451d99fdcdcddf159e8e0a1186960b332cdb5d7c" }

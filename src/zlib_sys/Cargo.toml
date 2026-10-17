@@ -12,4 +12,5 @@ workspace = true
 
 [dependencies]
 bun_core.workspace = true
+zlib-rs = { workspace = true, features = ["export-symbols"] }
 

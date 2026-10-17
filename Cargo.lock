@@ -4275,7 +4275,6 @@ dependencies = [
  "bun_event_loop",
  "bun_http_types",
  "bun_io",
- "bun_libdeflate_sys",
  "bun_picohttp",
  "bun_ptr",
  "bun_sys",
@@ -4306,7 +4305,6 @@ dependencies = [
  "bun_http_types",
  "bun_io",
  "bun_jsc",
- "bun_libdeflate_sys",
  "bun_opaque",
  "bun_picohttp",
  "bun_ptr",
@@ -4380,7 +4378,6 @@ dependencies = [
  "bun_js_parser",
  "bun_js_printer",
  "bun_libarchive",
- "bun_libdeflate_sys",
  "bun_no_window",
  "bun_options_types",
  "bun_parsers",
@@ -4568,7 +4565,6 @@ dependencies = [
  "bun_js_parser",
  "bun_js_printer",
  "bun_jsc_macros",
- "bun_libdeflate_sys",
  "bun_opaque",
  "bun_options_types",
  "bun_patch",
@@ -4586,6 +4582,7 @@ dependencies = [
  "bun_uws",
  "bun_watcher",
  "bun_wyhash",
+ "bun_zlib",
  "bytemuck",
  "libc",
  "scopeguard",
@@ -4694,14 +4691,6 @@ dependencies = [
  "bun_wyhash",
  "scopeguard",
  "thiserror 2.0.21",
-]
-
-[[package]]
-name = "bun_libdeflate_sys"
-version = "1.4.6"
-dependencies = [
- "bun_alloc",
- "bun_opaque",
 ]
 
 [[package]]
@@ -5566,7 +5555,6 @@ dependencies = [
  "bun_jsc",
  "bun_just",
  "bun_libarchive",
- "bun_libdeflate_sys",
  "bun_libuv_sys",
  "bun_lint_driver",
  "bun_linter",
@@ -6288,6 +6276,7 @@ dependencies = [
  "bun_core",
  "bun_zlib_sys",
  "strum 0.28.0",
+ "zlib-rs",
 ]
 
 [[package]]
@@ -6295,6 +6284,7 @@ name = "bun_zlib_sys"
 version = "1.4.6"
 dependencies = [
  "bun_core",
+ "zlib-rs",
 ]
 
 [[package]]
@@ -7278,7 +7268,7 @@ version = "3.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "faf9468729b8cbcea668e36183cb69d317348c2e08e994829fb56ebfdfbaac34"
 dependencies = [
- "windows-sys 0.48.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -9670,7 +9660,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "39cab71617ae0d63f51a36d69f866391735b51691dbda63cf6f96d042b63efeb"
 dependencies = [
  "libc",
- "windows-sys 0.59.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -11104,7 +11094,7 @@ dependencies = [
  "gobject-sys 0.22.9",
  "libc",
  "system-deps 9.0.0",
- "windows-sys 0.59.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -14432,7 +14422,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "20fd6de4ccfcc187e38bc21cfa543cb5a302cb86a8b114eb7f0bf0dc9f8ac00f"
 dependencies = [
  "io-lifetimes 3.0.1",
- "windows-sys 0.59.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -14532,7 +14522,7 @@ checksum = "3640c1c38b8e4e43584d8df18be5fc6b0aa314ce6ebf51b53313d4306cca8e46"
 dependencies = [
  "hermit-abi",
  "libc",
- "windows-sys 0.59.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -20010,7 +20000,7 @@ dependencies = [
  "once_cell",
  "socket2",
  "tracing",
- "windows-sys 0.59.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -21563,7 +21553,7 @@ dependencies = [
  "errno 0.3.14",
  "libc",
  "linux-raw-sys 0.12.1",
- "windows-sys 0.59.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -21632,7 +21622,7 @@ dependencies = [
  "security-framework",
  "security-framework-sys",
  "webpki-root-certs",
- "windows-sys 0.59.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -22028,7 +22018,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5b55fb86dfd3a2f5f76ea78310a88f96c4ea21a3031f8d212443d56123fd0521"
 dependencies = [
  "libc",
- "windows-sys 0.59.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -22554,7 +22544,7 @@ version = "1.4.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c4db69cba1110affc0e9f7bcd48bbf87b3f4fc7c61fc9155afd4c469eb3d6c1b"
 dependencies = [
- "errno 0.2.8",
+ "errno 0.3.14",
  "libc",
 ]
 
@@ -24751,7 +24741,7 @@ dependencies = [
  "getrandom 0.3.4",
  "once_cell",
  "rustix 1.1.5",
- "windows-sys 0.59.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -30681,7 +30671,7 @@ version = "0.1.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c2a7b1c03c876122aa43f3020e6c3c3ee5c05081c9a00739faf7503aeba10d22"
 dependencies = [
- "windows-sys 0.48.0",
+ "windows-sys 0.60.2",
 ]
 
 [[package]]
@@ -32643,8 +32633,6 @@ dependencies = [
 [[package]]
 name = "zlib-rs"
 version = "0.6.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b268e58e7c693d7c271f93ffc4ba3b380412554231c85bf61ca7af91042a4112"
 
 [[package]]
 name = "zmij"

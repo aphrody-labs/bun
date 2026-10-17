@@ -1,0 +1,32 @@
+# zlib-rs 0.6.8 and the C ABI of libz-rs-sys 0.6.8 (trifectatechfoundation/zlib-rs, Zlib
+# license), absorbed. Keeps the crates.io name so `[patch.crates-io]` serves flate2 and gix-zlib.
+[package]
+name = "zlib-rs"
+version = "0.6.8"
+edition = "2021"
+license = "Zlib"
+publish = false
+
+[lib]
+name = "zlib_rs"
+path = "src/lib.rs"
+
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+unexpected_cfgs = { level = "allow" }
+
+[features]
+default = ["std", "c-allocator"]
+std = ["rust-allocator"]
+c-allocator = []
+rust-allocator = []
+__internal-api = []
+__internal-fuzz = []
+__internal-fuzz-disable-checksum = []
+__internal-test = []
+ZLIB_DEBUG = []
+vpclmulqdq = []
+avx512 = ["vpclmulqdq"]
+lsx = []
+# Export the stock zlib C symbols (deflateInit_, inflate, crc32, ...) for C consumers.
+export-symbols = ["__internal-api"]

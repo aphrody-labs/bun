@@ -1,9 +1,9 @@
-// @link "deps/zlib/libz.a"
-
 use core::ffi::{c_char, c_int, c_uint, c_void};
 use core::mem::size_of;
 
 use bun_collections::VecExt as _;
+
+pub mod oneshot;
 
 // Externs stay in this crate per PORTING.md §FFI: "If your file has externs
 // and isn't already *_sys, leave them in place".

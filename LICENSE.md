@@ -37,13 +37,12 @@ Bun statically links these libraries:
 | [`simdutf`](https://github.com/simdutf/simdutf) | Apache 2.0 |
 | [`tinycc`](https://github.com/tinycc/tinycc) | LGPL v2.1 |
 | [`uSockets`](https://github.com/uNetworking/uSockets) | Apache 2.0 |
-| [`zlib-ng`](https://github.com/zlib-ng/zlib-ng) | zlib |
+| [`zlib-rs`](https://github.com/trifectatechfoundation/zlib-rs) | Zlib |
 | [`c-ares`](https://github.com/c-ares/c-ares) | MIT licensed |
 | [`libicu`](https://github.com/unicode-org/icu) 78 | [license here](https://github.com/unicode-org/icu/blob/main/icu4c/LICENSE) |
 | [`libbase64`](https://github.com/aklomp/base64/blob/master/LICENSE) | BSD 2-Clause |
 | [`libuv`](https://github.com/libuv/libuv) (on Windows) | MIT |
 | [`mullvad/mullvadvpn-app`](https://github.com/aphrody-labs/mullvadvpn-app) (`bun_vpn`) | GPL-3.0-or-later |
-| [`libdeflate`](https://github.com/ebiggers/libdeflate) | MIT |
 | [`libjpeg-turbo`](https://github.com/libjpeg-turbo/libjpeg-turbo) | [BSD 3-Clause / IJG / zlib](https://github.com/libjpeg-turbo/libjpeg-turbo/blob/main/LICENSE.md) |
 | [`libspng`](https://github.com/randy408/libspng) | BSD 2-Clause |
 | [`libwebp`](https://github.com/webmproject/libwebp) | BSD 3-Clause |

@@ -2213,16 +2213,16 @@ pub(crate) fn parse_compress_buffer_and_options(
 pub(crate) mod JSZlib {
     use super::*;
     use bun_jsc::ComptimeStringMapExt as _;
-    use bun_libdeflate_sys::libdeflate as bun_libdeflate;
+    use bun_zlib::oneshot;
 
     /// Local shim: libdeflate's `Status` has no `Into<&str>` upstream.
     #[inline]
-    fn libdeflate_status_str(s: bun_libdeflate::Status) -> &'static str {
+    fn libdeflate_status_str(s: oneshot::Status) -> &'static str {
         match s {
-            bun_libdeflate::Status::Success => "success",
-            bun_libdeflate::Status::BadData => "bad data",
-            bun_libdeflate::Status::ShortOutput => "short output",
-            bun_libdeflate::Status::InsufficientSpace => "insufficient space",
+            oneshot::Status::Success => "success",
+            oneshot::Status::BadData => "bad data",
+            oneshot::Status::ShortOutput => "short output",
+            oneshot::Status::InsufficientSpace => "insufficient space",
         }
     }
 
@@ -2443,22 +2443,22 @@ pub(crate) mod JSZlib {
                 leak_list_into_uint8array(global_this, list)
             }
             Library::Libdeflate => {
-                let Some(mut decompressor) = bun_libdeflate::OwnedDecompressor::new() else {
+                let Some(mut decompressor) = oneshot::OwnedDecompressor::new() else {
                     drop(list);
                     return Err(global_this.throw_out_of_memory());
                 };
                 let encoding = if is_gzip {
-                    bun_libdeflate::Encoding::Gzip
+                    oneshot::Encoding::Gzip
                 } else {
-                    bun_libdeflate::Encoding::Deflate
+                    oneshot::Encoding::Deflate
                 };
                 let max_output = ArrayBuffer::MAX_SIZE as usize;
                 let result = decompressor
                     .decompress_to_vec_grow(compressed, &mut list, encoding, max_output)
                     .map_err(|_| global_this.throw_out_of_memory())?;
                 match result.status {
-                    bun_libdeflate::Status::Success if list.len() <= max_output => {}
-                    bun_libdeflate::Status::Success | bun_libdeflate::Status::InsufficientSpace => {
+                    oneshot::Status::Success if list.len() <= max_output => {}
+                    oneshot::Status::Success | oneshot::Status::InsufficientSpace => {
                         drop(list);
                         return Err(global_this
                             .err(
@@ -2589,29 +2589,29 @@ pub(crate) mod JSZlib {
             }
             Library::Libdeflate => {
                 let level = level.unwrap_or(6);
-                if !(bun_libdeflate::MIN_COMPRESSION_LEVEL..=bun_libdeflate::MAX_COMPRESSION_LEVEL)
+                if !(oneshot::MIN_COMPRESSION_LEVEL..=oneshot::MAX_COMPRESSION_LEVEL)
                     .contains(&level)
                 {
                     return Err(global_this.throw_invalid_arguments(format_args!(
                         "Compression level must be between {} and {} for libdeflate",
-                        bun_libdeflate::MIN_COMPRESSION_LEVEL,
-                        bun_libdeflate::MAX_COMPRESSION_LEVEL,
+                        oneshot::MIN_COMPRESSION_LEVEL,
+                        oneshot::MAX_COMPRESSION_LEVEL,
                     )));
                 }
-                let Some(mut compressor) = bun_libdeflate::OwnedCompressor::new(level) else {
+                let Some(mut compressor) = oneshot::OwnedCompressor::new(level) else {
                     return Err(global_this.throw_out_of_memory());
                 };
                 let encoding = match window_bits {
-                    16.. => bun_libdeflate::Encoding::Gzip,
-                    1.. => bun_libdeflate::Encoding::Zlib,
-                    _ => bun_libdeflate::Encoding::Deflate,
+                    16.. => oneshot::Encoding::Gzip,
+                    1.. => oneshot::Encoding::Zlib,
+                    _ => oneshot::Encoding::Deflate,
                 };
 
                 let mut list: Vec<u8> = Vec::new();
                 let result = compressor
                     .compress_to_vec(compressed, &mut list, encoding)
                     .map_err(|_| global_this.throw_out_of_memory())?;
-                if result.status != bun_libdeflate::Status::Success {
+                if result.status != oneshot::Status::Success {
                     drop(list);
                     return Err(global_this.throw(format_args!(
                         "libdeflate error: {}",

@@ -317,17 +317,17 @@ impl ExtractTarball {
                         let _ = zlib_pool.ensure_unused_capacity(isize as usize);
                     }
                     if zlib_pool.list.capacity() > 16 {
-                        use bun_libdeflate_sys::libdeflate;
-                        if let Some(mut decompressor) = libdeflate::OwnedDecompressor::new() {
+                        use bun_zlib::oneshot;
+                        if let Some(mut decompressor) = oneshot::OwnedDecompressor::new() {
                             zlib_pool.list.clear();
                             let result = decompressor.decompress_to_vec(
                                 tgz_bytes,
                                 &mut zlib_pool.list,
-                                libdeflate::Encoding::Gzip,
+                                oneshot::Encoding::Gzip,
                             );
                             // libdeflate only reads the first gzip member, so a tarball with more
                             // than one member is left to libarchive.
-                            if result.status == libdeflate::Status::Success
+                            if result.status == oneshot::Status::Success
                                 && result.read == tgz_bytes.len()
                             {
                                 decompressed_in_memory = true;

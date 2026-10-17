@@ -121,6 +121,8 @@ async function fetchNinja(cfg: NinjaConfig, say: (line: string) => void): Promis
     await rm(zip);
     await chmod(join(scratch, `ninja${cfg.host.exeSuffix}`), 0o755);
     await mkdir(join(cfg.cacheDir, "ninja"), { recursive: true });
+    // A release directory without its binary (an interrupted publish) blocks the rename on Windows.
+    if (!existsSync(path)) await rm(join(cfg.cacheDir, "ninja", release.tag), { recursive: true, force: true });
     try {
       await rename(scratch, join(cfg.cacheDir, "ninja", release.tag));
     } catch (e) {

@@ -2,15 +2,14 @@
  * libspng — simple, fast PNG codec. Backs Bun.Image PNG decode/encode.
  *
  * Single-TU library; the only external dep is zlib for the deflate stream.
- * We point it at our vendored zlib-ng (ZLIB_COMPAT) via fetchDeps so the
- * generated zlib.h is in place before this compiles.
+ * <zlib.h> comes from src/zlib_rs/include (zlib-rs, same ABI as stock zlib).
  *
  * SPNG_STATIC drops the dllexport/visibility decoration; SPNG_SSE controls
  * the x86 filter SIMD level (4=SSE4.1, within our nehalem x64 floor).
  */
 
 import type { Dependency } from "../source.ts";
-import { depBuildDir } from "../source.ts";
+import { resolve } from "node:path";
 
 const LIBSPNG_COMMIT = "fb768002d4288590083a476af628e51c3f1d47cd"; // v0.7.4
 
@@ -23,8 +22,7 @@ export const libspng: Dependency = {
     commit: LIBSPNG_COMMIT,
   }),
 
-  // spng.c includes <zlib.h>; zlib-ng generates that header into its build
-  // dir during its own configure, so we need zlib BUILT (not just fetched).
+  // spng.c includes <zlib.h>, provided by src/zlib_rs/include.
   fetchDeps: ["zlib"],
 
   build: cfg => ({
@@ -36,7 +34,7 @@ export const libspng: Dependency = {
       // 4 = SSE4.1 defilter paths (pabsw/pblendvb); our x64 floor is nehalem. No-op on arm64 (NEON is auto-detected).
       ...(cfg.x64 ? { SPNG_SSE: 4 } : {}),
     },
-    cflags: [`-I${depBuildDir(cfg, "zlib")}`],
+    cflags: [`-I${resolve(cfg.cwd, "src/zlib_rs/include")}`],
   }),
 
   provides: () => ({

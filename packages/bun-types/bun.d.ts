@@ -6348,6 +6348,9 @@ declare module "bun" {
     library?: "zlib";
   }
 
+  /**
+   * One-shot path: the whole buffer in one zlib-rs call. Levels above 9 compress at 9.
+   */
   interface LibdeflateCompressionOptions {
     level?: 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12;
     library?: "libdeflate";

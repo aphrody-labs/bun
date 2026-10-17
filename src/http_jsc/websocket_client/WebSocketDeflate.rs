@@ -3,7 +3,7 @@
 use core::ffi::c_int;
 
 use bun_core::feature_flag;
-use bun_libdeflate_sys::libdeflate as libdeflate_sys;
+use bun_zlib::oneshot;
 use bun_zlib as zlib;
 
 #[repr(C)]
@@ -120,7 +120,7 @@ impl PerMessageDeflate {
     /// libdeflate handle (`None` when it could not be allocated).
     pub(crate) fn decompress(
         &mut self,
-        decompressor: Option<&mut libdeflate_sys::Decompressor>,
+        decompressor: Option<&mut oneshot::Decompressor>,
         in_buf: &[u8],
         out: &mut Vec<u8>,
     ) -> Result<(), DecompressError> {
@@ -132,8 +132,8 @@ impl PerMessageDeflate {
         if Self::can_use_libdeflate(in_buf.len()) {
             if let Some(decompressor) = decompressor {
                 let result =
-                    decompressor.decompress_to_vec(in_buf, out, libdeflate_sys::Encoding::Deflate);
-                if result.status == libdeflate_sys::Status::Success {
+                    decompressor.decompress_to_vec(in_buf, out, oneshot::Encoding::Deflate);
+                if result.status == oneshot::Status::Success {
                     if out.len() - initial_len > MAX_DECOMPRESSED_SIZE {
                         return Err(DecompressError::TooLarge);
                     }
