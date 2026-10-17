@@ -207,7 +207,13 @@
           {
             "group": "Standards & Compatibility",
             "icon": "badge-check",
-            "pages": ["/runtime/globals", "/runtime/bun-apis", "/runtime/web-apis", "/runtime/nodejs-compat"]
+            "pages": [
+              "/runtime/fork-features",
+              "/runtime/globals",
+              "/runtime/bun-apis",
+              "/runtime/web-apis",
+              "/runtime/nodejs-compat"
+            ]
           },
           {
             "group": "Contributing",

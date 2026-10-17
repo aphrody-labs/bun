@@ -11,6 +11,7 @@ Updated 2026-10-13. Claude, Codex, Antigravity, Gemini, OpenCode and local-model
 
 | Task                                                          | Skill or reference                  |
 | ------------------------------------------------------------- | ----------------------------------- |
+| What the fork adds to Bun (CLI, APIs, modules, packages, tools) | bun-fork-features, bun-fork-features memory |
 | Native Rust/Bun design, minimal dependencies and distribution | bun-rust-first                      |
 | Bun application APIs and package replacement                  | bun-native, bun-apis                |
 | Runtime build and toolchain                                   | bun-build                           |

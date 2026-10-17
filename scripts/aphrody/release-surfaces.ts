@@ -49,6 +49,10 @@ bun build ./app.tsx --outdir dist
 
 Bun OS declares native system, Python, .NET, graph and desktop integration surfaces. The [runtime reference](https://aphrody.app/runtime) records their source contracts and platform requirements. Availability requires evidence for the selected executable and target; a source declaration alone does not qualify behavior.
 
+## Features beyond upstream Bun
+
+The [feature catalog](https://aphrody.app/docs/runtime/fork-features) lists every command, \`Bun.*\` API, \`bun:*\` module, package, agent tool and skill that Bun OS adds, with the source that owns each. Highlights: native \`bun check\`, \`bun lint\`, \`bun fmt\` and \`bun n2b\`; \`bun mcp\`, \`bun lsp\` and \`bun agent-plugin\` for coding agents; \`bun ssh\`, \`bun docker\`, \`bun vpn\` and \`bun host\`; \`bun:python\`, \`bun:dotnet\`, \`bun:windows\`, \`bun:winrt\`, \`bun:winui\` and \`bun:linux\`; \`Bun.Video\`, \`Bun.HTML\`, \`Bun.Crawl\` and \`bun:chromium\`; \`bun wasm\`; and the Bun WebOS desktop with the self-hosted \`aphrody\` server.
+
 ## Bun.Video
 
 The flagship native media API reads metadata, extracts frames and applies the \`Bun.Image\` pipeline directly in TypeScript. Frame batches, WAV audio, GIF output and MP4 remux use native Rust workers.
@@ -90,7 +94,7 @@ Upgrades select published Bun OS releases. Build the checkout with \`bun bd\` an
 
 ## Native quality and migration
 
-Use \`bun check\`, \`bun lint\`, \`bun fmt\` and \`bun n2b\` directly for type checking, lint, formatting and migration. These commands use their linked native owners; external subprocess backends, bunx wrappers, standalone Oxc tools, tsgo/tsc and external n2b are not permitted for these tasks.
+Use \`bun check\`, \`bun lint\`, \`bun fmt\` and \`bun n2b\` directly for type checking, lint, formatting and migration. These commands use their linked native owners; external subprocess backends, standalone Oxc tools, tsgo/tsc and external n2b are not permitted for these tasks. Package scripts may expose these native commands but must not wrap or replace them; \`bunx\` is reserved for unrelated packages.
 
 Qualify checkout changes with \`bun bd check\`, \`bun bd lint\`, \`bun bd fmt\` and \`bun bd n2b\`. Native failures must be corrected in their owner.
 

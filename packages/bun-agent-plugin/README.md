@@ -20,6 +20,7 @@ Use `gemini` only for Gemini CLI. `agy` uses Antigravity's plugin schema and nat
 - [Native Bun.Video and media workflows](../../.claude/skills/bun-video/SKILL.md).
 - [Shared project memory](memory/bun-agent-shared-memory.md).
 - [Current skill router](memory/bun-skills-catalog.md).
+- [Fork feature catalog](../../docs/runtime/fork-features.mdx) and its [memory note](memory/bun-fork-features.md): what Bun OS adds to upstream Bun.
 
 Skills come from `.claude/skills` and `.claude/commands` only. Generated skills and tools come from the current checkout, not a historical README snapshot. Graph and type evidence must identify the real source domain and target binary.
 

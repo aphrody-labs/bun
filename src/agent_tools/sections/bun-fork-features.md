@@ -1,0 +1,24 @@
+---
+name: bun-fork-features
+description: "Catalog router for what the Bun OS fork adds to upstream Bun; read before saying Bun cannot do something."
+---
+
+# What this fork adds to Bun
+
+Bun OS is upstream Bun plus native Aphrody features in the one `bun` executable. Before
+you add a dependency, write a script or answer that Bun lacks a capability, find the
+feature in the catalog below, then confirm in the owning source with `rg` and
+`bun <command> --help`.
+
+Route by need:
+
+- Type check, lint, format, migrate: `bun check`, `bun lint`, `bun fmt`, `bun n2b` (native; never `tsc`, `eslint`, `prettier` or `bunx` wrappers).
+- Hosts and network: `bun ssh`, `bun docker`, `bun vpn`, `bun host`, `bun rsync --native`.
+- Agents: `bun mcp`, `bun agent-plugin`, `bun lsp`, `bun docs`; skills and memory come from the plugin.
+- Media and web: `Bun.Video`, `Bun.Image`, `Bun.HTML`, `Bun.Crawl`, `Bun.WebDetect`, `Bun.WebView`, `bun:chromium`, `bun:google`.
+- Platform layers: `bun:windows`, `bun:winrt`, `bun:winui`, `bun msvc`, `bun winmd`, `bun:linux`, `bun:cosmic`.
+- Other languages: `bun:python` and `bun uv`, `bun dotnet` and `bun:dotnet`, `bun wasm`.
+- Build the checkout: `bun bd`, `bun factory` (VPS slots). Heavy native builds run on the VPS.
+
+Declared source is not qualified behavior: confirm a feature against the executable and
+platform you target.

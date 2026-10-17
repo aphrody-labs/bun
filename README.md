@@ -27,6 +27,10 @@ bun build ./app.tsx --outdir dist
 
 Bun OS declares native system, Python, .NET, graph and desktop integration surfaces. The [runtime reference](https://aphrody.app/runtime) records their source contracts and platform requirements. Availability requires evidence for the selected executable and target; a source declaration alone does not qualify behavior.
 
+## Features beyond upstream Bun
+
+The [feature catalog](https://aphrody.app/docs/runtime/fork-features) lists every command, `Bun.*` API, `bun:*` module, package, agent tool and skill that Bun OS adds, with the source that owns each. Highlights: native `bun check`, `bun lint`, `bun fmt` and `bun n2b`; `bun mcp`, `bun lsp` and `bun agent-plugin` for coding agents; `bun ssh`, `bun docker`, `bun vpn` and `bun host`; `bun:python`, `bun:dotnet`, `bun:windows`, `bun:winrt`, `bun:winui` and `bun:linux`; `Bun.Video`, `Bun.HTML`, `Bun.Crawl` and `bun:chromium`; `bun wasm`; and the Bun WebOS desktop with the self-hosted `aphrody` server.
+
 ## Bun.Video
 
 The flagship native media API reads metadata, extracts frames and applies the `Bun.Image` pipeline directly in TypeScript. Frame batches, WAV audio, GIF output and MP4 remux use native Rust workers.
@@ -92,7 +96,7 @@ import { expect, test } from "bun:test";
 
 The following names come from the built-in module registry at this source revision. Platform availability and runtime qualification are documented separately.
 
-- `bun:app`
+- `bun:adblock`
 - `bun:chromium`
 - `bun:cosmic`
 - `bun:dotnet`
@@ -108,6 +112,7 @@ The following names come from the built-in module registry at this source revisi
 - `bun:main`
 - `bun:nginx`
 - `bun:obscura`
+- `bun:privacy`
 - `bun:python`
 - `bun:rio`
 - `bun:sqlite`
