@@ -27,7 +27,8 @@
     clippy::disallowed_methods,
     clippy::disallowed_types,
     clippy::disallowed_macros,
-, dead_code)]
+    dead_code
+)]
 
 extern crate alloc;
 
