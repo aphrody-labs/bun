@@ -17,7 +17,7 @@ pub(crate) fn dispatch() -> Option<i32> {
     }
     #[cfg(feature = "google_search")]
     {
-        Some(aphrody_google::search::cli::main(
+        Some(bun_google::search::cli::main(
             args.into_iter().skip(2).collect(),
         ))
     }

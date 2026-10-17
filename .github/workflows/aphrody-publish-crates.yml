@@ -17,7 +17,7 @@ on:
         type: boolean
         default: false
       only:
-        description: "Subset: sdk, src/browser/crates/ssrf, packages/bun-google/crates/boq, crates/aphrody-jev (empty: all)"
+        description: "Subset: sdk, src/browser/crates/ssrf, crates/aphrody-jev (empty: all)"
         type: string
         default: ""
       qualification-tag:

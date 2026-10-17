@@ -72,7 +72,6 @@ export const WORKSPACES: { dir: string; crates: string[]; manifests?: Record<str
     crates: ["bun_browser_ssrf", "bun_browser_dom"],
     manifests: { bun_browser_dom: "src/browser/crates/dom/Cargo.toml" },
   },
-  { dir: "packages/bun-google/crates/boq", crates: ["aphrody-boq"] },
   { dir: "crates/aphrody-jev", crates: ["aphrody-jev"] },
 ];
 

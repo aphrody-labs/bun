@@ -27,16 +27,14 @@ const browserFeatures =
 export const gates: Gate[] = [
   ...["check", "test", "clippy"].map(action => ({
     id: `rust-google-${action}`,
-    ...(action === "clippy" ? { env: { CLIPPY_CONF_DIR: "packages/bun-google/aphrody" } } : {}),
+    ...(action === "clippy" ? { env: { CLIPPY_CONF_DIR: "src/browser" } } : {}),
     command: [
       ...cargo,
       action,
-      "--config",
-      "packages/bun-google/aphrody/.cargo/config.toml",
-      "--manifest-path",
-      "packages/bun-google/aphrody/Cargo.toml",
       "-p",
-      "aphrody-google",
+      "bun_google",
+      "--features",
+      "search-cache,browser-search",
       "--locked",
       ...(action === "clippy" ? ["--no-deps", "--", "-D", "warnings"] : []),
     ],

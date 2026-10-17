@@ -1,5 +1,0 @@
-!.cargo/
-.cargo/*
-!.cargo/config.toml
-# Cargo outputs belong to this standalone workspace, not the source inventory.
-/target/

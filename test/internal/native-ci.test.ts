@@ -221,7 +221,7 @@ test("Clippy selects each source owner's configuration without changing strict w
   const checkout = resolve(import.meta.dir, "../..");
   const inherited = { CLIPPY_CONF_DIR: "/foreign/config", CARGO_BUILD_JOBS: "1" };
   const directories = {
-    "rust-google-clippy": "packages/bun-google/aphrody",
+    "rust-google-clippy": "src/browser",
     "rust-browser-clippy": "src/browser",
     "rust-install-clippy": ".",
   };

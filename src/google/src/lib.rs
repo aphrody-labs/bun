@@ -1,51 +1,13 @@
-//! Canonical Google/Gemini facade for the Aphrody ecosystem.
-//!
-//! This crate owns the integration boundary, not a second implementation:
-//! Rust clients, Aphrody MCP, Bun/BXC and Python use the same project/home
-//! contract while the specialized crates retain their domain code.
+//! Bun's Google SDK: public search (SERP parsing, discovery, cache, browser fallback), the
+//! language detection atlas and the non-secret Google project contract. Model clients and
+//! credentials stay in the OS (`aphrody-google` in aphrody-labs/bun-distribution).
 
-#[cfg(feature = "full")]
-pub use aphrody_antigravity as antigravity;
-#[cfg(all(not(target_arch = "wasm32"), feature = "full"))]
-pub use aphrody_gemini_runtime as gemini_runtime;
-#[cfg(feature = "full")]
-pub use aphrody_gemini_web as gemini_web;
-#[cfg(all(not(target_arch = "wasm32"), feature = "full"))]
-pub use aphrody_model_client as model_client;
 pub mod atlas;
-#[cfg(all(not(target_arch = "wasm32"), feature = "full"))]
-mod cli;
-#[cfg(all(not(target_arch = "wasm32"), feature = "full"))]
-pub mod routes;
-#[cfg(all(not(target_arch = "wasm32"), feature = "full"))]
-pub use cli::cli_main;
-#[cfg(all(not(target_arch = "wasm32"), feature = "full"))]
-pub mod detection;
 pub mod language_detect;
 pub mod languages;
-#[cfg(all(not(target_arch = "wasm32"), feature = "full"))]
-pub mod rate_limit;
 #[cfg(all(not(target_arch = "wasm32"), feature = "search"))]
 pub mod search;
-#[cfg(all(not(target_arch = "wasm32"), feature = "full"))]
-pub mod translate;
 use serde::{Deserialize, Serialize};
-
-/// Create an authenticated Antigravity client from the platform credential
-/// store. The token is kept inside the SDK client and is never serialized.
-#[cfg(feature = "full")]
-pub fn authenticated_client() -> Result<antigravity::AntigravityClient, antigravity::SdkError> {
-    antigravity::AntigravityClient::from_credential_manager()
-}
-
-/// Create an authenticated client from a completed OAuth PKCE login and persist
-/// the credentials using the platform's protected credential store (host-only: the loopback
-/// redirect listener and the credential store do not exist in a browser).
-#[cfg(all(not(target_arch = "wasm32"), feature = "full"))]
-pub async fn login() -> Result<(), antigravity::SdkError> {
-    let token = antigravity::login().await?;
-    antigravity::persist(&token)
-}
 
 /// Cloud target for a workload. DBFR and NIE use `Aphrody`; RG uses `Rgfr`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

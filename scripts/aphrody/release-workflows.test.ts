@@ -247,7 +247,6 @@ test("crate source qualification is restricted to exact registered JeV and brows
   for (const only of [
     "",
     "sdk",
-    "packages/bun-google/crates/boq",
     "unknown",
     "src/browser/crates/dom",
     "src/browser/crates/ssrf,sdk",

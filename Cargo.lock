@@ -289,21 +289,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470"
 
 [[package]]
-name = "aphrody-google"
-version = "1.4.4"
-dependencies = [
- "bun_browser_dom",
- "chrono",
- "regex",
- "reqwest",
- "rustls",
- "serde",
- "serde_json",
- "tokio",
- "url",
-]
-
-[[package]]
 name = "aphrody-jev"
 version = "1.4.4"
 dependencies = [
@@ -3517,6 +3502,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "bun_google"
+version = "1.4.4"
+dependencies = [
+ "bun_browser",
+ "bun_browser_dom",
+ "chrono",
+ "regex",
+ "reqwest",
+ "rusqlite",
+ "rustls",
+ "serde",
+ "serde_json",
+ "tokio",
+ "url",
+]
+
+[[package]]
 name = "bun_graph"
 version = "1.4.4"
 dependencies = [
@@ -4823,7 +4825,6 @@ dependencies = [
 name = "bun_runtime"
 version = "1.4.4"
 dependencies = [
- "aphrody-google",
  "aphrody-jev",
  "bcrypt",
  "bitflags 2.13.2",
@@ -4866,6 +4867,7 @@ dependencies = [
  "bun_event_loop",
  "bun_format_conformance",
  "bun_glob",
+ "bun_google",
  "bun_graph",
  "bun_hash",
  "bun_highway",

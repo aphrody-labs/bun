@@ -34,14 +34,8 @@ export const PUBLIC_GOOGLE_HOSTS = Object.freeze([
   "pkg.go.dev",
 ]);
 const SOURCES = [
-  [
-    "packages/bun-google/aphrody/crates/google/src/atlas.json",
-    "72989c4fcb78e6d61f4b6b13fabf2b5b358fa0775f3475192b69260379301878",
-  ],
-  [
-    "packages/bun-google/aphrody/crates/google/src/search/google_domains.txt",
-    "356dfb248ec122d6f7fc9090e4182f92d1d2a52e91b78e0ec9ad3fa2caff7ce2",
-  ],
+  ["src/google/src/atlas.json", "72989c4fcb78e6d61f4b6b13fabf2b5b358fa0775f3475192b69260379301878"],
+  ["src/google/src/search/google_domains.txt", "356dfb248ec122d6f7fc9090e4182f92d1d2a52e91b78e0ec9ad3fa2caff7ce2"],
 ] as const;
 export const REQUIRED_REDIRECT_CAPABILITY = "crawl-redirect-allowlist-before-network";
 const sha256 = (value: Uint8Array | string) => new Bun.CryptoHasher("sha256").update(value).digest("hex");

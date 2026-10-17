@@ -3,7 +3,7 @@
 //! (0b2aec6c9^). Domain cookies and transport remain the native Google owner.
 
 use super::{SearchOptions, network};
-use obscura_dom::{DomTree, NodeId, parse_html};
+use bun_browser_dom::{DomTree, NodeId, parse_html};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};

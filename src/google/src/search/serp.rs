@@ -3,7 +3,7 @@
 
 use std::{collections::HashSet, sync::LazyLock};
 
-use obscura_dom::{DomTree, NodeId, parse_html};
+use bun_browser_dom::{DomTree, NodeId, parse_html};
 use regex::Regex;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;

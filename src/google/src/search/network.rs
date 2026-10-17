@@ -494,7 +494,7 @@ async fn browser_fetch(
                     .build()
                     .map_err(|error| error.to_string())?;
                 runtime.block_on(async {
-                    let browser = obscura::Browser::builder()
+                    let browser = bun_browser::Browser::builder()
                         .user_agent(DESKTOP_UA)
                         .build()
                         .map_err(|error| error.to_string())?;
