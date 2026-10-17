@@ -36,9 +36,10 @@ Statuts : `fait` (déjà dans Bun), `en cours (autre agent)`, `à faire`,
 | Source aphrody                          | Cible Bun                                              | Statut                                                        |
 | --------------------------------------- | ------------------------------------------------------ | ------------------------------------------------------------- |
 | packages/web/agent-browser, packages/web/aphrody-web-test | packages/bun-web (`@aphrody/bun-web`, `/testing`) | fait |
-| packages/web/fuzzy                      | packages/web/rust/packages/fuzzy                       | en cours (autre agent)                                        |
-| packages/web/qr                         | packages/web/rust/packages/qr                          | en cours (autre agent)                                        |
-| packages/web/timeline                   | packages/web/rust/packages/timeline                    | en cours (autre agent)                                        |
+| packages/web/fuzzy | packages/bun-fuzzy | fait |
+| packages/web/qr | packages/bun-qr | fait |
+| packages/web/timeline | packages/bun-timeline | fait |
+| crates/web/{web-engine,web-frames,x}, obscura facade | src/browser/crates/{engine,frames}, src/x ; facade supprimée (doublon de `bun_browser`) | fait |
 | packages/web/webos-wasm                 | packages/web/rust/packages/webos-wasm                  | en cours (autre agent)                                        |
 | packages/web/x | packages/bun-x (`@aphrody/x`), Rust `src/x` (`bun_x`) | fait |
 | packages/google/google, crates/google/* | packages/bun-google/aphrody                            | en cours (autre agent)                                        |
