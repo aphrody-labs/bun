@@ -3,7 +3,7 @@ title: COSMIC
 description: Use the COSMIC desktop from JavaScript with bun:cosmic
 ---
 
-`bun:cosmic` gives you the parts of the COSMIC desktop (Pop!\_OS, Alpine and other Linux distributions) that an app needs: text shaping with cosmic-text, the freedesktop application index, cosmic-config settings, libcosmic windows and desktop notifications. The module loads on first import, so it costs nothing at startup.
+`bun:cosmic` gives you the parts of the [COSMIC desktop](https://system76.com/cosmic) that an app needs: text shaping with cosmic-text, the freedesktop application index, cosmic-config settings, libcosmic windows and desktop notifications. The module loads on first import, so it costs nothing at startup.
 
 ```ts
 import { apps, config, isSupported, text } from "bun:cosmic";
@@ -17,7 +17,7 @@ const comp = config.open("com.system76.CosmicComp", 1);
 console.log(comp.get("autotile"));
 ```
 
-`config` and `ron` work on every platform. On other platforms `isSupported` is `false`, and the text, application, window and notification calls throw an error with code `ERR_BUN_COSMIC_UNSUPPORTED`.
+`config` and `ron` work on every platform. `isSupported` is `true` on Linux and Windows. Text shaping works on both; the application index is Linux only. On unsupported platforms the native calls throw an error with code `ERR_BUN_COSMIC_UNSUPPORTED`.
 
 ---
 
@@ -98,7 +98,7 @@ ron.stringify(ron.variant("Rgba", [1, 0.5, 0, 1])); // "Rgba(1, 0.5, 0, 1)"
 
 ## Windows and notifications
 
-Windows and notifications run in the `bun-cosmic` helper process, so the GUI never blocks JavaScript. Bun looks for the helper in `BUN_COSMIC_HELPER`, then in `PATH`, then next to the `bun` executable. On Alpine, install the `bun-cosmic` package.
+Windows and notifications run in the `bun-cosmic` helper process, so the GUI never blocks JavaScript. Bun looks for the helper in `BUN_COSMIC_HELPER`, then in `PATH`, then next to the `bun` executable. The helper is built from [`packages/bun-cosmic`](https://github.com/aphrody-labs/bun/tree/main/packages/bun-cosmic).
 
 `openWindow` opens a libcosmic dialog. `closed` resolves with the button the user chose, or `null` when the window was closed another way.
 
@@ -110,7 +110,7 @@ const choice = await win.closed;
 console.log(choice?.label);
 ```
 
-`notify` sends a notification over D-Bus. With `actions`, the promise waits for the user to pick one or close the notification.
+`notify` sends a notification over D-Bus (`org.freedesktop.Notifications`). On Windows it shows a toast notification instead, without actions. With `actions`, the promise waits for the user to pick one or close the notification.
 
 ```ts
 import { notify } from "bun:cosmic";

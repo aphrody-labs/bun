@@ -3,7 +3,7 @@ title: Adblock
 description: Match network requests and cosmetic filters with Brave's adblock-rust engine, built into Bun.
 ---
 
-`bun:adblock` exposes the filter engine of Brave's [adblock-rust](https://github.com/brave/adblock-rust) (MPL-2.0), compiled into Bun as the `bun_adblock` crate. It parses Adblock Plus, uBlock Origin and hosts-file lists and needs no network: you pass the list text. Nothing is loaded until the first `new Engine()`.
+`bun:adblock` exposes the filter engine of Brave's [adblock-rust](https://github.com/brave/adblock-rust) (MPL-2.0), compiled into Bun. It parses Adblock Plus, uBlock Origin and hosts-file lists and needs no network: you pass the list text. Nothing is loaded until the first `new Engine()`.
 
 ```ts
 import { Engine } from "bun:adblock";

@@ -32,7 +32,7 @@ bun msvc msi                     # orphaned MSI products that make the installer
 | `env [--format <f>]`       | `json` (default, also `--json`), `pwsh`, `cmd`, `sh` (MSYS2/Git Bash, `PATH` in `/c/...` form), `github`                                |
 | `which <tool>...`          | Absolute path of `cl`, `link`, `lib`, `dumpbin`, `ml64`, `rc`, `midl`, `mt`, `signtool`, `clang-cl`, `cmake`, `ninja`, ...              |
 | `exec [--] <tool> [args]`  | Runs the tool with the computed environment and exits with its exit code                                                                |
-| `vcpkg [args...]`          | Runs the pinned `vendor/vcpkg` checkout with MSVC, the target triplet, CMake toolchain and Bun binary cache                             |
+| `vcpkg [args...]`          | Runs vcpkg with the MSVC environment, the target triplet, the CMake toolchain and a binary cache                                        |
 | `sync [--check] [--force]` | Writes the environment cache and prints its directory. `--check` exits with `1` when the cache is missing or stale                      |
 | `setup`                    | Installs or completes the C++ tools, the Windows SDK and the requested toolset                                                          |
 | `msi [--fix]`              | Lists the Visual Studio and Windows SDK MSI products whose cached package is gone, and removes their registration                       |
@@ -75,10 +75,11 @@ In GitHub Actions, `--format github` appends to `$GITHUB_ENV`:
 
 ### vcpkg
 
-`bun msvc vcpkg` resolves the same MSVC/SDK environment as `exec`, then runs the pinned `vendor/vcpkg` checkout (or `VCPKG_ROOT`). It maps the selected Bun target to the matching Windows triplet, exports `CMAKE_TOOLCHAIN_FILE`, and reuses `%LOCALAPPDATA%\bun\vcpkg\archives` as a read/write binary cache. Bootstrap the checked-out vcpkg executable once before the first command.
+`bun msvc vcpkg` resolves the same MSVC/SDK environment as `exec`, then runs vcpkg from `VCPKG_ROOT`, or from a `vendor/vcpkg` directory in the current directory or one of its parents. It maps the selected target to the matching Windows triplet (`x64-windows`, `x86-windows`, `arm64-windows` or `arm-windows`), exports `CMAKE_TOOLCHAIN_FILE`, and uses `%LOCALAPPDATA%\bun\vcpkg\archives` as a read/write binary cache. Bootstrap the vcpkg executable once before the first command.
 
 ```sh terminal icon="terminal"
-vendor\vcpkg\bootstrap-vcpkg.bat -disableMetrics
+$env:VCPKG_ROOT = "C:\path\to\vcpkg"
+& "$env:VCPKG_ROOT\bootstrap-vcpkg.bat" -disableMetrics
 bun msvc vcpkg install --triplet x64-windows
 bun msvc vcpkg install --x-manifest-root .
 ```
@@ -94,7 +95,7 @@ The environment is also suitable for Rust crates whose build scripts use `vcpkg`
 
 The fingerprint records when these last changed: the installer records, the instance's `VC\Tools\MSVC` and `VC\Auxiliary\Build` folders, and the SDK's `Include` and `Lib` folders. A later `sync` rewrites the cache only when one of them changed, or with `--force`.
 
-`scripts/build.ts` reads this cache to build Bun on Windows. When the bun running it has no `msvc` command, it runs the same code with `cargo run --bin bun-msvc` from `vendor/find-msvc-tools`.
+Bun's own Windows build reads this cache; see [Building Windows](/project/building-windows).
 
 ### `setup`
 

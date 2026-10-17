@@ -23,18 +23,7 @@ Bun v1.1 or later. The build uses Bun to run its own code generators.
 irm https://aphrody.app/install.ps1 | iex
 ```
 
-The installer in this checkout accepts `-BinDir` or `APHRODY_BUN_BIN_DIR`
-to select an executable directory independently of `BUN_INSTALL`, which
-continues to hold user packages, plugins and caches. For a System32 installation,
-run the installer from an administrator PowerShell:
-
-```ps1
-[Environment]::SetEnvironmentVariable("APHRODY_BUN_BIN_DIR", "$env:WINDIR\System32", "User")
-& ./scripts/aphrody/install.ps1 -BinDir "$env:WINDIR\System32"
-```
-
-The Win32 API is available as `win32` from `bun:windows`; it does not need an
-activation flag. Package caches should remain in a writable user directory.
+The installer puts `bun.exe` in `$Env:BUN_INSTALL\bin` (`~\.bun\bin` by default). Set `APHRODY_BUN_BIN_DIR` (or pass `-BinDir` to `scripts/aphrody/install.ps1`) to put the executable in another directory; `BUN_INSTALL` still holds packages and caches.
 
 [Visual Studio](https://visualstudio.microsoft.com) with the "Desktop Development with C++" workload. While installing, also install Git if Git for Windows is not already installed.
 

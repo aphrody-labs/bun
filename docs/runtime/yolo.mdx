@@ -1,9 +1,9 @@
 ---
-name: Typed decisions
-description: Bun's internal typed decision capability, native Rust validation and explicit application providers
+title: Typed decisions
+description: Use bun:yolo to turn named yes/no, choice and score judgments into validated JavaScript values.
 ---
 
-Yolo is Bun's internal typed decision capability. `bun:yolo` turns named Noul, Choice and Score answers into JavaScript primitives. `bun:Yolo` resolves to the same module. Rust validates question types, answer names, enum keys and finite numeric bounds before returning a value.
+`bun:yolo` turns named Noul (yes/no), Choice and Score answers into JavaScript primitives. `bun:Yolo` resolves to the same module. Bun validates question types, answer names, choice keys and numeric bounds natively before returning a value.
 
 ```ts
 import Yolo, { code, noul } from "bun:yolo";
@@ -21,7 +21,7 @@ if (await Yolo({ visibility: "public" }, noul("Is this resource public?"), { pro
 }
 ```
 
-The result is a primitive `boolean`; false takes the false branch. A Noul becomes true only when its probability is **greater than** `threshold`, which defaults to `0.5`. Use `inspect` when the probability itself matters. A judgment does not authorize side effects: deterministic access rules remain in application code.
+The result is a primitive `boolean`. A Noul becomes `true` only when its probability is **greater than** `threshold`, which defaults to `0.5`. Use `inspect` when the probability itself matters. A judgment does not authorize side effects on its own: keep deterministic access rules in application code.
 
 ## Named batches
 
@@ -52,28 +52,46 @@ export async function decideSources(provider: Provider) {
 // relevant: boolean; route: "docs" | "graph" | "none"; evidence: number in 0..2
 ```
 
-Omitting `provider` selects `remote()`. A deterministic `code` fixture demonstrates the protocol; it does not perform a language judgment or qualify a model. All questions for one state share one provider request. Choice supports 2–255 named options. Score supports 2–10 ordered criteria and may return a fractional value between zero and the final index. Batches contain 1–64 questions. Request and response JSON are each limited to 1 MiB. Internal descriptors preserve the full public byte budget. Unknown answer names, choice keys, wrong legends and numbers outside their range throw.
+All questions for one state share one provider request. Omitting `provider` selects `remote()`. The `code` provider above is deterministic; it demonstrates the protocol without performing a language judgment.
 
-`inspect(request, options)` returns the validated `{ model, answers, usage }` response. `systemOne` aliases `inspect`. `value(answer, question, threshold?)` validates one answer and returns its primitive.
+Limits:
 
-Request and response model names must contain a non-whitespace character and fit within 256 UTF-8 bytes. Rust validates request overrides before provider I/O, using the same model bounds as response validation.
+- A batch contains 1–64 questions.
+- A Choice has 2–255 named options.
+- A Score has 2–10 ordered criteria and may return a fractional value between zero and the final index.
+- Request and response JSON are each limited to 1 MiB.
+- Model names must contain a non-whitespace character and fit within 256 UTF-8 bytes.
 
-## Application-owned providers
+Unknown answer names, choice keys, wrong legends and numbers outside their range throw.
 
-An application can supply a `Provider` that owns its transport, credentials and model lifetime. `code(evaluate)` adapts a synchronous or asynchronous callback to this contract. The callback returns the raw named response; Rust still validates the request, answer distributions and primitive conversion. Keep provider configuration in protected server-side stores and inject only the qualified transport needed by the application.
+`inspect(request, options)` returns the validated `{ model, answers, usage }` response. `systemOne` is an alias of `inspect`. `ask(state, question, options)` answers a single question. `value(answer, question, threshold?)` validates one answer and returns its primitive.
 
-`remote({ baseURL?, model?, client? })` uses native HTTP by default. It reads `TYPESAFE_API_KEY` from the server environment. The endpoint root is `baseURL`, then `TYPESAFE_BASE_URL`, then `https://api.typesafe.ai`. The model is the request's `model`, the provider's `model`, `TYPESAFE_DEFAULT_MODEL`, then `jev-latest`. Requests use `/v1/systemone`. Endpoints require HTTPS; loopback HTTP supports local services and tests. URL credentials, query strings, fragments and redirects reject.
+## Providers
 
-Supplying `client` delegates transport and retries to its `systemOne` method. Configure the endpoint on that client; `baseURL` cannot accompany `client`. Native HTTP retries statuses 408, 429 and 5xx within `maxRetries` and the operation deadline. Authentication failures reject without retrying. Response bodies are bounded while streaming and must contain valid UTF-8 JSON.
+A `Provider` owns its transport, credentials and model. `code(evaluate)` adapts a synchronous or asynchronous callback to this contract. The callback returns the raw named response; Bun still validates the request, answer distributions and primitive conversion. Keep provider credentials on the server.
 
-This interface supplies structured decisions, not conversation generation. Native validation does not qualify provider accuracy, calibration, trained weights or a published inference service. See [typed decision boundaries](/docs/runtime/decisions) for confidence, abstention and the supervised Python bridge.
+`remote({ baseURL?, model?, client? })` uses native HTTP by default:
 
-`timeout` bounds the whole operation, including serialization and pending retries, to 1–120000 ms. Synchronous callbacks cannot be interrupted; their result rejects once control returns after the deadline. `maxRetries` is an integer from zero to three, default zero. Providers receive the deadline, retry limit and cancellation signal. Connection and authentication failures reject. An `AbortSignal` cancels the request and settles the caller even when a custom provider does not complete.
+| Setting  | Resolution order                                                                           |
+| -------- | ------------------------------------------------------------------------------------------ |
+| API key  | `TYPESAFE_API_KEY`                                                                         |
+| Endpoint | `baseURL`, then `TYPESAFE_BASE_URL`, then `https://api.typesafe.ai`                        |
+| Model    | the request's `model`, the provider's `model`, `TYPESAFE_DEFAULT_MODEL`, then `jev-latest` |
 
-## Existing local models
+Requests use the `/v1/systemone` path. Endpoints require HTTPS; plain HTTP is accepted only for loopback addresses. URL credentials, query strings, fragments and redirects are rejected.
 
-`local({ context, model, maxTokens? })` accepts a loaded `bun-llama` context. The caller selects the protected GGUF path and owns the context/model lifetime. No weights are downloaded or bundled into the core.
+Supplying `client` delegates transport and retries to its `systemOne` method. Configure the endpoint on that client; `baseURL` cannot be combined with `client`. Native HTTP retries status codes 408, 429 and 5xx within `maxRetries` and the operation deadline. Authentication failures reject without retrying. Response bodies are bounded while streaming and must contain valid UTF-8 JSON.
 
-The adapter requests strict JSON at temperature zero, caps generation at 1–4096 tokens (default 1024), and sends every answer through the same Rust validator. Markdown, explanatory text and responses outside the schema reject. Local adapters sharing a context accept one active request at a time. After cancellation or timeout, the context remains busy until its `complete` call settles. Token usage is `null` because the context does not expose exact accounting. Local probabilities are model outputs; calibration requires separate evidence. Grammar-constrained decoding depends on the local provider's capabilities and is not claimed by this adapter.
+This interface returns structured decisions, not generated text. See [typed decision boundaries](/docs/runtime/decisions) for confidence, abstention and the Python SDK.
 
-Optional providers require their credentials, native library and model to be available. Core validation and deterministic code providers work without those extensions.
+## Timeouts and cancellation
+
+`timeout` bounds the whole operation, including serialization and pending retries, to 1–120000 ms (default 10000). Synchronous callbacks cannot be interrupted; their result rejects once control returns after the deadline. `maxRetries` is an integer from 0 to 3, default 0. Providers receive the deadline, retry limit and cancellation signal. An `AbortSignal` cancels the request and settles the caller even when a custom provider does not complete.
+
+## Local models
+
+`local({ context, model, maxTokens? })` accepts a loaded `bun-llama` context. The caller selects the GGUF model file and owns the context and model lifetime. No weights are downloaded or bundled.
+
+The adapter requests strict JSON at temperature zero, caps generation at 1–4096 tokens (default 1024), and sends every answer through the same native validator. Markdown, explanatory text and responses outside the schema are rejected. Local adapters sharing a context accept one active request at a time; after cancellation or timeout, the context remains busy until its `complete` call settles. Token usage is `null` because the context does not report exact token counts. Local probabilities are raw model outputs and are not calibrated.
+
+Optional providers require their credentials, native library or model to be available. Validation and `code` providers work without them.

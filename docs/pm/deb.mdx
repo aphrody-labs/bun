@@ -1,14 +1,12 @@
 ---
-name: Debian and Ubuntu packages
-description: Install Debian packages through native APT and dpkg with explicit roots.
+title: Debian and Ubuntu packages
+description: Install Debian packages through the system APT and dpkg with an explicit root.
 ---
 
-# Debian and Ubuntu packages
-
-`bun pm apt` and `bun pm deb` invoke the installed Linux `/usr/bin/apt-get`,
-`/usr/bin/apt-cache` and `/usr/bin/dpkg-query`. APT owns repository signature
-verification, freshness, package hashes, Debian dependency solving and dpkg
-configuration. Bun does not embed or relicense APT/dpkg source code.
+`bun pm apt` and its alias `bun pm deb` run the installed `/usr/bin/apt-get`,
+`/usr/bin/apt-cache` and `/usr/bin/dpkg-query`. They are supported on Linux only.
+APT handles repository signature verification, freshness, package hashes, Debian
+dependency solving and dpkg configuration.
 
 ```sh
 bun pm apt search curl
@@ -20,24 +18,29 @@ bun pm apt --root /srv/debian update
 bun pm apt --root /srv/debian list
 ```
 
-Every transaction requires `--root` explicitly. A root must already contain a
-Debian dpkg database (`var/lib/dpkg/status`), repository configuration and the
-runtime needed by package maintainer scripts. Bun does not bootstrap a rootfs.
-Use `--root /` explicitly for the host, with the host privileges required by APT.
-An alternate root uses its own APT configuration, lists, cache and dpkg status;
-dpkg receives `--root`, and the native dpkg executable stays on the host.
+Every transaction (`install`, `remove`, `update`, `upgrade`, `download`,
+`source`) requires `--root` explicitly. A root must already contain a Debian
+dpkg database (`var/lib/dpkg/status`), repository configuration and the runtime
+needed by package maintainer scripts. Bun does not bootstrap a rootfs. Use
+`--root /` for the host, with the privileges required by APT. An alternate root
+uses its own APT configuration, lists, cache and dpkg status; dpkg receives
+`--root`, and the dpkg executable of the host is used.
 
 Commands: `install` (`add`), `remove` (`del`), `update`, `upgrade`, `download`,
-`source`, `search`, `show` (`info`), `list` and `check`. Transaction options are
-`--simulate`, `--yes`, `--download-only`, `--no-download` and
-`--no-install-recommends`. Arbitrary APT options and switches disabling trust
-checks are rejected. Existing repository scopes and `Signed-By` keys remain
-the authority for APT trust.
+`source`, `search`, `show` (`info`), `list` and `check`. `install` also accepts
+an absolute path to a local `.deb` file. Transaction options are `--simulate`,
+`--yes`, `--download-only`, `--no-download` and `--no-install-recommends`. Other
+APT options are rejected, and APT always runs with unauthenticated packages and
+insecure repositories disallowed. Repository scopes and `Signed-By` keys
+configured in the root decide what APT trusts.
 
-`systemDependencies` accepts `deb:` and the alias `apt:`. Installation requires
-`BUN_SYSTEM_ROOT` explicitly; a host installation also requires
-`BUN_SYSTEM_ELEVATE=1` and actual operating system privileges. Bun does not run
-sudo automatically. Resolution requires Linux APT metadata for that root.
+## `systemDependencies`
+
+`systemDependencies` in `package.json` accepts `deb:` and the alias `apt:`.
+Installation requires `BUN_SYSTEM_ROOT`; installing into the host root (`/`)
+also requires `BUN_SYSTEM_ELEVATE=1` and the corresponding operating system
+privileges. Bun does not run `sudo`. Resolution reads the APT metadata of that
+root.
 
 ```json
 {
@@ -49,11 +52,10 @@ sudo automatically. Resolution requires Linux APT metadata for that root.
 
 Supported constraints are `*`, `latest`, exact Debian versions and `=`, `>=`,
 `<=`, `<<` or `>>` comparisons. npm semver ranges are rejected. The declared
-package is locked by Debian version, architecture, archive URI and SHA-256.
-Installation rechecks these against APT metadata before the transaction.
-Transitive dependencies are solved and authenticated by APT; they are not
-individually pinned in the current Bun lock. Read-only metadata and a successful
-simulation do not prove installation.
+package is locked in the `"system"` block of `bun.lock` by Debian version,
+architecture, archive URI and SHA-256, and installation checks these against
+the current APT metadata before running the transaction. Transitive dependencies are solved and authenticated by APT; they
+are not individually pinned in `bun.lock`.
 
 ## Local metadata planning
 
@@ -62,7 +64,8 @@ bun pm apt plan --packages-file Packages --release-file Release \
   --index-path main/binary-amd64/Packages --arch amd64 curl
 ```
 
-This separate planner verifies a local Packages checksum against a plain
-Release file and describes a limited concrete-package closure. It does not
-authenticate the Release, perform a complete Debian solve, write locks or
-install packages. Its JSON reports `installable: false` and the trust limits.
+This planner works offline on local files. It checks the SHA-256 and size of a
+Packages file against a plain Release file and prints the closure of concrete
+packages as JSON. It does not verify the Release signature, perform a complete
+Debian dependency solve, write a lockfile or install packages; its output
+reports `"installable": false` and `"releaseTrust": "unverified"`.

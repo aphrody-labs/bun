@@ -136,7 +136,7 @@ The first call starts the CLR with the newest installed `Microsoft.NETCore.App`.
 
 ### Object model
 
-`load(assembly)` exposes .NET types as JavaScript objects through [Node API for .NET](https://github.com/microsoft/node-api-dotnet). It needs the packages that `@aphrody/bun-dotnet` ships. Install that package, or set `BUN_DOTNET_NODE_API` to its `dotnet/out/pkg` directory.
+`load(assembly)` exposes .NET types as JavaScript objects through [Node API for .NET](https://github.com/microsoft/node-api-dotnet). It needs the `node-api-dotnet` package (`bun add node-api-dotnet`). Set `BUN_DOTNET_NODE_API` to load it from another directory.
 
 ```ts
 import dotnet from "bun:dotnet";
@@ -165,6 +165,6 @@ Fixture.Calc.Apply(x => x * 3, 14); // 42: a JS function passed as Func<int, int
 public void OnChanged(Action<int> listener) => Changed += (_, value) => listener(value);
 ```
 
-`generateTypes({ assembly, output })` writes TypeScript declarations for an assembly. Pass `module: "esm"` for ES module declarations and `references` for dependent assemblies.
+`generateTypes({ assembly, output })` writes TypeScript declarations for an assembly. Pass `module: "esm"` for ES module declarations and `references` for dependent assemblies. It runs the `node-api-dotnet-generator` package, installed next to `node-api-dotnet`.
 
 `dotnet(args)`, `build`, `run`, `newProject` and `test` run `bun dotnet` in a child process and resolve to `{ stdout, stderr, exitCode }`.

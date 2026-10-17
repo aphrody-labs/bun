@@ -1,11 +1,29 @@
 ---
 title: Contributing
-description: Contributing to Bun
+description: Build Bun from source and set up a development environment.
 ---
 
 Configuring a development environment for Bun can take 10-30 minutes depending on your internet connection and computer speed. You will need ~10GB of free disk space for the repository and build artifacts.
 
 If you are using Windows, see [Building Windows](/project/building-windows).
+
+## One-command setup
+
+[`scripts/aphrody/setup.ts`](https://github.com/aphrody-labs/bun/blob/main/scripts/aphrody/setup.ts) clones the repository (default `~/bun`), installs the system packages, LLVM, rustup and the pinned nightly toolchain (on Windows also MSVC and the Windows SDK), fetches the native dependencies and ends with `bun bd --version`. Steps that are already done are skipped, so it is safe to run again. The launchers install a release build of Bun first when none is present:
+
+<CodeGroup>
+
+```bash Linux & macOS
+curl -fsSL https://raw.githubusercontent.com/aphrody-labs/bun/main/scripts/aphrody/install-dev.sh | bash
+```
+
+```powershell Windows
+irm https://raw.githubusercontent.com/aphrody-labs/bun/main/scripts/aphrody/install-dev.ps1 | iex
+```
+
+</CodeGroup>
+
+From an existing checkout, run `bun scripts/aphrody/setup.ts`. Pass `--dry-run` to print each step without changing anything, or `--no-build` to stop before the first build. The rest of this page describes the manual setup.
 
 ## Using Nix (Alternative)
 
@@ -379,7 +397,7 @@ The built version of Bun may not work on other systems if compiled this way.
 
 ## Contributing to the docs
 
-The docs are the MDX files in `docs/` in the Bun repository. [bun.com/docs](https://bun.com/docs) is built from them.
+The docs are the MDX files in `docs/` in the Bun repository. [aphrody.app/docs](https://aphrody.app/docs) is built from them.
 
 ### Voice
 

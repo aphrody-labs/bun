@@ -206,10 +206,10 @@ Bun picks the mechanism from the platform:
 
 sudo resets the environment. Bun passes the variables from `env` to sudo as `VAR=value` arguments, so they appear in the process list. On Windows without an enabled `sudo.exe`, Bun rejects `env` with `elevate`. Bun also rejects `elevate` combined with `argv0`, `uid` or `gid`.
 
-To allow it without a password, add a `NOPASSWD` rule. Aphrody Alpine ships one for the `aphrody` group in `/etc/sudoers.d/aphrody`:
+To allow it without a password, add a `NOPASSWD` rule, for example for the `wheel` group:
 
-```text /etc/sudoers.d/aphrody
-%aphrody ALL=(ALL:ALL) NOPASSWD: ALL
+```text /etc/sudoers.d/wheel
+%wheel ALL=(ALL:ALL) NOPASSWD: ALL
 ```
 
 ## Using AbortSignal

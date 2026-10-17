@@ -1,5 +1,6 @@
 ---
 title: Open a Qt 6 window with bun:ffi
+description: Create a Qt 6 window from JavaScript through a small C++ shim loaded with bun:ffi.
 sidebarTitle: Qt 6 window
 mode: center
 ---
@@ -49,18 +50,9 @@ process.exit(status);
 bun window.ts
 ```
 
-TinyCC, which powers [`cc`](/runtime/ffi#cc) in `bun:ffi`, compiles C only, so a C++ shim needs the system compiler. On Windows, [MSYS2](https://www.msys2.org) provides both the compiler and Qt (`pacman -S mingw-w64-ucrt-x86_64-{gcc,pkgconf,qt6-base}`); add `C:\msys64\ucrt64\bin` to `PATH` so the Qt DLLs are found when the shim loads. On Linux without a display, set `QT_QPA_PLATFORM=offscreen`.
+TinyCC, which powers [`cc`](/runtime/c-compiler) in `bun:ffi`, compiles C only, so a C++ shim needs the system compiler. On Windows, [MSYS2](https://www.msys2.org) provides both the compiler and Qt (`pacman -S mingw-w64-ucrt-x86_64-{gcc,pkgconf,qt6-base}`); add `C:\msys64\ucrt64\bin` to `PATH` so the Qt DLLs are found when the shim loads. On Linux without a display, set `QT_QPA_PLATFORM=offscreen`.
 
 `QApplication::exec()` blocks the JavaScript thread, so timers, promises and I/O callbacks do not run while the window is open. Use a `QTimer` in the shim for periodic work inside the loop.
-
-## Tested platforms
-
-The fixture prints `window created` and `window closed` with exit code 0 on:
-
-- Windows 11: Qt 6.11.2 and GCC from MSYS2 UCRT64
-- Ubuntu 26.04: Qt 6.10.2 under `xvfb-run`
-
-The Linux images are `scripts/aphrody/gui/ubuntu.Dockerfile` and `scripts/aphrody/gui/alpine.Dockerfile`.
 
 ---
 

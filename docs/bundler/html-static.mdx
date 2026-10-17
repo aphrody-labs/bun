@@ -260,7 +260,7 @@ Then, reference TailwindCSS in your HTML with a `<link>` tag, an `@import` in CS
 
 <Info>Only one of these is necessary, not all three.</Info>
 
-Bun OS provides [`@aphrody/bun-plugin-tailwind`](https://github.com/aphrody-labs/bun/tree/main/packages/bun-plugin-tailwind) with the same `bunfig.toml` setup. Its source defines options (`sources`, `optimize`, `minify`, `sourcemap`, a Material 3 `theme`), a PostCSS entry point on the same engine (`@aphrody/bun-plugin-tailwind/postcss`), and resolution of the integrated `tailwindcss` dependency. Validate the package version and required entry points in the consuming application.
+[`@aphrody/bun-plugin-tailwind`](https://github.com/aphrody-labs/bun/tree/main/packages/bun-plugin-tailwind) works with the same `bunfig.toml` setup. It accepts options (`sources`, `optimize`, `minify`, `sourcemap`, and `theme: "m3"` for a Material 3 preset), provides a PostCSS plugin on the same engine (`@aphrody/bun-plugin-tailwind/postcss`), and resolves `@import "tailwindcss"` from its own dependency when the project does not install `tailwindcss`.
 
 ```toml title="bunfig.toml" icon="settings"
 [serve.static]

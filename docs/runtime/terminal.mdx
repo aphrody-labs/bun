@@ -9,7 +9,7 @@ screens parse terminal output without starting a process.
 
 ## Run an interactive process
 
-Use [`Bun.Terminal`](/runtime/child-process#terminal) with `Bun.spawn()` when a
+Use [`Bun.Terminal`](/runtime/child-process#terminal-pty-support) with `Bun.spawn()` when a
 child process needs a TTY. It connects the process to a PTY on Linux and macOS,
 or ConPTY on Windows.
 

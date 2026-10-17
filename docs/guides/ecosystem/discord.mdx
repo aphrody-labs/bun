@@ -1,6 +1,7 @@
 ---
 title: Run discord.js, @discordjs/voice and discordx
 sidebarTitle: Discord bots (voice, discordx, compile)
+description: Run discord.js, @discordjs/voice and discordx bots on Bun and compile them into a single executable.
 mode: center
 ---
 
@@ -8,9 +9,9 @@ discord.js, `@discordjs/voice` and discordx run on Bun without a shim. This guid
 
 ---
 
-## What was checked
+## Compatibility
 
-Each row below was run on Bun against a fake gateway, a fake voice server and a UDP socket on `127.0.0.1` (no Discord connection, no token). The packages are discord.js 14.27, `@discordjs/voice` 0.19, `@discordjs/ws` 1.2 and discordx 11.13.
+The table covers discord.js 14.27, `@discordjs/voice` 0.19, `@discordjs/ws` 1.2 and discordx 11.13, run against a local fake gateway, voice server and UDP socket.
 
 | Part                                      | Result                                                                                                                              |
 | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
@@ -116,7 +117,7 @@ bun build --compile --minify bot.ts --outfile bot \
 
 Put in `--external` every optional package that is not installed. `prism-media` and `@discordjs/voice` require them inside functions, and the bundler stops on a name it cannot resolve. `zlib-sync` and `erlpack` need no flag. Native addons that are installed (`sodium-native`, `@snazzah/davey`) are embedded in the executable and load from there.
 
-Measured with the Windows x64 build of Bun 1.4.3-aphrody.3 on the bot used for the table above. Each run connects to a fake gateway, receives a message, sends a reply and exits, so the time includes the whole round trip. Median of 5 runs:
+Startup on Windows x64, median of 5 runs. Each run connects to a local fake gateway, receives a message, sends a reply and exits, so the time includes the whole round trip:
 
 | Bot                           | `bun file.ts`       | `bun build --compile` |
 | ----------------------------- | ------------------- | --------------------- |
@@ -124,7 +125,7 @@ Measured with the Windows x64 build of Bun 1.4.3-aphrody.3 on the bot used for t
 | discord.js + discordx         | 385 ms, 64 MiB peak | 338 ms, 56 MiB peak   |
 | discord.js + voice + playback | not measured        | 501 ms, 68 MiB peak   |
 
-The executable is about 147 MB, nearly all of it the Bun runtime.
+Nearly all of the executable's size is the Bun runtime itself.
 
 ---
 

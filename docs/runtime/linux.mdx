@@ -13,7 +13,7 @@ if (linux.isSupported) {
 }
 ```
 
-On other platforms `isSupported` is `false`. Every function exists, and each call that reaches the kernel throws an error that says `bun:linux` is only available on Linux.
+On other platforms `isSupported` is `false`. Every function exists, and each call that reaches the kernel throws an error with code `ERR_BUN_LINUX_UNSUPPORTED`.
 
 ---
 
@@ -246,4 +246,4 @@ const links = linux.netlink.request(
 
 ## Reference
 
-See `packages/bun-types/linux.d.ts` for the complete signatures, required privileges and errors.
+See [`packages/bun-types/linux.d.ts`](https://github.com/aphrody-labs/bun/blob/main/packages/bun-types/linux.d.ts) for the complete signatures, required privileges and errors, including `cgroup.setLimits`, `capabilities.set`, `capabilities.raiseAmbient`, `seccomp.actionAvailable`, the remaining `bpf` map calls and `reapOrphans`.

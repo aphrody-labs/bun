@@ -24,7 +24,7 @@ bun build --target=wasm ./crates/hello --outdir ./pkg
 
 ## Requirements
 
-- A Rust toolchain with the target installed: `rustup target add wasm32-unknown-unknown` (or `wasm32-wasip1`, `wasm32-wasip2` for WASI).
+- A Rust toolchain. With `rustup`, Bun adds a missing target (`wasm32-unknown-unknown`, or `wasm32-wasip1` and `wasm32-wasip2` for WASI) before building.
 - `wasm-bindgen` and `wasm-opt` are used from `PATH` when present. Otherwise Bun installs them once into `$BUN_INSTALL/tools`: `wasm-bindgen-cli` with `cargo`, at the version the crate's `Cargo.lock` pins, and `wasm-opt` (binaryen) with [`bun x`](/pm/bunx).
 
 ## Import a crate directly

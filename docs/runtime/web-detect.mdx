@@ -1,12 +1,14 @@
 ---
 title: Web detection
-description: Offline technology and anti-bot challenge detection for fetched responses, and the browser SSRF deny-set
+description: Offline technology and anti-bot challenge detection for fetched responses, and an SSRF address deny-set
 ---
 
-`Bun.WebDetect` exposes the detection engine shared by Bun's browser and crawler.
-It performs no I/O: pass evidence from a response you already fetched.
+`Bun.WebDetect` analyzes a response you already fetched and reports the
+technologies it uses and any anti-bot challenge it serves. It performs no I/O.
+It also exposes the SSRF address deny-set used by Bun's browser transports.
 
 ```ts
+const url = "https://example.com/";
 const response = await fetch(url);
 const report = Bun.WebDetect.detect({
   url,
@@ -21,11 +23,40 @@ if (report.challenge.provider !== "none") {
 console.log(report.findings.map(f => `${f.bucket}: ${f.name}`));
 ```
 
-The report contains technology `findings` (CDN, framework, server, ...), a
-`challenge` (provider, `high`/`medium`/`low` confidence, a recommended scraping
-profile `static`, `fast`, `stealth`, `max`, `wait` or `abort`, and evidence) and a
-suggested crawl `strategy`. Only `http:` and `https:` URLs are accepted. Headers
-may be strings or arrays of strings; `set-cookie` is commonly repeated.
+## Input
+
+| Field         | Type                                 | Description                                       |
+| ------------- | ------------------------------------ | ------------------------------------------------- |
+| `url`         | `string`                             | The requested URL. Only `http:` and `https:`      |
+| `finalUrl`    | `string`                             | The URL after redirects (defaults to `url`)       |
+| `status`      | `number`                             | The HTTP status (default `200`)                   |
+| `headers`     | `Record<string, string \| string[]>` | Response headers; repeat `set-cookie` as an array |
+| `body`        | `string`                             | The response body                                 |
+| `resolvedIps` | `string[]`                           | IP addresses the hostname resolved to             |
+| `cnameChain`  | `string[]`                           | CNAME records of the hostname                     |
+| `nsRecords`   | `string[]`                           | NS records of the domain                          |
+
+`detect()` throws a `TypeError` when the input is not an object, a field has the
+wrong type, or the URL is not `http:` or `https:`.
+
+## Report
+
+The report repeats `url`, `finalUrl`, `httpStatus`, `hostname`, `resolvedIps`,
+`cnameChain` and `nsRecords`, and adds:
+
+- `findings`: detected technologies, each with `name`, `bucket` (`frontend`,
+  `backend`, `cdn`, `dns`, `hosting`, `server`, `language`, `cms`, `analytics`,
+  `tag-manager`, `framework`, `library` or `other`), `evidence`, `source`,
+  a numeric `confidence` and, when known, a `version`.
+- `challenge`: the anti-bot `provider` (`none`, `cloudflare-block`,
+  `cloudflare-challenge`, `cloudflare-turnstile`, `akamai-bot-manager`,
+  `perimeter-x`, `data-dome`, `kasada`, `incapsula`, `aws-waf`, `sucuri`,
+  `js-required`, `soft-block` or `rate-limit`), its `confidence` (`high`,
+  `medium` or `low`), a `recommendation` (`static`, `fast`, `stealth`, `max`,
+  `wait` or `abort`) and the matching `evidence` strings.
+- `strategy`: a suggested crawl strategy with `profile` (`static`, `http` or
+  `render`), `waitFor`, `blockResources`, `reDetectAfterHydration`, `isSpa`,
+  `hasAntiBot`, the site `shape` and a `rationale`.
 
 ## SSRF deny-set
 
@@ -34,10 +65,14 @@ outbound request from untrusted input should never reach: loopback, RFC 1918,
 link-local and cloud metadata (`169.254.169.254`, `100.100.100.200`), CGNAT,
 benchmarking, documentation, multicast, reserved and unspecified addresses, and
 IPv6 forms embedding any of them (mapped, compatible, NAT64, 6to4, Teredo).
-Brackets around IPv6 literals are accepted. Check every resolved address, not
-only the hostname, before connecting.
+Brackets around IPv6 literals are accepted; any other string that is not an IP
+address throws a `TypeError`. Check every resolved address, not only the
+hostname, before connecting.
 
 ```ts
+const url = "https://example.com/";
 const addresses = await Bun.dns.lookup(new URL(url).hostname, { family: 0 });
 if (addresses.some(a => Bun.WebDetect.isForbiddenAddress(a.address))) throw new Error("blocked");
 ```
+
+`Bun.WebDetect` cannot be constructed; call its static methods.

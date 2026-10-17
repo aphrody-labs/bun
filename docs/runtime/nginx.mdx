@@ -1,14 +1,9 @@
 ---
 title: NGINX
-description: Own a native NGINX process and its Rust module with Bun, with explicit source and ABI qualification.
+description: Validate, start, reload and stop an NGINX process from Bun with bun:nginx.
 ---
 
-# Native NGINX controller
-
-`bun:nginx` and the literal spelling `bun:Nginixx` resolve to the same Rust
-process controller. NGINX's selected native executable owns its configuration,
-HTTP engine and compiled modules. The optional `@aphrody/bun-nginx` package
-re-exports the builtin and its types.
+`bun:nginx` controls an installed NGINX executable from JavaScript. Bun manages the NGINX master process; NGINX itself handles HTTP, TLS, proxying, caching and its configured modules. `bun:Nginixx` resolves to the same module.
 
 ```ts
 import Nginx from "bun:nginx";
@@ -30,134 +25,83 @@ console.log(started.pid);
 await nginx.reload();
 ```
 
-The prefix must already exist and the configuration must resolve inside it.
-Omit `daemon` and `pid` directives: Bun supplies foreground mode and
-`<prefix>/bun-nginx.pid`. Prepare NGINX's log and temporary directories in that
-private prefix, or set the corresponding paths in the configuration. Existing
-release-site configuration policy stays in
-`scripts/aphrody/deploy/release-nginx.ts`.
+Bun does not download NGINX. `binary` defaults to `nginx` on `PATH`.
 
-An exclusive `.bun-nginx-owner` prevents two controllers from claiming one
-prefix. Start refuses an existing PID file. Reload and quit verify both prefix
-ownership and the PID of the spawned master. Unix masters have an owned process
-group; Windows masters have a job object with kill-on-close. Operations cannot
-adopt, reload or terminate an unrelated NGINX service.
+## Prefix and configuration
 
-Validation has its own exclusive temporary PID file. Real NGINX creates an empty
-PID file during `-t`, so validation never receives the live master's PID path.
-Startup waits for the master's complete PID before verifying its identity.
+The prefix directory must already exist and `configFile` must resolve inside it. Omit the `daemon` and `pid` directives: Bun runs NGINX in the foreground and writes the master PID to `<prefix>/bun-nginx.pid`. Create NGINX's log and temporary directories inside the prefix, or set their paths in the configuration.
 
-`validate()`, `start()`, `reload()`, `quit()`, `status()` and `close()` return
-promises. Each operation accepts `timeoutMs` and `signal`. Deadlines are integer
-milliseconds between 1 and 30000. Diagnostic output has a separate bound for
-each stream, default 262144 bytes, maximum 1048576. Concurrent operations reject
-with `ERR_NGINX_BUSY`.
+Only one controller can own a prefix at a time; ownership is recorded in an exclusive `.bun-nginx-owner` file. `start()` refuses a prefix that already contains a PID file, and `reload()` and `quit()` check that the PID belongs to the master Bun started. The controller never adopts, reloads or stops an NGINX process it did not start. On Unix the master runs in its own process group; on Windows it runs in a job object that terminates it when the controller closes.
 
-The running master keeps Bun's event loop alive through a cancellable native
-job. Master exit ends that job and stops remaining owned workers. A collected
-controller synchronously terminates its owned group; reaping happens outside
-the JS thread. VM cancellation also terminates the group. A failed or aborted
-start terminates its child. `quit()` waits for graceful exit and permits a later
-start; `close()` also releases ownership and forces termination when graceful
-quit exceeds its deadline. Repeated close succeeds. Use `await using` or an
-explicit `finally` block for deterministic closure.
+`validate()` runs `nginx -t` with a separate temporary PID file, so it never touches the PID file of a running master.
 
-`probe()` reports `available: false` only when the executable is unavailable.
-Configuration failures, redirected ownership, deadlines, aborts and output
-limits reject with their native error codes. Bun does not download a provider
-implicitly. Capabilities measured by `nginx -V` describe compile flags; protocol
-tests and dynamic module configuration are separate evidence. `platform` and
-`arch` describe Bun's host. Upstream Windows NGINX is beta, has one effective
-worker and does not provide UDP/QUIC.
+## API
 
-## Provider and engine gates
+| Method                  | Description                                                                         |
+| ----------------------- | ----------------------------------------------------------------------------------- |
+| `Nginx.probe(options?)` | Runs `nginx -V` and reports version, configure arguments and compiled capabilities. |
+| `Nginx.create(options)` | Claims the prefix and returns a controller.                                         |
+| `nginx.probe(options?)` | Same as `Nginx.probe` for this controller's executable.                             |
+| `nginx.validate()`      | Tests the configuration.                                                            |
+| `nginx.start()`         | Starts the master and resolves with its status once the PID is written.             |
+| `nginx.reload()`        | Reloads the configuration in the same master.                                       |
+| `nginx.quit()`          | Stops the master gracefully. The controller can be started again.                   |
+| `nginx.status()`        | Returns `{ running, pid, prefix, configFile, pidFile, closed, lastExitCode }`.      |
+| `nginx.close()`         | Quits, releases the prefix and resolves with `{ closed: true, forced }`.            |
 
-The explicit Windows helper downloads the pinned official ZIP and detached
-signature, verifies it with official public keys in an isolated public keyring,
-verifies extracted bytes against the signed archive, and records the actual PE
-architecture. It does not modify a user's keyring or install a global service.
+All methods return promises. `create()` and `probe()` accept:
+
+| Option            | Description                                                           |
+| ----------------- | --------------------------------------------------------------------- |
+| `binary`          | Executable path or name on `PATH`. Default `nginx`.                   |
+| `binaryArguments` | Launcher arguments placed before NGINX flags (at most 16).            |
+| `maxOutputBytes`  | Limit for each of stdout and stderr, 1–1048576 bytes. Default 262144. |
+| `timeoutMs`       | Deadline in milliseconds, integer 1–30000.                            |
+| `signal`          | `AbortSignal` that cancels the operation.                             |
+| `prefix`          | (`create` only) Existing directory owned by this controller.          |
+| `configFile`      | (`create` only) Configuration file inside `prefix`.                   |
+
+Every operation also accepts its own `timeoutMs` and `signal`. Running two operations on the same controller at once rejects with `ERR_NGINX_BUSY`.
+
+## Lifetime
+
+A running master keeps Bun's event loop alive. When the master exits, Bun stops its remaining workers. A failed or aborted `start()` terminates the child. `close()` attempts a graceful quit and terminates the process if that exceeds the deadline (`forced: true`); calling it again succeeds. If the controller is garbage-collected or the process exits, Bun terminates the NGINX processes it started. Use `await using` or a `finally` block to close the controller deterministically.
+
+## Errors
+
+`probe()` resolves with `available: false` and code `ERR_NGINX_PROVIDER_UNAVAILABLE` when the executable cannot be run. Other failures reject with one of these codes:
+
+| Code                             | Meaning                                               |
+| -------------------------------- | ----------------------------------------------------- |
+| `ERR_NGINX_PROVIDER_UNAVAILABLE` | The NGINX executable cannot be run.                   |
+| `ERR_NGINX_CONFIG`               | NGINX rejected the configuration.                     |
+| `ERR_NGINX_OWNER`                | The prefix or PID file belongs to another controller. |
+| `ERR_NGINX_BUSY`                 | Another operation is in progress on this controller.  |
+| `ERR_NGINX_TIMEOUT`              | The operation exceeded `timeoutMs`.                   |
+| `ERR_NGINX_OUTPUT_LIMIT`         | NGINX output exceeded `maxOutputBytes`.               |
+| `ERR_NGINX_NATIVE`               | A process or system call failed.                      |
+| `ABORT_ERR`                      | The operation was cancelled with its `AbortSignal`.   |
+
+Invalid options, such as a `configFile` that resolves outside `prefix`, reject with `ERR_INVALID_ARG_VALUE`.
+
+The capabilities reported by `probe()` (`http`, `httpTLS`, `http2`, `http3`, `stream`, `mail`, `udp`, `threads`, ...) come from the build flags printed by `nginx -V`. `platform` and `arch` describe the host running Bun, not the executable.
+
+## Windows
+
+The official NGINX for Windows is a beta release: it uses a single effective worker process (`effectiveWorkersMaximum: 1`) and does not support UDP or QUIC. See [NGINX for Windows](https://nginx.org/en/docs/windows.html).
+
+The repository script `packages/bun-nginx/scripts/prepare-provider.ts` downloads the official NGINX 1.31.6 Windows ZIP, verifies its signature with the official NGINX signing keys in an isolated keyring, and extracts it into a directory you choose:
 
 ```powershell
-bun packages/bun-nginx/scripts/prepare-provider.ts C:/bun/factory/artifacts/nginx-sdk/windows "C:/Program Files/Git/usr/bin/gpg.exe"
-bun packages/bun-nginx/scripts/qualify-engine.ts C:/bun/factory/artifacts/nginx-sdk/windows/prefix/nginx-1.31.6/nginx.exe C:/bun/factory/artifacts/nginx-sdk/windows/engine-qualification.json
+bun packages/bun-nginx/scripts/prepare-provider.ts C:\path\to\nginx-sdk "C:\Program Files\Git\usr\bin\gpg.exe"
 ```
 
-`qualify-engine.ts` also accepts an existing Linux ELF executable. Its private
-localhost fixture measures configuration validation, HTTP bytes, Range,
-reload with the same master PID, rejection of invalid configuration while the
-old master still serves, and graceful quit. The receipt records binary SHA256,
-format, architecture and the executing Bun revision. It always records
-`nativeBunController: false`: this engine gate does not exercise the builtin.
+## Rust HTTP module
 
-On 2026-10-13 these engine gates passed for the signed upstream Windows 1.31.6
-provider (PE x86, executed on Windows x64). The portable source-built Linux
-provider has the additional module and ABI gates below. Neither engine receipt
-attests all Bun release targets, TLS/HTTP3 behavior or Rust controller execution.
+[`packages/bun-nginx/native`](https://github.com/aphrody-labs/bun/tree/main/packages/bun-nginx/native) contains an NGINX HTTP module written in Rust with [ngx-rust](https://github.com/nginx/ngx-rust). It is compiled into an NGINX executable built from source with `--add-module` (see `packages/bun-nginx/scripts/build-provider.ts`); a stock NGINX binary does not include it. It adds two location directives:
 
-The changed-binary controller gate is separate:
-
-```powershell
-$env:BUN_NGINX_TEST_BINARY = "C:/bun/factory/artifacts/nginx-sdk/windows/prefix/nginx-1.31.6/nginx.exe"
-bun bd test ./test/js/bun/nginx/test.ts
-```
-
-Core tests use an explicit process-protocol fixture to cover isolation,
-deadlines, abort, crash, GC, keepalive, VM exit and worker cleanup. The optional
-real engine case skips only when no selected executable exists. A missing
-builtin or failed core test remains a failed gate.
-
-References: [NGINX switches](https://nginx.org/en/docs/switches.html),
-[Windows limitations](https://nginx.org/en/docs/windows.html),
-[official signing keys](https://nginx.org/en/pgp_keys.html).
-
-## Rust module and source ownership
-
-The canonical sources are `vendor/nginx` at
-`0a5db852e18d1c22c62a5ede1412ac3f416111a0` (1.31.6) and `vendor/ngx-rust` at
-`cf58b5270dc5e9b855dab765e9f13ba2a12c7709` (`ngx`/`nginx-sys` 0.5.0).
-`packages/bun-nginx/native/sources.json` and the explicit source acquisition
-command define this contract:
-
-```sh
-bun packages/bun-nginx/scripts/prepare-sources.ts
-bun packages/bun-nginx/scripts/verify-sources.ts factory/artifacts/nginx-sdk/source-inventory.json
-```
-
-The helper reuses an existing matching clean vendor and refuses a changed
-revision or tracked edits. It creates the two canonical vendors when absent.
-No implicit Git link is added to Bun's repository. Both complete upstream
-source trees, licenses, Git tree IDs and file SHA256 inventory remain available
-locally. The optional `ngx` vendored feature and its nested `nginx-src/nginx`
-submodule stay disabled, so there is one NGINX source owner on each build host.
-
-The native module crate is `packages/bun-nginx/native`. NGINX's official
-`--add-module` build integration compiles its Rust static library into the
-actual NGINX executable. It reuses `vendor/ngx-rust/examples/auto/rust`, the
-exact configured NGINX headers and the module's own Cargo.lock. Cargo does not
-fetch or build another NGINX source. `NGINX_SOURCE_DIR`, `NGINX_BUILD_DIR` and
-the configured-header digest identify the selected ABI.
-
-```mermaid
-flowchart LR
-    Bun[Bun VM] --> Controller[Native Rust process controller]
-    Controller --> Master[Owned NGINX master]
-    Master --> Worker[NGINX worker and Rust HTTP module]
-    Worker --> Pool[Request pool and cleanup]
-    Worker --> Timer[NGINX event timer]
-    Worker --> HTTP[Bounded JSON over local HTTP]
-    HTTP --> Bun
-```
-
-`bun_nginx;` enables the module's metadata response in a location.
-`bun_nginx_delay 1..1000;` enables a bounded asynchronous response using an
-NGINX timer. Buffers and timer context belong to the request pool. Cleanup
-removes pending timers; a request reference keeps the pool alive through the
-callback. A cycle-owned counter makes pending timers observable without
-crossing worker threads. C callbacks contain Rust panics. The module creates
-no Tokio runtime and transfers no NGINX pointer or signal into JavaScriptCore.
-The timer context starts with the exact configured `ngx_connection_t` binding,
-checked at offset zero, so NGINX's C debug logger reads the correct connection
-identifier. The Linux module gate enables that logger while testing timers.
+- `bun_nginx;` returns a small JSON metadata response.
+- `bun_nginx_delay <ms>;` (1–1000) returns that response after an asynchronous NGINX timer.
 
 ```nginx
 events { worker_connections 32; }
@@ -170,104 +114,19 @@ http {
 }
 ```
 
-The optional SDK `readModuleInfo(nginx, url)` reads this module's bounded
-loopback HTTP response and verifies its schema and master PID against the
-existing native controller. It can check the configuration digest from a
-selected build receipt. HTTP metadata alone does not attest a binary hash;
-the build and qualification receipts provide that evidence separately.
+The optional `@aphrody/bun-nginx` package re-exports `bun:nginx` and adds `readModuleInfo(nginx, url, options?)`, which reads that response over loopback HTTP and checks that it comes from the master owned by the controller:
 
 ```ts
 import { readModuleInfo } from "@aphrody/bun-nginx";
-const module = await readModuleInfo(nginx, "http://127.0.0.1:8080/info", {
-  expectedConfigurationSha256: buildReceipt.configurationSha256,
-});
-console.log(module.moduleSignature, module.pendingTimers);
+
+const info = await readModuleInfo(nginx, "http://127.0.0.1:8080/info");
+console.log(info.nginxVersion, info.masterPID, info.pendingTimers);
 ```
 
-## Native module gates
+`options` accepts `timeoutMs` (default 2000), `signal` and `expectedConfigurationSha256`.
 
-`build-provider.ts plan <absolute-owned-output>` verifies source and module
-inputs and emits the configured native commands without executing them.
-Its executable Linux recipe holds `/home/ubuntu/build/locks/heavy.lock` and
-uses at most two build jobs. Windows source and toolchain qualification are
-separate gates; a plan keeps them explicit. It does not restart a system
-NGINX service or modify production configuration.
+## References
 
-```sh
-bun packages/bun-nginx/scripts/build-provider.ts plan /absolute/checkout/factory/artifacts/nginx-sdk/linux-x64-portable /absolute/sdk-receipt.json
-bun packages/bun-nginx/scripts/qualify-engine.ts --module-build /absolute/build-receipt.json /absolute/module-engine-qualification.json
-```
-
-The final product is a source-built NGINX with its Rust module statically
-included. A separate temporary module built with `abi-mismatch-fixture`
-deliberately changes its `ngx_module_t` signature. The real NGINX loader must
-reject it as incompatible. That fixture is not a release module.
-
-`qualify-module.ts` requires a changed Bun binary exposing `bun:nginx`, the
-explicit source-build receipt and the incompatible fixture. Its gates check
-HTTP/HEAD bytes, source/configuration identity, a concurrent response during
-a pending timer, client abort, invalid configuration, reload with the same
-master, ABI mismatch rejection and graceful quit. A runtime lacking the
-builtin fails that bridge gate. Separate engine-only receipts continue to
-record `nativeBunController: false`.
-
-Source preparation and planning do not qualify module execution or all Bun
-release targets. Shared libraries, libc baseline, TLS/HTTP3 behavior, target
-architecture and module ABI require their own native proofs.
-
-## Portable GNU x64 build
-
-`packages/bun-nginx/scripts/build-portable-gnu-x64.sh` builds in the existing
-checkout with LLVM 23, the focal GNU sysroot and the shared heavy lock. It
-limits native compilation to two jobs. The recipe selects the existing
-canonical BoringSSL and zlib sources, and extracts the exact PCRE2 development
-package from signed Ubuntu archive metadata into its private SDK prefix.
-Headers and libraries from the build host cannot enter through inherited
-compiler or linker search paths.
-
-```sh
-timeout 3600 bash packages/bun-nginx/scripts/build-portable-gnu-x64.sh
-bun packages/bun-nginx/scripts/qualify-portable.ts /absolute/build-receipt.json /absolute/module-engine-qualification.json /absolute/portable-qualification.json
-```
-
-The SDK receipt records source pins, signed metadata, file hashes and the
-canonical Bun compatibility object. The module uses the optimized
-`ngx-release` profile while NGINX retains `--with-debug` for its actual C
-logger gate. The executable has a relative `$ORIGIN/../lib` search path.
-The incompatible shared fixture has a separate private unwinder and its
-notice, both excluded from release artifacts. Its dependency graph is checked
-alongside the engine's graph.
-
-`qualify-portable.ts` reuses `scripts/aphrody/media-sdk-abi.ts` to reject wrong
-architecture, loader, search paths, private libc symbols, unresolved
-dependencies and required GLIBC versions above 2.17. Diagnostic streams have
-a 64 MiB hard bound, retain at most 64 KiB of text, and record the complete
-stream's byte count and SHA256. Build logs are truncated before each command.
-
-On 2026-10-13, the source-built Linux x64 NGINX 1.31.6 executable passed HTTP,
-HEAD, Range, reload, invalid Rust configuration, graceful quit and the real
-loader's incompatible-module rejection. A 500 ms native timer allowed a
-concurrent metadata response, and an aborted request's pending timer returned
-to zero. The executable SHA256 is
-`7c4b83794387538549a46b91c71bbd01980c87b685b6636adcd91bb39438823a`.
-That receipt records `nativeRustModuleQualified: true` and
-`nativeBunController: false`; the selected Bun binary predates this builtin.
-Windows Rust-module execution and the changed-binary bridge remain unqualified.
-The engine and fixture require at most GLIBC 2.17; the fixture's private
-unwinder requires GLIBC 2.14. These are measured ELF requirements, with native
-execution on the VPS; execution on an actual GLIBC 2.17 host remains unqualified.
-The receipt keeps `portableReleaseQualified` and `allReleasePlatformsQualified`
-false until the remaining runtime and protocol gates pass.
-
-`test/integration/glibc-compat/run.sh` qualifies the canonical compatibility
-owner against the GNU x64/arm64 and musl x64/arm64 sysroots. GNU probes cover
-entropy bounds, interruption, the ENOSYS device fallback and its errors,
-descriptor closure, fortified erasure and glob64 callback/layout behavior.
-Both GNU probe binaries meet GLIBC 2.17; musl binaries have no GNU libc imports.
-The ARM64 runs use QEMU user emulation, and the musl probe covers the shared
-gettid wrapper rather than GNU adapters. A real old kernel or early boot entropy
-environment is not attested by these probes.
-
-References: [NGINX development guide](https://nginx.org/en/docs/dev/development_guide.html),
-[official ngx-rust](https://github.com/nginx/ngx-rust),
-[source configuration](https://nginx.org/en/docs/configure.html).
+- [NGINX command-line switches](https://nginx.org/en/docs/switches.html)
+- [NGINX development guide](https://nginx.org/en/docs/dev/development_guide.html)
+- [Building NGINX from sources](https://nginx.org/en/docs/configure.html)

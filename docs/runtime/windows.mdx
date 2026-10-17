@@ -193,6 +193,11 @@ Each call creates a D3D12 device on adapter 0, runs its commands and waits on a 
 windows.processes.list(); // [{ pid, ppid, name, threads }, ...]
 windows.processes.path(process.pid); // full path of bun.exe
 windows.processes.terminate(1234, 1);
+
+windows.processes.setPriority(1234, "below-normal"); // idle, below-normal, normal, above-normal, high, realtime
+windows.processes.setAffinity(1234, 0b11); // CPU mask
+windows.processes.setEcoMode(1234, true); // power throttling (efficiency mode)
+windows.processes.trimWorkingSet(1234);
 ```
 
 A `pid` argument also accepts an object with a `pid` property, such as the `Subprocess` returned by `Bun.spawn`.
@@ -266,12 +271,9 @@ job.terminate(1);
 
 With `killOnClose`, closing the job (or leaving the `using` block) terminates its processes. A job that is garbage collected is closed too.
 
-`job.spawn(command, options)` and `job.spawn({ cmd, ...options })` return a
-standard `Bun.Subprocess`. Windows creates the process suspended, assigns its
-actual process handle to the job, then resumes its primary thread. Assignment
-failure terminates the suspended process and throws before child code executes.
-`job.assign(pidOrProcess)` remains available for existing processes; it cannot
-retroactively contain descendants created before assignment.
+`job.spawn(command, options)` and `job.spawn({ cmd, ...options })` return a standard `Bun.Subprocess`. The process is created suspended, assigned to the job, then resumed, so it never runs outside the job. If the assignment fails, the suspended process is terminated and `spawn` throws.
+
+`job.assign(pidOrProcess)` adds an existing process. Children it created before the assignment stay outside the job.
 
 | Limit             | Meaning                                     |
 | ----------------- | ------------------------------------------- |
@@ -395,7 +397,7 @@ The package is resolved from the working directory, then from the entry script, 
 
 ### Win32 functions, structs and COM
 
-The families are generated from [win32metadata](https://github.com/microsoft/win32metadata) by `scripts/aphrody/win32/gen.ts`: one package per DLL (368 families, about 18,000 functions), plus `@aphrody/bun-windows-win32` with the struct, enum, constant and COM interface descriptions they share. A function is bound with `bun:ffi` the first time it is read.
+The families are generated from [win32metadata](https://github.com/microsoft/win32metadata): one package per DLL (368 families), plus `@aphrody/bun-windows-win32` with the struct, enum, constant and COM interface descriptions they share. A function is bound with `bun:ffi` the first time it is read.
 
 ```ts
 const kernel32 = windows.family("kernel32");

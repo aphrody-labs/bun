@@ -88,7 +88,7 @@ win.find("list")!.get("Items").call("Append", "first item");
 
 ## Fluent 2 tokens
 
-`@aphrody/bun-fluent` carries the Fluent 2 design tokens of [microsoft/fluentui](https://github.com/microsoft/fluentui) (`packages/tokens`, MIT): colors, typography, radii, shadows and motion for the web light/dark and Teams themes. It exposes them as JS objects, as CSS custom properties, as a Tailwind v4 theme and as WinUI light, dark and high-contrast resources.
+`@aphrody/bun-fluent` carries the Fluent 2 design tokens of [microsoft/fluentui](https://github.com/microsoft/fluentui) (`packages/tokens`, MIT): colors, typography, radii, shadows and motion for the web light and dark themes and the Teams high-contrast theme. It exposes them as JS objects, as CSS custom properties, as a Tailwind v4 theme and as WinUI light, dark and high-contrast resources.
 
 ```ts
 import { fluentWinuiResources } from "@aphrody/bun-fluent";
@@ -115,8 +115,4 @@ await Bun.build({
 @import "fluent:theme.css";
 ```
 
-`winuiResources` maps each WinUI theme resource to its Fluent 2 token and Material 3 token. `docs/aphrody/merge/M-winui-m3.md` has the full table.
-
-## Example
-
-`packages/bun-webos/examples/winui-app` is a small notes window: XAML, a list, a theme switch and the Fluent brushes.
+`winuiResources` maps each WinUI theme resource (such as `AccentFillColorDefaultBrush`) to its Fluent 2 token and its Material 3 system token (`null` where Material 3 has no matching role).

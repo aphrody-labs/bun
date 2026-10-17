@@ -1,12 +1,12 @@
 ---
-name: Typed decision boundaries
-description: Bun's native decision validator, confidence, abstention and supervised Python bridge
+title: Typed decision boundaries
+description: Confidence, abstention, provider limits and the Python SDK for bun:yolo typed decisions.
 ---
 
-Bun's internal typed decision capability [`bun:yolo`](/docs/runtime/yolo) adapts application-supplied judgments into
-Noul booleans, named Choice keys and finite Score values. Rust validates the
-request, provider response and primitive conversion. A judgment is a proposal;
-application permission rules still authorize any subsequent operation.
+[`bun:yolo`](/docs/runtime/yolo) adapts application-supplied judgments into
+Noul booleans, named Choice keys and finite Score values. Bun validates the
+request, provider response and primitive conversion natively. A judgment is a
+proposal; application permission rules still authorize any subsequent operation.
 
 ```ts
 import { decide, noul, choice, score, type Provider } from "bun:yolo";
@@ -28,48 +28,50 @@ export async function selectSource(provider: Provider) {
 ```
 
 One named batch shares one provider request. `inspect`, also exported as
-`systemOne`, retains validated probabilities, model and usage. `decide`
-returns primitives. A Noul becomes true only when its probability is greater
-than `threshold`, which defaults to `0.5`; equality returns false. Score can
-be fractional. Clients must not rebuild these conversions or silently accept
-unknown answers, enum keys, distributions or legends.
+`systemOne`, keeps the validated probabilities, model and usage. `decide`
+returns primitives. A Noul becomes `true` only when its probability is greater
+than `threshold`, which defaults to `0.5`; equality returns `false`. Score can
+be fractional. Unknown answers, choice keys, distributions or legends are
+rejected.
 
-Choice abstention is a separate native operation. Validate the minimum with
-`confidenceThreshold(minimum)` before starting the provider, then call
+## Confidence and abstention
+
+Choice abstention is a separate operation. Validate the minimum with
+`confidenceThreshold(minimum)` before calling the provider, then call
 `selections(request, result, minimum)` on an inspected response. It returns
-only Choice entries: the winning key at or above the minimum confidence,
-otherwise `null`. Answers, distributions, model and usage stay unchanged.
-This confidence minimum is distinct from the strict Noul probability threshold.
+only Choice entries: the winning key when its confidence is at or above the
+minimum, otherwise `null`. Answers, distributions, model and usage stay
+unchanged. This confidence minimum is distinct from the Noul probability
+threshold.
 
-## Providers and boundaries
+## Providers and limits
 
-Supply an application-owned `Provider`, or use the default `remote()` provider
-with server-side `TYPESAFE_API_KEY` configuration. Private transport and
-model configuration stay with the application owner. The client does not
-become the validator. `code` adapts deterministic or asynchronous callbacks
-through the same native validation; `local` borrows a caller-owned `bun-llama`
-context without downloading weights. Local outputs are model judgments;
-calibration, accuracy and trained weights require separate evidence.
-The native API and exact interfaces are in `packages/bun-types/yolo.d.ts`.
+Supply your own `Provider`, or use the default `remote()` provider configured
+with the server-side `TYPESAFE_API_KEY` environment variable. `code` adapts
+deterministic or asynchronous callbacks through the same validation; `local`
+borrows a caller-owned `bun-llama` context without downloading weights. Local
+outputs are raw model judgments and are not calibrated. The full type
+definitions are in
+[`packages/bun-types/yolo.d.ts`](https://github.com/aphrody-labs/bun/blob/main/packages/bun-types/yolo.d.ts).
 
-Batches contain 1–64 questions; Choice has 2–255 options, Score has 2–10
-criteria. Request and response JSON are each bounded to 1 MiB. `timeout`
+Batches contain 1–64 questions; Choice has 2–255 options and Score has 2–10
+criteria. Request and response JSON are each limited to 1 MiB. `timeout`
 bounds the complete operation, including retries, to 1–120000 ms.
-`maxRetries` is 0–3, default zero. A caller `AbortSignal` cancels pending work.
+`maxRetries` is 0–3, default 0. A caller `AbortSignal` cancels pending work.
 Typed judgments do not generate an explanatory answer: an application may
-separately generate text and then check its grounding against cited evidence.
+generate text separately and then check its grounding against cited evidence.
 
 ## Python SDK
 
-The existing runtime SDK provides `bun_yolo.Yolo`, `noul`, `choice` and `score`
-from `packages/bun-runtime-sdk/python/ctypes`. It has no Python HTTP or model
-engine. Each call sends a private JSON envelope over stdin to a Bun worker,
-which calls `bun:yolo.inspect`, `decide` or `value`. Structured descriptions
-are preserved. Converted values return as Python `bool`, `str` or `float`.
-`client.inspect`/`system_one(..., minimum_confidence=0.8)` returns the same raw
-`model`, `answers` and `usage`, plus Rust-computed `selections`. Python never
-compares the confidence itself. `inspect_async` provides the same cancellation
-and lifetime behavior as `decide_async`.
+The runtime SDK in
+[`packages/bun-runtime-sdk/python/ctypes`](https://github.com/aphrody-labs/bun/tree/main/packages/bun-runtime-sdk/python/ctypes)
+provides `bun_yolo.Yolo`, `noul`, `choice` and `score`. It has no Python HTTP
+client or model engine. Each call sends a JSON envelope over stdin to a Bun
+worker, which calls `inspect`, `decide` or `value` from `bun:yolo`. Converted
+values return as Python `bool`, `str` or `float`.
+`client.inspect(..., minimum_confidence=0.8)` (alias `system_one`) returns the
+raw `model`, `answers` and `usage`, plus the computed `selections`.
+`inspect_async` and `decide_async` are the asynchronous variants.
 
 ```python
 import os
@@ -77,7 +79,6 @@ from pathlib import Path
 from bun_yolo import Yolo, noul
 from yolo_runtime import Runtime
 
-# The release owner provisions a verified SDK manifest and qualified Bun.
 with Runtime() as runtime:
     client = Yolo(runtime, Path(os.environ["BUN_EXECUTABLE"]))
     result = client.value({"type": "noul", "noul": 0.8}, noul("Fixture answer"))
@@ -85,24 +86,18 @@ with Runtime() as runtime:
 ```
 
 This example validates a supplied answer without model inference. Provider
-configuration for inference comes from the caller's protected configuration;
-no key is embedded in source. `Yolo` borrows the `Runtime`, accepts one active
-call per instance and never closes that borrowed handle. Each child has at
-most 1 MiB of input and captured output. `transport_timeout_ms` bounds the
-supervised wait (default 130000 ms); native `options.timeout` still bounds
-inference. `cancel()` cancels the native completion operation, stops the owned
-child and releases its handles. `await client.decide_async(...)` uses the
-same call and joins native cleanup when the Python task is cancelled.
+credentials come from the caller's configuration; no key is embedded in
+source. `Yolo` borrows the `Runtime`, accepts one active call per instance and
+never closes the borrowed handle. Each child process has at most 1 MiB of
+input and captured output. `transport_timeout_ms` bounds the wait for the
+worker (1–130000 ms, default 130000); `options.timeout` still bounds
+inference. `cancel()` cancels the pending operation, stops the child process
+and releases its handles. When the Python task running
+`await client.decide_async(...)` is cancelled, the call waits for native
+cleanup.
 
-The supervisor must advertise `process.stdin` and `process.wait`, added in
-C ABI 1.6. A legacy ABI 1.4/1.5 installation is refused before private process
-creation. No state, token or provider body is put in argv, a temporary file
-or diagnostics. No polling fallback is used. Native errors return bounded
-names/codes; raw messages are deliberately not transported.
-
-Python transport fixtures do not qualify native execution. The native SDK
-and the Bun binary need separate per-target gates. Optional official Python
-provider-client compatibility, local-model execution, live provider accuracy and a
-published release remain separate qualifications. Existing application
-decision workflows and curated evals are retained until their consumer import
-switch passes; source migration alone does not authorize their removal.
+The runtime library must support the `process.stdin` and `process.wait`
+capabilities (C ABI 1.6 or later); older installations are refused before a
+process is created. State, tokens and provider bodies are never passed in
+argv, temporary files or diagnostics. Native errors return bounded names and
+codes without raw messages.

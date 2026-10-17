@@ -72,4 +72,4 @@ const results = Bun.HTML.extract(html, [
 
 ## Implementation
 
-The readability engine is Brave's Speedreader (MPL-2.0, derived from the MIT `readability` and `kuchikiki` crates), absorbed into Bun as the `bun_readability` crate. It parses with the same html5ever parser as `Bun.HTML.parse`; `Bun.HTML.extract` uses the `Bun.HTML` DOM and selector engine. `Bun.HTML` is created on first access, so neither API costs anything at startup. For streaming transformations without a DOM, use [`HTMLRewriter`](/runtime/html-rewriter).
+The readability engine is Brave's Speedreader (MPL-2.0, derived from the MIT `readability` and `kuchikiki` crates), compiled into Bun. It parses with the same html5ever parser as `Bun.HTML.parse`; `Bun.HTML.extract` uses the `Bun.HTML` DOM and selector engine. `Bun.HTML` is created on first access, so neither API costs anything at startup. For streaming transformations without a DOM, use [`HTMLRewriter`](/runtime/html-rewriter).

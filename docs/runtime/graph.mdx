@@ -1,67 +1,82 @@
 ---
 title: Native code graph
-description: Extract source graphs and export scoped snapshot evidence
+description: Build, query and store code graphs of Rust, TypeScript, JavaScript and Markdown sources with bun:graph
 ---
 
-`bun:graph` combines a native SQLite registry with Rust source extraction and graph queries.
-`bun:graph-native` runs extraction and graph algorithms in workers.
-Use a qualified Bun OS executable for these APIs.
+`bun:graph-native` extracts a code graph from source files and runs graph algorithms on it in a worker thread. `bun:graph` stores graphs, runs and artifacts in a SQLite registry and queries them.
 
-## Source scopes
+## Build and query a graph
 
-Each indexed domain has a source and profile.
-A runtime domain can use `src/runtime`, source `graph:bun:src:runtime`, and profile `bun`.
-A package domain can use `packages/buv` and source `graph:bun:packages:buv`.
-The registry keeps these domain values in repository metadata.
-The snapshot repeats the scope and records coverage.
+`executeGraph()` takes one request and resolves with its result. Each request has a `scope` (a `graph:`-prefixed source name and a profile) and an `op`.
 
-File coverage and AST coverage measure different work.
-The file index can retain a path for an unsupported format.
-An unsupported or metadata-only input has `UNRESOLVED` provenance.
-A metadata-only record has no content SHA-256.
-The export reports these gaps explicitly.
+```ts graph.ts icon="/icons/typescript.svg"
+import { executeGraph } from "bun:graph-native";
 
-## Snapshot evidence
+const scope = { source: "graph:demo", profile: "bun" } as const;
 
-Select the repository and snapshot IDs before generating documentation.
-The exporter verifies the requested domain, source and profile against both records.
-It reads nodes and edges only within that snapshot's namespace.
-Historical input hashes come from immutable file nodes in the snapshot.
-The current `files` table does not supply historical hashes.
+const built = await executeGraph({
+  op: "build",
+  scope,
+  files: [{ path: "a.ts", content: "export function a() { return b(); }\nfunction b() { return 1; }\n" }],
+});
 
-The export uses bounded SQL reads and streams Markdown and JSON files.
-Each section defaults to 256 rows.
-Each output defaults to an 8 MiB limit.
-You can set `--max-rows` up to 10,000 and `--max-bytes` up to 64 MiB.
-The manifest gives exact snapshot counts and marks truncated sections.
-Benchmark samples require matching domain metadata on a completed run.
+console.log(built.result.graph.nodes.length, built.result.stats.calls);
 
-Use `scripts/aphrody/graph-docs.ts --help` for the exporter options.
-The command requires `--repository`, `--snapshot`, `--domain`, `--source`, and `--profile`.
-`--workspace` selects the checkout.
-`--db` selects its SQLite registry.
-`--out` selects a local staging root.
+const path = await executeGraph({ op: "path", scope, graph: built.result.graph, from: "a", to: "b" });
+console.log(path.result.hops);
+```
 
-The output directory contains:
+`build` extracts nodes and links from Rust (`.rs`), JavaScript and TypeScript (`.js`, `.jsx`, `.mjs`, `.cjs`, `.ts`, `.tsx`, `.mts`, `.cts`) and Markdown (`.md`, `.mdx`) files. Its result has the graph, call resolution statistics and the files that failed to parse.
 
-- `graph.md`, `graph.mdx`, and `graph.html` for source evidence.
-- `inputs.json`, `nodes.json`, `edges.json`, and `samples.json` for bounded evidence rows.
-- `manifest.json` for snapshot, producer, generation-source and artifact hashes.
-- `SKILL.md` for a scoped local skill.
+| `op`      | Input                                           | Result                                                  |
+| --------- | ----------------------------------------------- | ------------------------------------------------------- |
+| `build`   | `files` (`{ path, content }`), `packages?`      | `graph`, `stats`, `parse_errors`                        |
+| `query`   | `graph`, `question`, `depth?`, `budget_tokens?` | The best-matching nodes and their neighbourhood as text |
+| `path`    | `graph`, `from`, `to`, `directed?`              | The hops of the shortest path, or `null`                |
+| `explain` | `graph`, `node`                                 | The node with its incoming and outgoing connections     |
+| `analyze` | `graph`, `top?`                                 | Communities, modularity and the most connected nodes    |
+| `export`  | `graph`                                         | The normalized graph                                    |
 
-The exporter keys the directory by its generation inputs.
-Repeated exports verify existing artifact hashes before reusing that directory.
-Changes produce a new directory.
+`limits` bounds a request: `max_files`, `max_file_bytes`, `max_source_bytes`, `max_nodes`, `max_edges`, `max_ast_depth` and `max_output_bytes`. Pass an `AbortSignal` as `{ signal }` to cancel a request. At most four requests run at once; further requests reject until one finishes.
 
-## Docs and skills
+## Store graphs
 
-Bun's docs use MDX pages under `docs/` and navigation in `docs/docs.json`.
-Repository skills use `.claude/skills/<name>/SKILL.md` with `name` and `description` frontmatter.
-Generated graph evidence stays under local staging, which defaults to `tmp/graph-docs`.
-Generating evidence does not publish docs or install a skill into a private home.
+`BunPython` (also exported as `PyJS`) opens a SQLite registry. With no argument it uses `bun_python.sqlite` in the current directory (`registryPath`).
 
-The PyJS plugin retains its API source hashes.
-Pass all five scope options to its docs generator to include graph evidence.
-An export identifies the indexed producer separately from the sources used during generation.
-A successful export establishes the selected evidence and its hashes.
-Runtime compatibility and full parser coverage require their own native tests.
+```ts registry.ts icon="/icons/typescript.svg"
+import { BunPython } from "bun:graph";
+import { executeGraph } from "bun:graph-native";
+
+using registry = new BunPython("graph.sqlite");
+const repository = registry.repository("my-app", "git", process.cwd());
+
+const { result } = await executeGraph({
+  op: "build",
+  scope: { source: "graph:my-app", profile: "bun" },
+  files: [{ path: "a.ts", content: "export function a() {}\n" }],
+});
+
+const hash = new Bun.CryptoHasher("sha256").update(JSON.stringify(result.graph)).digest("hex");
+await registry.importGraph(repository, result.graph, hash);
+
+console.log(registry.queryNodes({ repositoryId: repository, search: "a" }));
+console.log(registry.counts());
+```
+
+A registry holds repositories, files, nodes, edges, graph snapshots, runs, samples, fixes, events and artifacts. Its main methods:
+
+| Method                                                 | Description                                                 |
+| ------------------------------------------------------ | ----------------------------------------------------------- |
+| `repository(name, kind, root, revision?)`              | Create or update a repository and return its id             |
+| `importGraph(repositoryId, graph, sha256)`             | Import a graph as a new snapshot                            |
+| `queryNodes({ repositoryId, kind?, label?, search? })` | Find nodes, paginated with `limit` and `offset`             |
+| `neighbors(id)`, `incoming(id)`, `outgoing(id)`        | Adjacent nodes with their edges                             |
+| `traverse(id, { direction?, maxDepth? })`              | Walk the graph from a node, with node and work limits       |
+| `snapshots(repositoryId)`, `getSnapshot(repositoryId)` | Snapshots of a repository                                   |
+| `coverage({ repositoryId, snapshotId? })`              | Node and edge counts by provenance, and unresolved nodes    |
+| `startRun()`, `finishRun()`, `sample()`, `event()`     | Record command runs, benchmark samples and events           |
+| `export(path?)`                                        | Write the registry as JSON, next to the database by default |
+
+`bun:graphx` adds a Valkey/Redis result cache (`GraphRedisCache`) and helpers that render a registry as Markdown or HTML and stream bounded JSON. `packages/bun-types/graph.d.ts` declares every type.
+
+The [`bun mcp`](/runtime/mcp) graph tools and [`bun lsp`](/runtime/lsp) use the same extraction to answer questions about a workspace.

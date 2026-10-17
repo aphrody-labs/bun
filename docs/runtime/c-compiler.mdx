@@ -198,11 +198,11 @@ const { symbols } = cc({
 type Flags = string | string[];
 ```
 
-These are flags like `-I` for include directories and `-D` for preprocessor definitions. They are appended after the defaults (`-std=c11 -Wl,--export-all-symbols -g -O2`), so a later `-std=` or `-O` wins. `-std=` accepts `c99`, `c11`, `c17` and `c23`, and their `gnu` variants; `-std=c23` defines `bool`, `true`, `false`, `nullptr`, `static_assert`, `alignas`, `alignof` and `thread_local`.
+These are flags like `-I` for include directories and `-D` for preprocessor definitions. They are appended after the defaults (`-std=c11 -Wl,--export-all-symbols -g -O2`), so a later `-std=` or `-O` wins. `-std=` accepts `c99`, `c11`, `c17` and `c23`, and their `gnu` variants; `-std=c23` defines `bool`, `true`, `false`, `nullptr`, `static_assert`, `alignas` and `alignof`.
 
 ### Language support
 
-TinyCC compiles C11: `_Static_assert`, `_Generic`, `_Alignas`, `_Thread_local` and `_Atomic`. Bun ships the freestanding headers (`<stdbool.h>`, `<stddef.h>`, `<stdarg.h>`, `<stdalign.h>`, `<stdnoreturn.h>`, `<float.h>`, `<stdatomic.h>`, `<tgmath.h>`). Atomic operations are sequentially consistent whatever memory order is requested. Other headers (`<stdio.h>`, `<string.h>`, …) come from the system: on Linux, including musl distributions such as Alpine, Bun looks in `/usr/include` and links against the C library in `/usr/lib`.
+TinyCC compiles C11: `_Static_assert`, `_Generic`, `_Alignas` and `_Atomic`. Thread-local variables (`_Thread_local`) are rejected, because the compiled code has no thread-local storage segment. Bun ships the freestanding headers (`<stdbool.h>`, `<stddef.h>`, `<stdarg.h>`, `<stdalign.h>`, `<stdnoreturn.h>`, `<float.h>`, `<stdatomic.h>`, `<tgmath.h>`). Other headers (`<stdio.h>`, `<string.h>`, …) come from the system: on Linux, including musl distributions such as Alpine, Bun looks in `/usr/include` and links against the C library in `/usr/lib`.
 
 ### Arguments and errors
 

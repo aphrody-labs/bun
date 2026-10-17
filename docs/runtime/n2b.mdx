@@ -23,12 +23,14 @@ bun n2b --aggressive
 
 ## Reports
 
+`--report` selects `text` (default), `json`, `jsonl`, `md` or `sarif`.
+
 ```bash terminal icon="terminal"
 bun n2b --report=json > n2b.json
-bun n2b --report=jsonl
+bun n2b --report=sarif > n2b.sarif
 ```
 
-`bun n2b` runs the embedded migration engine directly. Its reports remain separate from `bun lint` diagnostics.
+`--dry-run` previews the rewrites without writing files, and `--since <ref>` scans only the files changed since a git ref. `bun n2b rules` lists every rule with its category and documentation link.
 
 ## Migrate a project
 
@@ -43,10 +45,6 @@ bun migrate
 
 `bun migrate` is the same as `bun n2b migrate`.
 
-## Embedded engine
+`bun n2b --help` lists every command and flag.
 
-n2b and its rule registry are linked into the `bun` binary. Scans and reports run in process without installing a package or launching a migration backend. `BUN_N2B` does not select another implementation. `--external-backend` is unsupported; after `--`, it is a literal scan path. Project migration can run `bun install` when applying dependency changes.
-
-`bun n2b --help` lists every n2b command and flag.
-
-`bun n2b` and `bun migrate` always select the native commands. Use `bun run n2b` or `bun run migrate` to run a project's scripts.
+`bun n2b` and `bun migrate` always run the built-in commands. Use `bun run n2b` or `bun run migrate` to run a project's scripts of the same name.

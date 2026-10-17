@@ -169,14 +169,18 @@ port = 3000
 
 ## Lint and format
 
-[`bun lint`](/runtime/lint) and [`bun fmt`](/runtime/fmt) run their linked native engines. They do not use `[lint]` or `[fmt]` sections to select executables, versions or downloads.
+The `[lint]` section configures [`bun lint`](/lint) and the `[fmt]` section configures [`bun fmt`](/format). A key sets the default of the flag with the same name in camelCase (`maxWarnings` for `--max-warnings`, `semi = false` for `--no-semi`); flags passed on the command line override it. `[lint.rules]` sets rules. Run `bun lint --init` or `bun fmt --init` to add the section.
 
-Use `.oxlintrc.json` or `.oxlintrc.jsonc` for lint rules, and `.oxfmtrc.json` or `.oxfmtrc.jsonc` for formatting options. Pass `--config` for an explicit configuration, filesystem operands for scope and `--ignore-pattern` for exclusions.
+```toml title="bunfig.toml" icon="settings"
+[lint.rules]
+"no-console" = "warn"
 
-```sh
-bun lint --config .oxlintrc.json src
-bun fmt --config .oxfmtrc.json --check src
+[fmt]
+printWidth = 100
+semi = false
 ```
+
+Both commands also read an existing ESLint, oxlint, Prettier or oxfmt configuration file. Pass `--config` to use a specific one.
 
 ## Test runner
 
@@ -469,8 +473,8 @@ Use `*` as the rule name to turn off every rule of a plugin. In the same table, 
 "unicorn/no-null" = "warn"
 ```
 
-- A wildcard can only be `"off"`. To turn rules on, name them or use [`lint.categories`](#lint-categories).
-- [`lint.overrides`](#lint-overrides) and flags apply after `[lint.rules]`. A wildcard there also turns off a rule that `[lint.rules]` sets by name.
+- A wildcard can only be `"off"`. To turn rules on, name them or use [`lint.categories`](#lintcategories).
+- [`lint.overrides`](#lintoverrides) and flags apply after `[lint.rules]`. A wildcard there also turns off a rule that `[lint.rules]` sets by name.
 - `"react/*"` leaves `react/jsx-uses-react` on. That rule reports nothing. It keeps `no-unused-vars` quiet about `React`.
 - A wildcard works with Bun's own lint config. If the working directory has an ESLint or oxlint config, `bun lint` rejects the wildcard. Files under a config file in a nested directory follow that file, and the wildcard doesn't apply to them.
 
@@ -748,7 +752,7 @@ By default, `functions` is `clsx`, `cn`, `cva`, `cx`, `classNames`, `classnames`
 
 ### `format.sortPackageJson`
 
-[Sort the keys of `package.json`](/format#sort-package-json). Default `false`.
+[Sort the keys of `package.json`](/format#sort-packagejson). Default `false`.
 
 ```toml title="bunfig.toml" icon="settings"
 [fmt]
@@ -877,7 +881,7 @@ peer = true
 
 Whether `bun install` runs in "production mode". Default `false`.
 
-In production mode, Bun does not install `"devDependencies"` and freezes the lockfile (same as [`install.frozenLockfile`](#install-frozenlockfile)). Use the `--production` CLI flag to enable it for a single install. Since production mode freezes the lockfile, `bun add`, `bun remove`, and `bun update` fail while it is set.
+In production mode, Bun does not install `"devDependencies"` and freezes the lockfile (same as [`install.frozenLockfile`](#installfrozenlockfile)). Use the `--production` CLI flag to enable it for a single install. Since production mode freezes the lockfile, `bun add`, `bun remove`, and `bun update` fail while it is set.
 
 ```toml title="bunfig.toml" icon="settings"
 [install]

@@ -1,6 +1,7 @@
 ---
 title: Upgrade Bun to the latest version
 sidebarTitle: Upgrade Bun
+description: Upgrade Bun with the built-in bun upgrade command or install a specific version.
 mode: center
 ---
 
@@ -10,7 +11,7 @@ Bun upgrades itself with the built-in `bun upgrade` command.
 bun upgrade
 ```
 
-`bun upgrade` downloads and installs the latest `aphrody-v*` release of [aphrody-labs/bun](https://github.com/aphrody-labs/bun/releases), replacing the currently installed version.
+`bun upgrade` downloads and installs the latest release of [aphrody-labs/bun](https://github.com/aphrody-labs/bun/releases), checks it against the release's `SHA256SUMS.txt`, and replaces the currently installed version. Set `APHRODY_BUN_REPO` to download releases from another repository.
 
 <Note>To see the current version of Bun, run `bun --version`.</Note>
 
@@ -22,18 +23,18 @@ After upgrading, verify the new version:
 
 ```bash terminal icon="terminal"
 bun --version
-# Output: 1.x.y-aphrody.n
+# Output: 1.x.y
 
 # See the exact commit of the Bun binary
 bun --revision
-# Output: 1.x.y-aphrody.n+abc123def
+# Output: 1.x.y+abc123def
 ```
 
 ---
 
 ## Upgrade to canary builds
 
-`bun upgrade --canary` installs the release tagged `canary`. aphrody-labs/bun does not publish one at the moment, so the command reports that no canary build exists.
+`bun upgrade --canary` installs the release tagged `canary`. When the repository has no such release, the command reports that no canary build exists.
 
 ```bash terminal icon="terminal"
 bun upgrade --canary
@@ -55,15 +56,15 @@ bun upgrade --stable
 
 ## Install a specific version
 
-To install a specific version, pass an upstream base version (the newest `aphrody.<n>` release of that base) or an exact release tag to the install script:
+To install a specific version, pass a version or an exact release tag to the install script:
 
 <Tabs>
   <Tab title="macOS & Linux">
-    ```bash terminal icon="terminal" curl -fsSL https://aphrody.app/install.sh | bash -s bun-v1.4.4 ```
+    ```bash terminal icon="terminal" curl -fsSL https://aphrody.app/install.sh | bash -s bun-v1.4.5 ```
   </Tab>
   <Tab title="Windows">
     ```powershell PowerShell icon="windows" & ([scriptblock]::Create((irm https://aphrody.app/install.ps1))) -Version
-    bun-v1.4.4 ```
+    1.4.5 ```
   </Tab>
 </Tabs>
 
@@ -74,12 +75,8 @@ To install a specific version, pass an upstream base version (the newest `aphrod
 If you installed Bun with a package manager, upgrade with that package manager instead of `bun upgrade` to avoid conflicts.
 
 <Tip>
-**Homebrew users** <br />
-Use `brew upgrade bun` instead.
-
-**Scoop users** <br />
-Use `scoop update bun` instead.
-
+  **npm users** <br />
+  Use `npm install -g @aphrody/bun-runtime@latest` instead.
 </Tip>
 
 ---

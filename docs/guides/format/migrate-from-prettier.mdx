@@ -1,5 +1,6 @@
 ---
 title: Migrate from Prettier to bun fmt
+description: Replace Prettier with bun fmt, which reads your existing Prettier configuration
 sidebarTitle: Migrate from Prettier
 mode: center
 ---
@@ -107,7 +108,7 @@ The plugin's options are those of 4.1.1: `svelteSortOrder`, `svelteAllowShorthan
 
 Svelte files also go to your installed Prettier with `rangeStart`, `rangeEnd`, or `cursorOffset`, as flags or in the config.
 
-[`svelte` in `bunfig.toml`](/runtime/bunfig#format-svelte) overrides all of this: with `svelte = true` Bun formats the files whichever version is installed, and with `svelte = false` nothing does.
+[`svelte` in `bunfig.toml`](/runtime/bunfig#formatsvelte) overrides all of this: with `svelte = true` Bun formats the files whichever version is installed, and with `svelte = false` nothing does.
 
 ---
 
@@ -136,7 +137,7 @@ error: 3 files were not formatted because the Prettier config uses plugins that 
 
 ---
 
-You don't have to keep `.prettierrc`. Move the options to [`bunfig.toml`](/format#options), under the same names, and delete the file. `overrides` become [`[[fmt.overrides]]`](/runtime/bunfig#format-overrides).
+You don't have to keep `.prettierrc`. Move the options to [`bunfig.toml`](/format#options), under the same names, and delete the file. `overrides` become [`[[fmt.overrides]]`](/runtime/bunfig#formatoverrides).
 
 ```toml bunfig.toml icon="settings"
 [fmt]

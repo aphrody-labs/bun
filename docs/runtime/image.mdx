@@ -147,7 +147,7 @@ await img.write(Bun.s3.file("bucket/out.webp"));
 
 `.write()` accepts the same destinations as `Bun.write` — a path string, `Bun.file()`, `Bun.s3.file()`, or an fd. If you didn't chain a format method and the destination is a path string, the extension picks one (`.jpg`/`.png`/`.webp`/`.heic`/`.avif`).
 
-`rgba()` returns owned RGBA8 after the transform pipeline, with unassociated
+`rgba()` returns raw RGBA8 pixels after the transform pipeline, with unassociated
 alpha and the source ICC profile when available. It bypasses image encoding;
 selecting `.png()` or `.jpeg()` does not change these raw pixels.
 

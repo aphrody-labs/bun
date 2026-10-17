@@ -1,5 +1,6 @@
 ---
 title: Open a GTK 4 window with bun:ffi
+description: Create a GTK 4 window from JavaScript by calling GTK, GObject and GIO through bun:ffi.
 sidebarTitle: GTK 4 window
 mode: center
 ---
@@ -59,15 +60,6 @@ bun window.ts
 GTK, GLib, GObject and GIO are separate libraries. On Linux, `dlsym` on the GTK handle would also find GLib symbols, but `GetProcAddress` on Windows does not, so open each one. On Windows, install GTK with [MSYS2](https://www.msys2.org) (`pacman -S mingw-w64-ucrt-x86_64-gtk4`) and pass absolute paths under `C:\msys64\ucrt64\bin`, or add that directory to `PATH`. On Linux, GTK needs a display (`DISPLAY` or `WAYLAND_DISPLAY`); `xvfb-run` works in CI.
 
 `g_application_run` blocks the JavaScript thread, so timers, promises and I/O callbacks do not run while the window is open. Use GLib sources such as `g_timeout_add` with a `JSCallback` for periodic work inside the loop.
-
-## Tested platforms
-
-The fixture prints `window created` and `window closed` with exit code 0 on:
-
-- Windows 11: GTK 4.24.1 from MSYS2 UCRT64
-- Ubuntu 26.04: GTK 4.22.4 under `xvfb-run`
-
-The Linux images are `scripts/aphrody/gui/ubuntu.Dockerfile` and `scripts/aphrody/gui/alpine.Dockerfile`.
 
 ---
 

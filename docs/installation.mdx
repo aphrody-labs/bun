@@ -5,7 +5,7 @@ description: Install the Aphrody runtime with the install script, npm, or a rele
 
 ## Overview
 
-The Aphrody runtime ships as a single executable, `bun`. Inside an Aphrody installation, the distribution installs and updates it. Elsewhere, install it with the install script, npm, or a release archive from [GitHub releases](https://github.com/aphrody-labs/bun/releases).
+The Aphrody runtime ships as a single executable, `bun`. Install it with the install script, npm, or a release archive from [GitHub releases](https://github.com/aphrody-labs/bun/releases).
 
 <Tip>After installation, verify with `bun --version` and `bun --revision`.</Tip>
 
@@ -24,7 +24,7 @@ The Aphrody runtime ships as a single executable, `bun`. Inside an Aphrody insta
       **Linux users:** You need the `unzip` package to install Bun (`sudo apt install unzip`). The script picks the musl archive on Alpine and other musl systems.
     </Note>
     <Note>
-      **macOS users:** The latest release has no macOS binary. Install `aphrody-v1.4.3-aphrody.2`, the last release with macOS builds (`bash -s aphrody-v1.4.3-aphrody.2`), or [build from source](/project/contributing).
+      **macOS users:** Recent releases have no macOS binary. Install `aphrody-v1.4.3-aphrody.2`, the last release with macOS builds (`bash -s aphrody-v1.4.3-aphrody.2`), or [build from source](/project/contributing).
     </Note>
 
   </Tab>
@@ -56,20 +56,20 @@ The Aphrody runtime ships as a single executable, `bun`. Inside an Aphrody insta
   </Tab>
 </Tabs>
 
-The scripts are [`scripts/aphrody/install.sh`](https://github.com/aphrody-labs/bun/blob/main/scripts/aphrody/install.sh) and [`install.ps1`](https://github.com/aphrody-labs/bun/blob/main/scripts/aphrody/install.ps1). They download the release archive for the current platform, check it against the release's `SHA256SUMS.txt`, and install `bun` and `bunx` into `$BUN_INSTALL/bin` (default `~/.bun/bin`). Set `GITHUB_TOKEN` to authenticate the release lookup.
+The scripts are [`scripts/aphrody/install.sh`](https://github.com/aphrody-labs/bun/blob/main/scripts/aphrody/install.sh) and [`install.ps1`](https://github.com/aphrody-labs/bun/blob/main/scripts/aphrody/install.ps1). They download the release archive for the current platform from the `dist.aphrody.app` mirror (or GitHub when the mirror does not answer), check it against the release's `SHA256SUMS.txt`, and install `bun` and `bunx` into `$BUN_INSTALL/bin` (default `~/.bun/bin`). On Windows, the script also adds that directory to the user `Path` unless you pass `-NoPathUpdate`. Set `GITHUB_TOKEN` to authenticate requests to GitHub.
 
 To check that Bun was installed successfully, open a new terminal window and run:
 
 ```bash terminal icon="terminal"
 bun --version
-# Output: 1.4.4
+# Output: 1.x.y
 
 # See the release and the commit of aphrody-labs/bun that you're using
 bun --revision
-# Output: 1.4.4+<commit>
+# Output: 1.x.y+<commit>
 ```
 
-`bun --version` prints the component version. `Bun.version` and `process.versions.bun` report the same base version (`1.4.4`).
+`Bun.version` and `process.versions.bun` report the same version as `bun --version`.
 
 <Warning>
   If you've installed Bun but are seeing a `command not found` error, you may have to manually add the installation
@@ -142,7 +142,7 @@ bun --revision
 
 ## Upgrading
 
-Once installed, the binary can upgrade itself to the latest `aphrody-v*` release:
+Once installed, the binary can upgrade itself to the latest release:
 
 ```bash terminal icon="terminal"
 bun upgrade
@@ -152,19 +152,19 @@ bun upgrade
 
 ## Installing Older Versions
 
-Pass an upstream base version (the newest `aphrody.<n>` release of that base) or an exact release tag to the install script.
+Pass a version (`1.4.5`) or an exact release tag (`bun-v1.4.5`, `aphrody-v1.4.3-aphrody.2`) to the install script.
 
 <Tabs>
   <Tab title="Linux & macOS">
     ```bash terminal icon="terminal"
-    curl -fsSL https://aphrody.app/install.sh | bash -s 1.4.4
+    curl -fsSL https://aphrody.app/install.sh | bash -s 1.4.5
     curl -fsSL https://aphrody.app/install.sh | bash -s aphrody-v1.4.3-aphrody.2
     ```
 
   </Tab>
   <Tab title="Windows">
     ```powershell PowerShell icon="windows"
-    & ([scriptblock]::Create((irm https://aphrody.app/install.ps1))) -Version aphrody-v1.4.3-aphrody.2
+    & ([scriptblock]::Create((irm https://aphrody.app/install.ps1))) -Version 1.4.5
     ```
 
   </Tab>
@@ -182,7 +182,7 @@ Release archives are attached to each release on the [releases page](https://git
 | `bun-linux-x64-musl.zip` | Linux x64, musl (Alpine) |
 | `bun-windows-x64.zip`    | Windows x64              |
 
-The targets of each release are listed in [RELEASES.md](https://github.com/aphrody-labs/bun/blob/main/RELEASES.md). `aphrody-v1.4.3-aphrody.2` also has macOS, Linux ARM64 and Windows ARM64 archives.
+The archives available for each release are listed on its release page. `aphrody-v1.4.3-aphrody.2` also has macOS, Linux ARM64 and Windows ARM64 archives (`aarch64` in the archive name).
 
 <Note>
   A glibc binary needs the glibc version of the system it was built on, or newer. The glibc requirement of each release

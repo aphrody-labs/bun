@@ -1,6 +1,7 @@
 ---
 title: Open a native Win32 window with bun:ffi
 sidebarTitle: Native Win32 window
+description: Register a window class, create a window and run the Win32 message loop from JavaScript with bun:ffi.
 mode: center
 ---
 
@@ -82,15 +83,6 @@ bun window.ts
 ```
 
 `GetMessageW` blocks the JavaScript thread, so timers, promises and I/O callbacks do not run while the window is open. Use Win32 timers (`SetTimer` + `WM_TIMER`) for periodic work inside the loop.
-
-## Tested platforms
-
-The fixture prints `window created` and `window closed` with exit code 0 on:
-
-- Windows 11: user32 and gdi32
-- Ubuntu 26.04: Wine 10.0 running the Windows `bun.exe` under `xvfb-run`
-
-The Linux images are `scripts/aphrody/gui/ubuntu.Dockerfile` and `scripts/aphrody/gui/alpine.Dockerfile`.
 
 ---
 

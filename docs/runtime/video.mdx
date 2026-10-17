@@ -1,12 +1,12 @@
 ---
 title: Bun.Video
-description: Native video metadata, thumbnails, frame batches, audio, GIF and MP4 remux in TypeScript
+description: Read video metadata, extract frames, audio and GIFs, and remux MP4 files with Bun's native video API.
 ---
 
-`Bun.Video` is Bun's native video API. The Rust FilmCraft provider reads media
-and decodes frames. The [`Bun.Image`](/runtime/image) worker transforms and
-encodes those frames. These operations run inside Bun without launching an
-external media executable.
+`Bun.Video` is Bun's native video API. Its built-in decoder (FilmCraft, reported
+by `Bun.Video.decoder`) reads media and decodes frames; the
+[`Bun.Image`](/runtime/image) pipeline transforms and encodes those frames.
+These operations run inside Bun without launching an external media executable.
 
 ```ts
 if (!Bun.Video.available) throw new Error("This runtime has no native video provider");
@@ -15,19 +15,19 @@ const metadata = await video.metadata();
 await video.frame(480).resize(640, 360).webp({ lossless: true }).write("frame.webp");
 ```
 
-Use the global `Bun.Video` class. Importing `bun:video` or installing
-`@aphrody/bun-video` is unnecessary for this native API. The package supplies
-composition engines, HLS/DASH, browser capture and optional FFmpeg/mpv adapters.
+Use the global `Bun.Video` class; there is no module to import. The separate
+`@aphrody/bun-video` package adds composition engines, HLS/DASH, browser capture
+and optional FFmpeg/mpv adapters on top of it.
 
-The provider is selected at build time (`--video-native=on`); `available` reports
-its inclusion, not support for every codec. MP4 with H264 video and AAC audio
-is the qualified input. Other containers, profiles and targets need separate
-qualification. Still-image import is owned by `Bun.Image`.
+`Bun.Video.available` reports whether this build of Bun includes the native
+decoder; it does not guarantee support for every codec. Input must be an MP4
+file with H.264 video and, if present, AAC audio; other containers and codecs may be
+rejected. Use `Bun.Image` for still images.
 
 ## Command line
 
-`bun video` exposes the same native owner. Inspect the provider and extract a
-thumbnail from a local file:
+`bun video` exposes the same native API on the command line. Inspect the
+decoder, read metadata and extract frames from a local file:
 
 ```sh
 bun video info --json
@@ -39,11 +39,11 @@ bun video gif clip.mp4 preview.gif --duration 1 --fps 8 --width 64
 bun video remux clip.mp4 remux.mp4
 ```
 
-Output files must be new. The batch command requires a new directory. Use
-`bun video --help` for the options and `--json` for machine-readable results.
-Native commands use `Bun.Video` directly. Composition and downloader commands
-such as `bun video remotion` require the checksum-verified Bun Video executable
-and its release receipt beside Bun.
+Output files must not already exist, and `frames` requires a new directory.
+Use `bun video --help` for the options and `--json` for machine-readable
+results. Composition and downloader commands such as `bun video remotion` are
+provided by the optional Bun Video executable, which must be installed next to
+the `bun` executable together with its release manifest.
 
 ## Sources and metadata
 
@@ -76,7 +76,7 @@ const pixels = await new Bun.Video("episode.mp4")
 // { width, height, channels: 4, data: Uint8Array, iccProfile }
 ```
 
-`rgba()` returns owned RGBA8 bytes without encoding and decoding a PNG.
+`rgba()` returns raw RGBA8 pixels without a PNG encode and decode round trip.
 Other terminals mirror Image: `bytes`, `buffer`/`toBuffer`, `blob`, `write`,
 `toBase64`, `dataurl`/`toDataURL` and `placeholder`. JPEG, PNG, WebP, HEIC and
 AVIF output use Image's encoders and platform support. `Video.backend` shares
@@ -94,7 +94,7 @@ const step = meta.fpsDenominator / meta.fpsNumerator;
 const frames = await video.frames({ start: 0, end: 3 * step, step, maxFrames: 3 });
 ```
 
-Each batch owns one decoder session. Frame batches preserve source resolution;
+Each batch uses one decoder session. Frame batches preserve source resolution;
 use `frame(time)` to transform an individual frame. This API does not keep an
 entire episode decoded in memory.
 
@@ -106,16 +106,16 @@ await Bun.write("moment.gif", await video.gif({ start: 638, duration: 5, fps: 12
 await video.remux("episode-remux.mp4");
 ```
 
-Audio extraction returns PCM16 WAV and is bounded to 30 seconds and 64 MiB.
-GIF export is palette-quantized: it is a lossy derivative, limited to five
-seconds, 120 frames, 640×360 and 32 MiB. Remux preserves encoded access units
-and writes a new MP4; it refuses overwriting an existing destination.
-Remux is distinct from encoding a new composition or guaranteeing a smaller file.
+Audio extraction returns PCM16 WAV and is limited to 30 seconds and 64 MiB.
+GIF export is palette-quantized and therefore lossy; it is limited to five
+seconds, 24 frames per second, 640×360 and 32 MiB. Remux copies the encoded
+samples into a new MP4 without re-encoding and refuses to overwrite an existing
+destination; it does not make the file smaller.
 
 ## Frame analysis with WebGPU
 
-The package extension `@aphrody/bun-video/frame-analysis` owns bounded WGSL
-histograms and detail metrics. Pass raw Image/Video pixels directly:
+The `@aphrody/bun-video/frame-analysis` export computes WGSL histograms and
+detail metrics on the GPU. Pass raw Image or Video pixels directly:
 
 ```ts
 import { analyzeFrameRgba } from "@aphrody/bun-video/frame-analysis";
@@ -123,6 +123,7 @@ const rgba = await video.frame(780).resize(128, 72).rgba();
 const metrics = await analyzeFrameRgba(rgba, { backend: "chromium", timeout: 5000 });
 ```
 
-The extension reports the actual compute adapter and rejects unsupported
-backends. It accepts at most 65536 pixels and does not silently substitute CPU
-analysis. WGSL frame analysis does not establish hardware video decoding.
+The result reports the compute adapter that ran the analysis, and unsupported
+backends are rejected rather than replaced by a CPU fallback. Input is limited
+to 65536 pixels (each dimension from 4 to 256). Frame analysis does not use
+hardware video decoding.

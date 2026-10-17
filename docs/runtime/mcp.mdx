@@ -61,6 +61,7 @@ Calling the same tool with `{"cursor": "3.31994"}` returns the next page. The cu
 | --- | --- | --- | --- |
 | `docs_search` | Search the Bun documentation embedded in this binary (runtime APIs, bundler, package manager, test runner, guides). Returns ranked page paths with a description and a matching line; read a page with docs_read. | `query`, `limit?`, `offset?` | read-only |
 | `docs_read` | Read one page of the embedded Bun documentation as Markdown, whole or one section. `path` is a docs_search result (runtime/http/server), a docs URL, or "llms.txt" for the index of every page. | `path`, `heading?` | read-only |
+| `examples_search` | Search the bun-native dataset: working Bun code for a task (Bun.serve, Bun.file, bun:sqlite, Bun.$, bun:test, Bun.sql, Bun.redis, Bun.s3, Bun.build, Bun.spawn, workers, FFI...), exact signatures from bun-types, and the Bun replacement of Node.js APIs and npm packages. Use before writing Bun code; docs_search covers the prose docs. | `query`, `kind?`, `limit?`, `offset?` | read-only |
 | `skills_list` | List the agent skills available here: Bun repository skills (embedded), user skills (~/.claude/skills, ~/.codex/skills, ~/.bun/agent/skills), installed Bun plugin skills and the project's .claude/skills. Filter with `query`. | `query?`, `limit?`, `offset?` | read-only |
 | `skill_read` | Read a skill's instructions (SKILL.md) or one of its files, then follow them for the task at hand. | `name`, `file?` | read-only |
 | `memory_search` | Full-text search (SQLite FTS5) of the persistent agent memory for this project: decisions, conventions, references saved by memory_write or imported from Markdown notes. Empty query lists the most recent entries. | `query?`, `project?`, `limit?`, `offset?` | read-only |
@@ -94,8 +95,9 @@ Calling the same tool with `{"cursor": "3.31994"}` returns the next page. The cu
 | `deps_info` | Facts about one dependency read from its installed manifest: version, local path, license, repository, homepage, description and the documentation files it ships. | `name`, `root?`, `ecosystem?` | read-only |
 | `deps_tree` | List a directory of a dependency's installed sources. | `name`, `path?`, `depth?`, `root?`, `ecosystem?` | read-only |
 | `deps_read` | Read one file of a dependency's installed sources. Text past max_bytes is cut and the result is flagged truncated. | `name`, `path`, `offset?`, `max_bytes?`, `root?`, `ecosystem?` | read-only |
-| `deps_search` | Regular-expression search over the installed sources of one or more dependencies, in parallel. Returns file, line and the matching line. | `query`, `names`, `glob?`, `case_insensitive?`, `max_results?`, `root?`, `ecosystem?` | read-only |
+| `deps_search` | Regular-expression search over the installed sources of one or more dependencies, in parallel. Returns file, line and the matching line. | `query`, `names`, `glob?`, `case_insensitive?`, `max_results?`, `root?` | read-only |
 | `deps_docs` | Rank the documentation shipped by installed dependencies (README, *.md, *.mdx, docs/, *.d.ts) against a query and return the best sections. Offline counterpart of a web documentation search, pinned to the installed versions. | `query`, `names?`, `max_results?`, `root?` | read-only |
+| `yolo_decide` | Judge supplied state through Bun's typed decision capability: Noul booleans, Choice keys or Score values. Optional minimum_confidence adds candidate selections with null abstention; raw answers and distributions remain. A judgment does not execute or authorize an action. The server owns backend configuration and credentials; no credential arguments. At most 64 questions, 32000 estimated input tokens; shared process budget of 20 calls, 64 judgments and 64000 estimated tokens per minute, one call at a time. | `state`, `model?`, `questions`, `minimum_confidence?` | read-only |
 
 {/* generated:mcp-tools:end */}
 
@@ -131,4 +133,4 @@ Each skill is also a prompt, with an optional `task` argument.
 
 ## Adding tools
 
-Tools are Rust values registered in the `bun_mcp` crate (`src/mcp/registry.rs`): a name, a description, a JSON Schema of the arguments, behaviour annotations and a function. A module exposes a `TOOLS: &[Tool]` slice; the same descriptors produce `tools/list`, the install manifest and the table on this page.
+Tools are Rust values registered in the `bun_mcp` crate ([`src/mcp/registry.rs`](https://github.com/aphrody-labs/bun/blob/main/src/mcp/registry.rs)): a name, a description, a JSON Schema of the arguments, behaviour annotations and a function. A module exposes a `TOOLS: &[Tool]` slice; the same descriptors produce `tools/list`, the install manifest and the table on this page.
