@@ -23,6 +23,7 @@ import { dotnetHostRustSources } from "./deps/dotnet-host.ts";
 import { allDeps } from "./deps/index.ts";
 import { libwebp, LIBWEBP_COMMIT } from "./deps/libwebp.ts";
 import { lolhtml } from "./deps/lolhtml.ts";
+import { ngxRust } from "./deps/ngx-rust.ts";
 import { rustArgon2 } from "./deps/rust-argon2.ts";
 import { uutils } from "./deps/uutils.ts";
 import { uv, uvRustSources } from "./deps/uv.ts";
@@ -194,6 +195,9 @@ export function emitBun(n: Ninja, cfg: Config, sources: Sources): BunOutput {
   const rustArgon2Dep = resolveDep(n, cfg, rustArgon2, depsByName);
   assert(rustArgon2Dep !== null, "rust-argon2 resolveDep returned null — should never be skipped");
   depsByName.set(rustArgon2.name, rustArgon2Dep);
+  const ngxRustDep = resolveDep(n, cfg, ngxRust, depsByName);
+  assert(ngxRustDep !== null, "ngx-rust resolveDep returned null — should never be skipped");
+  depsByName.set(ngxRust.name, ngxRustDep);
   const uutilsDep = resolveDep(n, cfg, uutils, depsByName);
   assert(uutilsDep !== null, "uutils resolveDep returned null — should never be skipped");
   depsByName.set(uutils.name, uutilsDep);
@@ -217,7 +221,13 @@ export function emitBun(n: Ninja, cfg: Config, sources: Sources): BunOutput {
       ...windowsToolchainRustSources(cfg),
       ...dotnetHostRustSources(cfg),
     ],
-    vendorStamps: [...lolhtmlDep.outputs, ...rustArgon2Dep.outputs, ...uutilsDep.outputs, ...uvDep.outputs],
+    vendorStamps: [
+      ...lolhtmlDep.outputs,
+      ...rustArgon2Dep.outputs,
+      ...ngxRustDep.outputs,
+      ...uutilsDep.outputs,
+      ...uvDep.outputs,
+    ],
     shimValidations: emitShimVerify(n, cfg),
   });
 

@@ -465,6 +465,7 @@ export type DepName =
   | "lsqpack"
   | "lsquic"
   | "mimalloc"
+  | "ngx-rust"
   | "nodejs"
   | "picohttpparser"
   | "rust-argon2"

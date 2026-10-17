@@ -29,6 +29,7 @@ import { lshpack } from "./lshpack.ts";
 import { lsqpack } from "./lsqpack.ts";
 import { lsquic } from "./lsquic.ts";
 import { mimalloc } from "./mimalloc.ts";
+import { ngxRust } from "./ngx-rust.ts";
 import { nodejsHeaders } from "./nodejs-headers.ts";
 import { picohttpparser } from "./picohttpparser.ts";
 import { rustArgon2 } from "./rust-argon2.ts";
@@ -68,6 +69,7 @@ export const allDeps: readonly Dependency[] = [
   winfw,
   lolhtml,
   rustArgon2,
+  ngxRust,
   uutils,
   uv,
   lshpack,
@@ -104,6 +106,7 @@ export {
   lsqpack,
   lsquic,
   mimalloc,
+  ngxRust,
   nodejsHeaders,
   picohttpparser,
   rustArgon2,

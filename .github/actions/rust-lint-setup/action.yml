@@ -22,7 +22,7 @@ inputs:
     default: ""
   ninja-targets:
     description: "Space-separated build targets (`bun scripts/build.ts --target=…`)."
-    default: "clone-lolhtml clone-rust-argon2 clone-uutils"
+    default: "clone-lolhtml clone-rust-argon2 clone-ngx-rust clone-uutils"
 
 runs:
   using: composite

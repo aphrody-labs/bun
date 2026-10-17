@@ -1181,7 +1181,7 @@ async function produceMusl(input: WorkerInput, diagnostics: string, component: "
     "set -eu",
     "apk add --no-cache bash git curl unzip tar xz build-base cmake pkgconf linux-headers sudo util-linux",
     `git config --global --add safe.directory '${input.root.replaceAll("'", "'\\''")}'`,
-    `"$BUN_BOOTSTRAP" -e 'if(process.arch!==${JSON.stringify(allocation.arch)}||Bun.revision!==${JSON.stringify(bootstrap.source)}||Bun.version!==${JSON.stringify(bootstrap.tag.replace("aphrody-v", ""))})throw new Error("Native musl bootstrap identity differs")'`,
+    `"$BUN_BOOTSTRAP" -e 'if(process.arch!==${JSON.stringify(allocation.arch)}||Bun.revision!==${JSON.stringify(bootstrap.source)}||Bun.version!==${JSON.stringify(bootstrap.tag.replace("aphrody-v", "").split("-")[0])})throw new Error("Native musl bootstrap identity differs")'`,
     `exec "$BUN_BOOTSTRAP" --no-env-file scripts/aphrody/release-native-worker.ts ${component === "runtime" ? "produce-runtime" : "produce"} "$NATIVE_TARGET" "$NATIVE_SOURCE" "$NATIVE_VERSION" "$NATIVE_OUTPUT"`,
   ].join("\n");
   await command(

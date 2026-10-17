@@ -1414,8 +1414,7 @@ function staticVpnLibraries(sysroot: string, arch: Arch, abi: "gnu" | "musl"): S
     const source = scratch(`${name}-${pin.version}-${arch}-${abi}`);
     return [
       comment(`${name} ${pin.version}: static ${triple}; no host shared libraries.`),
-      download(`https://www.netfilter.org/projects/${name}/files/${name}-${pin.version}.tar.bz2`, archive),
-      checksum(archive, pin.sha256),
+      download(`https://www.netfilter.org/projects/${name}/files/${name}-${pin.version}.tar.bz2`, archive, pin.sha256),
       directory(source),
       run("tar", "-xjf", archive, "-C", source, "--strip-components=1"),
       inDirectory(source, [

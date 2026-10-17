@@ -154,6 +154,14 @@
       "visibility": "PUBLIC"
     },
     {
+      "repo": "nginx/ngx-rust",
+      "kind": "github-archive",
+      "ref": "cf58b5270dc5e9b855dab765e9f13ba2a12c7709",
+      "usedBy": ["build", "scripts/build/deps/ngx-rust.ts"],
+      "internal": false,
+      "visibility": "PUBLIC"
+    },
+    {
       "repo": "sru-systems/rust-argon2",
       "kind": "github-archive",
       "ref": "ed81866f163f0c7026aa6fd8388adf37242eb32a",
