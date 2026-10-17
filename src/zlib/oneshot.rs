@@ -225,7 +225,7 @@ impl core::ops::DerefMut for OwnedDecompressor {
 fn compressed(read: usize, written: usize, rc: ReturnCode) -> Result {
     Result {
         read,
-        // libdeflate's contract, kept by the callers: 0 bytes written means the output was too small.
+        // the one-shot path's contract, kept by the callers: 0 bytes written means the output was too small.
         written: if rc == ReturnCode::Ok { written } else { 0 },
         status: Status::Success,
     }

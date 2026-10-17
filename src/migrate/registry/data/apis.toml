@@ -595,7 +595,7 @@ aggressive  = false
 [[apis]]
 id          = "api/zlib-gzipSync"
 pattern     = '\bzlib\.gzipSync\s*\('
-message     = "Bun.gzipSync() est plus rapide que zlib.gzipSync (libdeflate SIMD)"
+message     = "Bun.gzipSync() est plus rapide que zlib.gzipSync (one-shot zlib-rs)"
 severity    = "info"
 replace     = "none"
 aggressive  = false

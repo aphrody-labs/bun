@@ -80,7 +80,7 @@ metadata:
 - **Declaring**: `new!(pub NAME: string|boolean|unsigned, "NAME", { default: .. })` produces a module `NAME` with `get`, `get_not_empty` and `key`.
 - The value is read once and cached.
 - A parse failure is silently treated as unset.
-- **Feature flags**: `pub mod feature_flag { new_feature_flag!(...) }` holds the runtime switches, for example `BUN_DESTRUCT_VM_ON_EXIT`, `BUN_FEATURE_FLAG_NO_LIBDEFLATE` and `BUN_FEATURE_FLAG_EXPERIMENTAL_BAKE`.
+- **Feature flags**: `pub mod feature_flag { new_feature_flag!(...) }` holds the runtime switches, for example `BUN_DESTRUCT_VM_ON_EXIT`, `BUN_FEATURE_FLAG_NO_ONESHOT_INFLATE` and `BUN_FEATURE_FLAG_EXPERIMENTAL_BAKE`.
 - **Usage**: `bun_core::env_var::BUN_X::get`. Never use `std::env::var` (disallowed).
 
 ## feature_flags (compile-time, src/bun_core/feature_flags.rs)

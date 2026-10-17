@@ -1,13 +1,13 @@
 //! Automatic request-body compression for `fetch({ compress })`.
 //!
 //! Runs on the HTTP thread inside `HTTPClient::start()` so it can reuse
-//! [`LibdeflateState`]'s 512 KiB scratch buffer and cached libdeflate handle
+//! [`OneshotState`]'s 512 KiB scratch buffer and cached one-shot handle
 //! (the same struct that backs the response-decompression fast path).
-//! gzip/deflate go through libdeflate; brotli/zstd use their one-shot
+//! gzip/deflate go through the one-shot path; brotli/zstd use their one-shot
 //! encoders. Only buffered bodies reach this — streams and sendfile are
 //! filtered out on the JS thread.
 
-use crate::http_thread::LibdeflateState;
+use crate::http_thread::OneshotState;
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
 pub enum CompressEncoding {
@@ -34,7 +34,7 @@ pub struct CompressOption {
     pub level: Option<i32>,
 }
 
-/// libdeflate's default level. Reused for the cached compressor so the common
+/// The one-shot path's default level. Reused for the cached compressor so the common
 /// `compress: true` / `compress: "gzip"` path never allocates a fresh handle.
 pub const DEFAULT_DEFLATE_LEVEL: i32 = 6;
 pub const DEFAULT_BROTLI_QUALITY: i32 = 6;
@@ -42,7 +42,7 @@ pub const DEFAULT_ZSTD_LEVEL: i32 = 3;
 
 /// Where [`compress_into`] put its output.
 pub(crate) enum CompressOutput {
-    /// Output is in `LibdeflateState::shared_buffer[..len]`. Valid only until
+    /// Output is in `OneshotState::shared_buffer[..len]`. Valid only until
     /// the next use of `shared_buffer` (i.e. the current synchronous callback).
     Shared(usize),
     /// Output is in the caller's `spill` Vec.
@@ -54,7 +54,7 @@ pub(crate) enum CompressOutput {
 /// otherwise allocates into `spill` (cleared first). Callers that need the
 /// output to outlive the current callback must copy `Shared` into owned storage.
 pub(crate) fn compress_into(
-    state: &mut LibdeflateState,
+    state: &mut OneshotState,
     input: &[u8],
     opt: &CompressOption,
     spill: &mut Vec<u8>,
@@ -67,10 +67,10 @@ pub(crate) fn compress_into(
                 bun_zlib::oneshot::Encoding::Gzip
             } else {
                 // HTTP "deflate" is the zlib-wrapped DEFLATE stream (RFC 9110
-                // §8.4.1.2); libdeflate's `Deflate` is the raw stream.
+                // §8.4.1.2); the one-shot path's `Deflate` is the raw stream.
                 bun_zlib::oneshot::Encoding::Zlib
             };
-            match compress_libdeflate_fast(state, input, enc, opt.level) {
+            match compress_oneshot_fast(state, input, enc, opt.level) {
                 Some(n) => Ok(CompressOutput::Shared(n)),
                 None => {
                     compress_zlib_streaming(input, gzip, opt.level, spill)?;
@@ -83,11 +83,11 @@ pub(crate) fn compress_into(
     }
 }
 
-/// libdeflate one-shot fast path into `state.shared_buffer`. Returns `None`
+/// the one-shot fast path into `state.shared_buffer`. Returns `None`
 /// when the bound exceeds the shared buffer or no compressor can be allocated — caller falls back to
 /// [`compress_zlib_streaming`].
-fn compress_libdeflate_fast(
-    state: &mut LibdeflateState,
+fn compress_oneshot_fast(
+    state: &mut OneshotState,
     input: &[u8],
     enc: bun_zlib::oneshot::Encoding,
     level: Option<i32>,
@@ -96,7 +96,7 @@ fn compress_libdeflate_fast(
 
     // Split-borrow so the compressor handle and `shared_buffer` can be used
     // together.
-    let LibdeflateState {
+    let OneshotState {
         compressor,
         shared_buffer,
         ..
@@ -123,7 +123,7 @@ fn compress_libdeflate_fast(
     Some(compressor.compress(input, shared_buffer, enc).written)
 }
 
-/// Slow path for gzip/deflate when the libdeflate one-shot bound exceeds the
+/// Slow path for gzip/deflate when the one-shot bound exceeds the
 /// shared buffer: streaming zlib `deflate(Z_FINISH)` into a Vec that grows in
 /// 64 KiB steps so the allocation tracks the actual compressed size, not the
 /// worst-case bound.
@@ -138,7 +138,7 @@ fn compress_zlib_streaming(
     // gzip wrapper: +16; HTTP "deflate" is the zlib-wrapped stream
     // (RFC 9110 §8.4.1.2): plain 15.
     let window_bits = if gzip { 15 + 16 } else { 15 };
-    // libdeflate accepts 0..=12; zlib only 0..=9.
+    // the one-shot path accepts 0..=12 (above 9 compresses at 9); zlib only 0..=9.
     let level = level.unwrap_or(DEFAULT_DEFLATE_LEVEL).min(9);
     let mut encoder = DeflateEncoder::new(level, window_bits, 8, 0).map_err(|err| match err {
         bun_zlib::ZlibError::OutOfMemory => crate::Error::Alloc(bun_alloc::AllocError),
@@ -177,7 +177,7 @@ fn compress_zlib_streaming(
 }
 
 fn compress_brotli(
-    state: &mut LibdeflateState,
+    state: &mut OneshotState,
     input: &[u8],
     level: Option<i32>,
     spill: &mut Vec<u8>,
@@ -212,7 +212,7 @@ fn compress_brotli(
 }
 
 fn compress_zstd(
-    state: &mut LibdeflateState,
+    state: &mut OneshotState,
     input: &[u8],
     level: Option<i32>,
     spill: &mut Vec<u8>,

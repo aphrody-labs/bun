@@ -355,7 +355,7 @@ impl<const SSL: bool> WebSocket<SSL> {
         let result = match self.deflate.borrow_mut().as_mut() {
             None => Err(ErrorCode::CompressionUnsupported),
             Some(deflate) => deflate
-                .decompress(rare.libdeflate_decompressor(), data, &mut decompressed)
+                .decompress(rare.oneshot_decompressor(), data, &mut decompressed)
                 .map_err(|err| match err {
                     websocket_deflate::Error::InflateFailed => ErrorCode::InvalidCompressedData,
                     websocket_deflate::Error::TooLarge => ErrorCode::MessageTooBig,

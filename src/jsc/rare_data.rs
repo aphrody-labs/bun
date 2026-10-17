@@ -254,8 +254,8 @@ pub struct RareData {
     compression_scratch: Option<Vec<u8>>,
     /// Inflated payload of one `new WebSocket()` client message; see [`Self::take_websocket_inflate_scratch`].
     websocket_inflate_scratch: Option<Vec<u8>>,
-    /// One libdeflate handle for every JS-thread one-shot inflate; see [`Self::libdeflate_decompressor`].
-    libdeflate_decompressor: Option<oneshot::OwnedDecompressor>,
+    /// One the one-shot path handle for every JS-thread one-shot inflate; see [`Self::oneshot_decompressor`].
+    oneshot_decompressor: Option<oneshot::OwnedDecompressor>,
 
     // There is intentionally no `aws_signature_cache` field — storage lives in
     // `bun_s3_signing::credentials::AWS_SIGNATURE_CACHE` (process static; it
@@ -305,7 +305,7 @@ impl Default for RareData {
             h2_padded_frame_buffer: None,
             compression_scratch: None,
             websocket_inflate_scratch: None,
-            libdeflate_decompressor: None,
+            oneshot_decompressor: None,
             s3_default_client: Strong::empty(),
             node_quic_callbacks: Strong::empty(),
             default_csrf_secret: Box::default(),
@@ -774,13 +774,13 @@ impl RareData {
         }
     }
 
-    /// libdeflate keeps no state between calls, so one handle serves every one-shot inflate on
-    /// this thread. `None` when libdeflate cannot allocate it; callers fall back to zlib.
-    pub fn libdeflate_decompressor(&mut self) -> Option<&mut oneshot::Decompressor> {
-        if self.libdeflate_decompressor.is_none() {
-            self.libdeflate_decompressor = oneshot::OwnedDecompressor::new();
+    /// the one-shot path keeps no state between calls, so one handle serves every one-shot inflate on
+    /// this thread. `None` when the one-shot path cannot allocate it; callers fall back to zlib.
+    pub fn oneshot_decompressor(&mut self) -> Option<&mut oneshot::Decompressor> {
+        if self.oneshot_decompressor.is_none() {
+            self.oneshot_decompressor = oneshot::OwnedDecompressor::new();
         }
-        self.libdeflate_decompressor.as_deref_mut()
+        self.oneshot_decompressor.as_deref_mut()
     }
 
     pub fn boring_engine(&mut self) -> *mut boring::ENGINE {

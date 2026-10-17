@@ -39,7 +39,7 @@ pub(crate) type Error = DecompressError;
 
 /// The zlib streams are per connection: with context takeover (the default)
 /// each message's back-references reach into the previous message's window.
-/// The libdeflate fast path is stateless and lives in the VM's
+/// The the one-shot path fast path is stateless and lives in the VM's
 /// `bun_jsc::RareData`, shared by every client on the thread.
 pub struct PerMessageDeflate {
     pub(crate) compress_stream: zlib::DeflateEncoder,
@@ -55,7 +55,7 @@ const Z_DEFAULT_MEM_LEVEL: c_int = 8;
 // Buffer size for compression/decompression operations
 const COMPRESSION_BUFFER_SIZE: usize = 4096;
 
-/// Output space reserved up front for one message. The one-shot libdeflate
+/// Output space reserved up front for one message. The one-shot the one-shot path
 /// path gets exactly that space, so it is skipped for compressed inputs at
 /// least this large: their output would not fit either.
 const INFLATE_BUFFER_SIZE: usize = 128 * 1024;
@@ -108,8 +108,8 @@ impl PerMessageDeflate {
         }))
     }
 
-    fn can_use_libdeflate(len: usize) -> bool {
-        if feature_flag::BUN_FEATURE_FLAG_NO_LIBDEFLATE.get() == Some(true) {
+    fn can_use_oneshot(len: usize) -> bool {
+        if feature_flag::BUN_FEATURE_FLAG_NO_ONESHOT_INFLATE.get() == Some(true) {
             return false;
         }
 
@@ -117,7 +117,7 @@ impl PerMessageDeflate {
     }
 
     /// Inflate one message onto `out`. `decompressor` is the thread's shared
-    /// libdeflate handle (`None` when it could not be allocated).
+    /// the one-shot path handle (`None` when it could not be allocated).
     pub(crate) fn decompress(
         &mut self,
         decompressor: Option<&mut oneshot::Decompressor>,
@@ -128,8 +128,8 @@ impl PerMessageDeflate {
         out.try_reserve_exact(INFLATE_BUFFER_SIZE)
             .map_err(|_| DecompressError::OutOfMemory)?;
 
-        // First we try with libdeflate, which is both faster and doesn't need the trailing deflate bytes
-        if Self::can_use_libdeflate(in_buf.len()) {
+        // First we try with the one-shot path, which is both faster and doesn't need the trailing deflate bytes
+        if Self::can_use_oneshot(in_buf.len()) {
             if let Some(decompressor) = decompressor {
                 let result =
                     decompressor.decompress_to_vec(in_buf, out, oneshot::Encoding::Deflate);

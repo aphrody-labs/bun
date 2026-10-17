@@ -1,6 +1,6 @@
 //! JS-side parsing of `fetch({ compress })`. The actual compression runs on
 //! the HTTP thread (`bun_http::compress_body`) so it can reuse
-//! `LibdeflateState`'s shared scratch buffer.
+//! `OneshotState`'s shared scratch buffer.
 
 use crate::webcore::jsc::{JSGlobalObject, JSValue, JsResult};
 use bun_jsc::ComptimeStringMapExt as _;

@@ -301,10 +301,10 @@ impl ExtractTarball {
 
             // libarchive gunzips on the fly (`BufferReadStream::open_read`),
             // so hand it the compressed bytes and never buffer the full tar.
-            // Small tarballs still try libdeflate first for speed; the gzip
+            // Small tarballs still try the one-shot path first for speed; the gzip
             // ISIZE trailer (size mod 2^32) is only trusted when small.
             let mut decompressed_in_memory = false;
-            if bun_core::FeatureFlags::is_libdeflate_enabled() && tgz_bytes.len() > 16 {
+            if bun_core::FeatureFlags::is_oneshot_inflate_enabled() && tgz_bytes.len() > 16 {
                 let isize: u32 = u32::from_le_bytes(
                     tgz_bytes[tgz_bytes.len() - 4..][..4]
                         .try_into()
@@ -325,7 +325,7 @@ impl ExtractTarball {
                                 &mut zlib_pool.list,
                                 oneshot::Encoding::Gzip,
                             );
-                            // libdeflate only reads the first gzip member, so a tarball with more
+                            // the one-shot path only reads the first gzip member, so a tarball with more
                             // than one member is left to libarchive.
                             if result.status == oneshot::Status::Success
                                 && result.read == tgz_bytes.len()

@@ -2215,9 +2215,9 @@ pub(crate) mod JSZlib {
     use bun_jsc::ComptimeStringMapExt as _;
     use bun_zlib::oneshot;
 
-    /// Local shim: libdeflate's `Status` has no `Into<&str>` upstream.
+    /// Local shim: the one-shot path's `Status` has no `Into<&str>` upstream.
     #[inline]
-    fn libdeflate_status_str(s: oneshot::Status) -> &'static str {
+    fn oneshot_status_str(s: oneshot::Status) -> &'static str {
         match s {
             oneshot::Status::Success => "success",
             oneshot::Status::BadData => "bad data",
@@ -2244,14 +2244,14 @@ pub(crate) mod JSZlib {
     #[strum(serialize_all = "lowercase")]
     pub(crate) enum Library {
         Zlib,
-        Libdeflate,
+        Oneshot,
     }
 
     // bun.ComptimeEnumMap(Library)
     bun_core::comptime_string_map! {
         pub(crate) static LIBRARY_MAP: Library = {
             b"zlib" => Library::Zlib,
-            b"libdeflate" => Library::Libdeflate,
+            b"libdeflate" => Library::Oneshot,
         };
     }
 
@@ -2442,7 +2442,7 @@ pub(crate) mod JSZlib {
                 drop(reader);
                 leak_list_into_uint8array(global_this, list)
             }
-            Library::Libdeflate => {
+            Library::Oneshot => {
                 let Some(mut decompressor) = oneshot::OwnedDecompressor::new() else {
                     drop(list);
                     return Err(global_this.throw_out_of_memory());
@@ -2472,8 +2472,8 @@ pub(crate) mod JSZlib {
                     _ => {
                         drop(list);
                         return Err(global_this.throw(format_args!(
-                            "libdeflate returned an error: {}",
-                            libdeflate_status_str(result.status),
+                            "one-shot inflate returned an error: {}",
+                            oneshot_status_str(result.status),
                         )));
                     }
                 }
@@ -2587,7 +2587,7 @@ pub(crate) mod JSZlib {
                 drop(reader);
                 leak_list_into_uint8array(global_this, list)
             }
-            Library::Libdeflate => {
+            Library::Oneshot => {
                 let level = level.unwrap_or(6);
                 if !(oneshot::MIN_COMPRESSION_LEVEL..=oneshot::MAX_COMPRESSION_LEVEL)
                     .contains(&level)
@@ -2615,7 +2615,7 @@ pub(crate) mod JSZlib {
                     drop(list);
                     return Err(global_this.throw(format_args!(
                         "libdeflate error: {}",
-                        libdeflate_status_str(result.status),
+                        oneshot_status_str(result.status),
                     )));
                 }
 

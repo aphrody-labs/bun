@@ -124,7 +124,7 @@ pub struct HttpThread {
 
     pub(crate) has_awoken: AtomicBool,
     pub(crate) timer: Instant,
-    pub(crate) lazy_libdeflater: Option<Box<LibdeflateState>>,
+    pub(crate) lazy_oneshot: Option<Box<OneshotState>>,
 
     /// Every `ThreadlocalAsyncHTTP` box currently in flight on this thread.
     /// Inserted by [`start_queued_task`] right after `heap::release`; removed
@@ -185,7 +185,7 @@ impl HttpThread {
             dead_ssl_contexts: Vec::new(),
             has_awoken: AtomicBool::new(false),
             timer: Instant::now(),
-            lazy_libdeflater: None,
+            lazy_oneshot: None,
             in_flight: Vec::new(),
         }
     }
@@ -226,21 +226,21 @@ pub struct CertCheckResumeMessage {
     pub(crate) async_http_id: u32,
 }
 
-pub(crate) const LIBDEFLATE_SHARED_BUFFER_LEN: usize = 512 * 1024;
+pub(crate) const ONESHOT_SHARED_BUFFER_LEN: usize = 512 * 1024;
 
-pub struct LibdeflateState {
+pub struct OneshotState {
     pub(crate) decompressor: Option<bun_zlib::oneshot::OwnedDecompressor>,
     pub(crate) compressor: Option<bun_zlib::oneshot::OwnedCompressor>,
-    pub(crate) shared_buffer: [u8; LIBDEFLATE_SHARED_BUFFER_LEN],
+    pub(crate) shared_buffer: [u8; ONESHOT_SHARED_BUFFER_LEN],
 }
 
 // SAFETY: `Option<Owned{De,}Compressor>` is `#[repr(transparent)]` over
 // `NonNull`, so all-zero = `None`; `[u8; N]` is valid at the all-zero bit
 // pattern.
-unsafe impl bun_core::Zeroable for LibdeflateState {}
+unsafe impl bun_core::Zeroable for OneshotState {}
 
-impl LibdeflateState {
-    /// Mutable access to the libdeflate decompressor handle.
+impl OneshotState {
+    /// Mutable access to the one-shot path decompressor handle.
     ///
     /// `decompressor` is set once in [`HttpThread::deflater`] (panics on OOM)
     /// and is never `None` after that, so the unwrap is infallible.
@@ -357,16 +357,16 @@ impl HttpThread {
         u64::try_from(self.timer.elapsed().as_nanos()).expect("int cast")
     }
 
-    pub(crate) fn deflater(&mut self) -> &mut LibdeflateState {
-        if self.lazy_libdeflater.is_none() {
+    pub(crate) fn deflater(&mut self) -> &mut OneshotState {
+        if self.lazy_oneshot.is_none() {
             let decompressor = bun_zlib::oneshot::OwnedDecompressor::new()
                 .unwrap_or_else(|| bun_core::out_of_memory());
-            let mut state: Box<LibdeflateState> = bun_core::boxed_zeroed();
+            let mut state: Box<OneshotState> = bun_core::boxed_zeroed();
             state.decompressor = Some(decompressor);
-            self.lazy_libdeflater = Some(state);
+            self.lazy_oneshot = Some(state);
         }
 
-        self.lazy_libdeflater.as_deref_mut().unwrap()
+        self.lazy_oneshot.as_deref_mut().unwrap()
     }
 
     pub(crate) fn context<const IS_SSL: bool>(&mut self) -> &mut NewHttpContext<IS_SSL> {

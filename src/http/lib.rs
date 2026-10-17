@@ -845,7 +845,7 @@ pub struct HTTPClient<'a> {
     pub(crate) unix_socket_path: &'a [u8],
     /// `fetch({ compress })` — when set, the body is compressed lazily at
     /// write time (h1: `send_initial_request_payload`; h2/h3: at attach) so
-    /// the output can borrow `LibdeflateState::shared_buffer`. Persists across
+    /// the output can borrow `OneshotState::shared_buffer`. Persists across
     /// redirects/retries so each hop re-compresses from the original
     /// `state.original_request_body`.
     pub(crate) compress: Option<compress_body::CompressOption>,
@@ -2996,7 +2996,7 @@ impl<'a> HTTPClient<'a> {
     /// `state.request_body` (the send cursor) to the compressed bytes;
     /// `state.original_request_body` stays as the original uncompressed slice
     /// so redirects/retries can re-compress from it. When `into_shared` and
-    /// the bound fits, the cursor borrows `LibdeflateState::shared_buffer` —
+    /// the bound fits, the cursor borrows `OneshotState::shared_buffer` —
     /// callers must [`spill_compressed_body`] before returning to the event
     /// loop with bytes left to send. Idempotent per attempt via
     /// `state.flags.body_compressed`.
@@ -3029,7 +3029,7 @@ impl<'a> HTTPClient<'a> {
             compress_body::CompressOutput::Spilled => self.compressed_request_body.as_slice(),
         };
         self.compressed_body_len = slice.len();
-        // SAFETY: `slice` borrows either `LibdeflateState::shared_buffer`
+        // SAFETY: `slice` borrows either `OneshotState::shared_buffer`
         // (HTTP-thread singleton, valid for the current synchronous callback —
         // caller spills before yielding) or `self.compressed_request_body`
         // (lives on `self`, only mutated by this function via `clear()` on the
@@ -4199,7 +4199,7 @@ impl<'a> HTTPClient<'a> {
                 self.state.flags.decompress_output_pending = true;
                 return Ok(false);
             }
-            // A body that one libdeflate call can inflate waits whole for its consumer.
+            // A body that one one-shot call can inflate waits whole for its consumer.
             if is_final_chunk && self.state.wants_exact_size_inflate() {
                 if self.signals.hold_for_consumer() {
                     self.state.flags.decompress_output_pending = true;
@@ -4783,9 +4783,9 @@ impl<'a> HTTPClient<'a> {
             || self.signals.body_receive_mode.is_some();
         if is_done || is_streaming || content_length.is_none() {
             let is_final_chunk = is_done;
-            // A body that arrived whole keeps the libdeflate fast path: it may be held.
+            // A body that arrived whole keeps the one-shot path fast path: it may be held.
             if !is_final_chunk {
-                self.state.flags.is_libdeflate_fast_path_disabled = true;
+                self.state.flags.is_oneshot_fast_path_disabled = true;
             }
             let processed = self.process_received_body(is_final_chunk)?;
 
@@ -4869,8 +4869,8 @@ impl<'a> HTTPClient<'a> {
                 if self.signals.get(signals::Field::ResponseBodyStreaming)
                     || self.signals.body_receive_mode.is_some()
                 {
-                    // If we're streaming, we cannot use the libdeflate fast path
-                    self.state.flags.is_libdeflate_fast_path_disabled = true;
+                    // If we're streaming, we cannot use the one-shot path fast path
+                    self.state.flags.is_oneshot_fast_path_disabled = true;
                     return self.process_received_body(false);
                 }
 
@@ -4940,8 +4940,8 @@ impl<'a> HTTPClient<'a> {
                 if self.signals.get(signals::Field::ResponseBodyStreaming)
                     || self.signals.body_receive_mode.is_some()
                 {
-                    // If we're streaming, we cannot use the libdeflate fast path
-                    self.state.flags.is_libdeflate_fast_path_disabled = true;
+                    // If we're streaming, we cannot use the one-shot path fast path
+                    self.state.flags.is_oneshot_fast_path_disabled = true;
 
                     return self.process_received_body(false);
                 }

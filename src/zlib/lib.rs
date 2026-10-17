@@ -887,7 +887,7 @@ impl<'a> Drop for ZlibCompressorArrayList<'a> {
 // C-side `internal_state`. Input and output are passed per call, so callers
 // can hold a decoder across multiple chunks without lifetime erasure.
 //
-// The `z_stream` is boxed because zlib-ng's `inflate_state`/`deflate_state`
+// The `z_stream` is boxed because zlib's `inflate_state`/`deflate_state`
 // store a back-pointer to it (checked in `inflateStateCheck` /
 // `deflateStateCheck`), so it must not move after init.
 // ──────────────────────────────────────────────────────────────────────────

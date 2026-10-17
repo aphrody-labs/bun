@@ -911,7 +911,7 @@ test("buffered extract: damaged-block retry resets header state (upstream semant
 // -------------------------------------------------------------------
 test("buffered extract does not hold the decompressed local tarball in memory", async () => {
   // 256 MiB of zeros: above the 64 MB gzip ISIZE cutoff that gates the
-  // libdeflate fast path, so libarchive (not libdeflate) decompresses,
+  // the one-shot path fast path, so libarchive (not the one-shot path) decompresses,
   // and a multiple of 512 so the tar entry needs no trailing pad block.
   // The old path inflated this into a ~256 MB Vec before extraction,
   // which shows up directly in the child's maxRSS.
@@ -1551,7 +1551,7 @@ function readFiles(root: string): Record<string, string> {
 }
 
 // Installs `tgz` as `stream-pkg`, `installs` times with one cache, and returns what each install left.
-// "libdeflate" and "libarchive": a `file:` tarball, which the buffered extractor decompresses that way.
+// "the one-shot path" and "libarchive": a `file:` tarball, which the buffered extractor decompresses that way.
 // "buffered" and "streaming": downloaded, from the registry or as a URL dependency, and extracted that way.
 // `files`: also what `readFiles` finds in the installed package.
 // `gzipEncoded`: the server compresses `tgz` and says so with `Content-Encoding: gzip`.
@@ -1604,7 +1604,7 @@ async function installStreamPkg(
       BUN_TMPDIR: tmp,
       BUN_INSTALL_STREAMING_MIN_SIZE: "1",
       BUN_INSTALL_STREAMING_DRAIN_THRESHOLD: "1",
-      ...(path === "libarchive" ? { BUN_FEATURE_FLAG_NO_LIBDEFLATE: "1" } : {}),
+      ...(path === "libarchive" ? { BUN_FEATURE_FLAG_NO_ONESHOT_INFLATE: "1" } : {}),
       ...(path === "buffered" ? { BUN_FEATURE_FLAG_DISABLE_STREAMING_INSTALL: "1" } : {}),
     });
     results.push({
@@ -1628,7 +1628,7 @@ async function installStreamPkg(
 // Where no integrity is recorded (a `file:` or URL tarball on its first
 // install, a registry without `dist.integrity`, `--no-verify`) that
 // trailer is the only thing that catches a damaged tarball. All three
-// ways to decompress one must check it: libdeflate in memory and
+// ways to decompress one must check it: the one-shot path in memory and
 // libarchive's gzip filter in the buffered extractor, and that filter
 // again in the streaming extractor.
 // -------------------------------------------------------------------

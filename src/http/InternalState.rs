@@ -7,7 +7,7 @@ use crate::{CertificateInfo, Decompressor, Encoding, HTTPRequestBody, HTTPRespon
 
 bun_core::define_scoped_log!(log, HTTPInternalState, hidden);
 
-/// Bounds the allocation that an untrusted gzip trailer can ask libdeflate's exact-size call for.
+/// Bounds the allocation that an untrusted gzip trailer can ask the one-shot path's exact-size call for.
 const EXACT_SIZE_INFLATE_MAX: usize = 32 * 1024 * 1024;
 
 /// ISIZE, the last 4 bytes of a gzip stream: the decoded size of its last member, modulo 4 GB.
@@ -79,7 +79,7 @@ pub struct InternalStateFlags {
     pub(crate) received_last_chunk: bool,
     pub(crate) did_set_content_encoding: bool,
     pub(crate) is_redirect_pending: bool,
-    pub(crate) is_libdeflate_fast_path_disabled: bool,
+    pub(crate) is_oneshot_fast_path_disabled: bool,
     pub(crate) resend_request_body_on_redirect: bool,
     /// Set when the TLS handshake completed but the user-supplied JS
     /// `checkServerIdentity` callback has not yet approved the peer
@@ -108,7 +108,7 @@ impl InternalStateFlags {
             received_last_chunk: false,
             did_set_content_encoding: false,
             is_redirect_pending: false,
-            is_libdeflate_fast_path_disabled: false,
+            is_oneshot_fast_path_disabled: false,
             resend_request_body_on_redirect: false,
             is_waiting_for_cert_check: false,
             receive_paused: false,
@@ -233,16 +233,16 @@ impl<'a> InternalState<'a> {
         self.flags.decompress_output_pending
     }
 
-    /// A complete gzip body that only an unbudgeted pass can inflate in one libdeflate call.
+    /// A complete gzip body that only an unbudgeted pass can inflate in one one-shot call.
     pub(crate) fn wants_exact_size_inflate(&self) -> bool {
-        bun_core::feature_flags::is_libdeflate_enabled()
+        bun_core::feature_flags::is_oneshot_inflate_enabled()
             && self.encoding == Encoding::Gzip
-            && !self.flags.is_libdeflate_fast_path_disabled
+            && !self.flags.is_oneshot_fast_path_disabled
             && !self.flags.is_redirect_pending
             && matches!(self.decompressor, Decompressor::None)
             && self.is_done()
             && gzip_trailer_size(&self.compressed_body.list).is_some_and(|size| {
-                size > crate::http_thread::LIBDEFLATE_SHARED_BUFFER_LEN
+                size > crate::http_thread::ONESHOT_SHARED_BUFFER_LEN
                     && size < EXACT_SIZE_INFLATE_MAX
             })
     }
@@ -295,27 +295,27 @@ impl<'a> InternalState<'a> {
         let mut still_needs_to_decompress = true;
         let mut consumed = buffer.len();
 
-        if bun_core::feature_flags::is_libdeflate_enabled() {
-            // Fast-path: use libdeflate
+        if bun_core::feature_flags::is_oneshot_inflate_enabled() {
+            // Fast-path: use the one-shot path
 
-            'libdeflate: {
+            'oneshot: {
                 use bun_zlib::oneshot;
                 if !(is_final_chunk
-                    && !self.flags.is_libdeflate_fast_path_disabled
+                    && !self.flags.is_oneshot_fast_path_disabled
                     && matches!(self.decompressor, Decompressor::None)
                     && self.encoding.can_use_lib_deflate()
                     && self.is_done())
                 {
-                    break 'libdeflate;
+                    break 'oneshot;
                 }
                 let format = match self.encoding {
                     Encoding::Gzip => oneshot::Encoding::Gzip,
-                    // zlib-ng alone judges a zlib-wrapped body: libdeflate accepts more streams.
+                    // The streaming zlib alone judges a zlib-wrapped body: the one-shot path accepts more streams.
                     Encoding::Deflate if has_zlib_header(buffer) => break 'libdeflate,
                     Encoding::Deflate => oneshot::Encoding::Deflate,
                     _ => unreachable!(),
                 };
-                self.flags.is_libdeflate_fast_path_disabled = true;
+                self.flags.is_oneshot_fast_path_disabled = true;
 
                 log!("Decompressing {} bytes with libdeflate\n", buffer.len());
                 let deflater = crate::http_thread().deflater();
@@ -329,7 +329,7 @@ impl<'a> InternalState<'a> {
                 {
                     // Under an output budget only `shared_buffer`'s worth may come out in one shot.
                     if max_output != usize::MAX {
-                        break 'libdeflate;
+                        break 'oneshot;
                     }
                     if estimated_size < EXACT_SIZE_INFLATE_MAX {
                         self.decoded_body.list.clear();
@@ -340,14 +340,14 @@ impl<'a> InternalState<'a> {
                             .try_reserve_exact(estimated_size)
                             .is_err()
                         {
-                            break 'libdeflate;
+                            break 'oneshot;
                         }
                         let result = deflater.decompressor_mut().decompress_to_vec(
                             buffer,
                             &mut self.decoded_body.list,
                             oneshot::Encoding::Gzip,
                         );
-                        // libdeflate decodes a single gzip member; unconsumed
+                        // the one-shot path decodes a single gzip member; unconsumed
                         // input means this is a multi-member stream (RFC 1952
                         // §2.2). Let the zlib path handle it.
                         if result.status == oneshot::Status::Success
@@ -358,7 +358,7 @@ impl<'a> InternalState<'a> {
                             self.decoded_body.list.clear();
                         }
 
-                        break 'libdeflate;
+                        break 'oneshot;
                     }
                 }
 
@@ -368,7 +368,7 @@ impl<'a> InternalState<'a> {
                     .expect("set in HttpThread::deflater()");
                 let result = decompressor.decompress(buffer, &mut deflater.shared_buffer, format);
 
-                // libdeflate decodes a single member; unconsumed input means
+                // the one-shot path decodes a single member; unconsumed input means
                 // a multi-member gzip stream. Let the zlib path handle it.
                 if result.status == oneshot::Status::Success && result.read == buffer.len() {
                     if self

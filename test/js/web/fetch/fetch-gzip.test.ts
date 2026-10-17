@@ -194,7 +194,7 @@ describe("fetch() decodes Content-Encoding case-insensitively", () => {
   describe.each(["gzip", "deflate", "br", "zstd"] as const)(
     "streaming %s decompression over multiple chunks",
     encoding => {
-      it.concurrent.each(["0", "1"])("BUN_FEATURE_FLAG_NO_LIBDEFLATE=%s", async noLibdeflate => {
+      it.concurrent.each(["0", "1"])("BUN_FEATURE_FLAG_NO_ONESHOT_INFLATE=%s", async noOneshot => {
         // Body large enough that the compressed form spans many 17-byte writes.
         const expected = JSON.stringify({
           data: Array.from({ length: 64 }, (_, i) => ({ i, s: `item-${i}` })),
@@ -235,7 +235,7 @@ describe("fetch() decodes Content-Encoding case-insensitively", () => {
                process.stdout.write(Buffer.concat(chunks).toString("utf8"));`,
               `http://127.0.0.1:${port}/`,
             ],
-            env: { ...bunEnv, BUN_FEATURE_FLAG_NO_LIBDEFLATE: noLibdeflate },
+            env: { ...bunEnv, BUN_FEATURE_FLAG_NO_ONESHOT_INFLATE: noOneshot },
             stderr: "pipe",
           });
           const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
@@ -757,7 +757,7 @@ describe("fetch() decodes multi-member Content-Encoding: gzip", () => {
     ["content-length, trailing CRLF garbage", [Buffer.concat([BODY, Buffer.from("\r\n")])], false],
   ];
 
-  describe.each(["0", "1"])("BUN_FEATURE_FLAG_NO_LIBDEFLATE=%s", noLibdeflate => {
+  describe.each(["0", "1"])("BUN_FEATURE_FLAG_NO_ONESHOT_INFLATE=%s", noOneshot => {
     it.concurrent.each(cases)("%s", async (_label, pieces, chunked) => {
       const total = pieces.reduce((n, p) => n + p.length, 0);
       const server = createNetServer(socket => {
@@ -793,7 +793,7 @@ describe("fetch() decodes multi-member Content-Encoding: gzip", () => {
              process.stdout.write(buf);`,
             `http://127.0.0.1:${port}/`,
           ],
-          env: { ...bunEnv, BUN_FEATURE_FLAG_NO_LIBDEFLATE: noLibdeflate },
+          env: { ...bunEnv, BUN_FEATURE_FLAG_NO_ONESHOT_INFLATE: noOneshot },
           stderr: "pipe",
         });
         const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
@@ -813,7 +813,7 @@ describe("fetch() decodes multi-member Content-Encoding: gzip", () => {
   // must still decode successfully (prior Bun behavior, and what browsers /
   // curl / Go do). The multi-member loop only resumes on 0x1f so stray
   // CRLF/footer junk from misconfigured origins does not fail the fetch.
-  it.concurrent.each(["0", "1"])("single member with trailing garbage (NO_LIBDEFLATE=%s)", async noLibdeflate => {
+  it.concurrent.each(["0", "1"])("single member with trailing garbage (NO_LIBDEFLATE=%s)", async noOneshot => {
     const body = Buffer.concat([M1, Buffer.from("\r\ngarbage")]);
     const server = createNetServer(socket => {
       socket.on("error", () => {});
@@ -837,7 +837,7 @@ describe("fetch() decodes multi-member Content-Encoding: gzip", () => {
            process.stdout.write(Buffer.from(await res.arrayBuffer()));`,
           `http://127.0.0.1:${port}/`,
         ],
-        env: { ...bunEnv, BUN_FEATURE_FLAG_NO_LIBDEFLATE: noLibdeflate },
+        env: { ...bunEnv, BUN_FEATURE_FLAG_NO_ONESHOT_INFLATE: noOneshot },
         stderr: "pipe",
       });
       const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
@@ -852,8 +852,8 @@ describe("fetch() decodes multi-member Content-Encoding: gzip", () => {
     }
   });
 
-  // Last member's ISIZE trailer > 512 KiB (LibdeflateState::shared_buffer) so
-  // the libdeflate fast path takes the decompress_to_vec branch, which must
+  // Last member's ISIZE trailer > 512 KiB (OneshotState::shared_buffer) so
+  // the the one-shot path fast path takes the decompress_to_vec branch, which must
   // also detect unconsumed input and fall through.
   it.concurrent("content-length, last member > 512 KiB (decompress_to_vec branch)", async () => {
     const big = Buffer.alloc(600 * 1024, "BIG-LAST-MEMBER-");
@@ -1094,14 +1094,14 @@ describe("Content-Encoding: deflate, zlib-wrapped or raw", () => {
   };
 
   it.concurrent.each(["0", "1"])(
-    "the read boundary and the framing do not change the result (BUN_FEATURE_FLAG_NO_LIBDEFLATE=%s)",
-    async noLibdeflate => {
+    "the read boundary and the framing do not change the result (BUN_FEATURE_FLAG_NO_ONESHOT_INFLATE=%s)",
+    async noOneshot => {
       // node:zlib reads `twoReadings` both ways.
       expect(inflateSync(twoReadings)).toEqual(zlibReading);
       expect(inflateRawSync(twoReadings)).not.toEqual(zlibReading);
       await using proc = Bun.spawn({
         cmd: [bunExe(), "-e", fixture, input],
-        env: { ...bunEnv, BUN_FEATURE_FLAG_NO_LIBDEFLATE: noLibdeflate },
+        env: { ...bunEnv, BUN_FEATURE_FLAG_NO_ONESHOT_INFLATE: noOneshot },
         stdout: "pipe",
         stderr: "pipe",
       });
