@@ -101,6 +101,13 @@ export function nativeWorkerInput(args: string[], sourceRoot = root): WorkerInpu
 
 type MemoryReader = (path: string) => Promise<string | undefined>;
 async function readMemoryFile(path: string): Promise<string | undefined> {
+  if (path === "vm_stat") {
+    try {
+      return Bun.spawnSync(["vm_stat"]).stdout.toString();
+    } catch {
+      return undefined;
+    }
+  }
   try {
     const text = await Bun.file(path).slice(0, 65_537).text();
     if (text.length > 65_536) throw new Error("Memory observation exceeds limit");
@@ -118,6 +125,18 @@ export async function nativeAvailableMemory(
   read: MemoryReader = readMemoryFile,
 ): Promise<number> {
   if (!Number.isFinite(fallback) || fallback < 0) throw new Error("Invalid free memory observation");
+  if (platform === "darwin") {
+    // os.freemem() counts only never-used pages; inactive, speculative and purgeable pages are reclaimable.
+    const text = await read("vm_stat");
+    const size = text?.match(/page size of (\d+) bytes/)?.[1];
+    const counts = new Map([...(text ?? "").matchAll(/^Pages ([a-z ]+):\s+(\d+)\./gm)].map(m => [m[1], Number(m[2])] as const));
+    const pages = (label: string) => counts.get(label) ?? 0;
+    if (size) {
+      const reclaimable = pages("free") + pages("inactive") + pages("speculative") + pages("purgeable");
+      if (reclaimable > 0) return Math.max(fallback, reclaimable * Number(size));
+    }
+    return fallback;
+  }
   if (platform !== "linux") return fallback;
   const meminfo = await read("/proc/meminfo");
   const available = meminfo?.match(/^MemAvailable:\s+(\d+)\s+kB$/m);
@@ -236,7 +255,7 @@ export function nativeCapacity(
     input.cpus < required.cpus
   )
     throw Error(
-      `Native capacity insufficient: require ${required.disk / GiB} GiB free disk, ${required.memory / GiB} GiB available RAM and ${required.cpus} native CPUs`,
+      `Native capacity insufficient: require ${required.disk / GiB} GiB free disk, ${required.memory / GiB} GiB available RAM and ${required.cpus} native CPUs (observed ${Math.floor(input.freeDisk / GiB)} GiB, ${Math.floor(input.freeMemory / GiB)} GiB, ${input.cpus} CPUs)`,
     );
   return { ...input, required, maxJobs: resources.jobs, linkThreads: resources.linkThreads };
 }
@@ -1151,9 +1170,11 @@ async function produceMusl(input: WorkerInput, diagnostics: string, component: "
   if (Bun.file(archive).size !== bootstrap.bytes || (await hashSDKFile(archive)) !== bootstrap.sha256)
     throw new Error("Native musl bootstrap checksum differs");
   const binary = join(input.output, "musl-bun");
-  const members = await new Bun.Archive(await Bun.file(archive).bytes()).files();
-  const member = members.get(`bun-${input.target}/bun`);
-  if (!member) throw new Error("Pinned musl bootstrap has no matching native Bun member");
+  // The host bootstrap may predate zip support in Bun.Archive; unzip is on every runner.
+  const extracted = join(input.output, "musl-bootstrap");
+  await command(["unzip", "-o", "-q", archive, "-d", extracted], input.root, join(diagnostics, "native-musl-unzip.log"));
+  const member = Bun.file(join(extracted, `bun-${input.target}`, "bun"));
+  if (!(await member.exists())) throw new Error("Pinned musl bootstrap has no matching native Bun member");
   await Bun.write(binary, member);
   await chmod(binary, 0o755);
   const script = [

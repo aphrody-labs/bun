@@ -299,10 +299,20 @@ test("Linux available RAM includes reclaimable cache without inventing a host bu
   ).toBe(12 * GiB);
   expect(await nativeAvailableMemory("linux", GiB, memoryFixture({}))).toBe(GiB);
   expect(
-    await nativeAvailableMemory("darwin", GiB, async () => {
+    await nativeAvailableMemory("win32", GiB, async () => {
       throw Error("Linux proc must not be read");
     }),
   ).toBe(GiB);
+  expect(await nativeAvailableMemory("darwin", GiB, memoryFixture({}))).toBe(GiB);
+  const vmStat = [
+    "Mach Virtual Memory Statistics: (page size of 16384 bytes)",
+    "Pages free:                 65536.",
+    "Pages inactive:            262144.",
+    "Pages speculative:          32768.",
+    "Pages purgeable:                0.",
+    "",
+  ].join("\n");
+  expect(await nativeAvailableMemory("darwin", GiB, memoryFixture({ vm_stat: vmStat }))).toBe(360448 * 16384);
 });
 
 test("cgroup v2 constrains reclaimable memory by leaf and every mounted ancestor", async () => {
