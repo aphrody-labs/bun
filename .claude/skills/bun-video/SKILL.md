@@ -7,7 +7,7 @@ description: "Use native Bun.Video and Bun.Image for media metadata, transformed
 
 ## Native video and composition workflows
 
-_From `packages/bun-agent-plugin/skills/bun-video/SKILL.md`._
+_From `src/agent_tools/sections/bun-video.md`._
 
 `Bun.Video` is the native video API of the Aphrody runtime. Its Rust FilmCraft
 provider decodes media; extracted frames reuse the `Bun.Image` transformation

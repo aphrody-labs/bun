@@ -29,8 +29,8 @@ export const PREFER: { instead: string; bash: string; use: string[] }[] = [
   { instead: "Glob", bash: String.raw`^\s*(?:fd|find)\b`, use: ["vfs_find", "graph_query"] },
 ];
 
-/** Where repository skills come from, first match of a name wins. Each is `<dir>/<name>/SKILL.md`. */
-export const SKILL_ROOTS = ["packages/bun-agent-plugin/skills", ".agents/skills", "skills", ".claude/skills"];
+/** Where repository skills come from, each is `<dir>/<name>/SKILL.md`. */
+export const SKILL_ROOTS = [".claude/skills"];
 /** Slash commands become skills too (`<name>.md` with a `description` front matter). */
 export const COMMAND_ROOTS = [".claude/commands"];
 

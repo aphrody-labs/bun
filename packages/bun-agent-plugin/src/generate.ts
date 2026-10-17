@@ -150,7 +150,6 @@ export function repoSkills(root: string, extra: string[] = []): Skill[] {
     for (const file of sorted(base)) {
       if (!file.endsWith(".md")) continue;
       const name = file.slice(0, -3);
-      // `.agents/skills/source-command-<name>` is the same command already converted to a skill.
       if (out.has(name) || out.has(`source-command-${name}`)) continue;
       const md = text(join(base, file));
       const fm = frontMatter(md);

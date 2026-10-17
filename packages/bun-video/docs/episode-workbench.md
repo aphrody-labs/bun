@@ -94,7 +94,7 @@ dans leurs stores protégés. Les datasets finaux autorisés peuvent être livr�
 La publication R2 utilise un namespace immuable et un reçu ; le catalogue CDN
 et son pointer appartiennent au publisher Infra unique.
 
-Le skill existant [video-pixel-perfect](../plugin/skills/video-pixel-perfect/SKILL.md)
+Le skill existant [video-pixel-perfect](../../../.claude/skills/video-pixel-perfect/SKILL.md)
 décrit le replay de même durée avec FPS rationnel, source encodée préservée et
 mesures RGBA/PCM natives. Le provider n’expose pas d’encodeur arbitraire de
 séquence RGBA ; une composition indépendante reste une portée distincte.

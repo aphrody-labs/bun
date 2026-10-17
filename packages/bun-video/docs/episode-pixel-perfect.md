@@ -6,8 +6,8 @@ sans encodeur vidéo ni commande externe. Il refuse les configurations qu’il n
 peut pas préserver et n’écrase aucune sortie existante.
 
 ```powershell
-bun plugin/skills/video-pixel-perfect/scripts/episode-replay.ts replay --episode-dir .local/episodes/episode-1 --timeout-ms 14400000
-bun plugin/skills/video-pixel-perfect/scripts/episode-replay.ts verify --episode-dir .local/episodes/episode-1 --timeout-ms 14400000
+bun scripts/episode-replay.ts replay --episode-dir .local/episodes/episode-1 --timeout-ms 14400000
+bun scripts/episode-replay.ts verify --episode-dir .local/episodes/episode-1 --timeout-ms 14400000
 ```
 
 Le runtime doit inclure les API natives `Bun.Video` et `Bun.Image.rgba` qualifiées.

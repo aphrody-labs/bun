@@ -1,7 +1,0 @@
-{
-  "name": "bun-video",
-  "version": "0.1.0",
-  "description": "Unified Remotion and HyperFrames authoring, Bun workers and explicit native capture",
-  "skills": "./skills",
-  "private": true
-}

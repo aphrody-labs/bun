@@ -72,7 +72,7 @@ export function yoloIdentity(inputs: YoloIdentityInputs): Map<string, string> {
   add("mcp-catalog", [...inputs.catalogSources].sort(), json({ server: MCP_SERVER, tools: inputs.tools }));
   // Canonical public skills only; generated memory fiches and local extra skill roots never train the model.
   for (const skill of [...inputs.skills].sort((a, b) => a.name.localeCompare(b.name))) {
-    if (!skill.source.startsWith("packages/bun-agent-plugin/skills/")) continue;
+    if (!skill.source.startsWith(".claude/skills/")) continue;
     for (const [path, content] of [...skill.files].sort(([a], [b]) => a.localeCompare(b))) {
       if (typeof content !== "string" || !path.endsWith(".md")) continue;
       add("skill", [skill.source + "/" + path], content);

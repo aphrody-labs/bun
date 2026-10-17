@@ -215,5 +215,5 @@ _From `package.json`._
 | --- | --- |
 | `bun run bd` | `BUN_DEBUG_QUIET_LOGS=1 bun scripts/build.ts --profile=debug --quiet` |
 | `bun run rust:check-all` | `bun scripts/rust-check-all.ts` |
-| `bun run rust:clippy` | `cargo clippy --workspace --no-deps --keep-going` |
+| `bun run rust:clippy` | `cargo clippy --no-deps --keep-going` |
 | `bun run test` | `bun scripts/runner.node.ts --exec-path ./build/debug/bun-debug` |

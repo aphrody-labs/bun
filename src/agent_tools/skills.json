@@ -7,7 +7,7 @@
       "sections": [
         {
           "kind": "markdown",
-          "file": "packages/bun-agent-plugin/skills/bun-yolo/SKILL.md",
+          "file": "src/agent_tools/sections/bun-yolo.md",
           "heading": "Typed judgments through Bun"
         },
         {
@@ -37,7 +37,7 @@
       "sections": [
         {
           "kind": "markdown",
-          "file": "packages/bun-agent-plugin/skills/bun-video/SKILL.md",
+          "file": "src/agent_tools/sections/bun-video.md",
           "heading": "Native video and composition workflows"
         },
         {

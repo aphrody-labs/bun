@@ -128,12 +128,12 @@ structured-clone object fast paths.
 
 ## Class definitions (`*.classes.ts`)
 
-40 files match `src/**/*.classes.ts`, in `src/jsc` (1), `src/runtime/api` (22), `src/runtime/crawl` (1), `src/runtime/crypto` (1), `src/runtime/curl` (1), `src/runtime/ffi` (1), `src/runtime/image` (1), `src/runtime/nginx` (1), `src/runtime/node` (1), `src/runtime/node/quic` (1), `src/runtime/server` (1), `src/runtime/socket` (1), `src/runtime/test_runner` (1), `src/runtime/valkey_jsc` (1), `src/runtime/vector_index` (1), `src/runtime/video` (1), `src/runtime/webcore` (3).
+41 files match `src/**/*.classes.ts`, in `src/jsc` (1), `src/runtime/adblock` (1), `src/runtime/api` (21), `src/runtime/crawl` (1), `src/runtime/crypto` (1), `src/runtime/curl` (1), `src/runtime/ffi` (1), `src/runtime/image` (1), `src/runtime/nginx` (1), `src/runtime/node` (1), `src/runtime/node/quic` (1), `src/runtime/server` (1), `src/runtime/socket` (1), `src/runtime/test_runner` (1), `src/runtime/valkey_jsc` (1), `src/runtime/vector_index` (1), `src/runtime/video` (1), `src/runtime/web_detect` (1), `src/runtime/webcore` (3).
 
 ## Read next
 
 - `docs/project/bindgen.mdx`: **Bindgen**. Bindgen for Bun
-  Sections: Creating JS Functions in Rust; Strings; Function Variants; `t.dictionary`; Enumerations; `t.oneOf`; Attributes; Callbacks; Classes.
+  Sections: Functions; Types; Values and lifetimes; Classes; Tests.
 - `docs/project/contributing.mdx`: **Contributing**. Contributing to Bun
   Sections: Using Nix (Alternative); Install Dependencies (Manual); Install LLVM; Building Bun; VSCode; Running debug builds; Code generation scripts; Modifying ESM modules; Release build; AddressSanitizer; Building WebKit locally + Debug mode of JSC; Troubleshooting; Using bun-debug; Contributing to the docs.
 - `src/jsc/bindings/v8/CLAUDE.md`: **V8 C++ API Implementation Guide**. Use Bun's native `bun check`, `bun lint`, `bun fmt` and `bun n2b` commands directly for type checking, linting, formatting and migration. Do not install or invoke external backends for these commands.
@@ -217,5 +217,5 @@ _From `package.json`._
 | `bun run clang-format:check` | `./scripts/run-clang-format.sh check` |
 | `bun run codegen:verify` | `bun src/codegen/generate-agent-tools.ts --check && (bun run codegen:string-maps && git diff --exit-code 'src/**/*.generated.rs' \|\| (echo '\n*.generated.rs is stale — run `bun run codegen:string-maps` and commit the result.' >&2; exit 1))` |
 | `bun run rust:check-all` | `bun scripts/rust-check-all.ts` |
-| `bun run rust:clippy` | `cargo clippy --workspace --no-deps --keep-going` |
+| `bun run rust:clippy` | `cargo clippy --no-deps --keep-going` |
 | `bun run test` | `bun scripts/runner.node.ts --exec-path ./build/debug/bun-debug` |

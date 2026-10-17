@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { bunEnv, bunExe, tempDir } from "harness";
-import { existsSync, readFileSync, symlinkSync } from "node:fs";
+import { readFileSync, symlinkSync } from "node:fs";
 import { join } from "node:path";
 import { generate, glob, main, plan, sanitize } from "../../src/codegen/generate-agent-tools.ts";
 
@@ -46,76 +46,15 @@ describe("generate-agent-tools", () => {
     expect(outputs).toContain("docs/project/agent-tools.mdx");
     for (const name of ["cpp-bun", "webkit", "win32", "linux-kernel", "bun-deps"]) {
       expect(outputs).toContain(`.claude/skills/${name}/SKILL.md`);
-      expect(outputs).toContain(`.agents/skills/${name}/SKILL.md`);
     }
   });
-
-  test("default check detects portable skill drift independently of Claude outputs", async () => {
-    using dir = tempDir("agent-tools-portable-check", {});
-    expect((await run("--out", String(dir))).exitCode).toBe(0);
-    const portable = join(String(dir), ".agents/skills/bun-yolo/SKILL.md");
-    const canonical = readFileSync(portable, "utf8");
-    expect(canonical).toContain("docs/runtime/decisions.mdx");
-    expect(canonical).not.toContain("docs/runtime/jev.mdx");
-    await Bun.write(portable, canonical + "\nDrift.\n");
-    const result = await run("--check", "--out", String(dir));
-    expect(result.stderr).toContain("stale: .agents/skills/bun-yolo/SKILL.md");
-    expect(result.stderr).not.toContain("stale: .claude/");
-    expect(result.exitCode).toBe(1);
-  });
-
-  test("targeted portable refresh never writes Claude or Rust outputs and preserves custom skills", async () => {
-    using dir = tempDir("agent-tools-portable-only", {
-      ".claude/skills/bun-yolo/SKILL.md": "Concurrent Claude edit.\n",
-      ".agents/skills/bun-yolo/SKILL.md": "Custom portable skill.\n",
-      "src/agent_tools/generated/tools.rs": "Concurrent Rust edit.\n",
-    });
-    const result = await run("--skill-root=.agents", "--out", String(dir));
-    expect(result.stderr).toContain("preserved: .agents/skills/bun-yolo/SKILL.md");
-    expect(readFileSync(join(String(dir), ".agents/skills/bun-yolo/SKILL.md"), "utf8")).toBe(
-      "Custom portable skill.\n",
-    );
-    expect(readFileSync(join(String(dir), ".claude/skills/bun-yolo/SKILL.md"), "utf8")).toBe(
-      "Concurrent Claude edit.\n",
-    );
-    expect(readFileSync(join(String(dir), "src/agent_tools/generated/tools.rs"), "utf8")).toBe(
-      "Concurrent Rust edit.\n",
-    );
-    expect(result.exitCode).toBe(1);
-  });
-
-  test.each([{ scope: ["--skill-root=.agents"] }, { scope: ["--skill-root", ".agents"] }])(
-    "both scoped option forms write only portable skills: %j",
-    async ({ scope }) => {
-      using dir = tempDir("agent-tools-scoped-option", {
-        ".claude/skills/bun-yolo/SKILL.md": "Concurrent Claude edit.\n",
-        "src/agent_tools/generated/tools.rs": "Concurrent Rust edit.\n",
-        "docs/project/agent-tools.mdx": "Concurrent documentation edit.\n",
-      });
-      const result = await run(...scope, `--out=${String(dir)}`);
-      expect(readFileSync(join(String(dir), ".agents/skills/bun-yolo/SKILL.md"), "utf8")).toContain(
-        "docs/runtime/decisions.mdx",
-      );
-      expect(readFileSync(join(String(dir), ".claude/skills/bun-yolo/SKILL.md"), "utf8")).toBe(
-        "Concurrent Claude edit.\n",
-      );
-      expect(readFileSync(join(String(dir), "src/agent_tools/generated/tools.rs"), "utf8")).toBe(
-        "Concurrent Rust edit.\n",
-      );
-      expect(readFileSync(join(String(dir), "docs/project/agent-tools.mdx"), "utf8")).toBe(
-        "Concurrent documentation edit.\n",
-      );
-      expect(result.stderr).toBe("");
-      expect(result.exitCode).toBe(0);
-    },
-  );
 
   test("invalid value options fail before generating or writing anything", () => {
     using dir = tempDir("agent-tools-invalid-options", {
       ".claude/skills/bun-yolo/SKILL.md": "Concurrent Claude edit.\n",
       "src/agent_tools/generated/tools.rs": "Concurrent Rust edit.\n",
     });
-    for (const flag of ["--skill-root", "--tools", "--skills", "--out"]) {
+    for (const flag of ["--tools", "--skills", "--out"]) {
       for (const invalid of [[flag], [`${flag}=`], [flag, "--check"], [flag, "one", `${flag}=two`]]) {
         // No --out: a missing or duplicate flag must reject even before the default checkout is selected.
         expect(() => main(invalid, new Set())).toThrow(
@@ -123,39 +62,33 @@ describe("generate-agent-tools", () => {
         );
       }
     }
-    for (const invalid of ["../.agents", ".agents/skills", ".other"]) {
-      expect(() => main([`--skill-root=${invalid}`, "--out", String(dir)], new Set())).toThrow(
-        "--skill-root must be .agents or .claude",
-      );
-    }
     expect(readFileSync(join(String(dir), ".claude/skills/bun-yolo/SKILL.md"), "utf8")).toBe(
       "Concurrent Claude edit.\n",
     );
     expect(readFileSync(join(String(dir), "src/agent_tools/generated/tools.rs"), "utf8")).toBe(
       "Concurrent Rust edit.\n",
     );
-    expect(existsSync(join(String(dir), ".agents"))).toBe(false);
   });
 
-  test("targeted refresh preserves dirty managed files from the inventory", async () => {
-    const path = ".agents/skills/bun-yolo/SKILL.md";
+  test("a refresh preserves dirty managed files from the inventory", async () => {
+    const path = ".claude/skills/bun-yolo/SKILL.md";
     const edited = generate().get(path)! + "\nConcurrent managed edit.\n";
     using dir = tempDir("agent-tools-dirty", { [path]: edited });
-    expect(main(["--skill-root=.agents", "--out", String(dir)], new Set([path]))).toBe(1);
+    expect(main(["--out", String(dir)], new Set([path]))).toBe(1);
     expect(readFileSync(join(String(dir), path), "utf8")).toBe(edited);
   });
 
   test("removed generated skills do not delete adjacent custom resources", async () => {
-    const managed = generate().get(".agents/skills/bun-yolo/SKILL.md")!;
+    const managed = generate().get(".claude/skills/bun-yolo/SKILL.md")!;
     using dir = tempDir("agent-tools-retired-custom", {
-      ".agents/skills/retired/SKILL.md": managed,
-      ".agents/skills/retired/custom.md": "Custom resource.\n",
-      ".agents/skills/bun-yolo/custom.md": "Custom owner without a generated skill.\n",
+      ".claude/skills/retired/SKILL.md": managed,
+      ".claude/skills/retired/custom.md": "Custom resource.\n",
+      ".claude/skills/bun-yolo/custom.md": "Custom owner without a generated skill.\n",
     });
-    const result = await run("--skill-root=.agents", "--out", String(dir));
-    expect(result.stderr).toContain("preserved: .agents/skills/retired");
-    expect(result.stderr).toContain("preserved: .agents/skills/bun-yolo/SKILL.md");
-    expect(readFileSync(join(String(dir), ".agents/skills/retired/custom.md"), "utf8")).toBe("Custom resource.\n");
+    const result = await run("--out", String(dir));
+    expect(result.stderr).toContain("preserved: .claude/skills/retired");
+    expect(result.stderr).toContain("preserved: .claude/skills/bun-yolo/SKILL.md");
+    expect(readFileSync(join(String(dir), ".claude/skills/retired/custom.md"), "utf8")).toBe("Custom resource.\n");
     expect(result.exitCode).toBe(1);
   });
 

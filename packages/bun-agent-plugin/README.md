@@ -16,12 +16,12 @@ Use `gemini` only for Gemini CLI. `agy` uses Antigravity's plugin schema and nat
 ## Sources and contracts
 
 - [Adapter contracts and official schemas](docs/agent-adapters.md).
-- [Rust/Bun policy](skills/bun-rust-first/SKILL.md).
-- [Native Bun.Video and media workflows](skills/bun-video/SKILL.md).
+- [Rust/Bun policy](../../.claude/skills/bun-rust-first/SKILL.md).
+- [Native Bun.Video and media workflows](../../.claude/skills/bun-video/SKILL.md).
 - [Shared project memory](memory/bun-agent-shared-memory.md).
 - [Current skill router](memory/bun-skills-catalog.md).
 
-Package-owned skills take precedence. Neutral repository skill directories are read before Claude-compatible source directories. Generated skills and tools come from the current checkout, not a historical README snapshot. Graph and type evidence must identify the real source domain and target binary.
+Skills come from `.claude/skills` and `.claude/commands` only. Generated skills and tools come from the current checkout, not a historical README snapshot. Graph and type evidence must identify the real source domain and target binary.
 
 ## Installation boundaries
 

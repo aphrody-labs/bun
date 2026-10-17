@@ -5,7 +5,7 @@ source path and SHA256. `bun scripts/catalog.ts` regenerates it. Equal hashes
 identify duplicate content without deleting upstream provenance or license text.
 The common entry point is `../README.md`; native media details are
 `../native/README.md`, benchmark methodology `../video-benchmark/README.md`, and
-agent authoring `../plugin/skills/bun-video/SKILL.md`.
+agent authoring `../../../.claude/skills/bun-video/SKILL.md`.
 
 The unified executable preserves every upstream command. React compositions use
 Remotion's render lifecycle; HTML timelines use HyperFrames' seek lifecycle.

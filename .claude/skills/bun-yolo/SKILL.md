@@ -7,7 +7,7 @@ description: "Use Bun's internal typed decision capability for boolean, choice a
 
 ## Typed judgments through Bun
 
-_From `packages/bun-agent-plugin/skills/bun-yolo/SKILL.md`._
+_From `src/agent_tools/sections/bun-yolo.md`._
 
 Use `bun:yolo` when a decision needs a judgment about language, such as passage
 relevance, intent routing or evidence support. Deterministic rules remain in

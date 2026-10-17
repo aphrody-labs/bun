@@ -8,7 +8,7 @@ const root = resolve(import.meta.dir, "../../..");
 const pages = [
   "docs/runtime/yolo.mdx",
   "docs/runtime/decisions.mdx",
-  "packages/bun-agent-plugin/skills/bun-yolo/SKILL.md",
+  "src/agent_tools/sections/bun-yolo.md",
   "packages/bun-agent-plugin/docs/decision-context.md",
   "docs/project/bun-site-sync.md",
 ];
@@ -31,7 +31,7 @@ test("public decision guides use Bun terminology and the canonical generic route
 
 test("generated decision skill uses its canonical owner across provider bundles", () => {
   expect(repoSkills(root).find(skill => skill.name === "bun-yolo")?.source).toBe(
-    "packages/bun-agent-plugin/skills/bun-yolo",
+    ".claude/skills/bun-yolo",
   );
   const files = generate({ root });
   const resources = [...files.entries()].filter(([path]) => path.includes("/skills/bun-yolo/"));

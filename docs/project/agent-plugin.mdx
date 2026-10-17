@@ -97,7 +97,7 @@ bun scripts/aphrody/agent-plugin.ts generate --check  # fails when dist is stale
 bun scripts/aphrody/agent-plugin.ts install           # generate and install
 ```
 
-Its inputs include package-owned skills (`packages/bun-agent-plugin/skills`), neutral repository skills (`.agents/skills`, `skills`) and Claude-compatible source paths as a fallback (`.claude/skills`, `.claude/commands`). The first skill of a name wins. `AGENTS.md` is preferred for repository guidance, with `CLAUDE.md` compatibility. Runtime tool catalogs, declarations, documentation and memory fiches are extracted from the checkout; adapters are generated rather than maintained separately.
+Its skill inputs are the repository skills in `.claude/skills` (hand-written, or generated from `src/agent_tools/skills.json` by `src/codegen/generate-agent-tools.ts`) and the slash commands in `.claude/commands`. That tree is the only skill source: Codex, Gemini CLI, OpenCode and Antigravity get the same skills through their generated adapters. `AGENTS.md` is preferred for repository guidance, with `CLAUDE.md` compatibility. Runtime tool catalogs, declarations, documentation and memory fiches are extracted from the checkout; adapters are generated rather than maintained separately.
 
 See [adapter contracts](../../packages/bun-agent-plugin/docs/agent-adapters.md) for source schemas and real qualification limits. A local model uses the selected harness's adapter; an inference endpoint alone cannot load skills or execute MCP tools. No Claude JSON hooks are registered with OpenCode or Gemini.
 
