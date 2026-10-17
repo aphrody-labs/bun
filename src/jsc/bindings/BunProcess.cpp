@@ -8,6 +8,7 @@
 
 // Include the CMake-generated dependency versions header
 #include "bun_dependency_versions.h"
+#include <zlib.h>
 #include <node_version.h>
 #include <wtf/Scope.h>
 #include <JavaScriptCore/InternalFieldTuple.h>
