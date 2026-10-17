@@ -164,7 +164,6 @@ pub struct WindowAttributes {
     pub(crate) parent_window: Option<SendSyncRawWindowHandle>,
     pub fullscreen: Option<Fullscreen>,
     // Platform-specific configuration.
-    #[allow(dead_code)]
     pub(crate) platform_specific: PlatformSpecificWindowAttributes,
 }
 

@@ -16,7 +16,6 @@ pub struct OwnedImage {
     pub image: Arc<wgpu::Texture>,
     pub view: Arc<wgpu::TextureView>,
     pub max_miplevels: u32,
-    #[allow(dead_code)]
     pub levels: u32,
     pub size: Size<u32>,
 }

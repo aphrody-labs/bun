@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! Simple winit application.
 
 use std::collections::HashMap;
@@ -69,7 +70,6 @@ fn main() -> Result<(), Box<dyn Error>> {
     event_loop.run_app(&mut state).map_err(Into::into)
 }
 
-#[allow(dead_code)]
 #[derive(Debug, Clone, Copy)]
 enum UserEvent {
     WakeUp,

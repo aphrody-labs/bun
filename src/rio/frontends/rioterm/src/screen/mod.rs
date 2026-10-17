@@ -4925,7 +4925,6 @@ impl Screen<'_> {
     }
 
     /// Process a new character for keyboard hints
-    #[allow(dead_code)]
     pub fn hint_input(&mut self, c: char, clipboard: &mut Clipboard) {
         let terminal = self.context_manager.current().terminal.lock();
         if let Some(hint_match) = self.hint_state.keyboard_input(&*terminal, c) {

@@ -1603,7 +1603,7 @@ unsafe fn register_window_class(class_name: &[u16]) {
     unsafe { RegisterClassExW(&class) };
 }
 
-struct ComInitialized(#[allow(dead_code)] *mut ());
+struct ComInitialized(*mut ());
 impl Drop for ComInitialized {
     fn drop(&mut self) {
         unsafe { CoUninitialize() };

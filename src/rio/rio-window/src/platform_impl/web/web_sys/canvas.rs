@@ -28,7 +28,6 @@ use super::media_query_handle::MediaQueryListHandle;
 use super::pointer::PointerHandler;
 use super::{event, fullscreen, ButtonsState, ResizeScaleHandle};
 
-#[allow(dead_code)]
 pub struct Canvas {
     common: Common,
     id: WindowId,

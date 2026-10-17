@@ -65,7 +65,6 @@ pub(crate) struct RgbaIcon {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct NoIcon;
 
-#[allow(dead_code)] // These are not used on every platform
 mod constructors {
     use super::*;
 

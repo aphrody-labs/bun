@@ -8,7 +8,6 @@ pub use std::io::Result;
 // TODO: Delete this
 /// A helper trait to provide the map_non_block function on Results.
 pub trait MapNonBlock<T> {
-    #[allow(dead_code)]
     fn map_non_block(self) -> Result<Option<T>>;
 }
 

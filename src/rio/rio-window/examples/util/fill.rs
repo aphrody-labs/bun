@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! Fill the window buffer with a solid color.
 //!
 //! Launching a window without drawing to it has unpredictable results varying from platform to
@@ -102,7 +103,6 @@ mod platform {
         })
     }
 
-    #[allow(dead_code)]
     pub fn cleanup_window(window: &Window) {
         GC.with(|gc| {
             let mut gc = gc.borrow_mut();

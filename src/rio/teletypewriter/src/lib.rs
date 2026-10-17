@@ -1,4 +1,4 @@
-#![allow(unreachable_pub, unused_variables)] // imported crate: its public items are its own API surface
+#![allow(unreachable_pub, unused_variables, dead_code)] // imported crate: its public items are its own API surface
 
 extern crate libc;
 

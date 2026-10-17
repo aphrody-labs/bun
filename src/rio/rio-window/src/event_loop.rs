@@ -567,7 +567,6 @@ impl raw_window_handle::HasDisplayHandle for ActiveEventLoop {
 /// - A reference-counted pointer to the underlying type.
 #[derive(Clone)]
 pub struct OwnedDisplayHandle {
-    #[allow(dead_code)]
     platform: platform_impl::OwnedDisplayHandle,
 }
 
@@ -671,7 +670,6 @@ pub struct AsyncRequestSerial {
 
 impl AsyncRequestSerial {
     // TODO(kchibisov): Remove `cfg` when the clipboard will be added.
-    #[allow(dead_code)]
     pub(crate) fn get() -> Self {
         static CURRENT_SERIAL: AtomicUsize = AtomicUsize::new(0);
         // NOTE: We rely on wrap around here, while the user may just request

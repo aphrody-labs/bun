@@ -3469,8 +3469,8 @@ pub(crate) fn parse_animation_time_ms(value: &str) -> Option<f32> {
     let is_calc = normalized.starts_with("calc(") && normalized.ends_with(')');
     if !is_calc
         && normalized
-            .bytes()
-            .any(|byte| matches!(byte, b'+' | b'*' | b'/' | b'(' | b')'))
+            .chars()
+            .any(|c| matches!(c, '+' | '*' | '/' | '(' | ')'))
     {
         return None;
     }

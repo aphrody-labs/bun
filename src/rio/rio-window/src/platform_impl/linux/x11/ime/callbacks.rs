@@ -80,9 +80,9 @@ pub(crate) unsafe fn set_destroy_callback(
 #[allow(clippy::enum_variant_names)]
 enum ReplaceImError {
     // Boxed to prevent large error type
-    MethodOpenFailed(#[allow(dead_code)] Box<PotentialInputMethods>),
-    ContextCreationFailed(#[allow(dead_code)] ImeContextCreationError),
-    SetDestroyCallbackFailed(#[allow(dead_code)] XError),
+    MethodOpenFailed(Box<PotentialInputMethods>),
+    ContextCreationFailed(ImeContextCreationError),
+    SetDestroyCallbackFailed(XError),
 }
 
 // Attempt to replace current IM (which may or may not be presently valid) with a new one. This

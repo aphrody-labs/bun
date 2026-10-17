@@ -137,7 +137,6 @@ impl<T: Eq> Binding<T> {
 
 #[derive(Clone, Debug, Eq, PartialEq, Hash)]
 pub enum BindingKey {
-    #[allow(dead_code)]
     Scancode(PhysicalKey),
     Keycode {
         key: Key,
@@ -353,7 +352,6 @@ pub enum Action {
     Copy,
 
     #[cfg(not(any(target_os = "macos", windows)))]
-    #[allow(dead_code)]
     /// Store current selection into selection buffer.
     CopySelection,
 
@@ -391,16 +389,13 @@ pub enum Action {
     ClearHistory,
 
     /// Hide the Rio window.
-    #[allow(dead_code)]
     Hide,
 
     /// Hide all windows other than Rio on macOS.
     #[cfg(target_os = "macos")]
-    #[allow(dead_code)]
     HideOtherApplications,
 
     /// Minimize the Rio window.
-    #[allow(dead_code)]
     Minimize,
 
     /// Quit Rio.
@@ -410,11 +405,9 @@ pub enum Action {
     ClearLogNotice,
 
     /// Spawn a new instance of Rio.
-    #[allow(dead_code)]
     SpawnNewInstance,
 
     /// Create a new Rio window.
-    #[allow(dead_code)]
     WindowCreateNew,
 
     /// Create config editor.
@@ -444,16 +437,13 @@ pub enum Action {
     TabCloseUnfocused,
 
     /// Toggle fullscreen.
-    #[allow(dead_code)]
     ToggleFullscreen,
 
     /// Toggle maximized.
-    #[allow(dead_code)]
     ToggleMaximized,
 
     /// Toggle simple fullscreen on macOS.
     #[cfg(target_os = "macos")]
-    #[allow(dead_code)]
     ToggleSimpleFullscreen,
 
     /// Clear active selection.

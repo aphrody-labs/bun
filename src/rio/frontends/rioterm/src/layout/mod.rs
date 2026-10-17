@@ -247,7 +247,6 @@ impl<T: rio_backend::event::EventListener> ContextGrid<T> {
     }
 
     #[inline]
-    #[allow(dead_code)]
     pub fn get_mut(&mut self, key: NodeId) -> Option<&mut ContextGridItem<T>> {
         self.inner.get_mut(&key)
     }
@@ -949,7 +948,6 @@ impl<T: rio_backend::event::EventListener> ContextGrid<T> {
     /// emission loop uses `contexts_mut` (it needs `&mut
     /// renderable_content` to take damage) — this one is handy for
     /// read-only cross-panel queries like the damage audit.
-    #[allow(dead_code)]
     #[inline]
     pub fn contexts(&self) -> &FxHashMap<NodeId, ContextGridItem<T>> {
         &self.inner

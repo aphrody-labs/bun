@@ -131,19 +131,16 @@ impl AtlasAllocator {
     }
 
     /// Clear all allocations and reset the atlas
-    #[allow(dead_code)]
     pub fn clear(&mut self) {
         self.shelves.clear();
     }
 
     /// Check if the atlas is empty
-    #[allow(dead_code)]
     pub fn is_empty(&self) -> bool {
         self.shelves.is_empty()
     }
 
     /// Get the atlas dimensions
-    #[allow(dead_code)]
     pub fn dimensions(&self) -> (u16, u16) {
         (self.width, self.height)
     }
@@ -170,7 +167,6 @@ impl AtlasAllocator {
     }
 
     /// Get atlas utilization statistics
-    #[allow(dead_code)]
     pub fn utilization(&self) -> AtlasStats {
         let total_area = (self.width as u32) * (self.height as u32);
         let used_area = self.calculate_used_area();
@@ -183,14 +179,12 @@ impl AtlasAllocator {
         }
     }
 
-    #[allow(dead_code)]
     fn calculate_used_area(&self) -> u32 {
         let next_y = self.find_next_y_position();
         (self.width as u32) * (next_y as u32)
     }
 }
 
-#[allow(dead_code)]
 #[derive(Debug)]
 pub struct AtlasStats {
     pub total_area: u32,

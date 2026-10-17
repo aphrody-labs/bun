@@ -119,10 +119,8 @@ unsafe impl Sync for UnownedWindow {}
 pub struct UnownedWindow {
     pub(crate) xconn: Arc<XConnection>, // never changes
     xwindow: xproto::Window,            // never changes
-    #[allow(dead_code)]
     visual: u32, // never changes
     root: xproto::Window,               // never changes
-    #[allow(dead_code)]
     screen_id: i32, // never changes
     selected_cursor: Mutex<SelectedCursor>,
     cursor_grabbed_mode: Mutex<CursorGrabMode>,
@@ -1595,13 +1593,11 @@ impl UnownedWindow {
         WindowButtons::all()
     }
 
-    #[allow(dead_code)]
     #[inline]
     pub fn xlib_display(&self) -> *mut c_void {
         self.xconn.display as _
     }
 
-    #[allow(dead_code)]
     #[inline]
     pub fn xlib_window(&self) -> c_ulong {
         self.xwindow as ffi::Window

@@ -2602,7 +2602,6 @@ mod alias_tests {
     }
 }
 
-#[allow(dead_code)]
 fn find_font_path(
     db: &crate::font::loader::Database,
     font_family: String,

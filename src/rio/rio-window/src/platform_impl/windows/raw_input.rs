@@ -29,7 +29,6 @@ use crate::event_loop::DeviceEvents;
 use crate::keyboard::{KeyCode, PhysicalKey};
 use crate::platform_impl::platform::util;
 
-#[allow(dead_code)]
 pub fn get_raw_input_device_list() -> Option<Vec<RAWINPUTDEVICELIST>> {
     let list_size = size_of::<RAWINPUTDEVICELIST>() as u32;
 
@@ -58,7 +57,6 @@ pub fn get_raw_input_device_list() -> Option<Vec<RAWINPUTDEVICELIST>> {
     Some(buffer)
 }
 
-#[allow(dead_code)]
 pub enum RawDeviceInfo {
     Mouse(RID_DEVICE_INFO_MOUSE),
     Keyboard(RID_DEVICE_INFO_KEYBOARD),
@@ -78,7 +76,6 @@ impl From<RID_DEVICE_INFO> for RawDeviceInfo {
     }
 }
 
-#[allow(dead_code)]
 pub fn get_raw_input_device_info(handle: HANDLE) -> Option<RawDeviceInfo> {
     let mut info: RID_DEVICE_INFO = unsafe { mem::zeroed() };
     let info_size = size_of::<RID_DEVICE_INFO>() as u32;

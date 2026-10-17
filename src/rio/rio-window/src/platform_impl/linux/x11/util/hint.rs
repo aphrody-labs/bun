@@ -4,7 +4,6 @@ use std::sync::Arc;
 use super::*;
 
 #[derive(Debug)]
-#[allow(dead_code)]
 pub enum StateOperation {
     Remove = 0, // _NET_WM_STATE_REMOVE
     Add = 1,    // _NET_WM_STATE_ADD
@@ -58,7 +57,6 @@ struct MwmHints {
     status: u32,
 }
 
-#[allow(dead_code)]
 mod mwm {
     // Motif WM hints are obsolete, but still widely supported.
     // https://stackoverflow.com/a/1909708

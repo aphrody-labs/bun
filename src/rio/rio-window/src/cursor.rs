@@ -178,11 +178,9 @@ impl Error for BadImage {}
 
 /// Platforms export this directly as `PlatformCustomCursorSource` if they need to only work with
 /// images.
-#[allow(dead_code)]
 #[derive(Debug)]
 pub(crate) struct OnlyCursorImageSource(pub(crate) CursorImage);
 
-#[allow(dead_code)]
 impl OnlyCursorImageSource {
     pub(crate) fn from_rgba(
         rgba: Vec<u8>,
@@ -196,7 +194,6 @@ impl OnlyCursorImageSource {
 }
 
 /// Platforms export this directly as `PlatformCustomCursor` if they don't implement caching.
-#[allow(dead_code)]
 #[derive(Debug, Clone)]
 pub(crate) struct OnlyCursorImage(pub(crate) Arc<CursorImage>);
 
@@ -215,7 +212,6 @@ impl PartialEq for OnlyCursorImage {
 impl Eq for OnlyCursorImage {}
 
 #[derive(Debug)]
-#[allow(dead_code)]
 pub(crate) struct CursorImage {
     pub(crate) rgba: Vec<u8>,
     pub(crate) width: u16,
@@ -276,7 +272,6 @@ impl CursorImage {
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub(crate) struct NoCustomCursor;
 
-#[allow(dead_code)]
 impl NoCustomCursor {
     pub(crate) fn from_rgba(
         rgba: Vec<u8>,

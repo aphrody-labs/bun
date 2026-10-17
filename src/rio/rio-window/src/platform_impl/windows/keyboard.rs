@@ -737,7 +737,6 @@ fn get_kbd_state() -> [u8; 256] {
 
 /// Gets the current keyboard state regardless of whether the corresponding keyboard events have
 /// been removed from the event queue. See also: get_kbd_state
-#[allow(clippy::uninit_assumed_init)]
 fn get_async_kbd_state() -> [u8; 256] {
     unsafe {
         let mut kbd_state: [u8; 256] = [0; 256];

@@ -1,9 +1,8 @@
-#[allow(dead_code)]
+#![allow(dead_code)]
 fn needs_send<T: Send>() {}
 
 #[test]
 fn event_loop_proxy_send() {
-    #[allow(dead_code)]
     fn is_send<T: 'static + Send>() {
         // ensures that `rio_window::EventLoopProxy<T: Send>` implements `Send`
         needs_send::<rio_window::event_loop::EventLoopProxy<T>>();

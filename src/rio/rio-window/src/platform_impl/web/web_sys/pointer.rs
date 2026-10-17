@@ -11,7 +11,6 @@ use crate::keyboard::ModifiersState;
 use event::ButtonsState;
 use web_sys::PointerEvent;
 
-#[allow(dead_code)]
 pub(super) struct PointerHandler {
     on_cursor_leave: Option<EventListenerHandle<dyn FnMut(PointerEvent)>>,
     on_cursor_enter: Option<EventListenerHandle<dyn FnMut(PointerEvent)>>,

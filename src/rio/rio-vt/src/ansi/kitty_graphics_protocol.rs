@@ -994,7 +994,6 @@ fn decode_payload_base64(payload: &[u8]) -> Option<Vec<u8>> {
 /// protocol EINVAL/ENOENT/E2BIG message strings so the caller can
 /// surface them in a response.
 #[derive(Debug)]
-#[allow(dead_code)] // UnsupportedFormat/Medium are platform-gated
 enum GraphicError {
     DimensionsTooLarge,
     DimensionsRequired,

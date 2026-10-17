@@ -12,7 +12,6 @@
 use crate::UnderlineShape;
 use bytemuck::{Pod, Zeroable};
 
-#[allow(dead_code)]
 #[derive(Default, Clone, Copy)]
 pub struct RunUnderline {
     pub enabled: bool,
@@ -484,7 +483,6 @@ impl Batch {
     /// underline_style: 1 = regular, 2 = dashed, 3 = dotted, 4 = curly
     /// thickness: The actual line thickness (passed in corner_radii.x)
     #[inline]
-    #[allow(dead_code)]
     fn underline(
         &mut self,
         rect: &Rect,
@@ -587,7 +585,6 @@ impl Batch {
 // Fields are read by the wgpu/metal recorders; on Linux+no-wgpu only
 // the Vulkan recorder runs and it reads them via `Debug` formatting in
 // trace logs but not via field access — silence dead_code there.
-#[allow(dead_code)]
 #[derive(Debug, Clone, Copy)]
 pub enum DrawCmd {
     /// Instanced quad draw (one instance per quad, 4 verts from vertex_id).
@@ -892,7 +889,6 @@ impl BatchManager {
     }
 
     /// Add an underline quad with GPU pattern rendering
-    #[allow(dead_code)]
     #[inline]
     pub fn underline(
         &mut self,
@@ -1025,7 +1021,6 @@ impl BatchManager {
         }
     }
 
-    #[allow(dead_code)]
     #[inline]
     pub fn draw_underline(
         &mut self,

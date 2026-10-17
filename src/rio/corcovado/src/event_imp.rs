@@ -1169,7 +1169,6 @@ pub fn opt_from_usize(opt: usize) -> PollOpt {
 
 // Used internally to mutate an `Event` in place
 // Not used on all platforms
-#[allow(dead_code)]
 pub fn kind_mut(event: &mut Event) -> &mut Ready {
     &mut event.kind
 }

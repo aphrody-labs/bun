@@ -105,5 +105,4 @@ impl ActiveEventLoop {
 ///     event_loop.run_on_demand(|_, _| {});
 /// });
 /// ```
-#[allow(dead_code)]
 fn test_run_on_demand_cannot_access_event_loop() {}

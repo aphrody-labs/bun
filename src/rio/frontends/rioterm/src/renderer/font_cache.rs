@@ -68,19 +68,16 @@ impl FontCache {
     }
 
     /// Get current cache size (for debugging/monitoring)
-    #[allow(dead_code)]
     pub fn len(&self) -> usize {
         self.hot_cache.len() + self.cache.len()
     }
 
     /// Check if cache is empty
-    #[allow(dead_code)]
     pub fn is_empty(&self) -> bool {
         self.hot_cache.is_empty() && self.cache.is_empty()
     }
 
     /// Clear all cache entries with cleanup
-    #[allow(dead_code)]
     pub fn clear(&mut self) {
         self.hot_cache.clear();
         self.cache.clear();

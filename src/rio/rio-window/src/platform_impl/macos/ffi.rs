@@ -224,7 +224,7 @@ extern "C" {
 //
 // But the values that `NSWindowLevel` has are compiled in, and as such has
 // to remain ABI compatible, so they're safe for us to hardcode as well.
-#[allow(dead_code, non_upper_case_globals)]
+#[allow(non_upper_case_globals)]
 mod window_level {
     const kCGNumReservedWindowLevels: i32 = 16;
     const kCGNumReservedBaseWindowLevels: i32 = 5;

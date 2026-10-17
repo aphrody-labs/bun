@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 use corcovado::event::Evented;
 use corcovado::{Events, Poll, PollOpt, Ready, Registration, SetReadiness, Token};
 use std::time::Duration;
@@ -189,7 +190,6 @@ mod stress {
         const NUM: usize = ENTRIES * PER_ENTRY;
 
         struct Entry {
-            #[allow(dead_code)]
             registration: Registration,
             set_readiness: SetReadiness,
             num: AtomicUsize,

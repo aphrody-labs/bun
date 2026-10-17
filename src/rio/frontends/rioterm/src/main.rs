@@ -1,4 +1,4 @@
-#![allow(unreachable_pub)] // imported crate: its public items are its own API surface
+#![allow(unreachable_pub, dead_code)] // imported crate: its public items are its own API surface
 
 // With the default subsystem, 'console', windows creates an additional console
 // window for the program.

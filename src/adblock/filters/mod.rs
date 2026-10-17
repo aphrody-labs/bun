@@ -13,7 +13,6 @@ pub(crate) mod token_selector;
 
 #[allow(unknown_lints)]
 #[allow(
-    dead_code,
     clippy::all,
     unused_imports,
     unsafe_code,

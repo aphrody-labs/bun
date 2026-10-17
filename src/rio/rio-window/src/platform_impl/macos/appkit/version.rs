@@ -2,7 +2,6 @@
 #[derive(PartialEq, PartialOrd, Debug, Clone, Copy)]
 pub struct NSAppKitVersion(f64);
 
-#[allow(dead_code)]
 #[allow(non_upper_case_globals)]
 impl NSAppKitVersion {
     pub fn current() -> Self {

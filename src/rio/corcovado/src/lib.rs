@@ -1,4 +1,4 @@
-#![allow(unreachable_pub)] // imported crate: its public items are its own API surface
+#![allow(unreachable_pub, dead_code)] // imported crate: its public items are its own API surface
 
 //! A low-level readiness-based IO library focused on what Rio needs from its
 //! PTY event loop: event notification backed by epoll, kqueue, and IOCP, plus

@@ -49,14 +49,12 @@ impl From<OsError> for EventLoopError {
 
 impl NotSupportedError {
     #[inline]
-    #[allow(dead_code)]
     pub(crate) fn new() -> NotSupportedError {
         NotSupportedError { _marker: () }
     }
 }
 
 impl OsError {
-    #[allow(dead_code)]
     pub(crate) fn new(
         line: u32,
         file: &'static str,

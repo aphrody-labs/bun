@@ -179,7 +179,6 @@ pub struct WgpuGridRenderer {
     /// `bg_cpu` changed since the last `write_buffer`.
     bg_dirty: bool,
 
-    #[allow(dead_code)]
     frame: usize,
 
     uniform_buffer: wgpu::Buffer,
@@ -192,10 +191,8 @@ pub struct WgpuGridRenderer {
     // text pipeline. The bind-group-layout fields are retained for
     // Phase 2 (recreating the atlas bind group when we grow/rotate
     // the atlas texture); hence `#[allow(dead_code)]` for now.
-    #[allow(dead_code)]
     text_uniform_bgl: wgpu::BindGroupLayout,
     text_uniform_bg: wgpu::BindGroup,
-    #[allow(dead_code)]
     text_atlas_bgl: wgpu::BindGroupLayout,
     text_atlas_bg: wgpu::BindGroup,
     text_pipeline: wgpu::RenderPipeline,

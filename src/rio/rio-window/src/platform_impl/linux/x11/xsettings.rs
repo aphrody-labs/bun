@@ -88,8 +88,8 @@ struct Setting<'a> {
 /// The data contained in a setting.
 enum SettingData<'a> {
     Integer(i32),
-    String(#[allow(dead_code)] &'a [u8]),
-    Color(#[allow(dead_code)] [i16; 4]),
+    String(&'a [u8]),
+    Color([i16; 4]),
 }
 
 impl<'a> Setting<'a> {
@@ -253,7 +253,6 @@ impl Endianness {
 }
 
 /// Parser errors.
-#[allow(dead_code)]
 #[derive(Debug)]
 pub enum ParserError {
     /// Ran out of bytes.

@@ -191,13 +191,5 @@ pub unsafe fn sockaddr_un(
 }
 
 fn sun_path_offset() -> usize {
-    unsafe {
-        // Work with an actual instance of the type since using a null pointer is UB
-        #[allow(invalid_value)]
-        #[allow(deprecated)]
-        let addr: libc::sockaddr_un = mem::uninitialized();
-        let base = &addr as *const _ as usize;
-        let path = &addr.sun_path as *const _ as usize;
-        path - base
-    }
+    mem::offset_of!(libc::sockaddr_un, sun_path)
 }

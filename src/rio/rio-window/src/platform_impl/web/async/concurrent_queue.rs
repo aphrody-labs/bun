@@ -7,7 +7,6 @@ pub struct ConcurrentQueue<T> {
 }
 
 pub enum PushError<T> {
-    #[allow(dead_code)]
     Full(T),
     Closed(T),
 }

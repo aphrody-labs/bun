@@ -23,9 +23,7 @@ const KILL_REAP_TIMEOUT: Duration = Duration::from_secs(1);
 pub struct Child {
     pub id: Arc<libc::c_int>,
     pub pid: Arc<libc::pid_t>,
-    #[allow(dead_code)]
     ptsname: String,
-    #[allow(dead_code)]
     process: Option<std::process::Child>,
     lifecycle: Arc<Mutex<ChildLifecycle>>,
 }

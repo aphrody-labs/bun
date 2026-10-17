@@ -20,10 +20,10 @@ pub enum DndState {
 #[derive(Debug)]
 pub enum DndDataParseError {
     EmptyData,
-    InvalidUtf8(#[allow(dead_code)] Utf8Error),
-    HostnameSpecified(#[allow(dead_code)] String),
-    UnexpectedProtocol(#[allow(dead_code)] String),
-    UnresolvablePath(#[allow(dead_code)] io::Error),
+    InvalidUtf8(Utf8Error),
+    HostnameSpecified(String),
+    UnexpectedProtocol(String),
+    UnresolvablePath(io::Error),
 }
 
 impl From<Utf8Error> for DndDataParseError {

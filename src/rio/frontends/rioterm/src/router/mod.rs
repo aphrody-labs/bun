@@ -766,7 +766,6 @@ pub struct RouteWindow<'a> {
     #[cfg(target_os = "windows")]
     pub initial_frame_rendered: bool,
     pub render_timestamp: Instant,
-    #[cfg_attr(target_os = "macos", allow(dead_code))]
     pub vblank_interval: Duration,
     pub winit_window: Window,
     pub screen: Screen<'a>,

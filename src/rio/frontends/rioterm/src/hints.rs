@@ -170,7 +170,6 @@ impl HintState {
     }
 
     /// Get keys pressed so far
-    #[allow(dead_code)]
     pub fn keys_pressed(&self) -> &[char] {
         &self.keys
     }
@@ -193,7 +192,6 @@ impl HintState {
     }
 
     /// Update the alphabet used for hint labels
-    #[allow(dead_code)]
     pub fn update_alphabet(&mut self, alphabet: &str) {
         if self.alphabet != alphabet {
             self.alphabet = alphabet.to_string();

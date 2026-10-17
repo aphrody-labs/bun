@@ -1,3 +1,4 @@
+#![allow(dead_code)] // imported crate
 // The terminal core (VT state machine, parser, grid, selection, search,
 // PTY event model, colors) now lives in the `rio-vt` crate. Re-export
 // every module at its original `crate::`/`rio_backend::` path so nothing

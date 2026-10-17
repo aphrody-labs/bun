@@ -160,7 +160,6 @@ struct TextWgpuState {
     uniform_buffer: wgpu::Buffer,
     uniform_bind_group: wgpu::BindGroup,
     atlas_bind_group: wgpu::BindGroup,
-    #[allow(dead_code)] // retained for future atlas-bind-group recreation on atlas grow
     atlas_bind_group_layout: wgpu::BindGroupLayout,
     pipeline: wgpu::RenderPipeline,
     instance_buffer: wgpu::Buffer,

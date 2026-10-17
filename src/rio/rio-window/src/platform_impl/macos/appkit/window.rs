@@ -250,7 +250,6 @@ extern_methods!(
     }
 );
 
-#[allow(dead_code)]
 #[repr(isize)] // NSInteger
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum NSWindowTitleVisibility {
@@ -264,7 +263,6 @@ unsafe impl Encode for NSWindowTitleVisibility {
     const ENCODING: Encoding = NSInteger::ENCODING;
 }
 
-#[allow(dead_code)]
 #[repr(usize)] // NSUInteger
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum NSWindowButton {
@@ -300,7 +298,6 @@ unsafe impl Encode for NSWindowButton {
 //
 // But the values that `NSWindowLevel` has are compiled in, and as such has
 // to remain ABI compatible, so they're safe for us to hardcode as well.
-#[allow(dead_code)]
 mod window_level {
     const kCGNumReservedWindowLevels: i32 = 16;
     const kCGNumReservedBaseWindowLevels: i32 = 5;
@@ -334,7 +331,6 @@ use window_level::*;
 #[repr(transparent)]
 pub struct NSWindowLevel(pub NSInteger);
 
-#[allow(dead_code)]
 impl NSWindowLevel {
     #[doc(alias = "BelowNormalWindowLevel")]
     pub const BELOW_NORMAL: Self = Self((kCGNormalWindowLevel - 1) as _);
@@ -390,7 +386,6 @@ unsafe impl Encode for NSWindowStyleMask {
     const ENCODING: Encoding = NSUInteger::ENCODING;
 }
 
-#[allow(dead_code)]
 #[repr(usize)] // NSUInteger
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum NSBackingStoreType {
@@ -403,7 +398,6 @@ unsafe impl Encode for NSBackingStoreType {
     const ENCODING: Encoding = NSUInteger::ENCODING;
 }
 
-#[allow(dead_code)]
 #[repr(usize)] // NSUInteger
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum NSWindowSharingType {
@@ -416,7 +410,6 @@ unsafe impl Encode for NSWindowSharingType {
     const ENCODING: Encoding = NSUInteger::ENCODING;
 }
 
-#[allow(dead_code)]
 #[repr(isize)] // NSInteger
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum NSWindowOrderingMode {
@@ -429,7 +422,6 @@ unsafe impl Encode for NSWindowOrderingMode {
     const ENCODING: Encoding = NSInteger::ENCODING;
 }
 
-#[allow(dead_code)]
 #[repr(isize)] // NSInteger
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum NSWindowTabbingMode {

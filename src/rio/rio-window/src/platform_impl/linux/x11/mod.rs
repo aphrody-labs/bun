@@ -203,7 +203,6 @@ pub(crate) enum RefreshState {
     /// Window is unmapped or `VisibilityFullyObscured` — timer is
     /// torn down so we don't burn CPU on invisible windows.
     Hidden {
-        #[allow(dead_code)]
         rate: Duration,
     },
     /// Timer registered with calloop, firing at `rate`.

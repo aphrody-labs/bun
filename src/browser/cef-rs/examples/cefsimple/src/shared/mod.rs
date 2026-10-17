@@ -1,3 +1,4 @@
+#![allow(dead_code)]
 //! Rust port of the [`cefsimple`](https://github.com/chromiumembedded/cef/tree/master/tests/cefsimple) example.
 
 use cef::*;
@@ -12,7 +13,6 @@ pub type Library = library_loader::LibraryLoader;
 #[cfg(not(target_os = "macos"))]
 pub struct Library;
 
-#[allow(dead_code)]
 pub fn load_cef() -> Library {
     #[cfg(target_os = "macos")]
     let library = {
@@ -32,7 +32,6 @@ pub fn load_cef() -> Library {
     library
 }
 
-#[allow(dead_code)]
 pub fn run_main(main_args: &MainArgs, cmd_line: &CommandLine, sandbox_info: *mut u8) {
     let switch = CefString::from("type");
     let is_browser_process = cmd_line.has_switch(Some(&switch)) != 1;

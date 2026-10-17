@@ -1,3 +1,4 @@
+#![allow(dead_code)] // imported crate
 // Copyright (c) 2023-present, Raphael Amorim.
 //
 // This source code is licensed under the MIT license found in the
@@ -1282,7 +1283,6 @@ const RUN_BUCKET_SIZE: usize = 8;
 /// cell: UTF-16 code units on macOS (CoreText string indices), UTF-8
 /// bytes elsewhere (swash `cluster.source.start`).
 #[derive(Clone, Copy, Debug)]
-#[allow(dead_code)] // `x` / `y` / `advance` kept for future kerning-aware layout
 struct ShapedGlyph {
     id: u16,
     x: f32,

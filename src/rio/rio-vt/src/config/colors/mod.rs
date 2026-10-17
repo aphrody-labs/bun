@@ -504,7 +504,6 @@ impl ColorBuilder8Bits {
 }
 
 impl ColorBuilder {
-    #[allow(dead_code)]
     fn new(red: f64, green: f64, blue: f64, alpha: f64) -> Self {
         Self {
             red,

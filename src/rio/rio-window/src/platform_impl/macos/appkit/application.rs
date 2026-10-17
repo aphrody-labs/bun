@@ -59,7 +59,6 @@ extern_methods!(
         pub fn hide(&self, sender: Option<&AnyObject>);
 
         #[method(orderFrontCharacterPalette:)]
-        #[allow(dead_code)]
         pub fn orderFrontCharacterPalette(&self, sender: Option<&AnyObject>);
 
         #[method(hideOtherApplications:)]
@@ -91,7 +90,6 @@ extern_methods!(
     }
 );
 
-#[allow(dead_code)]
 #[repr(isize)] // NSInteger
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum NSApplicationActivationPolicy {

@@ -246,7 +246,6 @@ unsafe impl Encode for NSEventPhase {
     const ENCODING: Encoding = NSUInteger::ENCODING;
 }
 
-#[allow(dead_code)]
 #[repr(i16)] // short
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 pub enum NSEventSubtype {
@@ -267,7 +266,6 @@ unsafe impl Encode for NSEventSubtype {
     const ENCODING: Encoding = i16::ENCODING;
 }
 
-#[allow(dead_code)]
 #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[repr(usize)] // NSUInteger
 pub enum NSEventType {
