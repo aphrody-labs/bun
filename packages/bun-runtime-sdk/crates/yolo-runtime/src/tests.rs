@@ -851,7 +851,7 @@ mod process {
   #[test]
   fn capture_rejects_unknown_flags_and_null_output_without_losing_data() {
     let rt = create(0);
-    assert_eq!(spawn_flags(rt, 8, "true", &[]).0, YoloStatus::InvalidArgument);
+    assert_eq!(spawn_flags(rt, 16, "true", &[]).0, YoloStatus::InvalidArgument);
     assert_eq!(
       spawn_flags(rt, YOLO_SPAWN_CAPTURE | YOLO_SPAWN_CAPTURE_LOSSLESS, "true", &[]).0,
       YoloStatus::InvalidArgument
