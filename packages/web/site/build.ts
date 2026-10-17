@@ -882,10 +882,14 @@ const cmd = (label: string, text: string) =>
   `<button class="cmd" type="button" data-copy="${escapeHtml(text)}"><span>${escapeHtml(label)}</span><code>${escapeHtml(text)}</code></button>`;
 
 /** Commandes des scripts d'installation du runtime servis par ce site (/install, /install.ps1). */
-function runtimeInstallCommands(origin: string) {
+function runtimeInstallCommands(origin: string, release?: Release) {
   const host = new URL(origin).host;
-  return `<div class="cmds">${cmd("Runtime, Linux and macOS (bash)", `curl -fsSL ${origin}/install | bash`)}${cmd("Runtime, Windows (PowerShell)", `powershell -c "irm ${host}/install.ps1|iex"`)}</div>`;
+  return `<div class="cmds">${cmd(unixInstallLabel(release), `curl -fsSL ${origin}/install | bash`)}${cmd("Windows (PowerShell)", `powershell -c "irm ${host}/install.ps1|iex"`)}</div>`;
 }
+
+/** The bash installer serves Linux, and macOS when the release carries macOS archives. */
+const unixInstallLabel = (release?: Release) =>
+  !release || releasePlatforms(release).some(platform => platform.startsWith("macOS")) ? "Linux and macOS" : "Linux";
 
 /** En-tête de l'accueil : résumé de la distribution, commandes d'installation de ses scripts publiés. */
 function renderHero(d: SiteData): string {
@@ -942,7 +946,7 @@ export function renderRuntimeHero(
   const host = new URL(o.origin).host;
   const doc = (slug: string, fallback = "/docs") => (!extra.docs || extra.docs.has(slug) ? pageUrl(slug) : fallback);
   const commands = [
-    cmd("Linux and macOS", `curl -fsSL ${o.origin}/install | bash`),
+    cmd(unixInstallLabel(latest), `curl -fsSL ${o.origin}/install | bash`),
     cmd("Windows (PowerShell)", `powershell -c "irm ${host}/install.ps1|iex"`),
   ];
   const platforms = latest ? releasePlatforms(latest) : [];
@@ -985,7 +989,7 @@ ${release}
 <div class="card"><p class="card-title"><a href="${doc("runtime/index")}">Runtime</a></p><p class="muted">Run JavaScript, TypeScript and JSX on JavaScriptCore, with Node.js and Web APIs.</p><pre><code>bun run index.tsx</code></pre></div>
 <div class="card"><p class="card-title"><a href="${doc("pm/cli/install")}">Package manager</a></p><p class="muted">Install npm packages, manage workspaces and keep a text lockfile.</p><pre><code>bun install</code></pre></div>
 <div class="card"><p class="card-title"><a href="${doc("test/index")}">Test runner</a></p><p class="muted">Jest-compatible tests with mocks, snapshots and watch mode.</p><pre><code>bun test</code></pre></div>
-<div class="card"><p class="card-title"><a href="${doc("bundler/index")}">Bundler</a></p><p class="muted">Bundle JavaScript, TypeScript, JSX and CSS for browsers or servers.</p><pre><code>bun build ./app.tsx --outdir dist</code></pre></div>
+<div class="card"><p class="card-title"><a href="${doc("bundler/index")}">Bundler</a></p><p class="muted">Bundle JavaScript, TypeScript, JSX and CSS for browsers or servers.</p><pre><code>bun build ./app.tsx</code></pre></div>
 </div></section>
 ${
   modules.length
@@ -1057,7 +1061,7 @@ function renderDownloads(
   data: SiteData | null,
 ): string {
   const head = `<h2 id="runtime">Runtime (${escapeHtml(o.repo)})</h2><p>Release builds from <a href="https://github.com/${o.repo}/releases">GitHub releases</a>, each file with its SHA-256 from the release checksum file.</p>
-${runtimeInstallCommands(o.origin)}`;
+${runtimeInstallCommands(o.origin, latest)}`;
   if (!releases || !latest)
     return `${head}<p class="banner">The release list could not be read when this page was built. See <a href="https://github.com/${o.repo}/releases">GitHub releases</a>.</p>`;
   const groups = new Map<string, string[]>();
@@ -1128,9 +1132,15 @@ function renderRuntimeNotes(releases: Release[] | null, o: BuildOptions): string
   const stable = releases?.filter(r => isRuntimeRelease(r) && !r.prerelease) ?? [];
   if (!stable.length) return `${head}<p>See <a href="https://github.com/${o.repo}/releases">GitHub releases</a>.</p>`;
   const others = releases?.filter(r => !isRuntimeRelease(r) && !r.prerelease) ?? [];
+  // Release headings sit below the release title (h3).
   const notes = (r: Release) =>
     r.body.trim()
-      ? Bun.markdown.html(r.body, { headings: { ids: false }, tagFilter: true } as any)
+      ? Bun.markdown
+          .html(r.body, { headings: { ids: false }, tagFilter: true } as any)
+          .replace(
+            /<(\/?)h([1-6])\b/g,
+            (_, close: string, level: string) => `<${close}h${Math.min(6, Number(level) + 2)}`,
+          )
       : '<p class="muted">No notes.</p>';
   return `${head}<p>Published builds of <a href="https://github.com/${o.repo}">${escapeHtml(o.repo)}</a>. Files and checksums are on <a href="/downloads">Downloads</a>; changes inherited from Bun are described in the <a href="https://bun.com/blog">upstream release notes</a>.</p>
 ${stable
@@ -1224,7 +1234,7 @@ function renderBenchmarks(reports: PerfReport[], o: BuildOptions, latest: Releas
 <p class="lead">Measured runtime and product workloads. Each table identifies its binaries, source, measurement method and execution host.</p>`;
   const results = reports.length
     ? `${o.perfRun ? `<p>Source: <a href="${escapeHtml(o.perfRun)}">CI run</a> of the <code>aphrody-perf</code> workflow (artifacts <code>perf-report-*</code>).</p>` : ""}${reports.map(renderPerfTable).join("\n")}`
-    : `<p class="banner">No measured report was attached to this build of the site. Run the commands below to measure on your machine.</p>`;
+    : `<p class="banner">No benchmark results are published yet. The measured cases and the commands to run them are below.</p>`;
   const thresholds = existsSync(join(o.src, "bench/aphrody/thresholds.json"))
     ? `<p>Thresholds live in <a href="https://github.com/${o.repo}/blob/main/bench/aphrody/thresholds.json"><code>bench/aphrody/thresholds.json</code></a>: a case fails when the runtime median exceeds upstream by more than its ratio <em>and</em> its absolute delta.</p>`
     : "";
