@@ -444,7 +444,7 @@ checksum = "330a5ed07fa54e4702c9d6c4174f74427fc0ef6e214bbd677ae50a5099946470"
 
 [[package]]
 name = "aphrody-jev"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "axum",
  "futures",
@@ -460,7 +460,7 @@ dependencies = [
 
 [[package]]
 name = "aphrody-pkg-system"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_core",
 ]
@@ -1922,7 +1922,7 @@ dependencies = [
 
 [[package]]
 name = "bun-cosmic"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "libcosmic",
  "notify-rust",
@@ -1938,7 +1938,7 @@ dependencies = [
 
 [[package]]
 name = "bun-dotnet-host"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "libc",
  "serde_json",
@@ -1947,7 +1947,7 @@ dependencies = [
 
 [[package]]
 name = "bun-macro"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "anyhow",
  "napi 2.16.17",
@@ -1957,7 +1957,7 @@ dependencies = [
 
 [[package]]
 name = "bun-mdx-rs"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun-native-plugin",
  "mdxjs",
@@ -1968,7 +1968,7 @@ dependencies = [
 
 [[package]]
 name = "bun-native-plugin"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "anyhow",
  "bun-macro",
@@ -1976,7 +1976,7 @@ dependencies = [
 
 [[package]]
 name = "bun-nginx-module"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "nginx-sys",
  "ngx",
@@ -1984,7 +1984,7 @@ dependencies = [
 
 [[package]]
 name = "bun-plugin-n2b-napi"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_migrate",
  "napi 3.14.2",
@@ -1995,7 +1995,7 @@ dependencies = [
 
 [[package]]
 name = "bun-plugin-oxc-napi"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun-native-plugin",
  "bun_ecma_api",
@@ -2019,7 +2019,7 @@ dependencies = [
 
 [[package]]
 name = "bun-runtime-bench"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "pyo3",
 ]
@@ -2046,7 +2046,7 @@ dependencies = [
 
 [[package]]
 name = "bun-webview-core"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "base64 0.22.1",
  "gtk4",
@@ -2061,7 +2061,7 @@ dependencies = [
 
 [[package]]
 name = "bun-winsvc"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "windows-service 0.8.0",
  "windows-sys 0.61.2",
@@ -2069,7 +2069,7 @@ dependencies = [
 
 [[package]]
 name = "bun_adblock"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "addr",
  "arrayvec",
@@ -2090,7 +2090,7 @@ dependencies = [
 
 [[package]]
 name = "bun_agent_tools"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_core",
  "bun_sys",
@@ -2104,7 +2104,7 @@ dependencies = [
 
 [[package]]
 name = "bun_alloc"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "allocator-api2 0.2.21",
  "bun_mimalloc_sys",
@@ -2115,7 +2115,7 @@ dependencies = [
 
 [[package]]
 name = "bun_analytics"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bitflags 2.13.2",
  "bun_core",
@@ -2143,7 +2143,7 @@ dependencies = [
 
 [[package]]
 name = "bun_ast"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bitflags 2.13.2",
  "bstr",
@@ -2166,7 +2166,7 @@ dependencies = [
 
 [[package]]
 name = "bun_ast_jsc"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_ast",
  "bun_jsc",
@@ -2174,7 +2174,7 @@ dependencies = [
 
 [[package]]
 name = "bun_base64"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_alloc",
  "bun_core",
@@ -2186,7 +2186,7 @@ dependencies = [
 
 [[package]]
 name = "bun_boringssl"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_alloc",
  "bun_boringssl_sys",
@@ -2197,7 +2197,7 @@ dependencies = [
 
 [[package]]
 name = "bun_boringssl_sys"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_core",
  "bun_opaque",
@@ -2205,7 +2205,7 @@ dependencies = [
 
 [[package]]
 name = "bun_brotli"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_alloc",
  "bun_brotli_sys",
@@ -2215,14 +2215,14 @@ dependencies = [
 
 [[package]]
 name = "bun_brotli_sys"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_opaque",
 ]
 
 [[package]]
 name = "bun_browser"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "anyhow",
  "bun_browser_browser",
@@ -2236,7 +2236,7 @@ dependencies = [
 
 [[package]]
 name = "bun_browser_browser"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "base64 0.23.1",
  "bun_browser_dom",
@@ -2253,7 +2253,7 @@ dependencies = [
 
 [[package]]
 name = "bun_browser_cdp"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "anyhow",
  "base64 0.23.1",
@@ -2278,7 +2278,7 @@ dependencies = [
 
 [[package]]
 name = "bun_browser_crawl"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "blake3",
  "bun_browser_dom",
@@ -2303,7 +2303,7 @@ dependencies = [
 
 [[package]]
 name = "bun_browser_detect"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "reqwest 0.13.5",
  "rustls",
@@ -2316,7 +2316,7 @@ dependencies = [
 
 [[package]]
 name = "bun_browser_dom"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "cssparser 0.37.0",
  "html5ever 0.40.1",
@@ -2326,7 +2326,7 @@ dependencies = [
 
 [[package]]
 name = "bun_browser_engine"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "anyhow",
  "bun_browser_browser",
@@ -2349,7 +2349,7 @@ dependencies = [
 
 [[package]]
 name = "bun_browser_extract"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "async-trait",
  "base64 0.23.1",
@@ -2364,7 +2364,7 @@ dependencies = [
 
 [[package]]
 name = "bun_browser_frames"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "base64 0.23.1",
  "bun_no_window",
@@ -2379,7 +2379,7 @@ dependencies = [
 
 [[package]]
 name = "bun_browser_index"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "memmap2 0.9.11",
  "parking_lot",
@@ -2390,7 +2390,7 @@ dependencies = [
 
 [[package]]
 name = "bun_browser_js"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "aes 0.9.3",
  "aes-gcm",
@@ -2422,7 +2422,7 @@ dependencies = [
 
 [[package]]
 name = "bun_browser_layout"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "arrayvec",
  "cssparser 0.37.0",
@@ -2436,7 +2436,7 @@ dependencies = [
 
 [[package]]
 name = "bun_browser_mcp"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "anyhow",
  "base64 0.23.1",
@@ -2453,7 +2453,7 @@ dependencies = [
 
 [[package]]
 name = "bun_browser_net"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -2481,7 +2481,7 @@ dependencies = [
 
 [[package]]
 name = "bun_browser_render"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "ab_glyph",
  "athena-text",
@@ -2504,7 +2504,7 @@ dependencies = [
 
 [[package]]
 name = "bun_browser_service"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_browser",
  "bun_browser_dom",
@@ -2521,7 +2521,7 @@ dependencies = [
 
 [[package]]
 name = "bun_browser_ssrf"
-version = "1.4.4"
+version = "1.4.6"
 
 [[package]]
 name = "bun_browserslist"
@@ -2544,7 +2544,7 @@ dependencies = [
 
 [[package]]
 name = "bun_bundler"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bitflags 2.13.2",
  "bstr",
@@ -2591,7 +2591,7 @@ dependencies = [
 
 [[package]]
 name = "bun_bundler_jsc"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_ast",
@@ -2603,7 +2603,7 @@ dependencies = [
 
 [[package]]
 name = "bun_bunfig"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_alloc",
@@ -2627,7 +2627,7 @@ dependencies = [
 
 [[package]]
 name = "bun_cares_sys"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_alloc",
  "bun_core",
@@ -2639,7 +2639,7 @@ dependencies = [
 
 [[package]]
 name = "bun_clap"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_clap_macros",
@@ -2650,7 +2650,7 @@ dependencies = [
 
 [[package]]
 name = "bun_clap_macros"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_output_tags",
  "proc-macro2",
@@ -2660,7 +2660,7 @@ dependencies = [
 
 [[package]]
 name = "bun_collections"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "allocator-api2 0.2.21",
  "bun_alloc",
@@ -2676,7 +2676,7 @@ dependencies = [
 
 [[package]]
 name = "bun_core"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_alloc",
@@ -2700,7 +2700,7 @@ dependencies = [
 
 [[package]]
 name = "bun_core_macros"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_output_tags",
  "proc-macro2",
@@ -2710,7 +2710,7 @@ dependencies = [
 
 [[package]]
 name = "bun_coreutils"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "uu_arch",
  "uu_b2sum",
@@ -2796,7 +2796,7 @@ dependencies = [
 
 [[package]]
 name = "bun_cosmic"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "cosmic-text",
  "freedesktop-desktop-entry",
@@ -2804,7 +2804,7 @@ dependencies = [
 
 [[package]]
 name = "bun_crash_handler"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bitflags 2.13.2",
  "bstr",
@@ -2830,7 +2830,7 @@ dependencies = [
 
 [[package]]
 name = "bun_csrf"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_base64",
  "bun_boringssl_sys",
@@ -2841,7 +2841,7 @@ dependencies = [
 
 [[package]]
 name = "bun_css"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bitflags 2.13.2",
  "bstr",
@@ -2862,7 +2862,7 @@ dependencies = [
 
 [[package]]
 name = "bun_css_derive"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2871,7 +2871,7 @@ dependencies = [
 
 [[package]]
 name = "bun_css_jsc"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_alloc",
@@ -2896,7 +2896,7 @@ dependencies = [
 
 [[package]]
 name = "bun_dispatch"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -2905,7 +2905,7 @@ dependencies = [
 
 [[package]]
 name = "bun_dns"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_cares_sys",
  "bun_core",
@@ -2918,7 +2918,7 @@ dependencies = [
 
 [[package]]
 name = "bun_docker"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_ssh",
  "bytes",
@@ -2932,7 +2932,7 @@ dependencies = [
 
 [[package]]
 name = "bun_dotenv"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_alloc",
@@ -2972,7 +2972,7 @@ dependencies = [
 
 [[package]]
 name = "bun_ecma_api"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_arena",
  "bun_ecma_ast",
@@ -3857,7 +3857,7 @@ dependencies = [
 
 [[package]]
 name = "bun_errno"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_core",
  "bun_libuv_sys",
@@ -3890,7 +3890,7 @@ dependencies = [
 
 [[package]]
 name = "bun_event_loop"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_collections",
  "bun_core",
@@ -3907,7 +3907,7 @@ dependencies = [
 
 [[package]]
 name = "bun_exe_format"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_core",
@@ -3920,7 +3920,7 @@ dependencies = [
 
 [[package]]
 name = "bun_format"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bitflags 2.13.2",
  "bstr",
@@ -3983,7 +3983,7 @@ dependencies = [
 
 [[package]]
 name = "bun_format_conformance"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_core",
@@ -4140,7 +4140,7 @@ dependencies = [
 
 [[package]]
 name = "bun_git"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "base64 0.23.1",
  "gix",
@@ -4159,7 +4159,7 @@ dependencies = [
 
 [[package]]
 name = "bun_glob"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_alloc",
@@ -4172,7 +4172,7 @@ dependencies = [
 
 [[package]]
 name = "bun_google"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_browser",
  "bun_browser_dom",
@@ -4189,7 +4189,7 @@ dependencies = [
 
 [[package]]
 name = "bun_graph"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_arena",
  "bun_collections",
@@ -4222,21 +4222,21 @@ dependencies = [
 
 [[package]]
 name = "bun_hash"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_highway",
 ]
 
 [[package]]
 name = "bun_highway"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
 ]
 
 [[package]]
 name = "bun_host"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "hmac 0.12.1",
  "serde",
@@ -4246,7 +4246,7 @@ dependencies = [
 
 [[package]]
 name = "bun_http"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_alloc",
@@ -4281,7 +4281,7 @@ dependencies = [
 
 [[package]]
 name = "bun_http_jsc"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_alloc",
@@ -4309,7 +4309,7 @@ dependencies = [
 
 [[package]]
 name = "bun_http_types"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_alloc",
@@ -4323,7 +4323,7 @@ dependencies = [
 
 [[package]]
 name = "bun_ini"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_alloc",
@@ -4342,7 +4342,7 @@ dependencies = [
 
 [[package]]
 name = "bun_install"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "aphrody-pkg-system",
  "bitflags 2.13.2",
@@ -4404,7 +4404,7 @@ dependencies = [
 
 [[package]]
 name = "bun_install_jsc"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_alloc",
@@ -4423,7 +4423,7 @@ dependencies = [
 
 [[package]]
 name = "bun_install_types"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bitflags 2.13.2",
  "bstr",
@@ -4437,7 +4437,7 @@ dependencies = [
 
 [[package]]
 name = "bun_io"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bitflags 2.13.2",
  "bstr",
@@ -4459,7 +4459,7 @@ dependencies = [
 
 [[package]]
 name = "bun_js_parser"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bitflags 2.13.2",
  "bstr",
@@ -4488,7 +4488,7 @@ dependencies = [
 
 [[package]]
 name = "bun_js_parser_jsc"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_alloc",
@@ -4509,7 +4509,7 @@ dependencies = [
 
 [[package]]
 name = "bun_js_printer"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_alloc",
@@ -4532,7 +4532,7 @@ dependencies = [
 
 [[package]]
 name = "bun_jsc"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bitflags 2.13.2",
  "bstr",
@@ -4584,7 +4584,7 @@ dependencies = [
 
 [[package]]
 name = "bun_jsc_macros"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4670,7 +4670,7 @@ dependencies = [
 
 [[package]]
 name = "bun_libarchive"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_alloc",
@@ -4687,7 +4687,7 @@ dependencies = [
 
 [[package]]
 name = "bun_libdeflate_sys"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_alloc",
  "bun_opaque",
@@ -4695,7 +4695,7 @@ dependencies = [
 
 [[package]]
 name = "bun_libuv_sys"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_core",
  "bun_windows_sys",
@@ -4706,7 +4706,7 @@ dependencies = [
 
 [[package]]
 name = "bun_lint"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bitflags 2.13.2",
  "bstr",
@@ -4767,7 +4767,7 @@ dependencies = [
 
 [[package]]
 name = "bun_lint_conformance"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_core",
@@ -4778,7 +4778,7 @@ dependencies = [
 
 [[package]]
 name = "bun_lint_driver"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_ast",
@@ -4809,7 +4809,7 @@ dependencies = [
 
 [[package]]
 name = "bun_lint_eslint"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_core",
@@ -4822,7 +4822,7 @@ dependencies = [
 
 [[package]]
 name = "bun_lint_graph"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_core",
  "bun_glob",
@@ -4836,7 +4836,7 @@ dependencies = [
 
 [[package]]
 name = "bun_lint_jest"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_core",
  "bun_lint",
@@ -4847,7 +4847,7 @@ dependencies = [
 
 [[package]]
 name = "bun_lint_oxlint"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_core",
  "bun_glob",
@@ -4858,7 +4858,7 @@ dependencies = [
 
 [[package]]
 name = "bun_lint_plugins"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_core",
@@ -4873,7 +4873,7 @@ dependencies = [
 
 [[package]]
 name = "bun_lint_react"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_core",
@@ -4888,7 +4888,7 @@ dependencies = [
 
 [[package]]
 name = "bun_lint_react_compiler"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_alloc",
  "bun_ast",
@@ -4900,7 +4900,7 @@ dependencies = [
 
 [[package]]
 name = "bun_lint_typescript"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_core",
@@ -4912,7 +4912,7 @@ dependencies = [
 
 [[package]]
 name = "bun_lint_unicorn"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_core",
@@ -4980,7 +4980,7 @@ dependencies = [
 
 [[package]]
 name = "bun_lsp"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_graph",
  "bun_windows_sys",
@@ -4992,7 +4992,7 @@ dependencies = [
 
 [[package]]
 name = "bun_lsquic_sys"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_core",
 ]
@@ -5007,7 +5007,7 @@ dependencies = [
 
 [[package]]
 name = "bun_mcp"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "aphrody-jev",
  "bun_agent_tools",
@@ -5033,7 +5033,7 @@ dependencies = [
 
 [[package]]
 name = "bun_md"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_alloc",
  "bun_collections",
@@ -5047,7 +5047,7 @@ dependencies = [
 
 [[package]]
 name = "bun_migrate"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "anyhow",
  "assert_cmd",
@@ -5085,14 +5085,14 @@ dependencies = [
 
 [[package]]
 name = "bun_mimalloc_sys"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_opaque",
 ]
 
 [[package]]
 name = "bun_native"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "libloading 0.9.0",
  "serde",
@@ -5102,11 +5102,11 @@ dependencies = [
 
 [[package]]
 name = "bun_no_window"
-version = "1.4.4"
+version = "1.4.6"
 
 [[package]]
 name = "bun_node_path"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_core",
  "bun_paths",
@@ -5116,11 +5116,11 @@ dependencies = [
 
 [[package]]
 name = "bun_opaque"
-version = "1.4.4"
+version = "1.4.6"
 
 [[package]]
 name = "bun_options_types"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_ast",
@@ -5142,18 +5142,18 @@ dependencies = [
 
 [[package]]
 name = "bun_output"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_core",
 ]
 
 [[package]]
 name = "bun_output_tags"
-version = "1.4.4"
+version = "1.4.6"
 
 [[package]]
 name = "bun_parsers"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_alloc",
@@ -5174,7 +5174,7 @@ dependencies = [
 
 [[package]]
 name = "bun_patch"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_core",
@@ -5190,7 +5190,7 @@ dependencies = [
 
 [[package]]
 name = "bun_patch_jsc"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_jsc",
@@ -5200,7 +5200,7 @@ dependencies = [
 
 [[package]]
 name = "bun_paths"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_alloc",
@@ -5215,7 +5215,7 @@ dependencies = [
 
 [[package]]
 name = "bun_perf"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_core",
  "bun_sys",
@@ -5223,7 +5223,7 @@ dependencies = [
 
 [[package]]
 name = "bun_picohttp"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_core",
@@ -5232,7 +5232,7 @@ dependencies = [
 
 [[package]]
 name = "bun_pkg_cli"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_pkg_core",
  "bun_pkg_net",
@@ -5249,7 +5249,7 @@ dependencies = [
 
 [[package]]
 name = "bun_pkg_core"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "node-semver",
  "pep440_rs",
@@ -5259,7 +5259,7 @@ dependencies = [
 
 [[package]]
 name = "bun_pkg_net"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_pkg_store",
  "reqwest 0.13.5",
@@ -5272,7 +5272,7 @@ dependencies = [
 
 [[package]]
 name = "bun_pkg_store"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "hex",
  "reflink-copy",
@@ -5282,7 +5282,7 @@ dependencies = [
 
 [[package]]
 name = "bun_platform"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_core",
  "libc",
@@ -5290,7 +5290,7 @@ dependencies = [
 
 [[package]]
 name = "bun_privacy"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "argon2 0.5.3",
  "base64 0.22.1",
@@ -5311,7 +5311,7 @@ dependencies = [
 
 [[package]]
 name = "bun_ptr"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_alloc",
@@ -5322,7 +5322,7 @@ dependencies = [
 
 [[package]]
 name = "bun_quality"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_arena",
  "bun_ecma_diagnostics",
@@ -5375,7 +5375,7 @@ dependencies = [
 
 [[package]]
 name = "bun_react_compiler"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_alloc",
  "bun_ast",
@@ -5389,7 +5389,7 @@ dependencies = [
 
 [[package]]
 name = "bun_readability"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bitflags 2.13.2",
  "bun_browser_dom",
@@ -5419,7 +5419,7 @@ dependencies = [
 
 [[package]]
 name = "bun_resolve_builtins"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_ast",
  "bun_collections",
@@ -5429,7 +5429,7 @@ dependencies = [
 
 [[package]]
 name = "bun_resolver"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bitflags 2.13.2",
  "bstr",
@@ -5470,7 +5470,7 @@ dependencies = [
 
 [[package]]
 name = "bun_router"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_alloc",
@@ -5492,7 +5492,7 @@ dependencies = [
 
 [[package]]
 name = "bun_runtime"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "aphrody-jev",
  "bcrypt",
@@ -5640,7 +5640,7 @@ dependencies = [
 
 [[package]]
 name = "bun_s3_signing"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_base64",
@@ -5656,14 +5656,14 @@ dependencies = [
 
 [[package]]
 name = "bun_safety"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_core",
 ]
 
 [[package]]
 name = "bun_sema"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bitflags 2.13.2",
  "bstr",
@@ -5682,7 +5682,7 @@ dependencies = [
 
 [[package]]
 name = "bun_sema_baselines"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_core",
@@ -5695,7 +5695,7 @@ dependencies = [
 
 [[package]]
 name = "bun_sema_driver"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_ast",
@@ -5710,7 +5710,7 @@ dependencies = [
 
 [[package]]
 name = "bun_sema_parser"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_alloc",
  "bun_ast",
@@ -5723,7 +5723,7 @@ dependencies = [
 
 [[package]]
 name = "bun_sema_standalone"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_alloc",
@@ -5741,7 +5741,7 @@ dependencies = [
 
 [[package]]
 name = "bun_semver"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_alloc",
@@ -5752,7 +5752,7 @@ dependencies = [
 
 [[package]]
 name = "bun_semver_jsc"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_core",
@@ -5762,7 +5762,7 @@ dependencies = [
 
 [[package]]
 name = "bun_sha_hmac"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_boringssl",
  "bun_boringssl_sys",
@@ -5771,7 +5771,7 @@ dependencies = [
 
 [[package]]
 name = "bun_shell_parser"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bitflags 2.13.2",
  "bstr",
@@ -5785,7 +5785,7 @@ dependencies = [
 
 [[package]]
 name = "bun_shim_impl"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_no_window",
  "bun_opaque",
@@ -5795,11 +5795,11 @@ dependencies = [
 
 [[package]]
 name = "bun_simdutf_sys"
-version = "1.4.4"
+version = "1.4.6"
 
 [[package]]
 name = "bun_sourcemap"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_alloc",
@@ -5822,7 +5822,7 @@ dependencies = [
 
 [[package]]
 name = "bun_sourcemap_jsc"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_alloc",
@@ -5840,7 +5840,7 @@ dependencies = [
 
 [[package]]
 name = "bun_spawn"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_alloc",
  "bun_analytics",
@@ -5864,7 +5864,7 @@ dependencies = [
 
 [[package]]
 name = "bun_spawn_sys"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_analytics",
@@ -5880,7 +5880,7 @@ dependencies = [
 
 [[package]]
 name = "bun_sql"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bitflags 2.13.2",
  "bstr",
@@ -5898,7 +5898,7 @@ dependencies = [
 
 [[package]]
 name = "bun_sql_jsc"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bitflags 2.13.2",
  "bstr",
@@ -5924,7 +5924,7 @@ dependencies = [
 
 [[package]]
 name = "bun_ssh"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "clap",
  "fast_rsync",
@@ -5942,7 +5942,7 @@ dependencies = [
 
 [[package]]
 name = "bun_standalone_graph"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bitflags 2.13.2",
  "bstr",
@@ -5977,7 +5977,7 @@ dependencies = [
 
 [[package]]
 name = "bun_sys"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bitflags 2.13.2",
  "bstr",
@@ -6001,7 +6001,7 @@ dependencies = [
 
 [[package]]
 name = "bun_sys_jsc"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_core",
  "bun_jsc",
@@ -6010,7 +6010,7 @@ dependencies = [
 
 [[package]]
 name = "bun_tcc_sys"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_alloc",
  "bun_core",
@@ -6023,7 +6023,7 @@ dependencies = [
 
 [[package]]
 name = "bun_text_diff"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_core",
@@ -6032,7 +6032,7 @@ dependencies = [
 
 [[package]]
 name = "bun_threading"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_alloc",
  "bun_collections",
@@ -6058,7 +6058,7 @@ dependencies = [
 
 [[package]]
 name = "bun_transpiler"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_bundler",
 ]
@@ -6074,7 +6074,7 @@ dependencies = [
 
 [[package]]
 name = "bun_url"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_alloc",
  "bun_collections",
@@ -6087,7 +6087,7 @@ dependencies = [
 
 [[package]]
 name = "bun_uws"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_boringssl",
@@ -6099,7 +6099,7 @@ dependencies = [
 
 [[package]]
 name = "bun_uws_sys"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bitflags 2.13.2",
  "bstr",
@@ -6120,7 +6120,7 @@ dependencies = [
 
 [[package]]
 name = "bun_valkey"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_core",
@@ -6129,7 +6129,7 @@ dependencies = [
 
 [[package]]
 name = "bun_vfs"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_graph",
  "globset",
@@ -6145,7 +6145,7 @@ dependencies = [
 
 [[package]]
 name = "bun_vpn"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_sys",
  "log",
@@ -6159,11 +6159,11 @@ dependencies = [
 
 [[package]]
 name = "bun_vt"
-version = "1.4.4"
+version = "1.4.6"
 
 [[package]]
 name = "bun_wasm"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_alloc",
  "bun_core",
@@ -6174,7 +6174,7 @@ dependencies = [
 
 [[package]]
 name = "bun_watcher"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bitflags 2.13.2",
  "bstr",
@@ -6194,7 +6194,7 @@ dependencies = [
 
 [[package]]
 name = "bun_which"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
  "bun_core",
@@ -6204,11 +6204,11 @@ dependencies = [
 
 [[package]]
 name = "bun_windows_sys"
-version = "1.4.4"
+version = "1.4.6"
 
 [[package]]
 name = "bun_workspace"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "blake3",
  "bun_core",
@@ -6230,14 +6230,14 @@ dependencies = [
 
 [[package]]
 name = "bun_wyhash"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bstr",
 ]
 
 [[package]]
 name = "bun_x"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "anyhow",
  "clap",
@@ -6265,11 +6265,11 @@ dependencies = [
 
 [[package]]
 name = "bun_yarr"
-version = "1.4.4"
+version = "1.4.6"
 
 [[package]]
 name = "bun_zlib"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_alloc",
  "bun_collections",
@@ -6280,14 +6280,14 @@ dependencies = [
 
 [[package]]
 name = "bun_zlib_sys"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_core",
 ]
 
 [[package]]
 name = "bun_zstd"
-version = "1.4.4"
+version = "1.4.6"
 dependencies = [
  "bun_core",
  "bun_opaque",

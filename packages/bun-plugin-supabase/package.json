@@ -1,6 +1,6 @@
 {
   "name": "@aphrody/bun-plugin-supabase",
-  "version": "1.4.4",
+  "version": "1.4.6",
   "description": "Typed Supabase PostgreSQL client and migration runner built on Bun.SQL",
   "license": "MIT",
   "type": "module",

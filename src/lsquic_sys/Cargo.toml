@@ -1,6 +1,6 @@
 [package]
 name = "bun_lsquic_sys"
-version = "1.4.4"
+version = "1.4.6"
 edition = "2024"
 publish = false
 

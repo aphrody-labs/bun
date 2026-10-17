@@ -2,7 +2,7 @@
 edition = "2021"
 name = "bun-mdx-rs"
 publish = false
-version = "1.4.4"
+version = "1.4.6"
 
 [lib]
 crate-type = ["cdylib"]

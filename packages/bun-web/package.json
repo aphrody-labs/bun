@@ -1,6 +1,6 @@
 {
   "name": "@aphrody/bun-web",
-  "version": "1.4.4",
+  "version": "1.4.6",
   "private": true,
   "type": "module",
   "description": "Bun browser SDK: CDP pages over Bun.WebView, the bun_browser engine lifecycle and web service (fetch, scrape, crawl), agent-browser client, Tauri bridge and the Playwright-compatible test runner.",

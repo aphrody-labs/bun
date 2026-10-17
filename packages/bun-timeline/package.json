@@ -1,6 +1,6 @@
 {
   "name": "@aphrody/timeline",
-  "version": "1.4.4",
+  "version": "1.4.6",
   "description": "Native Bun timeline collection, SQL, Redis, GraphQL and retrieval projections",
   "license": "Apache-2.0",
   "files": [
