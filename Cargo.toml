@@ -576,7 +576,7 @@ bun_workspace = { path = "src/workspace" }
 "regex" = { "version" = "1.11", "features" = [] }
 "reqwest" = { "version" = "0.13.5", "features" = ["rustls-no-provider","json","stream","form","query","charset","http2","system-proxy","blocking","cookies","gzip","brotli","deflate","socks","multipart"], "default-features" = false }
 "rustls" = { "version" = "0.23", "default-features" = false, "features" = ["ring","std","tls12"] }
-"serde" = { "version" = "=1.0.228", "features" = ["derive"] }
+"serde" = { "version" = "1.0.228", "features" = ["derive"] }
 "serde_json" = "1.0.151"
 "sha1" = { "version" = "0.11.0" }
 "sha2" = "0.11.0"
