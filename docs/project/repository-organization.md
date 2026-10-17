@@ -31,3 +31,40 @@ checks pass, plus a Unicode generator table smoke check. Scoped oxlint with
 warnings denied, oxfmt and `git diff --check` pass. Existing unused example code
 and seven lint warnings in the moved tooling were corrected. Rust executable
 code is unchanged; no native runtime build or host deployment is needed.
+
+## Rust workspace
+
+The Rust code is one flat Cargo workspace (2026-10-17). The root `Cargo.toml` lists
+every crate in `members` and keeps the only `Cargo.lock`, `rust-toolchain.toml`,
+`[patch.crates-io]` table (the PyO3 fork, the vendored `swc_common`) and profiles.
+The former nested workspaces (`packages/bun-winsvc`, `bun-webview-core`,
+`bun-nginx/native`, `bun-python-native`, `bun-runtime-sdk`, `bun-native-plugin-rs`,
+`bun-dotnet-native`, `bun-video/native`, `bun-build-mdx-rs`, `bun-cosmic`,
+`src/rio`, `src/browser/cef-rs`, the `wgpu-probe` example, `bench/aphrody/interop`
+and the `test/js/bun/ffi/cosmic-window` fixture) are members now. Only `vendor/` and
+`scripts/verify-baseline-static` stay in `exclude`.
+
+- `default-members` is what a bare `cargo check|clippy|test` builds: crates that
+  need no system SDK and download nothing in a build script. CEF, Rio, nginx, the
+  webview hosts, the PyO3 modules, the video, .NET and MDX natives and the cosmic
+  crates are left out; their gates name them with `-p`.
+- Artifacts built on their own keep their settings in named root profiles, since
+  `panic` and `lto` cannot be set per package: `runtime`, `unwind-release`,
+  `winsvc`, `webview-host`, `nginx-module`, `mdx`, `cosmic`, `shim`, `wasm`.
+  Example: `cargo build --profile winsvc -p bun-winsvc`; the output lands in
+  `target/winsvc/`.
+- `bun scripts/aphrody/flatten-workspace.ts <dir>` folds a nested workspace: member
+  manifests get their inherited fields, dependency specs and lints inline, the
+  nested lockfile and toolchain file go away. `--heavy` keeps the crates out of
+  `default-members`. `[profile.*]`, `[patch.*]` and `[replace]` entries the root
+  lacks stop the fold with their list; `--migrate-tables` moves them into the root,
+  and an entry the root declares differently must be reconciled by hand. After the
+  fold, `cargo metadata` refreshes `Cargo.lock` and any version that went back
+  within its semver series, compared with the root and nested lockfiles, is
+  reported (`cargo update -p <name> --precise <version>` restores it).
+- `flatten-workspace.ts --check` lists the committed `Cargo.toml` files outside the
+  root `exclude` that still declare a `[workspace]`; the `clippy` job of
+  `rust-lints.yml` runs it and fails on any output.
+- The `aphrody-rust` PyO3 adapter of the Python SDK moved to Bun OS
+  (`aphrody-labs/bun-distribution`, `crates/aphrody-rust`), next to its
+  `aphrody-rag-core` dependency: `Cargo.lock` holds no `aphrody-labs/aphrody` source.

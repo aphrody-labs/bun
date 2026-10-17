@@ -10,7 +10,7 @@ One entry point: `bun scripts/aphrody/work.ts <command>`. The queue is `scripts/
 1. `status`: ahead/behind, dirty paths grouped by lot owner, audit findings. Never touch paths owned by another active lot.
 2. `next`: the lot to work on (exit 3 = queue empty: run `refill`, which turns audit findings into lots; still empty = nothing left, stop).
 3. Read before coding: the memory notes and skills the lot needs (`bun-skills-catalog` routes them), the nested CLAUDE.md of the directory, `aphrody graph --source graph:bun query "<question>"` and the `bun mcp` tools. Verify that code does not already exist.
-4. Code, then `gate [paths]`: `cargo check -p` for the crate, `bun test` for scripts and `test/internal`, `bun bd test` for native tests (never `bun test` on native changes), plugin `generate --check`, audit for docs and skills.
+4. Code, then `gate [paths]`: `cargo check -p <crate>` (Windows: `bun msvc exec --toolset 14.44 -- cargo …`) for the crate, `bun test` for scripts and `test/internal`, `bun bd test` for native tests (never `bun test` on native changes), plugin `generate --check`, audit for docs and skills.
 5. `ship --lot ID -m "<message>" [paths]`: gate, `git add` and `git commit -- <paths>` only, push to main, `git branch -r --contains <sha>` as proof. A red gate commits nothing.
 6. `mark ID done`, back to 1. Do not stop while a lot is todo or active.
 
@@ -23,6 +23,7 @@ One entry point: `bun scripts/aphrody/work.ts <command>`. The queue is `scripts/
 - Hosts (VPS, dbfr), `C:\aphrody` and `C:\shenron` belong to the aphrody session: ask it over A2A, do not edit them from here.
 - Windows: no code or script may open a console window (`bun_no_window`).
 - Fix pre-existing failures met in touched files; remove what is useless.
+- Rust: one flat Cargo workspace at the root (one `Cargo.lock`, one `[patch.crates-io]`). A new crate joins the root `members`, and `default-members` unless it needs a system SDK or downloads in a build script. Standalone artifacts use the root's named profiles (`cargo build --profile winsvc -p bun-winsvc`). Never add a nested `[workspace]`: fold one with `bun scripts/aphrody/flatten-workspace.ts <dir> [--heavy] [--migrate-tables]`; `--check` must print nothing.
 
 ## Infinite goal
 
