@@ -51,6 +51,13 @@
         "@aphrody/web": "workspace:*",
       },
     },
+    "packages/bun-fuzzy": {
+      "name": "@aphrody/fuzzy",
+      "version": "1.4.4",
+      "devDependencies": {
+        "@types/bun": "npm:@aphrody/bun-types@1.4.4",
+      },
+    },
     "packages/bun-google": {
       "name": "@aphrody/bun-google",
       "version": "1.4.4",
@@ -132,9 +139,26 @@
         "postcss",
       ],
     },
+    "packages/bun-qr": {
+      "name": "@aphrody/qr",
+      "version": "1.4.4",
+      "devDependencies": {
+        "@types/bun": "npm:@aphrody/bun-types@1.4.4",
+      },
+    },
     "packages/bun-runtime-sdk": {
       "name": "@aphrody/bun-runtime-sdk",
       "version": "1.4.10",
+    },
+    "packages/bun-timeline": {
+      "name": "@aphrody/timeline",
+      "version": "1.4.4",
+      "dependencies": {
+        "graphql": "17.0.2",
+      },
+      "devDependencies": {
+        "@types/bun": "npm:@aphrody/bun-types@1.4.4",
+      },
     },
     "packages/bun-types": {
       "name": "@aphrody/bun-types",
@@ -216,30 +240,6 @@
         "react-dom": "19.3.0",
       },
     },
-    "packages/web/rust/packages/fuzzy": {
-      "name": "@aphrody/fuzzy",
-      "version": "1.4.4",
-      "devDependencies": {
-        "@types/bun": "npm:@aphrody/bun-types@1.4.4",
-      },
-    },
-    "packages/web/rust/packages/qr": {
-      "name": "@aphrody/qr",
-      "version": "1.4.4",
-      "devDependencies": {
-        "@types/bun": "npm:@aphrody/bun-types@1.4.4",
-      },
-    },
-    "packages/web/rust/packages/timeline": {
-      "name": "@aphrody/timeline",
-      "version": "1.4.4",
-      "dependencies": {
-        "graphql": "17.0.2",
-      },
-      "devDependencies": {
-        "@types/bun": "npm:@aphrody/bun-types@1.4.4",
-      },
-    },
     "packages/web/rust/packages/webos-wasm": {
       "name": "@aphrody/webos-wasm",
       "version": "1.4.4",
@@ -307,7 +307,7 @@
 
     "@aphrody/eslint-plugin-m3": ["@aphrody/eslint-plugin-m3@3.3.5", "", { "peerDependencies": { "oxlint": "*" }, "optionalPeers": ["oxlint"] }, "sha512-9rc9o6EjIuChuo2URc5Js1T+/lVSbRvZ8QgH3Lvr404QDmKqfVOlSZPWd45ty8bWU/921y/ELrc3EgCVsZqG9A=="],
 
-    "@aphrody/fuzzy": ["@aphrody/fuzzy@workspace:packages/web/rust/packages/fuzzy"],
+    "@aphrody/fuzzy": ["@aphrody/fuzzy@workspace:packages/bun-fuzzy"],
 
     "@aphrody/google": ["@aphrody/google@workspace:packages/bun-google/aphrody/packages/google"],
 
@@ -365,13 +365,13 @@
 
     "@aphrody/paths": ["@aphrody/paths@0.1.2", "", {}, "sha512-TPrnizCIZrW3WWc6GljP62AeF9rw7P6kmVvGefT038ut8UxtdSvt4FXrkZcKV+oDpXkUvyy9EU7B7UBDGLy1Rg=="],
 
-    "@aphrody/qr": ["@aphrody/qr@workspace:packages/web/rust/packages/qr"],
+    "@aphrody/qr": ["@aphrody/qr@workspace:packages/bun-qr"],
 
     "@aphrody/runtime-sdk": ["@aphrody/runtime-sdk@0.1.2", "", {}, "sha512-h2fqoQEVn6rFBM6/LMU5XU0oTGpbR4k93MNGCTMwoaU/3v2ScWQXXlC4M3/bpbMj1hX82/JuOoF2eHCYZbfgDQ=="],
 
     "@aphrody/scaffold": ["@aphrody/scaffold@1.0.0-canary.2", "", { "bin": { "aphrody-scaffold": "src/cli.ts" } }, "sha512-Ir+QAxOVrHzMG6lrcuvg6XJeMgpI751PwOlEvCDMemYXBtXK4s45ldxYCB8L8W1Rjb6JQXkhK3wpkcL0WmKPXg=="],
 
-    "@aphrody/timeline": ["@aphrody/timeline@workspace:packages/web/rust/packages/timeline"],
+    "@aphrody/timeline": ["@aphrody/timeline@workspace:packages/bun-timeline"],
 
     "@aphrody/typesafe-sdk": ["@aphrody/typesafe-sdk@0.6.2", "", {}, "sha512-Pnj7gUKWCcTjztzmMBVLX7FNGJVlJKfrwuE3pLDnjGABlZHW7/wb6SakGllIAz65Qjx7+oYd+MYxWbxEpGyVRw=="],
 

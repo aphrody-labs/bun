@@ -85,5 +85,5 @@ documents du seul espace choisi ; une erreur intermédiaire empêche ce retrait.
 Le jeton et les réponses privées ne sont jamais inclus dans les erreurs.
 
 Le raccordement aux opérations et au foyer natif existants vit dans
-[`@aphrody/workspace`](../../infra/workspace/src/shenron.ts). Le produit peut
+[`@aphrody/workspace`](../web/rust/integrations/packages/infra/workspace/src/shenron.ts). Le produit peut
 consommer directement les exports sans ce raccordement.
