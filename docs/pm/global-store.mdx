@@ -132,7 +132,7 @@ When packages live under the project's `node_modules/.bun/`, Node's module resol
 
 In practice this only affects **true phantom dependencies**: a package doing `require('helper')` for something it never declared in `dependencies`, `peerDependencies`, or `peerDependenciesMeta`. If you hit this, add the helper to the consuming package's dependencies (the right fix) or set `globalStore = false`.
 
-[`publicHoistPattern`](/runtime/bunfig#install-publichoistpattern) and [`hoistPattern`](/runtime/bunfig#install-hoistpattern) hoist into the project's `node_modules`, which packages inside the global store can't reach. They still work for resolving hoisted packages from your own source code.
+[`publicHoistPattern`](/runtime/bunfig#installpublichoistpattern) and [`hoistPattern`](/runtime/bunfig#installhoistpattern) hoist into the project's `node_modules`, which packages inside the global store can't reach. They still work for resolving hoisted packages from your own source code.
 
 ### `node_modules` is mostly symlinks
 
@@ -156,4 +156,4 @@ Multiple `bun install` processes (parallel CI jobs, concurrent workspace builds)
 
 - [Package manager > Isolated installs](/pm/isolated-installs) — The linker the global store builds on
 - [Package manager > Global cache](/pm/global-cache) — Where downloaded packages are stored
-- [Runtime > bunfig](/runtime/bunfig#install-globalstore) — `bunfig.toml` reference
+- [Runtime > bunfig](/runtime/bunfig#installglobalstore) — `bunfig.toml` reference

@@ -42,7 +42,7 @@ The package is resolved from the working directory, then from the entry script, 
 
 ### Win32 functions, structs and COM
 
-The families are generated from [win32metadata](https://github.com/microsoft/win32metadata) by `scripts/aphrody/win32/gen.ts`: one package per DLL (368 families, about 18,000 functions), plus `@aphrody/bun-windows-win32` with the struct, enum, constant and COM interface descriptions they share. A function is bound with `bun:ffi` the first time it is read.
+The families are generated from [win32metadata](https://github.com/microsoft/win32metadata): one package per DLL (368 families), plus `@aphrody/bun-windows-win32` with the struct, enum, constant and COM interface descriptions they share. A function is bound with `bun:ffi` the first time it is read.
 
 ```ts
 const kernel32 = windows.family("kernel32");
@@ -107,7 +107,7 @@ service.release();
 - `docs/runtime/winrt.mdx`: **Windows Runtime**. Call Windows Runtime (WinRT) APIs from Bun with bun:winrt, with namespaces projected on demand and async operations as Promises
   Sections: Classes and objects; Async operations; Other metadata.
 - `docs/runtime/winui.mdx`: **WinUI 3**. Open native WinUI 3 windows from Bun with bun:winui, load XAML, handle control events on the JS thread, and theme them with Fluent 2 tokens
-  Sections: Runtime; Application and windows; XAML and elements; Fluent 2 tokens; Example.
+  Sections: Runtime; Application and windows; XAML and elements; Fluent 2 tokens.
 - `docs/runtime/dotnet.mdx`: **.NET**. Run the .NET SDK inside Bun, install and resolve .NET without scripts, run C# files, and call .NET assemblies from JavaScript with bun:dotnet
   Sections: Install .NET; Find and resolve installs; Shell environment; The .NET SDK inside Bun; bun:dotnet.
 - `docs/runtime/msvc.mdx`: **MSVC & Windows metadata**. Resolve, set up and cache Visual Studio, MSVC and the Windows SDK without vswhere or vcvarsall, cross-compile for Windows from Linux and macOS, and generate Rust or bun:ffi bindings from .winmd metadata

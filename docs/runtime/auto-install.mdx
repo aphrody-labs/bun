@@ -15,7 +15,7 @@ foo();
 
 The first time you run this script, Bun auto-installs `"foo"` and caches it. Later runs use the cached version.
 
-Auto-install is off when a [security scanner](/runtime/bunfig#install-security-scanner) is configured in the global `.bunfig.toml`, or in a `bunfig.toml` from the working directory or the importing file up to the [project root](#project-root). It is also off when one of those files, a `.npmrc`, or a `package.json` that Bun reads to find the project root cannot be read or parsed. `-i` and `--install` do not turn it back on. The import fails and tells you to run `bun install`.
+Auto-install is off when a [security scanner](/runtime/bunfig#installsecurityscanner) is configured in the global `.bunfig.toml`, or in a `bunfig.toml` from the working directory or the importing file up to the [project root](#project-root). It is also off when one of those files, a `.npmrc`, or a `package.json` that Bun reads to find the project root cannot be read or parsed. `-i` and `--install` do not turn it back on. The import fails and tells you to run `bun install`.
 
 ---
 
@@ -58,7 +58,7 @@ Once Bun determines a version or version range, it:
 2. When resolving `latest`, checks if `package@latest` was downloaded and cached in the last _24 hours_. If so, uses it.
 3. Otherwise, downloads and installs the appropriate version from the registry.
 
-With `bun --prefer-offline` (or [`install.prefer = "offline"`](/runtime/bunfig#install-prefer)), Bun resolves versions and tags from the cached registry metadata, however old it is, and only asks the registry for a package that is not in the cache.
+With `bun --prefer-offline` (or [`install.prefer = "offline"`](/runtime/bunfig#installprefer)), Bun resolves versions and tags from the cached registry metadata, however old it is, and only asks the registry for a package that is not in the cache.
 
 The first import of a package that is not in the cache blocks the thread until the download finishes. Timers and other requests' handlers do not run inside `require()`, `import()`, or `Bun.resolveSync()`.
 
@@ -72,7 +72,7 @@ When Bun cannot write to the cache, on a read-only file system for example, pack
 
 ## Registries
 
-Bun downloads packages from the npm registry (`https://registry.npmjs.org/`) unless you configure another one. Auto-install reads the default registry, the scoped registries, and their credentials from [`bunfig.toml`](/runtime/bunfig#install-registry) and from [`.npmrc`](/pm/npmrc).
+Bun downloads packages from the npm registry (`https://registry.npmjs.org/`) unless you configure another one. Auto-install reads the default registry, the scoped registries, and their credentials from [`bunfig.toml`](/runtime/bunfig#installregistry) and from [`.npmrc`](/pm/npmrc).
 
 ```ini .npmrc icon="npm"
 @myorg:registry=https://npm.myorg.com/

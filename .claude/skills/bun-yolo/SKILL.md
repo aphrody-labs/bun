@@ -83,7 +83,7 @@ credentials, corpora or weights into request fixtures or plugin resources.
 
 ## Read next
 
-- `docs/runtime/yolo.mdx`: **docs/runtime/yolo.mdx**. Bun's internal typed decision capability, native Rust validation and explicit application providers
-  Sections: Named batches; Application-owned providers; Existing local models.
-- `docs/runtime/decisions.mdx`: **docs/runtime/decisions.mdx**. Bun's native decision validator, confidence, abstention and supervised Python bridge
-  Sections: Providers and boundaries; Python SDK.
+- `docs/runtime/yolo.mdx`: **Typed decisions**. Use bun:yolo to turn named yes/no, choice and score judgments into validated JavaScript values.
+  Sections: Named batches; Providers; Timeouts and cancellation; Local models.
+- `docs/runtime/decisions.mdx`: **Typed decision boundaries**. Confidence, abstention, provider limits and the Python SDK for bun:yolo typed decisions.
+  Sections: Confidence and abstention; Providers and limits; Python SDK.

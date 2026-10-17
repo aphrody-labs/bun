@@ -59,7 +59,7 @@ To change it, set the `registry` option in `.npmrc`:
 registry=http://localhost:4873/
 ```
 
-The equivalent `bunfig.toml` option is [`install.registry`](/runtime/bunfig#install-registry):
+The equivalent `bunfig.toml` option is [`install.registry`](/runtime/bunfig#installregistry):
 
 ```toml bunfig.toml icon="settings"
 install.registry = "http://localhost:4873/"
@@ -73,7 +73,7 @@ install.registry = "http://localhost:4873/"
 @myorg:registry=http://localhost:4873/
 ```
 
-The equivalent `bunfig.toml` option is to add a key in [`install.scopes`](/runtime/bunfig#install-scopes):
+The equivalent `bunfig.toml` option is to add a key in [`install.scopes`](/runtime/bunfig#installscopes):
 
 ```toml bunfig.toml icon="settings"
 [install.scopes]
@@ -111,7 +111,7 @@ Bun supports the following options:
 - `_auth` (sent as written in a `Basic` header; npm's form is base64 encoded username:password, for example `btoa(username + ":" + password)`)
 - `email` (accepted and ignored, as npm does)
 
-The equivalent `bunfig.toml` option is to add a key in [`install.scopes`](/runtime/bunfig#install-scopes):
+The equivalent `bunfig.toml` option is to add a key in [`install.scopes`](/runtime/bunfig#installscopes):
 
 ```toml bunfig.toml icon="settings"
 [install.scopes]
@@ -146,7 +146,7 @@ Controls how Bun installs workspace packages when they are available locally:
 link-workspace-packages=true
 ```
 
-The equivalent `bunfig.toml` option is [`install.linkWorkspacePackages`](/runtime/bunfig#install-linkworkspacepackages):
+The equivalent `bunfig.toml` option is [`install.linkWorkspacePackages`](/runtime/bunfig#installlinkworkspacepackages):
 
 ```toml bunfig.toml icon="settings"
 [install]
@@ -161,7 +161,7 @@ Always saves exact versions without the `^` prefix:
 save-exact=true
 ```
 
-The equivalent `bunfig.toml` option is [`install.exact`](/runtime/bunfig#install-exact):
+The equivalent `bunfig.toml` option is [`install.exact`](/runtime/bunfig#installexact):
 
 ```toml bunfig.toml icon="settings"
 [install]
@@ -188,7 +188,7 @@ Shows what Bun would install without installing anything:
 dry-run=true
 ```
 
-The equivalent `bunfig.toml` option is [`install.dryRun`](/runtime/bunfig#install-dryrun):
+The equivalent `bunfig.toml` option is [`install.dryRun`](/runtime/bunfig#installdryrun):
 
 ```toml bunfig.toml icon="settings"
 [install]
@@ -207,7 +207,7 @@ cache=/path/to/cache
 cache=false
 ```
 
-The equivalent `bunfig.toml` option is [`install.cache`](/runtime/bunfig#install-cache):
+The equivalent `bunfig.toml` option is [`install.cache`](/runtime/bunfig#installcache):
 
 ```toml bunfig.toml icon="settings"
 [install.cache]

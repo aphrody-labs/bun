@@ -75,7 +75,7 @@ captures, credentials, datasets and signed media URLs in their protected stores.
 
 ## Read next
 
-- `docs/runtime/video.mdx`: **Bun.Video**. Native video metadata, thumbnails, frame batches, audio, GIF and MP4 remux in TypeScript
+- `docs/runtime/video.mdx`: **Bun.Video**. Read video metadata, extract frames, audio and GIFs, and remux MP4 files with Bun's native video API.
   Sections: Command line; Sources and metadata; Frame transformations and raw pixels; Bounded frame batches; Audio, GIF and MP4 remux; Frame analysis with WebGPU.
 - `docs/runtime/image.mdx`: **Image**. Decode, transform, and encode images with a fast native pipeline
   Sections: Input; Metadata; Resize; Extract; Rotate · flip; Modulate; Output formats; Terminals; Placeholders; `Bun.serve` integration; Clipboard; Platform backends.

@@ -4,7 +4,7 @@ sidebarTitle: Write file to stdout
 mode: center
 ---
 
-Bun exposes `stdout` as a `BunFile` with the `Bun.stdout` property. Pass it as the destination to [`Bun.write()`](/runtime/file-io#writing-files-bun-write).
+Bun exposes `stdout` as a `BunFile` with the `Bun.stdout` property. Pass it as the destination to [`Bun.write()`](/runtime/file-io#writing-files-bunwrite).
 
 The following code writes a file to `stdout`, like the Unix `cat` command.
 
@@ -16,4 +16,4 @@ await Bun.write(Bun.stdout, file);
 
 ---
 
-See [`Bun.write()`](/runtime/file-io#writing-files-bun-write).
+See [`Bun.write()`](/runtime/file-io#writing-files-bunwrite).

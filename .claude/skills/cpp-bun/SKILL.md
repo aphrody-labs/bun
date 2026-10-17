@@ -134,8 +134,8 @@ structured-clone object fast paths.
 
 - `docs/project/bindgen.mdx`: **Bindgen**. Bindgen for Bun
   Sections: Functions; Types; Values and lifetimes; Classes; Tests.
-- `docs/project/contributing.mdx`: **Contributing**. Contributing to Bun
-  Sections: Using Nix (Alternative); Install Dependencies (Manual); Install LLVM; Building Bun; VSCode; Running debug builds; Code generation scripts; Modifying ESM modules; Release build; AddressSanitizer; Building WebKit locally + Debug mode of JSC; Troubleshooting; Using bun-debug; Contributing to the docs.
+- `docs/project/contributing.mdx`: **Contributing**. Build Bun from source and set up a development environment.
+  Sections: One-command setup; Using Nix (Alternative); Install Dependencies (Manual); Install LLVM; Building Bun; VSCode; Running debug builds; Code generation scripts; Modifying ESM modules; Release build; AddressSanitizer; Building WebKit locally + Debug mode of JSC; Troubleshooting; Using bun-debug; Contributing to the docs.
 - `src/jsc/bindings/v8/CLAUDE.md`: **V8 C++ API Implementation Guide**. Use Bun's native `bun check`, `bun lint`, `bun fmt` and `bun n2b` commands directly for type checking, linting, formatting and migration. Do not install or invoke external backends for these commands.
   Sections: Architecture Overview; Directory Structure; Implementing New V8 APIs; Memory Management Guidelines; Testing Strategy; Debugging Tips; Advanced Topics; Contributing.
 - `scripts/build/CLAUDE.md`: **TypeScript Build System**. Use Bun's native `bun check`, `bun lint`, `bun fmt` and `bun n2b` commands directly for type checking, linting, formatting and migration. Do not install or invoke external backends for these commands.

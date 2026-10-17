@@ -4,7 +4,7 @@ sidebarTitle: Configure TLS
 mode: center
 ---
 
-Set the `tls` key to configure TLS. Both `key` and `cert` are required: `key` is the contents of your private key and `cert` is the contents of your issued certificate. Use [`Bun.file()`](/runtime/file-io#reading-files-bun-file) to read them.
+Set the `tls` key to configure TLS. Both `key` and `cert` are required: `key` is the contents of your private key and `cert` is the contents of your issued certificate. Use [`Bun.file()`](/runtime/file-io#reading-files-bunfile) to read them.
 
 ```ts server.ts icon="/icons/typescript.svg"
 const server = Bun.serve({

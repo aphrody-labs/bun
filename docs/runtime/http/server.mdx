@@ -179,7 +179,7 @@ Unlike unix domain sockets, abstract namespace sockets are not bound to the file
 
 <Note>HTTP/3 support in `Bun.serve` is **experimental** and may change in future releases.</Note>
 
-`Bun.serve` can also listen for HTTP/3 over QUIC. Set `http3: true` together with [`tls`](./tls); HTTP/3 requires TLS.
+`Bun.serve` can also listen for HTTP/3 over QUIC. Set `http3: true` together with [`tls`](/runtime/http/tls); HTTP/3 requires TLS.
 
 ```ts
 Bun.serve({
@@ -268,7 +268,7 @@ Bun.serve({
 <Note>
   **Streaming & Server-Sent Events** — The idle timer applies while a response is being streamed. If your stream goes
   quiet for longer than `idleTimeout`, Bun closes the connection mid-response. For long-lived streams, disable the
-  timeout for that request with [`server.timeout(req, 0)`](#server-timeout-request-seconds).
+  timeout for that request with [`server.timeout(req, 0)`](#servertimeoutrequest-seconds).
 </Note>
 
 ---

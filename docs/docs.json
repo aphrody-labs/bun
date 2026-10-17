@@ -72,14 +72,11 @@
               "/runtime/index",
               "/runtime/watch-mode",
               "/runtime/check",
-              "/runtime/lint",
-              "/runtime/fmt",
               "/runtime/lsp",
               "/runtime/n2b",
               "/runtime/just",
-              "/runtime/mcp",
-              "/runtime/host",
               "/runtime/debugger",
+              "/project/benchmarking",
               "/runtime/repl",
               "/runtime/bunfig",
               "/runtime/code-generation-from-strings"
@@ -106,7 +103,8 @@
               "/runtime/http/cookies",
               "/runtime/http/tls",
               "/runtime/http/error-handling",
-              "/runtime/http/metrics"
+              "/runtime/http/metrics",
+              "/runtime/nginx"
             ]
           },
           {
@@ -118,13 +116,10 @@
               "/runtime/http/websockets",
               "/runtime/networking/tcp",
               "/runtime/networking/udp",
-              "/runtime/networking/dns"
+              "/runtime/networking/dns",
+              "/runtime/ssh",
+              "/vpn/index"
             ]
-          },
-          {
-            "group": "VPN",
-            "icon": "shield",
-            "pages": ["/vpn/index"]
           },
           {
             "group": "Data & Storage",
@@ -144,7 +139,7 @@
           {
             "group": "Concurrency",
             "icon": "split",
-            "pages": ["/runtime/workers", "/runtime/module-graph", "/runtime/graph"]
+            "pages": ["/runtime/workers", "/runtime/module-graph"]
           },
           {
             "group": "Process & System",
@@ -152,13 +147,12 @@
             "pages": [
               "/runtime/environment-variables",
               "/runtime/shell",
-              "/runtime/buv",
-              "/runtime/python",
-              "/runtime/cuda-torch",
-              "/runtime/terminal",
               "/runtime/child-process",
+              "/runtime/terminal",
               "/runtime/webview",
-              "/runtime/cron"
+              "/runtime/cron",
+              "/runtime/python",
+              "/runtime/buv"
             ]
           },
           {
@@ -167,16 +161,18 @@
             "pages": [
               "/runtime/node-api",
               "/runtime/ffi",
+              "/runtime/c-compiler",
+              "/runtime/transpiler",
               "/runtime/linux",
               "/runtime/windows",
               "/runtime/winrt",
               "/runtime/winui",
               "/runtime/msvc",
               "/runtime/dotnet",
-              "/aphrody/iecode-runtime-capabilities",
               "/runtime/cosmic",
-              "/runtime/c-compiler",
-              "/runtime/transpiler"
+              "/runtime/mcp",
+              "/runtime/graph",
+              "/runtime/host"
             ]
           },
           {
@@ -196,15 +192,15 @@
               "/runtime/readability",
               "/runtime/image",
               "/runtime/video",
-              "/runtime/yolo",
-              "/runtime/decisions",
+              "/runtime/web-detect",
               "/runtime/adblock",
-              "/runtime/nginx",
               "/runtime/hashing",
               "/runtime/privacy",
               "/runtime/glob",
               "/runtime/semver",
               "/runtime/color",
+              "/runtime/yolo",
+              "/runtime/decisions",
               "/runtime/utils"
             ]
           },
@@ -217,16 +213,11 @@
             "group": "Contributing",
             "icon": "heart",
             "pages": [
-              "/project/roadmap",
-              "/project/benchmarking",
-              "/project/setup",
-              "/project/agent-tools",
-              "/project/agent-plugin",
-              "/project/native-compiler-integration",
-              "/project/auto-deploy",
               "/project/contributing",
               "/project/building-windows",
               "/project/bindgen",
+              "/project/agent-plugin",
+              "/project/agent-tools",
               "/project/license"
             ]
           }
@@ -275,7 +266,8 @@
               "/pm/package-extensions",
               "/pm/security-scanner-api",
               "/pm/npmrc",
-              "/pm/winget"
+              "/pm/winget",
+              "/pm/deb"
             ]
           }
         ]
@@ -297,17 +289,18 @@
           {
             "group": "Asset Processing",
             "icon": "image",
-            "pages": ["/bundler/html-static", "/bundler/standalone-html", "/bundler/css", "/bundler/loaders"]
+            "pages": [
+              "/bundler/html-static",
+              "/bundler/standalone-html",
+              "/bundler/css",
+              "/bundler/loaders",
+              "/bundler/wasm"
+            ]
           },
           {
             "group": "Single File Executable",
             "icon": "binary",
             "pages": ["/bundler/executables"]
-          },
-          {
-            "group": "WebAssembly",
-            "icon": "cpu",
-            "pages": ["/bundler/wasm"]
           },
           {
             "group": "Extensions",
@@ -608,12 +601,6 @@
               "/guides/runtime/vscode-debugger",
               "/guides/runtime/web-debugger",
               "/guides/runtime/heap-snapshot",
-              "/guides/runtime/win32-window",
-              "/guides/runtime/gtk-window",
-              "/guides/runtime/qt-window",
-              "/guides/runtime/kde-window",
-              "/guides/runtime/cosmic-window",
-              "/guides/runtime/tauri",
               "/guides/runtime/build-time-constants",
               "/guides/runtime/define-constant",
               "/guides/runtime/cicd",

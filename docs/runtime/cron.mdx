@@ -161,13 +161,13 @@ const job = Bun.cron("*/5 * * * *", async () => {
 
 In-process scheduling is the lightweight option for long-running servers and workers. It requires no system cron daemon, works the same on every platform, and shares state (database pools, caches, module-level variables) between invocations.
 
-|                              | In-process                       | [OS-level](#bun-cron-path-schedule-title-os-level) |
-| ---------------------------- | -------------------------------- | -------------------------------------------------- |
-| Survives process exit/reboot | No                               | Yes                                                |
-| Shared state between runs    | Yes                              | No (fresh process each time)                       |
-| Platform requirements        | None                             | crontab / launchd / Task Scheduler                 |
-| Windows expression limits    | None                             | [48-trigger cap](#trigger-limit)                   |
-| Return type                  | [`CronJob`](#the-cronjob-handle) | `Promise<void>`                                    |
+|                              | In-process                       | [OS-level](#buncronpath-schedule-title-os-level) |
+| ---------------------------- | -------------------------------- | ------------------------------------------------ |
+| Survives process exit/reboot | No                               | Yes                                              |
+| Shared state between runs    | Yes                              | No (fresh process each time)                     |
+| Platform requirements        | None                             | crontab / launchd / Task Scheduler               |
+| Windows expression limits    | None                             | [48-trigger cap](#trigger-limit)                 |
+| Return type                  | [`CronJob`](#the-cronjob-handle) | `Promise<void>`                                  |
 
 ### Parameters
 

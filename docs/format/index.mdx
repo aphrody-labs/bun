@@ -147,7 +147,7 @@ import { a, b, c } from "./util";
 - Two imports from the same module become one.
 - Side-effect imports like `import "./setup"` never move, and nothing moves past one.
 
-To pick your own groups, use a table. See [`format.sortImports`](/runtime/bunfig#format-sortimports).
+To pick your own groups, use a table. See [`format.sortImports`](/runtime/bunfig#formatsortimports).
 
 ```toml bunfig.toml icon="settings"
 [fmt.sortImports]
@@ -167,7 +167,7 @@ sortTailwindcss = true
 <a className="m-2 flex p-4" /> // [!code ++]
 ```
 
-Classes are sorted in Tailwind's recommended order, in `class` and `className` and in calls to `clsx`, `cn`, `cva`, `twMerge`, and [a few more](/runtime/bunfig#format-sorttailwindcss). The order comes from the `tailwindcss` package in your project, so version 3 or 4 has to be installed.
+Classes are sorted in Tailwind's recommended order, in `class` and `className` and in calls to `clsx`, `cn`, `cva`, `twMerge`, and [a few more](/runtime/bunfig#formatsorttailwindcss). The order comes from the `tailwindcss` package in your project, so version 3 or 4 has to be installed.
 
 If your `.prettierrc` lists `prettier-plugin-tailwindcss`, sorting is already on, with that plugin's options and defaults.
 
@@ -254,7 +254,7 @@ To leave `.svelte` files alone, turn it off.
 svelte = false
 ```
 
-See [`format.svelte`](/runtime/bunfig#format-svelte).
+See [`format.svelte`](/runtime/bunfig#formatsvelte).
 
 ## Standard input
 

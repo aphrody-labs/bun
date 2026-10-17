@@ -4,7 +4,7 @@ sidebarTitle: Copy file
 mode: center
 ---
 
-Use [`Bun.write()`](/runtime/file-io#writing-files-bun-write) to copy a file to another location on disk. The first argument is a _destination_, like an absolute path or `BunFile` instance. The second argument is the _data_ to write.
+Use [`Bun.write()`](/runtime/file-io#writing-files-bunwrite) to copy a file to another location on disk. The first argument is a _destination_, like an absolute path or `BunFile` instance. The second argument is the _data_ to write.
 
 ```ts
 const file = Bun.file("/path/to/original.txt");
@@ -13,4 +13,4 @@ await Bun.write("/path/to/copy.txt", file);
 
 ---
 
-See [`Bun.write()`](/runtime/file-io#writing-files-bun-write).
+See [`Bun.write()`](/runtime/file-io#writing-files-bunwrite).

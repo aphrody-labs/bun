@@ -87,5 +87,5 @@ gates. The recipe and full evidence contract are in the canonical NGINX page.
 
 ## Read next
 
-- `docs/runtime/nginx.mdx`: **NGINX**. Own a native NGINX process and its Rust module with Bun, with explicit source and ABI qualification.
-  Sections: Provider and engine gates; Rust module and source ownership; Native module gates; Portable GNU x64 build.
+- `docs/runtime/nginx.mdx`: **NGINX**. Validate, start, reload and stop an NGINX process from Bun with bun:nginx.
+  Sections: Prefix and configuration; API; Lifetime; Errors; Windows; Rust HTTP module; References.

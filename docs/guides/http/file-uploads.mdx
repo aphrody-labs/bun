@@ -63,7 +63,7 @@ The form sends a `POST` request with the form data to the `/action` endpoint. Ha
 
 First, call [`.formData()`](https://developer.mozilla.org/en-US/docs/Web/API/Request/formData) on the incoming `Request` to asynchronously parse its contents into a `FormData` instance. Then use [`.get()`](https://developer.mozilla.org/en-US/docs/Web/API/FormData/get) to extract the `name` and `profilePicture` fields; `name` is a `string` and `profilePicture` is a `Blob`.
 
-Finally, write the `Blob` to disk with [`Bun.write()`](/runtime/file-io#writing-files-bun-write).
+Finally, write the `Blob` to disk with [`Bun.write()`](/runtime/file-io#writing-files-bunwrite).
 
 {/* prettier-ignore */}
 ```ts index.ts icon="/icons/typescript.svg"
