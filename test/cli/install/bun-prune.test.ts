@@ -1903,7 +1903,6 @@ test.concurrent("isolated: --production --filter unlinks one workspace's dev dep
   }
   await expectProductionInstallIsNoop(dir);
 });
-<<<<<<< HEAD
 
 // The unselected root reaches the workspace through its optional peer, a second row with the workspace's name.
 test.concurrent("isolated: --production --filter keeps the store entry when the unselected root names the workspace as an optional peer", async () => {
@@ -1923,8 +1922,6 @@ test.concurrent("isolated: --production --filter keeps the store entry when the 
   expect(exitCode).toBe(0);
   expect(existsSync(storeEntry)).toBeTrue();
 });
-=======
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
 
 test.concurrent.each(linkers)(
   "%s: --filter limits extraneous entries to the selected workspaces' own folders; name, path and glob selectors",
@@ -2636,11 +2633,7 @@ test.concurrent("hoisted: a nested copy is kept while the root copy is still the
   expect(existsSync(rootPkgJson)).toBeTrue();
 });
 
-<<<<<<< HEAD
 test.concurrent("hoisted: --production removes the dev version at the root and keeps the nested copy a production package resolves to", async () => {
-=======
-test.concurrent("hoisted: --production keeps the nested copy a production package resolves to while the root holds the dev version", async () => {
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
   const pkg = { name: "foo", dependencies: { "one-fixed-dep": "1.0.0" }, devDependencies: { "no-deps": "2.0.0" } };
   const [dir, silentDir] = await Promise.all([setup(pkg), setup(pkg)]);
   const rootPkgJson = join(dir, "node_modules", "no-deps", "package.json");
@@ -2648,7 +2641,6 @@ test.concurrent("hoisted: --production keeps the nested copy a production packag
   expect(await file(rootPkgJson).json()).toMatchObject({ version: "2.0.0" });
   expect(await file(nestedPkgJson).json()).toMatchObject({ version: "1.0.0" });
 
-<<<<<<< HEAD
   // Nothing waits for the place at the root, so whatever version is in it goes without a warning.
   const rootPkg = await file(rootPkgJson).json();
   await write(rootPkgJson, JSON.stringify({ ...rootPkg, version: "9.9.9" }));
@@ -2659,10 +2651,6 @@ test.concurrent("hoisted: --production keeps the nested copy a production packag
   await write(rootPkgJson, JSON.stringify(rootPkg));
 
   // A production install leaves the place at the root empty: it does not move the nested copy there.
-=======
-  // The root copy is the one a full install hoists there, not a stale tree:
-  // no "is not the version bun.lock expects" warning, no install hint.
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
   const { stdout, stderr, exitCode } = await prune(dir, "--production");
   expect(out(stdout)).toMatchInlineSnapshot(`
       "bun prune <version> (<revision>)
@@ -2673,7 +2661,6 @@ test.concurrent("hoisted: --production keeps the nested copy a production packag
   expect(stderr).toBe("");
   expect(exitCode).toBe(0);
   expect(await file(nestedPkgJson).json()).toMatchObject({ version: "1.0.0" });
-<<<<<<< HEAD
   expect(existsSync(rootPkgJson)).toBeFalse();
   await expectProductionInstallIsNoop(dir);
 
@@ -2830,87 +2817,6 @@ test.concurrent("hoisted + workspaces: --production removes the dev version at t
   expect(await file(workspacePkgJson).json()).toMatchObject({ version: "1.0.0" });
 
   // A production install leaves the place at the root empty: it does not move the workspace's copy there.
-=======
-  expect(await file(rootPkgJson).json()).toMatchObject({ version: "2.0.0" });
-
-  // A root copy whose version the lockfile does not know anywhere is a
-  // genuinely stale tree and still warns under --production.
-  const rootPkg = await file(rootPkgJson).json();
-  await write(rootPkgJson, JSON.stringify({ ...rootPkg, version: "9.9.9" }));
-  const stale = await prune(dir, "--production", "--dry-run");
-  expect(out(stale.stderr)).toBe(
-    `${WARN("node_modules/no-deps", "node_modules/one-fixed-dep/node_modules/no-deps")}\n${NOTE}`,
-  );
-  expect(stale.exitCode).toBe(0);
-  await write(rootPkgJson, JSON.stringify(rootPkg));
-
-  await runBunInstall(installEnv(dir), dir, { production: true });
-
-  const silent = await prune(silentDir, "--production", "--silent");
-  expect(silent.stdout).toBe("");
-  expect(silent.stderr).toBe("");
-  expect(silent.exitCode).toBe(0);
-  expect(
-    existsSync(join(silentDir, "node_modules", "one-fixed-dep", "node_modules", "no-deps", "package.json")),
-  ).toBeTrue();
-});
-
-test.concurrent("hoisted: inside a tree folder, junk is removed but a copy shadowed by a mismatched root package is kept", async () => {
-  const dir = await setup({
-    name: "foo",
-    dependencies: { "one-dep": "1.0.0", "no-deps": "2.0.0", "a-dep": "1.0.2" },
-  });
-  const nm = join(dir, "node_modules");
-  const nestedNoDeps = join(nm, "one-dep", "node_modules", "no-deps");
-  expect(await file(join(nestedNoDeps, "package.json")).json()).toMatchObject({ version: "1.0.1" });
-  expect(await file(join(nm, "a-dep", "package.json")).json()).toMatchObject({ version: "1.0.2" });
-
-  await write(
-    join(dir, "package.json"),
-    JSON.stringify({ name: "foo", dependencies: { "one-dep": "1.0.0", "no-deps": "2.0.0", "a-dep": "1.0.1" } }),
-  );
-  await install(dir, "--lockfile-only");
-  const shadowed = plant(dir, "node_modules/one-dep/node_modules/a-dep");
-  const junk = plant(dir, "node_modules/one-dep/node_modules/junk");
-
-  const { lines: merged, exitCode } = await pruneMerged(dir);
-  expect(merged).toStrictEqual([
-    BANNER,
-    "",
-    WARN("node_modules/a-dep", "node_modules/one-dep/node_modules/a-dep"),
-    NOTE,
-    "- junk (node_modules/one-dep/node_modules)",
-    REMOVED(1, 6),
-  ]);
-  expect(exitCode).toBe(0);
-  expect(existsSync(junk)).toBeFalse();
-  expect(existsSync(shadowed)).toBeTrue();
-  expect(await file(join(nestedNoDeps, "package.json")).json()).toMatchObject({ version: "1.0.1" });
-  expect(await file(join(nm, "a-dep", "package.json")).json()).toMatchObject({ version: "1.0.2" });
-});
-
-test.concurrent("hoisted + workspaces: --production keeps a workspace's copy while the root still holds the dev version", async () => {
-  const { packageDir: dir, packageJson } = await registry.createTestDir({ bunfigOpts: { linker: "hoisted" } });
-  await Promise.all([
-    write(
-      packageJson,
-      JSON.stringify({ name: "root", workspaces: ["packages/*"], devDependencies: { "no-deps": "2.0.0" } }),
-    ),
-    write(
-      join(dir, "packages", "a", "package.json"),
-      JSON.stringify({ name: "a", version: "1.0.0", dependencies: { "no-deps": "1.0.0" } }),
-    ),
-  ]);
-  await install(dir, "--linker", "hoisted");
-  const nm = join(dir, "node_modules");
-  const rootPkgJson = join(nm, "no-deps", "package.json");
-  const workspacePkgJson = join(dir, "packages", "a", "node_modules", "no-deps", "package.json");
-  expect(await file(rootPkgJson).json()).toMatchObject({ version: "2.0.0" });
-  expect(await file(workspacePkgJson).json()).toMatchObject({ version: "1.0.0" });
-
-  // The root copy is the dev version a full install hoists there; not a
-  // stale tree, so no warning under --production.
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
   const { stdout, stderr, exitCode } = await prune(dir, "--production", "--linker", "hoisted");
   expect(out(stdout)).toMatchInlineSnapshot(`
       "bun prune <version> (<revision>)
@@ -2922,11 +2828,7 @@ test.concurrent("hoisted + workspaces: --production keeps a workspace's copy whi
   expect(exitCode).toBe(0);
   expect(await file(workspacePkgJson).json()).toMatchObject({ version: "1.0.0" });
   expect(isSymlink(join(nm, "a"))).toBeTrue();
-<<<<<<< HEAD
   expect(existsSync(rootPkgJson)).toBeFalse();
-=======
-  expect(await file(rootPkgJson).json()).toMatchObject({ version: "2.0.0" });
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
 });
 
 test.concurrent("isolated: --production removes a dev-only link and its bin even though production still needs the store entry", async () => {
@@ -3442,7 +3344,6 @@ test.concurrent("isolated: store entries of file:, tarball and git dependencies 
   expect(storeEntries(dir)).toStrictEqual(installed);
 });
 
-<<<<<<< HEAD
 test.concurrent("isolated: a file: dependency declared by a registry package is not a store entry, a leftover one is removed", async () => {
   // file-dep@1.0.0 declares `"files": "file:./the-files"`; the installer links the
   // folder inside the package's own store entry instead of creating one for it.
@@ -3475,19 +3376,6 @@ test.concurrent("workspaces: without --linker, a bun.lock with configVersion 1 i
   expect(storeEntries(dir)).toStrictEqual(["a-dep@1.0.1", "no-deps@1.0.1", "one-dep@1.0.0"]);
   const junk = plant(dir, "node_modules/.bun/junk@1.0.0/node_modules/junk");
 
-=======
-test.concurrent("workspaces: without --linker, a bun.lock with configVersion 1 is pruned with the isolated linker", async () => {
-  const { packageDir: dir, packageJson } = await registry.createTestDir({});
-  await writeWorkspaces(dir, packageJson, {
-    packages: { a: { dependencies: { "one-dep": "1.0.0" }, devDependencies: { "a-dep": "1.0.1" } } },
-  });
-  await install(dir);
-  expect(await lock(dir)).toContain('"configVersion": 1,');
-  const store = join(dir, "node_modules", ".bun");
-  expect(storeEntries(dir)).toStrictEqual(["a-dep@1.0.1", "no-deps@1.0.1", "one-dep@1.0.0"]);
-  const junk = plant(dir, "node_modules/.bun/junk@1.0.0/node_modules/junk");
-
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
   const { stdout, stderr, exitCode } = await prune(dir, "--production");
   expect(stderr).not.toContain("linker");
   expect(out(stdout)).toMatchInlineSnapshot(`
@@ -4716,7 +4604,6 @@ test.concurrent("--global is rejected before the global folder is touched; bun l
   expect(exitCode).toBe(1);
   expect(existsSync(fresh)).toBeFalse();
 });
-<<<<<<< HEAD
 
 test.concurrent.each([
   ["ESC [ 2 K", "\x1b[2K", "\\x1b[2K"],
@@ -4744,5 +4631,3 @@ test.concurrent.each([
   }
   expect(existsSync(planted)).toBeFalse();
 });
-=======
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)

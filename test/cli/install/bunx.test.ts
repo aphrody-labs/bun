@@ -1,6 +1,5 @@
 import { spawn } from "bun";
 import { afterAll, beforeAll, beforeEach, describe, expect, it, setDefaultTimeout } from "bun:test";
-<<<<<<< HEAD
 import { copyFile, mkdir, writeFile } from "fs/promises";
 import {
   bunEnv,
@@ -30,12 +29,6 @@ import {
   utimesSync,
   writeFileSync,
 } from "node:fs";
-=======
-import { mkdir, rm, writeFile } from "fs/promises";
-import { bunEnv, bunExe, isWindows, readdirSorted, tmpdirSync } from "harness";
-import { chmodSync, copyFileSync, readdirSync, symlinkSync } from "node:fs";
-import { tmpdir } from "os";
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
 import { delimiter, join, resolve } from "path";
 import { dummyAfterAll, dummyBeforeAll, dummyBeforeEach, dummyRegistry, getPort, setHandler } from "./dummy.registry";
 
@@ -72,7 +65,6 @@ function pathWithout(name: string, PATH: string | undefined): string {
     .join(delimiter);
 }
 
-<<<<<<< HEAD
 // Cases that need bunx to install something get a per-test in-process registry
 // serving throwaway packages: what they assert is bunx's own behavior (name ->
 // bin resolution, the bunx cache, argument passthrough), and installing real
@@ -124,16 +116,6 @@ function fixtureServer(handler: (pathname: string) => FixtureBody | Promise<Fixt
       if (body instanceof Response) return body;
       return body instanceof Uint8Array ? new Response(body) : Response.json(body);
     },
-=======
-beforeAll(async () => {
-  // Clean stale bunx cache dirs from previous runs once up front instead of before every test.
-  const tmp = isWindows ? tmpdir() : "/tmp";
-  const waiting: Promise<void>[] = [];
-  readdirSync(tmp).forEach(file => {
-    if (file.startsWith("bunx-") || file.startsWith("bun-x.test")) {
-      waiting.push(rm(join(tmp, file), { recursive: true, force: true }));
-    }
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
   });
   return {
     /** Every request path received so far, in order. */
@@ -418,7 +400,6 @@ it.concurrent("should choose the tagged versions instead of the PATH versions wh
     });
   });
 
-<<<<<<< HEAD
   const results = await Promise.all(
     processes.map(async (subprocess, i) => {
       const [stdout, stderr, exitCode] = await Promise.all([
@@ -437,14 +418,6 @@ it.concurrent("should choose the tagged versions instead of the PATH versions wh
       exitCode: 0,
     })),
   );
-=======
-  const results = await Promise.all(processes.map(p => p.exited));
-  expect(results).toEqual(semverVersions.map(() => 0));
-  const outputs = (await Promise.all(processes.map(p => new Response(p.stdout).text()))).map(a =>
-    a.substring(0, a.indexOf("\n")),
-  );
-  expect(outputs).toEqual(semverVersions.map(v => "SemVer " + v));
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
 });
 
 // Two versions of a package whose bin (`uglifyjs`, as in the real uglify-js) is
@@ -594,7 +567,6 @@ const cowsayRepo = {
 
 it.concurrent("should work for github repository", async () => {
   const { x_dir, env } = setup();
-<<<<<<< HEAD
   using github = await localGithub("bunx-fixture", "cowsay", cowsayRepo);
   const run = () => {
     const subprocess = spawn({
@@ -671,102 +643,6 @@ it.concurrent.each(["--version", "-v"])("should print the version using %s and e
     env,
   });
 
-=======
-  // without cache
-  const withoutCache = spawn({
-    cmd: [bunExe(), "x", "github:piuccio/cowsay", "--help"],
-    cwd: x_dir,
-    stdout: "pipe",
-    stdin: "inherit",
-    stderr: "pipe",
-    env,
-  });
-
-  let [err, out, exited] = await Promise.all([
-    new Response(withoutCache.stderr).text(),
-    new Response(withoutCache.stdout).text(),
-    withoutCache.exited,
-  ]);
-
-  expect(err).not.toContain("error:");
-  expect(out.trim()).toContain("Usage: " + (isWindows ? "cli.js" : "cowsay"));
-  expect(exited).toBe(0);
-
-  // cached
-  const cached = spawn({
-    cmd: [bunExe(), "x", "github:piuccio/cowsay", "--help"],
-    cwd: x_dir,
-    stdout: "pipe",
-    stdin: "inherit",
-    stderr: "pipe",
-    env,
-  });
-
-  [err, out, exited] = await Promise.all([
-    new Response(cached.stderr).text(),
-    new Response(cached.stdout).text(),
-    cached.exited,
-  ]);
-
-  expect(err).not.toContain("error:");
-  expect(out.trim()).toContain("Usage: " + (isWindows ? "cli.js" : "cowsay"));
-  expect(exited).toBe(0);
-});
-
-it.concurrent("should work for github repository with committish", async () => {
-  const { x_dir, env } = setup();
-  const withoutCache = spawn({
-    cmd: [bunExe(), "x", "github:piuccio/cowsay#HEAD", "hello bun!"],
-    cwd: x_dir,
-    stdout: "pipe",
-    stdin: "inherit",
-    stderr: "pipe",
-    env,
-  });
-
-  let [err, out, exited] = await Promise.all([
-    new Response(withoutCache.stderr).text(),
-    new Response(withoutCache.stdout).text(),
-    withoutCache.exited,
-  ]);
-
-  expect(err).not.toContain("error:");
-  expect(out.trim()).toContain("hello bun!");
-  expect(exited).toBe(0);
-
-  // cached
-  const cached = spawn({
-    cmd: [bunExe(), "x", "--no-install", "github:piuccio/cowsay#HEAD", "hello bun!"],
-    cwd: x_dir,
-    stdout: "pipe",
-    stdin: "inherit",
-    stderr: "pipe",
-    env,
-  });
-
-  [err, out, exited] = await Promise.all([
-    new Response(cached.stderr).text(),
-    new Response(cached.stdout).text(),
-    cached.exited,
-  ]);
-
-  expect(err).not.toContain("error:");
-  expect(out.trim()).toContain("hello bun!");
-  expect(exited).toBe(0);
-});
-
-it.concurrent.each(["--version", "-v"])("should print the version using %s and exit", async flag => {
-  const { x_dir, env } = setup();
-  const subprocess = spawn({
-    cmd: [bunExe(), "x", flag],
-    cwd: x_dir,
-    stdout: "pipe",
-    stdin: "inherit",
-    stderr: "pipe",
-    env,
-  });
-
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
   let [err, out, exited] = await Promise.all([subprocess.stderr.text(), subprocess.stdout.text(), subprocess.exited]);
 
   expect(err).not.toContain("error:");
@@ -889,11 +765,8 @@ describe("bunx --no-install", () => {
   it.concurrent.each(["typescript", "http-server", "eslint"])(
     "`bunx --no-install %s` should find cached packages",
     async pkg => {
-<<<<<<< HEAD
       const bin = pkg === "typescript" ? "tsc" : pkg;
       using registry = await localRegistry(fixturePackage(pkg, "1.0.0", bin));
-=======
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
       const ctx = setup();
       ctx.env.npm_config_registry = registry.url;
       // An unversioned `bunx <pkg>` runs a matching bin from PATH before it looks
@@ -1762,7 +1635,6 @@ it.concurrent.skipIf(!isWindows)("completions: writes bunx.cmd (not bunx.exe) wh
   const bunCopy = join(String(dir), "bun-copy.exe");
   await copyFile(bunExe(), bunCopy);
 
-<<<<<<< HEAD
   await using proc = spawn({
     cmd: [bunCopy, "completions"],
     env: bunEnv,
@@ -1874,18 +1746,6 @@ describe.skipIf(isWindows)("cache directory", () => {
       stdout: "",
       stderr: expect.stringContaining("Could not find an existing 'tool' binary to run."),
       exitCode: 1,
-=======
-    const run = () => {
-      const subprocess = spawn({
-        cmd: [bunExe(), "x", "--no-install", pkg],
-        cwd: x_dir,
-        stdout: "pipe",
-        stdin: "ignore",
-        stderr: "pipe",
-        env,
-      });
-      return Promise.all([subprocess.stderr.text(), subprocess.stdout.text(), subprocess.exited] as const);
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
     };
 
     chmodSync(box.root, 0o700);
@@ -1926,7 +1786,6 @@ describe.skipIf(isWindows)("cache directory", () => {
     // Not in `node_modules/.bun-cache` of the project, where `bun install` puts its cache then.
     expect(readdirSync(box.cwd)).toEqual([]);
 
-<<<<<<< HEAD
     expect(await box.run(["tool"], { env })).toMatchObject({ stdout: ran, stderr: "", exitCode: 0, requests: [] });
 
     // The next run that installs takes the install cache, now that there is one.
@@ -1969,18 +1828,6 @@ describe.skipIf(isWindows)("cache directory", () => {
       TMP: tmp,
       TEMP: tmp,
       BUN_TMPDIR: tmp,
-=======
-    const run = () => {
-      const subprocess = spawn({
-        cmd: [bunExe(), "x", "--no-install", `@${scope}/${pkg}`],
-        cwd: x_dir,
-        stdout: "pipe",
-        stdin: "ignore",
-        stderr: "pipe",
-        env,
-      });
-      return Promise.all([subprocess.stderr.text(), subprocess.stdout.text(), subprocess.exited] as const);
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
     };
 
     expect(await box.run(["tool"], { env })).toMatchObject({ stdout: ran, exitCode: 0 });

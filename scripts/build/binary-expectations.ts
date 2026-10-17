@@ -389,7 +389,6 @@ export function binaryExpectations(cfg: Config): BinaryExpectations {
     cfg.webkit === "local" && cfg.linux && cfg.abi !== "android"
       ? ["libicudata.so.*", "libicui18n.so.*", "libicuuc.so.*"]
       : [];
-<<<<<<< HEAD
   // --fuzzilli=on: clang's coverage runtime needs it.
   const coverageLibs = cfg.fuzzilli && cfg.linux && cfg.abi === "gnu" ? ["libresolv.so.2"] : [];
   const allowedLibs = [
@@ -398,9 +397,6 @@ export function binaryExpectations(cfg: Config): BinaryExpectations {
     ...localWebKitLibs,
     ...(cfg.abi === "android" ? ["liblog.so"] : []),
   ];
-=======
-  const allowedLibs = [...sanitizerLibs, ...localWebKitLibs, ...(cfg.abi === "android" ? ["liblog.so"] : [])];
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
   const staticInitializers = cfg.asan ? undefined : runtimeInitializers(cfg);
 
   switch (format) {

@@ -1051,11 +1051,7 @@ test.concurrent.each([
 
 test.concurrent("migrated bun.lock with a nested-placed peer of a file: dependency round-trips --frozen-lockfile", async () => {
   // delta is a regular peer of gamma placed only as "gamma/delta"; listing it in optionalPeers too made reload drop the entry.
-<<<<<<< HEAD
   using testDir = synthetic("migrate-nested-peer-fixed-point", {
-=======
-  await using testDir = tempDir("migrate-nested-peer-fixed-point", {
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
     "package.json": JSON.stringify({
       name: "sandbox",
       version: "1.0.0",
@@ -1196,11 +1192,7 @@ test.concurrent.each<[string, Record<string, string>, string[]]>([
 
 test.concurrent("bun install terminates when a file: folder dependency declares a workspace:. self-reference (#25202)", async () => {
   // Same hoist cycle without a foreign lockfile; today a transitive workspace: range is resolved against the root project, so this errors instead of hanging.
-<<<<<<< HEAD
   using testDir = synthetic("install-folder-self-workspace", {
-=======
-  await using testDir = tempDir("install-folder-self-workspace", {
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
     "package.json": JSON.stringify({ name: "consumer", dependencies: { test: "file:dir1" } }),
     "dir1/package.json": JSON.stringify({ name: "test", version: "1.0.0", devDependencies: { foo: "workspace:." } }),
   });
@@ -1692,10 +1684,7 @@ describe("package-lock.json migration fixes", () => {
     expect(lock.packages.devdep[2]).toStrictEqual({
       dependencies: { devopt: "" },
       optionalDependencies: { "opt-and-dev": "" },
-<<<<<<< HEAD
       hasInstallScript: true,
-=======
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
     });
     expect(Object.keys(lock.packages).sort()).toStrictEqual(["devdep", "devopt", "opt-and-dev", "optdep"]);
     expect(await pmHash(dir)).toBe(before);
@@ -1728,11 +1717,7 @@ describe("package-lock.json migration fixes", () => {
   test.concurrent("unreferenced entries are skipped with a warning (B6) and github shorthand keeps github: form", async () => {
     using dir = fixture("minimist-git-metadep");
     const { stderr, exitCode, lock } = await migrate(dir);
-<<<<<<< HEAD
     expect(stderr).toContain(" unused package-lock.json entr");
-=======
-    expect(stderr).toContain("not depended on by any package");
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
     expect(stderr).toContain('"node_modules/@isaacs/no-thing-here"');
     expect(lock.packages.minimist[0]).toBe(
       "minimist@github:substack/minimist#3754568bfd43a841d2d72d7fb54598635aea8fa4",
@@ -2123,7 +2108,6 @@ describe("package-lock.json migration fixes", () => {
     expect(lock.workspaces[""]).toStrictEqual(root);
     await frozen(dir);
   });
-<<<<<<< HEAD
 
   test.concurrent("a ranged peer npm satisfied with a lower version migrates to the tree a fresh resolve writes", async () => {
     // npm satisfied peer-deps-fixed's `no-deps@^1.0.0` with the 1.0.0 it hoisted. bun binds such a
@@ -2220,8 +2204,6 @@ describe("package-lock.json migration fixes", () => {
     ]);
     await frozen(dir);
   });
-=======
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
 
   test.concurrent("workspace listed in the lockfile but deleted from disk is skipped", async () => {
     const src = join(ARBORIST, "workspaces-simple-virtual");
@@ -2358,11 +2340,7 @@ describe("package-lock.json migration fixes", () => {
     const { stderr, exitCode, lock } = await migrate(project.dir);
     // The root's own `p` is recorded; the copy `o` reaches through the walk is a transitive out-of-tree folder and is skipped even though it is the same target.
     expect(stderr).toContain(
-<<<<<<< HEAD
       'skipping "p" from package-lock.json: transitive folder dependency "../m/node_modules/p" is outside the project',
-=======
-      'skipped "p" from package-lock.json: transitive folder dependency "../m/node_modules/p" is outside the project',
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
     );
     expect(exitCode).toBe(0);
     expect(lock.packages).toStrictEqual({

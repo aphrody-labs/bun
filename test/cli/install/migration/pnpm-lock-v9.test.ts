@@ -3439,17 +3439,10 @@ importers:
 `,
     });
 
-<<<<<<< HEAD
     const { stderr, exitCode } = await migrate(String(dir), "--verbose");
 
     expect(stderr).toContain(
       'warn: skipping "x" from workspace "packages/a": excluded from pnpm-lock.yaml by excludeLinksFromLockfile',
-=======
-    const { stderr, exitCode } = await migrate(String(dir));
-
-    expect(stderr).toContain(
-      'warn: skipped "x" from workspace "packages/a": excluded from pnpm-lock.yaml by excludeLinksFromLockfile',
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
     );
     expect(stderr).not.toContain("from the root package");
     expect(stderr).toContain("migrated lockfile from pnpm-lock.yaml");

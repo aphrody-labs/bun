@@ -972,19 +972,13 @@ describe("bun pm licenses", () => {
     `);
   });
 
-<<<<<<< HEAD
   test.concurrent("control characters from package.json are escaped in text output but preserved in --json", async () => {
     const dir = clone(hoistedDir);
-=======
-  test.concurrent("control characters from package.json are stripped in text output but preserved in --json", async () => {
-    const dir = await setup();
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
     const evilLicense = "MIT\u001b[31m\nEVIL";
     patchInstalledManifest(dir, "a-dep", { license: evilLicense, description: "tab\there\r\n" });
     patchInstalledManifest(dir, "one-dep", { license: "ISC\nGPL-3.0" });
     patchInstalledManifest(dir, "no-deps", { license: "BSD\t2" });
 
-<<<<<<< HEAD
     const [stdout, parsed] = await Promise.all([licensesText(dir, "--long", "--no-summary"), licensesJson(dir)]);
     expect(stdout).not.toMatch(RAW_CONTROL);
     expect(stdout).toMatchInlineSnapshot(`
@@ -993,35 +987,6 @@ describe("bun pm licenses", () => {
 
         ISC\\nGPL-3.0 (1)
         └── one-dep@1.0.0
-=======
-    // --no-summary drops the "bun pm licenses v<version> (<short sha>)" banner. A short sha can be all
-    // digits, and the banner would then pass the group-header filter below.
-    const stdout = await licensesText(dir, "--long", "--no-summary");
-    expect(stdout).not.toContain("\u001b");
-    expect(stdout).not.toContain("\r");
-    expect(stdout).not.toContain("\t");
-    expect(stdout).toContain("MIT[31mEVIL (1)\n└── a-dep@1.0.1 (dev)\n    tabhere\n");
-    expect(stdout).toContain("ISCGPL-3.0 (1)\n└── one-dep@1.0.0\n");
-    expect(stdout).toContain("BSD2 (1)\n└── no-deps@1.0.0\n");
-    expect(stdout.split("\n").filter(line => / \(\d+\)$/.test(line))).toStrictEqual([
-      "BSD2 (1)",
-      "ISCGPL-3.0 (1)",
-      "MIT (2)",
-      "MIT[31mEVIL (1)",
-      "Unknown (1)",
-    ]);
-    expect(stdout.split("\n").some(line => line.startsWith("GPL-3.0") || line.startsWith("EVIL"))).toBeFalse();
-
-    const parsed = await licensesJson(dir);
-    expect(Object.keys(parsed)).toStrictEqual(["BSD\t2", "ISC\nGPL-3.0", "MIT", evilLicense, "Unknown"]);
-    expect(parsed[evilLicense]).toStrictEqual([
-      { name: "a-dep", versions: ["1.0.1"], license: evilLicense, description: "tab\there\r\n" },
-    ]);
-    expect(parsed["ISC\nGPL-3.0"]).toStrictEqual([{ name: "one-dep", versions: ["1.0.0"], license: "ISC\nGPL-3.0" }]);
-    expect(parsed["BSD\t2"]).toStrictEqual([{ name: "no-deps", versions: ["1.0.0"], license: "BSD\t2" }]);
-    expect(parsed.Unknown).toStrictEqual([u("no-deps", "1.0.1")]);
-  });
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
 
         MIT (2)
         ├── path-parse@1.0.6
@@ -1734,15 +1699,9 @@ describe("bun pm licenses", () => {
 
   // pnpm#5702: a package that cannot be read must not fail the whole listing; the omission is reported instead of silent.
   test.concurrent("unparsable package.json is reported as Unknown, missing ones are omitted with a warning", async () => {
-<<<<<<< HEAD
     const dir = clone(hoistedDir);
     writeFileSync(nm(dir, "resolve", "package.json"), "{ not json");
     rmSync(nm(dir, "one-dep"), { recursive: true, force: true });
-=======
-    const dir = await setup();
-    overwriteInstalledManifest(dir, "resolve", "{ not json");
-    rmSync(join(dir, "node_modules", "one-dep"), { recursive: true, force: true });
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
 
     const [stdout, stderr, exitCode] = await licenses(dir, "--json");
     expect(normalizeBunSnapshot(stderr)).toMatchInlineSnapshot(`
@@ -1755,17 +1714,6 @@ describe("bun pm licenses", () => {
     });
     expect(exitCode).toBe(0);
   });
-<<<<<<< HEAD
-=======
-
-  // pnpm#8589: the lockfile's resolvable tree hoists the dev subtree's a-dep@1.0.9, but `--production` installs a-dep@1.0.10 there.
-  const outHoistedFixture = {
-    "package.json": pkg({
-      dependencies: { "uses-a-dep-10": "1.0.0" },
-      devDependencies: { "uses-a-dep-9": "1.0.0" },
-    }),
-  };
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
 
   test.concurrent("pnpm#8589: --prod after `bun install --production` finds packages hoisted differently", async () => {
     const dir = prodInstallDir;

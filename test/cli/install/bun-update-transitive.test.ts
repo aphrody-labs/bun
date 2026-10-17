@@ -1168,7 +1168,6 @@ test.concurrent("`bun update <name> --latest` moves a patched dependency and war
   expect(await file(join(dir, "node_modules", "no-deps", "patched.txt")).exists()).toBeFalse();
   expect(exitCode).toBe(0);
 });
-<<<<<<< HEAD
 
 // A version bump that leaves a patchedDependencies key behind is pointed out by every install, not only by `bun update`.
 test.concurrent("every install warns about a patchedDependencies key that matches no installed version", async () => {
@@ -1231,8 +1230,6 @@ test.concurrent("a patchedDependencies key without a version is pointed out wher
   expect(stderr).toMatch(/package\.json:\d+:\d+/);
   expect(await file(join(dir, "node_modules", "no-deps", "patched.txt")).exists()).toBeFalse();
 });
-=======
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
 
 // bun.lock still records the `no-deps: 1.0.0` override; package.json is edited without an install in between, so the update sees the new overrides first.
 async function overriddenThenEdited(overrides?: Json) {
@@ -2382,7 +2379,6 @@ test.concurrent("`bun update <name>` for a transitive-only name runs the securit
   expect(exitCode).toBe(1);
 });
 
-<<<<<<< HEAD
 // parent's `^1.0.0` is satisfied by the root's exact leaf@1.0.0, so it shares that copy and the request has nothing to move.
 test.concurrent("`bun update <name>` keeps a dependent's row on the root's exact pin", async () => {
   using server = await serveRegistry(TAGGED_FREE);
@@ -2413,13 +2409,6 @@ test.concurrent("`bun update <name>` also scans the nested copy it re-resolved w
     pkgJson({ parent: "^1.0.0", leaf: "1.0.0" }),
   );
   expect(await lockedVersions(dir, "leaf")).toStrictEqual(["1.0.0", "1.0.1"]);
-=======
-// The request binds to the root's exact leaf@1.0.0, which stays put; the copy that moves is parent's nested one.
-test.concurrent("`bun update <name>` also scans the nested copy it re-resolved when the root's own row stays put", async () => {
-  using server = await serveRegistry(TAGGED_FREE);
-  const dir = await installServed(server, "update-named-scan-nested-", pkgJson({ parent: "^1.0.0", leaf: "1.0.0" }));
-  expect(await lockedVersions(dir, "leaf")).toStrictEqual(["1.0.0"]);
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
   const before = await withLeafScanner(server, dir);
   const { stdout, exitCode } = await run(dir, "update", "leaf");
   const scanned = stdout.match(/^scanned: .*$/m)?.[0] ?? "";
@@ -2427,14 +2416,9 @@ test.concurrent("`bun update <name>` also scans the nested copy it re-resolved w
   expect(scanned).toContain("leaf@1.1.0");
   expect(stdout).toContain("FATAL: leaf");
   expect(await lockText(dir)).toBe(before);
-<<<<<<< HEAD
   expect(await lockedVersions(dir, "leaf")).toStrictEqual(["1.0.0", "1.0.1"]);
   expect(await installedVersion(dir, "leaf")).toBe("1.0.0");
   expect(await installedVersion(dir, "parent", "node_modules", "leaf")).toBe("1.0.1");
-=======
-  expect(await lockedVersions(dir, "leaf")).toStrictEqual(["1.0.0"]);
-  expect(await installedVersion(dir, "leaf")).toBe("1.0.0");
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
   expect(exitCode).toBe(1);
 });
 
@@ -3003,24 +2987,15 @@ test.concurrent("`bun update <name>` from a member leaves a sibling's own entry 
 });
 
 test.concurrent("`bun update <name>` from a member: a sibling whose range rejects the picked version stays put", async () => {
-<<<<<<< HEAD
   const { dir, pkg2Text } = await staleMembers("^1.0.0", "~1.0.0");
   const { stderr, exitCode } = await runIn(dir, "packages/pkg1", "update", "no-deps");
   expect(stderr).not.toContain("error:");
   expect(await packageJsonOf(dir, "packages/pkg1")).toStrictEqual(member("pkg1", { "no-deps": "^1.1.0" }));
-=======
-  const { dir, pkg1 } = await staleMemberTransitive("~1.0.0");
-  const pkg2Text = await packageJsonText(dir, "packages/pkg2");
-  const { stderr, exitCode } = await runIn(dir, "packages/pkg1", "update", "no-deps");
-  expect(stderr).not.toContain("error:");
-  expect(await packageJsonOf(dir, "packages/pkg1")).toStrictEqual(pkg1);
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
   expect(await packageJsonText(dir, "packages/pkg2")).toBe(pkg2Text);
   expect(await lockedVersions(dir, "no-deps")).toStrictEqual(["1.0.0", "1.1.0"]);
   await frozen(dir);
   expect(exitCode).toBe(0);
 });
-<<<<<<< HEAD
 
 // one-range-dep's `^1.0.0` row shares the no-deps@1.0.0 that pkg2's own `~1.0.0` entry holds; neither request re-resolves pkg2's entry, so the row stays with it rather than forking off to 1.1.0.
 test.concurrent.each([
@@ -3050,8 +3025,6 @@ test.concurrent("`bun update <name> -r` moves a sibling's entry and the rows sha
   await frozen(dir);
   expect(exitCode).toBe(0);
 });
-=======
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
 
 test.concurrent("`bun update <name>` from the root does not re-resolve a member's own entry", async () => {
   const root = { ...ROOT, dependencies: { "no-deps": "^2.0.0" } };

@@ -68,18 +68,12 @@ function sortTypes(file: SchemaFile): void {
   file.types = sorted;
 }
 
-<<<<<<< HEAD
 const args = argParse(["sources", "types-only", "codegen-path", "types-path"]);
 const codegenPath: string = args["codegen-path"];
 const sources = (args.sources as string)
   .split(",")
   .filter(source => source.length > 0)
   .sort();
-=======
-type ExceptionContext =
-  | { type: "none" }
-  | { type: "argument"; argumentIndex: number; name: string; functionName: string };
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
 
 const allFiles: SchemaFile[] = [];
 for (const source of sources) allFiles.push(await load(source));

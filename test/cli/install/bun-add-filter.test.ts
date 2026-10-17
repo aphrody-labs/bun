@@ -183,23 +183,10 @@ test.concurrent('add --filter targets one workspace by name (and does not instal
   const dir = await makeMonorepo();
 
   const { stderr, exitCode } = await run(["add", "no-deps", "--filter", "api"], dir, { linker: "hoisted" });
-<<<<<<< HEAD
   expect(stderr).toBe("Saved lockfile\n");
   expect(exitCode).toBe(0);
 
   await expectWorkspaces(dir, [ROOT, plus(API), WEB, PKG_A, PKG_B]);
-=======
-  expect(stderr).not.toContain("error:");
-  expect(exitCode).toBe(0);
-
-  expect(await allPackageJsons(dir)).toStrictEqual([
-    ROOT,
-    { name: "api", dependencies: { "no-deps": "^2.0.0" } },
-    WEB,
-    PKG_A,
-    PKG_B,
-  ]);
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
 
   expect(await file(join(dir, "node_modules", "no-deps", "package.json")).json()).toStrictEqual({
     name: "no-deps",
@@ -475,11 +462,7 @@ test.concurrent("dependents are found through devDependencies and plain-range ed
   const before = await allPackageJsonTexts(dir);
 
   const { stderr, exitCode } = await run(["add", "no-deps", "--filter", "...api"], dir);
-<<<<<<< HEAD
   expect(stderr).toBe("Saved lockfile\n");
-=======
-  expect(stderr).not.toContain("error:");
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
   expect(exitCode).toBe(0);
 
   await expectAddedOnlyTo(dir, before, ["api", "web"]);
@@ -675,11 +658,7 @@ test.concurrent("a plain range the workspace version does not satisfy is not an 
     const before = await allPackageJsonTexts(dir);
 
     const { stderr, exitCode } = await run(["add", "no-deps", "--filter", "...^api"], dir);
-<<<<<<< HEAD
     expect(stderr).toBe('error: No workspace packages matched the filter "...^api"\n');
-=======
-    expect(stderr).toContain('error: No workspace packages matched the filter "...^api"');
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
     expect(exitCode).toBe(1);
 
     expect(await allPackageJsonTexts(dir)).toStrictEqual(before);
@@ -694,11 +673,7 @@ test.concurrent("a plain range the workspace version does not satisfy is not an 
     const before = await allPackageJsonTexts(dir);
 
     const { stderr, exitCode } = await run(["add", "no-deps", "--filter", "...^api"], dir);
-<<<<<<< HEAD
     expect(stderr).toBe("Saved lockfile\n");
-=======
-    expect(stderr).not.toContain("error:");
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
     expect(exitCode).toBe(0);
 
     await expectAddedOnlyTo(dir, before, ["web"]);
@@ -712,13 +687,9 @@ test.concurrent("a plain range the workspace version does not satisfy is not an 
     const before = await allPackageJsonTexts(dir);
 
     const { stderr, exitCode } = await run(["add", "no-deps", "--filter", "...api"], dir);
-<<<<<<< HEAD
     expect(stderr).toStartWith(
       'error: No matching version for workspace dependency "api". Version: "workspace:^2.0.0"\n',
     );
-=======
-    expect(stderr).toContain('No matching version for workspace dependency "api"');
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
     expect(exitCode).toBe(1);
 
     expect(await allPackageJsonTexts(dir)).toStrictEqual(before);
@@ -731,11 +702,7 @@ test.concurrent("a plain range the workspace version does not satisfy is not an 
     const before = await allPackageJsonTexts(dir);
 
     const { stderr, exitCode } = await run(["add", "no-deps", "--filter", "...^api"], dir);
-<<<<<<< HEAD
     expect(stderr).toBe("Saved lockfile\n");
-=======
-    expect(stderr).not.toContain("error:");
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
     expect(exitCode).toBe(0);
 
     await expectAddedOnlyTo(dir, before, ["web"]);
@@ -750,11 +717,7 @@ test.concurrent("a plain range the workspace version does not satisfy is not an 
     const before = await allPackageJsonTexts(dir);
 
     const { stderr, exitCode } = await run(["add", "no-deps", "--filter", "...^api"], dir);
-<<<<<<< HEAD
     expect(stderr).toBe("Saved lockfile\n");
-=======
-    expect(stderr).not.toContain("error:");
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
     expect(exitCode).toBe(0);
 
     await expectAddedOnlyTo(dir, before, ["web"]);
@@ -777,29 +740,17 @@ test.concurrent("a bare '...' is rejected", async () => {
 });
 
 test.concurrent("install --filter with a positive and a negated pattern installs only the positive matches", async () => {
-<<<<<<< HEAD
   const fixture = {
     root: { ...ROOT, dependencies: { "a-dep": "1.0.1" } },
     api: { name: "api", dependencies: { "no-deps": "2.0.0" } },
     "pkg-a": { name: "pkg-a", dependencies: { "is-number": "1.0.0" } },
   };
   const dir = await makeMonorepo(fixture);
-=======
-  const dir = await makeMonorepo({
-    root: { ...ROOT, dependencies: { "a-dep": "1.0.1" } },
-    api: { name: "api", dependencies: { "no-deps": "2.0.0" } },
-    "pkg-a": { name: "pkg-a", dependencies: { "is-number": "1.0.0" } },
-  });
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
 
   const { stderr, exitCode } = await run(["install", "--filter", "api", "--filter", "!web"], dir, {
     linker: "hoisted",
   });
-<<<<<<< HEAD
   expect(stderr).toBe("Saved lockfile\n");
-=======
-  expect(stderr).not.toContain("error:");
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
   expect(exitCode).toBe(0);
 
   expect(
@@ -809,11 +760,8 @@ test.concurrent("install --filter with a positive and a negated pattern installs
       exists(join(dir, "node_modules", "is-number")),
     ]),
   ).toStrictEqual([true, false, false]);
-<<<<<<< HEAD
   // The whole monorepo is still resolved into bun.lock; the filter only decides what gets linked.
   await expectWorkspaces(dir, [fixture.root, fixture.api, WEB, fixture["pkg-a"], PKG_B]);
-=======
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
 });
 
 test.concurrent("install --filter with relations installs the closure only", async () => {
@@ -1138,19 +1086,11 @@ test.concurrent("add --only-missing --filter leaves an existing entry untouched 
   const apiBefore = await pkgText(dir, "api");
 
   const { stderr, exitCode } = await run(["add", "no-deps", "--only-missing", "--filter", "*"], dir);
-<<<<<<< HEAD
   expect(stderr).toBe("Saved lockfile\n");
   expect(exitCode).toBe(0);
 
   expect(await pkgText(dir, "api")).toBe(apiBefore);
   await expectWorkspaces(dir, [
-=======
-  expect(stderr).not.toContain("error:");
-  expect(exitCode).toBe(0);
-
-  expect(await pkgText(dir, "api")).toBe(apiBefore);
-  expect(await allPackageJsons(dir)).toStrictEqual([
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
     ROOT,
     { name: "api", dependencies: { "no-deps": "1.0.0" } },
     { name: "web", dependencies: { "a-dep": "1.0.1", "no-deps": "^2.0.0" } },
@@ -2350,7 +2290,6 @@ test.concurrent("an aliased local path spelled differently per target is rejecte
   const dir = await makeMonorepo();
   await addVendorFoo(dir);
   const before = await allPackageJsonTexts(dir);
-<<<<<<< HEAD
 
   const { stderr, exitCode } = await run(
     ["add", "myfoo@file:./vendor/foo", "--filter", "root", "--filter", "api"],
@@ -2377,22 +2316,12 @@ test.concurrent.skipIf(isWindows)(
     const { stderr, exitCode } = await run(["add", path, "--filter", "api"], dir);
     expect(stderr).toBe(`error: Dependency "${path}" has an unsafe folder path\n`);
     expect(exitCode).toBe(1);
-=======
 
-  const { stderr, exitCode } = await run(
-    ["add", "myfoo@file:./vendor/foo", "--filter", "root", "--filter", "api"],
-    dir,
-  );
-  expect(stderr).toContain(
-    'error: "myfoo@file:../../vendor/foo" is spelled differently relative to each selected workspace; add it to one workspace at a time',
-  );
-  expect(exitCode).toBe(1);
->>>>>>> 9f150dd2bc9 (style: format TS/JS sources and fix test typings; ignore generated files in oxfmt)
-
-  expect(await allPackageJsonTexts(dir)).toStrictEqual(before);
-  expect(await exists(join(dir, "bun.lock"))).toBeFalse();
-  expect(await exists(join(dir, "node_modules"))).toBeFalse();
-});
+    expect(await allPackageJsonTexts(dir)).toStrictEqual(before);
+    expect(await exists(join(dir, "bun.lock"))).toBeFalse();
+    expect(await exists(join(dir, "node_modules"))).toBeFalse();
+  },
+);
 
 test.concurrent("an absolute local path is written verbatim into every target", async () => {
   const dir = await makeMonorepo();
