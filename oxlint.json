@@ -120,6 +120,17 @@
     // by the pinned JavaScript linter; their declaration/template owners validate them.
     "packages/bun-types/ts7.1/import-attributes.d.ts",
     "vendor",
+    // Third-party bundles, minified libraries and vendored runtimes shipped verbatim as assets.
+    "packages/bun-video/hyperframes/registry/**/*.min.js",
+    "packages/bun-video/hyperframes/registry/**/*.iife.js",
+    "packages/bun-video/hyperframes/registry/blocks/*/assets/**",
+    "packages/bun-video/hyperframes/registry/blocks/*/source/src/vendor/**",
+    "packages/bun-video/hyperframes/skills/**/*.min.js",
+    "packages/bun-video/hyperframes/skills/**/vendor/**",
+    "packages/bun-video/hyperframes/producer/tests/**/vendor/**",
+    "packages/bun-video/hyperframes/cli/src/media-use/lib/svg-sanitize.mjs",
+    "packages/bun-oxc/adapters/runtime_npm/**",
+    "packages/bun-oxc/src/parser-core/**",
     "build",
     "**/.pytest_cache/**",
     "bench",
