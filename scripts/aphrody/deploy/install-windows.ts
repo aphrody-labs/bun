@@ -1,7 +1,7 @@
 // Installe (ou retire) le service Windows AphrodyBun, à lancer en administrateur :
 //   bun install-windows.ts [--name AphrodyBun] [--dir C:\ProgramData\Aphrody\Bun] [--winsvc PATH] [--script PATH]
 //   bun install-windows.ts --uninstall
-// Copie bun.exe, bun-winsvc.exe (packages/bun-winsvc, cargo build --release) et le script dans --dir, puis crée le service
+// Copie bun.exe, bun-winsvc.exe (cargo build --profile winsvc -p bun-winsvc) et le script dans --dir, puis crée le service
 // démarrage automatique qui lance `bun.exe <script>` ; bun-winsvc le relance s'il sort et tue son arbre à l'arrêt.
 import { copyFileSync, existsSync, mkdirSync } from "node:fs";
 import { join, resolve } from "node:path";
@@ -13,7 +13,7 @@ const arg = (k: string, d: string) => {
 const name = arg("--name", "AphrodyBun");
 const dir = arg("--dir", "C:/ProgramData/Aphrody/Bun");
 const repo = resolve(import.meta.dir, "../../..");
-const winsvc = arg("--winsvc", join(repo, "packages/bun-winsvc/target/release/bun-winsvc.exe"));
+const winsvc = arg("--winsvc", join(process.env.CARGO_TARGET_DIR ?? join(repo, "target"), "winsvc", "bun-winsvc.exe"));
 const script = arg("--script", join(import.meta.dir, "probe.ts"));
 
 const sc = (...a: string[]) => Bun.spawnSync(["sc.exe", ...a]);
@@ -33,7 +33,7 @@ if (process.argv.includes("--uninstall")) {
 }
 
 if (!existsSync(winsvc))
-  throw new Error(`bun-winsvc.exe absent: ${winsvc} (cargo build --release dans packages/bun-winsvc)`);
+  throw new Error(`bun-winsvc.exe absent: ${winsvc} (cargo build --profile winsvc -p bun-winsvc)`);
 mkdirSync(dir, { recursive: true });
 await remove();
 copyFileSync(process.execPath, join(dir, "bun.exe"));

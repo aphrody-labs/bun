@@ -1,5 +1,6 @@
 [package]
 name = "bun_lint_plugins"
+publish = false
 version.workspace = true
 edition.workspace = true
 

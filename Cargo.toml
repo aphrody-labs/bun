@@ -3,6 +3,32 @@
 # toolchain can build); feature unification is unchanged.
 resolver = "3"
 members = [
+  "test/js/bun/ffi/cosmic-window",
+  "bench/aphrody/interop",
+  "packages/bun-cosmic",
+  "scripts/aphrody/alpine/wsl/examples/wgpu-probe",
+  "src/browser/cef-rs/download-cef",
+  "src/browser/cef-rs/get-latest",
+  "src/browser/cef-rs/update-bindings",
+  "src/browser/cef-rs/export-cef-dir",
+  "src/browser/cef-rs/sys",
+  "src/browser/cef-rs/cef",
+  "src/browser/cef-rs/examples/tests_shared",
+  "src/browser/cef-rs/examples/osr",
+  "src/browser/cef-rs/examples/cefsimple",
+  "packages/bun-video/native",
+  "packages/bun-build-mdx-rs",
+  "packages/bun-build-mdx-rs/swc_common",
+  "packages/bun-dotnet-native/crates/bun-dotnet-host",
+  "packages/bun-native-plugin-rs/bun-macro",
+  "packages/bun-native-plugin-rs",
+  "packages/bun-runtime-sdk/crates/yolo-core",
+  "packages/bun-runtime-sdk/crates/yolo-runtime",
+  "packages/bun-runtime-sdk/crates/yolo-pyo3",
+  "packages/bun-python-native/crates/bun-python-host",
+  "packages/bun-nginx/native",
+  "packages/bun-webview-core",
+  "packages/bun-winsvc",
   "src/rio/sugarloaf",
   "src/rio/teletypewriter",
   "src/rio/corcovado",
@@ -267,13 +293,277 @@ members = [
   "packages/bun-oxc/crates/napi",
   "packages/bun-n2b/crates/napi",
 ]
+# Targets of a bare `cargo check|clippy|test`. Members outside it (CEF, the Rio app, nginx, the
+# webview hosts, pyo3, the video and .NET natives, the MDX napi addon) need system SDKs or download
+# them in build scripts: their own gates build them with `-p`.
+default-members = [
+  "packages/bun-native-plugin-rs/bun-macro",
+  "packages/bun-native-plugin-rs",
+  "packages/bun-runtime-sdk/crates/yolo-core",
+  "packages/bun-runtime-sdk/crates/yolo-runtime",
+  "packages/bun-python-native/crates/bun-python-host",
+  "packages/bun-winsvc",
+  "src/rio/teletypewriter",
+  "src/rio/corcovado",
+  "src/rio/rio-graphics",
+  "src/rio/rio-vt",
+  "src/rio/rio-grapheme-width",
+  "src/rio/rio-unicode",
+  "crates/aphrody-jev",
+  "src/browser/crates/api",
+  "src/browser/crates/browser",
+  "src/browser/crates/cdp",
+  "src/browser/crates/dom",
+  "src/browser/crates/js",
+  "src/browser/crates/mcp",
+  "src/browser/crates/net",
+  "src/browser/crates/render",
+  "src/browser/crates/ssrf",
+  "src/browser/crates/extract",
+  "src/browser/crates/layout",
+  "src/browser/crates/service",
+  "src/browser/crates/crawl",
+  "src/browser/crates/detect",
+  "src/browser/crates/index",
+  "src/browser/crates/engine",
+  "src/browser/crates/frames",
+  "src/x",
+  "src/google",
+  "src/bun_vpn",
+  "src/opaque",
+  "src/adblock",
+  "src/analytics",
+  "src/base64",
+  "src/bundler",
+  "src/collections",
+  "src/coreutils",
+  "src/cosmic",
+  "src/css",
+  "src/errno",
+  "src/glob",
+  "src/bun-os/git",
+  "src/bun-os/native",
+  "src/bun-os/pkg/core",
+  "src/bun-os/pkg/store",
+  "src/bun-os/pkg/net",
+  "src/bun-os/pkg/cli",
+  "src/graph",
+  "src/http",
+  "src/install",
+  "src/install/windows-shim",
+  "src/parsers",
+  "src/io",
+  "src/libarchive",
+  "src/lsp",
+  "src/md",
+  "src/readability",
+  "src/host",
+  "src/mcp",
+  "src/agent_tools",
+  "src/workspace",
+  "src/vfs",
+  "src/paths",
+  "src/resolver",
+  "src/safety",
+  "src/sema",
+  "src/sema/baselines",
+  "src/sema/driver",
+  "src/sema/parser",
+  "src/sema/standalone",
+  "src/lint",
+  "src/lint/eslint",
+  "src/lint/typescript",
+  "src/lint/plugins",
+  "src/lint/oxlint",
+  "src/lint/unicorn",
+  "src/lint/react",
+  "src/lint/jest",
+  "src/lint/graph",
+  "src/lint/react_compiler",
+  "src/lint/driver",
+  "src/lint/conformance",
+  "src/format",
+  "src/format/conformance",
+  "src/semver",
+  "src/wasm",
+  "src/sourcemap",
+  "src/sql",
+  "src/sys",
+  "src/threading",
+  "src/valkey",
+  "src/watcher",
+  "src/cares_sys",
+  "src/clap",
+  "src/clap_macros",
+  "src/crash_handler",
+  "src/csrf",
+  "src/css_jsc",
+  "src/dns",
+  "src/dotenv",
+  "src/event_loop",
+  "src/exe_format",
+  "src/highway",
+  "src/http_jsc",
+  "src/http_types",
+  "src/ini",
+  "src/install_jsc",
+  "src/install_types",
+  "src/js_parser",
+  "src/js_parser_jsc",
+  "src/js_printer",
+  "src/libdeflate_sys",
+  "src/libuv_sys",
+  "src/ast",
+  "src/ast_jsc",
+  "src/picohttp",
+  "src/s3_signing",
+  "src/sql_jsc",
+  "src/zlib",
+  "src/patch",
+  "src/platform",
+  "src/sha_hmac",
+  "src/privacy",
+  "src/sys_jsc",
+  "src/zlib_sys",
+  "src/dispatch",
+  "src/brotli",
+  "src/bundler_jsc",
+  "src/perf",
+  "src/resolve_builtins",
+  "src/sourcemap_jsc",
+  "src/url",
+  "src/vt",
+  "src/windows_sys",
+  "src/jsc",
+  "src/jsc_macros",
+  "src/ptr",
+  "src/boringssl",
+  "src/brotli_sys",
+  "src/bun_alloc",
+  "src/mimalloc_sys",
+  "src/semver_jsc",
+  "src/standalone_graph",
+  "src/uws",
+  "src/wyhash",
+  "src/yarr",
+  "src/node_path",
+  "src/text_diff",
+  "src/hash",
+  "src/boringssl_sys",
+  "src/bun_core",
+  "src/bun_core_macros",
+  "src/bun_output_tags",
+  "src/patch_jsc",
+  "src/router",
+  "src/shell_parser",
+  "src/tcc_sys",
+  "src/uws_sys",
+  "src/lsquic_sys",
+  "src/zstd",
+  "src/options_types",
+  "src/output",
+  "src/runtime",
+  "src/simdutf_sys",
+  "src/which",
+  "src/transpiler",
+  "src/react_compiler",
+  "src/spawn",
+  "src/spawn_sys",
+  "src/no_window",
+  "src/ssh",
+  "src/docker",
+  "src/bunfig",
+  "src/transpiler/ecma_api",
+  "src/migrate",
+  "src/just",
+  "src/quality",
+  "src/quality/format_cli",
+  "src/quality/lint_cli",
+  "src/transpiler/ecma_engine",
+  "src/collections/arena",
+  "src/ast/ecma",
+  "src/ast/macros",
+  "src/ast/visit",
+  "src/sema/cfg",
+  "src/js_printer/ecma",
+  "src/transpiler/compat",
+  "src/quality/config",
+  "src/collections/ecma",
+  "src/quality/diagnostics",
+  "src/sema/ecmascript",
+  "src/ast/estree",
+  "src/ast/estree_tokens",
+  "src/quality/format_js",
+  "src/quality/format_core",
+  "src/quality/format_css",
+  "src/quality/format_graphql",
+  "src/quality/format_json",
+  "src/quality/format_markdown",
+  "src/quality/format_tests",
+  "src/quality/format_yaml",
+  "src/transpiler/declarations",
+  "src/js_parser/jsdoc",
+  "src/lsp/quality",
+  "src/js_parser/lexer",
+  "src/quality/linter",
+  "src/quality/macros",
+  "src/transpiler/mangler",
+  "src/transpiler/minifier",
+  "src/quality/adapters/common",
+  "src/js_parser/ecma",
+  "src/react_compiler/ecma",
+  "src/js_parser/regexp",
+  "src/transpiler/relay",
+  "src/sema/ecma",
+  "src/ast/span",
+  "src/bun_core/ecma_strings",
+  "src/ast/syntax",
+  "src/transpiler/ecma",
+  "src/transpiler/plugins",
+  "src/ast/traverse",
+  "src/quality/adapters/minify",
+  "src/quality/adapters/parser",
+  "src/quality/adapters/playground",
+  "src/quality/adapters/transform",
+  "src/quality/adapters/react",
+  "src/quality/adapters/relay",
+  "src/codegen/ecma_ast_tools",
+  "src/codegen/ecma_benchmark",
+  "src/codegen/ecma_codegen_conformance",
+  "src/codegen/ecma_common",
+  "src/codegen/ecma_compat_data",
+  "src/codegen/ecma_coverage",
+  "src/codegen/ecma_linter_codegen",
+  "src/codegen/ecma_minsize",
+  "src/codegen/ecma_rulegen",
+  "src/codegen/ecma_track_linter_timings",
+  "src/codegen/ecma_track_memory_allocations",
+  "src/codegen/ecma_transform_checker",
+  "src/codegen/ecma_transform_conformance",
+  "src/codegen/ecma_website_common",
+  "src/codegen/ecma_website_formatter",
+  "src/codegen/ecma_website_linter",
+  "src/transpiler/browserslist",
+  "src/css/parser",
+  "src/parsers/graphql",
+  "src/md/parser",
+  "src/parsers/json_schema",
+  "src/parsers/toml_formatter",
+  "src/parsers/yaml",
+  "src/collections/typed_index",
+  "src/resolver/ecma",
+  "src/parsers/json_schema_macros",
+  "src/sourcemap/ecma",
+  "packages/bun-oxc/crates/napi",
+  "packages/bun-n2b/crates/napi",
+]
 # `vendor/lolhtml` (the `lol_html` crate) is a non-member path dependency,
 # fetched into `vendor/` by `scripts/build/deps/lolhtml.ts` before cargo runs.
 # Keeping it out of `members` means its `[profile]` section is ignored and its
 # heavy dev-dependencies (criterion, html5ever) never enter `Cargo.lock`.
 # `packages/bun-cosmic` is the libcosmic window helper of `bun:cosmic`: its own
 # workspace and lockfile, because libcosmic is a git dependency.
-exclude = ["vendor", "packages/bun-cosmic", "packages/bun-dotnet-native", "packages/bun-native-plugin-rs", "packages/bun-video/native"]
+exclude = ["scripts/verify-baseline-static", "vendor"]
 
 [workspace.package]
 "repository" = "https://github.com/aphrody-labs/bun"
@@ -313,6 +603,48 @@ lto = "fat"
 codegen-units = 1
 panic = "abort"
 strip = true
+
+# Profiles of members built as standalone artifacts. `panic` and `lto` cannot be set per package,
+# so each artifact has its own profile; their build scripts pass `--profile <name>`.
+[profile.runtime]
+inherits = "release"
+panic = "unwind"
+
+[profile.unwind-release]
+inherits = "release"
+panic = "unwind"
+
+[profile.winsvc]
+inherits = "release"
+opt-level = "s"
+lto = true
+strip = true
+panic = "abort"
+
+[profile.webview-host]
+inherits = "release"
+lto = "thin"
+codegen-units = 1
+strip = true
+panic = "abort"
+
+[profile.nginx-module]
+inherits = "release"
+panic = "unwind"
+lto = "thin"
+codegen-units = 1
+
+[profile.mdx]
+inherits = "release"
+lto = true
+strip = "symbols"
+
+[profile.cosmic]
+inherits = "release"
+lto = "thin"
+codegen-units = 1
+strip = true
+
 
 [profile.browser-tests]
 inherits = "dev"
@@ -860,3 +1192,10 @@ opt-level = "z"
 opt-level = "z"
 
 [patch.crates-io]
+# PyO3 comes from the aphrody-labs fork, same pin as packages/buv/vendor.json.
+pyo3 = { git = "https://github.com/aphrody-labs/pyo3", rev = "451d99fdcdcddf159e8e0a1186960b332cdb5d7c" }
+pyo3-build-config = { git = "https://github.com/aphrody-labs/pyo3", rev = "451d99fdcdcddf159e8e0a1186960b332cdb5d7c" }
+pyo3-ffi = { git = "https://github.com/aphrody-labs/pyo3", rev = "451d99fdcdcddf159e8e0a1186960b332cdb5d7c" }
+pyo3-macros = { git = "https://github.com/aphrody-labs/pyo3", rev = "451d99fdcdcddf159e8e0a1186960b332cdb5d7c" }
+pyo3-macros-backend = { git = "https://github.com/aphrody-labs/pyo3", rev = "451d99fdcdcddf159e8e0a1186960b332cdb5d7c" }
+swc_common = { path = "packages/bun-build-mdx-rs/swc_common" }

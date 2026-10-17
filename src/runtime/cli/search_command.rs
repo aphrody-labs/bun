@@ -32,7 +32,7 @@ pub(crate) fn dispatch() -> Option<i32> {
         {
             let _ = File::stdout().write_all(
                 include_str!(
-                    "../../../packages/bun-google/aphrody/crates/google/src/search/help.txt"
+                    "../../google/src/search/help.txt"
                 )
                 .as_bytes(),
             );

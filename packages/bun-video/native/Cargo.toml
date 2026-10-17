@@ -5,8 +5,6 @@ edition = "2024"
 publish = false
 license = "MIT"
 
-[workspace]
-
 [features]
 default = []
 filmcraft = ["dep:filmcraft-codecs", "dep:filmcraft-frame", "dep:filmcraft-media", "dep:filmcraft-time", "dep:filmcraft-isobmff", "dep:gif"]
@@ -41,3 +39,5 @@ crate-type = ["rlib", "cdylib"]
 [[bin]]
 name = "bun-video-native"
 path = "src/main.rs"
+
+[lints]

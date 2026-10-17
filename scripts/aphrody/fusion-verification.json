@@ -448,7 +448,6 @@
         "--profile",
         "browser-tests",
         "--locked",
-        "--workspace",
         "--keep-going"
       ],
       "kind": "heavy",
@@ -466,7 +465,6 @@
         "--profile",
         "browser-tests",
         "--locked",
-        "--workspace",
         "--all-targets",
         "--",
         "-D",

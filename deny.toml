@@ -90,4 +90,23 @@ deny = [
 unknown-registry = "deny"
 unknown-git = "deny"
 allow-registry = ["https://github.com/rust-lang/crates.io-index"]
-allow-git = []
+# Git sources are pinned (rev or tag) by the members that need them; nothing
+# else may pull from git. aphrody-labs hosts the forks (PyO3, wry, filmcraft).
+allow-git = [
+  # libcosmic and its pop-os stack: bun-cosmic and the cosmic-window ffi fixture.
+  "https://github.com/pop-os/libcosmic",
+  "https://github.com/pop-os/cosmic-protocols",
+  "https://github.com/pop-os/dbus-settings-bindings",
+  "https://github.com/pop-os/freedesktop-icons",
+  "https://github.com/pop-os/smithay-clipboard",
+  "https://github.com/pop-os/softbuffer",
+  "https://github.com/pop-os/window_clipboard.git",
+  "https://github.com/pop-os/winit.git",
+  "https://github.com/iced-rs/cryoglyph.git",
+  "https://github.com/jackpot51/rust-atomicwrites",
+  # Mullvad VPN daemon (bun_vpn).
+  "https://github.com/mullvad/udp-over-tcp",
+]
+
+[sources.allow-org]
+github = ["aphrody-labs"]

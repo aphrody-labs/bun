@@ -2,6 +2,7 @@
 # I/O-free system-package owner using the Bun workspace's shared byte primitives.
 [package]
 name = "aphrody-pkg-system"
+publish = false
 version = "1.4.4"
 edition = "2024"
 license = "Apache-2.0"

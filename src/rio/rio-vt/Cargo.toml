@@ -1,5 +1,6 @@
 [package]
 name = "rio-vt"
+publish = false
 version = "0.5.28"
 authors = ["Raphael Amorim <rapha850@gmail.com>"]
 edition = "2021"
@@ -7,7 +8,6 @@ license = "MIT"
 keywords = ["graphics", "terminal", "application"]
 repository = "https://github.com/raphamorim/rio"
 description = "Embeddable terminal core extracted from Rio: VT state machine, grid, PTY driver, selection, search"
-readme = "README.md"
 
 [lib]
 path = "src/lib.rs"

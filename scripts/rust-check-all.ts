@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 /**
- * `cargo check --workspace` for every CI target triple.
+ * `cargo check` of the default workspace members for every CI target triple.
  *
  * Replaces the old `zig:check-all` (which leaned on zig's bundled per-target
  * libc/SDK). cargo has no such bundle: each `--target` needs its std installed
@@ -64,7 +64,7 @@ for (const triple of triples) {
     continue;
   }
 
-  const args = ["check", "--workspace", "--keep-going", "--target", triple, "--message-format=short"];
+  const args = ["check", "--keep-going", "--target", triple, "--message-format=short"];
   if (tier3) args.push(cargoBuildStdArg);
   console.log(`\x1b[36m[check]\x1b[0m ${triple}${tier3 ? `  (${cargoBuildStdArg})` : ""}`);
   const r = spawnSync("cargo", args, { stdio: "inherit" });

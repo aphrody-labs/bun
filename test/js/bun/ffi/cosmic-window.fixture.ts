@@ -4,10 +4,10 @@
 // from a JSCallback the cdylib calls on this thread from the application's
 // init; the close button or `--timeout <ms>` end the event loop.
 //
-//   cargo build --release --manifest-path cosmic-window/Cargo.toml
+//   cargo build --profile cosmic -p bun-cosmic-window   (from the repository root)
 //   bun cosmic-window.fixture.ts [--title T] [--width W] [--height H] [--timeout MS] [--lib PATH]
 //
-// Library lookup: --lib, $BUN_COSMIC_WINDOW_LIB, then cosmic-window/target/release.
+// Library lookup: --lib, $BUN_COSMIC_WINDOW_LIB, then target/cosmic of the repository root.
 // Linux needs DISPLAY or WAYLAND_DISPLAY (xvfb-run works; rendering is tiny-skia).
 import { dlopen, FFIType, JSCallback, suffix } from "bun:ffi";
 import { existsSync } from "node:fs";
@@ -43,13 +43,16 @@ for (let i = 0; i < argv.length; i++) {
 
 lib ||= join(
   import.meta.dir,
-  "cosmic-window",
+  "..",
+  "..",
+  "..",
+  "..",
   "target",
-  "release",
+  "cosmic",
   `${process.platform === "win32" ? "" : "lib"}bun_cosmic_window.${suffix}`,
 );
 if (!existsSync(lib)) {
-  console.error(`cosmic-window: ${lib} not found (cargo build --release --manifest-path cosmic-window/Cargo.toml)`);
+  console.error(`cosmic-window: ${lib} not found (cargo build --profile cosmic -p bun-cosmic-window)`);
   process.exit(2);
 }
 if (process.platform === "linux" && !process.env.DISPLAY && !process.env.WAYLAND_DISPLAY) {

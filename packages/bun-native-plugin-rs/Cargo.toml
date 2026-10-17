@@ -5,13 +5,12 @@ license = "MIT"
 version = "1.4.4"
 edition = "2021"
 
-[workspace]
-resolver = "3"
-members = ["bun-macro"]
-
 [dependencies]
 anyhow = "1.0.94"
 # use local path in dev and publish to crates.io in prod
 bun-macro = { path = "./bun-macro", version = "1.4.4" }
 
 
+
+
+[lints]

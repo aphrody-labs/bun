@@ -10,7 +10,6 @@ rust-version = "1.96.1"
 repository = "https://github.com/raphamorim/rio"
 homepage = "https://rioterm.com"
 documentation = "https://github.com/raphamorim/rio#readme"
-readme = "README.md"
 
 [[bin]]
 name = "rio"

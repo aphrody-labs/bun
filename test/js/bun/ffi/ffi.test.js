@@ -787,7 +787,7 @@ describe.concurrent("native toolkit windows", () => {
   const kirigami = typeof findQtToolchain("kirigami") === "object";
   const cosmicLib =
     process.env.BUN_COSMIC_WINDOW_LIB ??
-    `${import.meta.dir}/cosmic-window/target/release/${isWindows ? "" : "lib"}bun_cosmic_window.${suffix}`;
+    `${import.meta.dir}/../../../../target/cosmic/${isWindows ? "" : "lib"}bun_cosmic_window.${suffix}`;
   const cosmic = hasDisplay && existsSync(cosmicLib);
   // Qt needs no display server with its offscreen platform plugin.
   const qtEnv = hasDisplay ? bunEnv : { ...bunEnv, QT_QPA_PLATFORM: "offscreen", QT_QUICK_BACKEND: "software" };

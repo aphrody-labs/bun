@@ -3,11 +3,11 @@ name = "cef-dll-sys"
 description = "cef-rs sys crate"
 links = "cef_dll_wrapper"
 
-version.workspace = true
-edition.workspace = true
-license.workspace = true
-authors.workspace = true
-repository.workspace = true
+version = "154.5.0+154.0.34"
+edition = "2021"
+license = "Apache-2.0 OR MIT"
+authors = ["Wu Yu Wei <yuweiwu@pm.me>", "Bill Avery <wravery@gmail.com>", "csmoe <csmoe@msn.com>"]
+repository = "https://github.com/aphrody-labs/cef-rs"
 
 [lib]
 doctest = false
@@ -20,9 +20,11 @@ sandbox = []
 features = ["dox"]
 
 [build-dependencies]
-anyhow.workspace = true
-cc.workspace = true
-cmake.workspace = true
-download-cef.workspace = true
-serde_json.workspace = true
+anyhow = { version = "1" }
+cc = { version = "1.2.8" }
+cmake = { version = "0.1.52" }
+download-cef = { version = "3.0", path = "../download-cef" }
+serde_json = { version = "1" }
 sha2 = "0.10"
+
+[lints]

@@ -1,23 +1,21 @@
 # Native Python components
 
-The Bun fork owns these external components. Neither crate is a dependency of
-the Bun engine: CPython is loaded only when the caller explicitly uses the host.
+The Bun fork owns this external component. It is not a dependency of the Bun
+engine: CPython is loaded only when the caller explicitly uses the host.
 No interpreter, model, cache, credential or provider history is copied here.
 
 - `bun-python-host` owns the shared-library loader and the historical
   `aphrody_py_*` C ABI. Its source was transferred unchanged from
   `aphrody-labs/aphrody` at `c58e93d6dc1b4b2d420c3c929a40c67dd071d2f4`.
-- `aphrody-rust` owns the PyO3 adapter, retaining the module
-  `aphrody.aphrody_rust`, ABI `abi3-py311`, function names and packed buffers.
-  Product RAG algorithms remain in the pinned `aphrody-rag-core` dependency.
+- The `aphrody-rust` PyO3 adapter (`aphrody.aphrody_rust`, `abi3-py311`) lives
+  in Bun OS (`aphrody-labs/bun-distribution`, `crates/aphrody-rust`) next to
+  `aphrody-rag-core`; it uses the PyO3 fork pinned by this workspace.
 - Yolo's PyO3 extension remains in the existing `bun-runtime-sdk` package.
 - uv, Ruff and the complete vu runtime have a separate package owner; this
   package does not duplicate their resolver, CLI or interpreter distribution.
 - The JavaScript binding is the built-in `bun:python` module. This package owns
   only the native host and its C ABI; it carries no parallel JS wrapper.
 
-Build the Python wheel from the Python product checkout with a qualified
-`APHRODY_BUN_CHECKOUT`. Native source is resolved there, never copied back.
 The host builds separately with `cargo build -p bun-python-host --release`.
 It preserves explicit interpreter selection, shared-library identity, error
 codes, string destruction, and attach-versus-own lifecycle behavior.

@@ -15,8 +15,8 @@ process owner. This source contract does not qualify every native target.
 | Artifact staging           | `packages/bun-runtime-sdk/scripts/stage.ts`                        |
 
 ```sh
-bun scripts/build/rust/cargo-serial.ts build --manifest-path packages/bun-runtime-sdk/Cargo.toml --profile runtime -p yolo-runtime --jobs 1
-bun scripts/build/rust/cargo-serial.ts test --manifest-path packages/bun-runtime-sdk/Cargo.toml -p yolo-runtime --lib --jobs 1 -- --test-threads=1
+bun scripts/build/rust/cargo-serial.ts build --profile runtime -p yolo-runtime --jobs 1
+bun scripts/build/rust/cargo-serial.ts test -p yolo-runtime --lib --jobs 1 -- --test-threads=1
 bun packages/bun-runtime-sdk/scripts/stage.ts
 ```
 

@@ -1,10 +1,10 @@
 [package]
 name = "yolo-pyo3"
-version.workspace = true
-edition.workspace = true
-license.workspace = true
-authors.workspace = true
-repository.workspace = true
+version = "1.0.0"
+edition = "2024"
+license = "MIT AND Apache-2.0"
+authors = ["aphrody-code"]
+repository = "https://github.com/aphrody-labs/bun"
 description = "PyO3 0.29 Native Extension Module for YOLO Monorepo (Free-threaded, No-GIL, py.detach)"
 
 [lib]
@@ -13,4 +13,6 @@ crate-type = ["cdylib"]
 
 [dependencies]
 yolo-core = { path = "../yolo-core", version = "1.0.0" }
-pyo3 = { workspace = true }
+pyo3 = { version = "0.29" }
+
+[lints]

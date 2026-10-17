@@ -1,5 +1,6 @@
 [package]
 name = "bun_text_diff"
+publish = false
 version.workspace = true
 edition.workspace = true
 

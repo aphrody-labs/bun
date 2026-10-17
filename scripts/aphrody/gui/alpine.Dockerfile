@@ -5,7 +5,8 @@
 # (test/js/bun/ffi/cosmic-window) is built with Alpine's Rust into /opt/bun-cosmic-window;
 # Wine runs win32-window.fixture.ts with a Windows bun.exe mounted at /opt/bun-windows/bun.exe.
 #
-#   docker build -t aphrody/gui-alpine:3.24 -f scripts/aphrody/gui/alpine.Dockerfile test/js/bun/ffi/cosmic-window
+#   docker build -t aphrody/gui-alpine:3.24 -f scripts/aphrody/gui/alpine.Dockerfile \
+#     --build-context workspace=. test/js/bun/ffi/cosmic-window
 #   docker run --rm --init -v "$PWD:/bun" -v /path/to/bun-windows:/opt/bun-windows:ro aphrody/gui-alpine:3.24 \
 #     xvfb-run -a bun test test/js/bun/ffi/ffi.test.js -t "native toolkit windows|Win32 window"
 # --init: as PID 1, xvfb-run never receives Xvfb's ready signal and hangs.
@@ -33,10 +34,13 @@ RUN apk add --no-cache \
       wine
 
 WORKDIR /src/cosmic-window
-COPY Cargo.toml Cargo.lock ./
-RUN mkdir src && touch src/lib.rs && cargo build --release --locked
+# A member of the root workspace, built standalone here: the root Cargo.lock (named context
+# `workspace`) keeps its versions, cargo only drops the entries it does not use.
+COPY Cargo.toml ./
+COPY --from=workspace Cargo.lock ./
+RUN printf '\n[workspace]\n' >> Cargo.toml && mkdir src && touch src/lib.rs && cargo build --release
 COPY src src
-RUN touch src/lib.rs && cargo build --release --locked \
+RUN touch src/lib.rs && cargo build --release \
     && mkdir -p /opt/bun-cosmic-window \
     && cp target/release/libbun_cosmic_window.so /opt/bun-cosmic-window/ \
     && rm -rf /src/cosmic-window/target

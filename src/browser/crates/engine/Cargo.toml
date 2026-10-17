@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 [package]
 name = "bun_browser_engine"
+publish = false
 repository.workspace = true
 description = "Bun browser engine commands: CDP server, fetch, scrape, crawl and worker (the `bun web` subcommands)."
 version.workspace = true

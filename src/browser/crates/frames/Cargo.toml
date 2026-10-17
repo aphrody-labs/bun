@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: Apache-2.0
 [package]
 name = "bun_browser_frames"
+publish = false
 repository.workspace = true
 description = "MPEG-7 ColorLayout frame indexing and trace.moe client for Bun."
 version.workspace = true

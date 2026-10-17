@@ -8,8 +8,6 @@ publish = false
 build = "build.rs"
 
 # The engine's ABI belongs to NGINX, so this crate is outside Bun's JSC workspace.
-[workspace]
-
 [lib]
 name = "ngx_http_bun_module"
 crate-type = ["cdylib", "staticlib"]
@@ -23,11 +21,6 @@ default = ["export-modules"]
 export-modules = []
 # Negative gate only: NGINX must reject this deliberately incompatible fixture.
 abi-mismatch-fixture = []
-
-[profile.release]
-panic = "unwind"
-lto = "thin"
-codegen-units = 1
 
 [lints.rust]
 unsafe_op_in_unsafe_fn = "deny"

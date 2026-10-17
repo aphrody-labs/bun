@@ -47,7 +47,7 @@ function run(cmd: string, args: string[], env: Record<string, string> = {}): num
 }
 
 function mordant(targets: string[], extra: string[], env: Record<string, string> = {}): number {
-  const args = [`+${toolchain}`, "mordant", "--workspace", ...targets.flatMap(t => ["--target", t]), ...extra];
+  const args = [`+${toolchain}`, "mordant", ...targets.flatMap(t => ["--target", t]), ...extra];
   return run("cargo", args, { MORDANT_RUSTFLAGS: RUSTFLAGS, ...env });
 }
 

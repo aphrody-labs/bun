@@ -1,13 +1,13 @@
 # SPDX-License-Identifier: Apache-2.0
 [package]
 name = "yolo-runtime"
-version.workspace = true
-edition.workspace = true
-rust-version.workspace = true
-authors.workspace = true
-license.workspace = true
-repository.workspace = true
-homepage.workspace = true
+version = "1.0.0"
+edition = "2024"
+rust-version = "1.97"
+authors = ["aphrody-code"]
+license = "MIT AND Apache-2.0"
+repository = "https://github.com/aphrody-labs/bun"
+homepage = "https://github.com/aphrody-labs/bun/tree/main/packages/bun-runtime-sdk"
 description = "Versioned C ABI of the precompiled YOLO native runtime: system stats, cancellable benchmark, process supervision, HTTP probe"
 
 [lib]
@@ -23,12 +23,15 @@ default = []
 
 [dependencies]
 yolo-core = { path = "../yolo-core", version = "1.0.0" }
-serde = { workspace = true, features = ["derive"] }
-serde_json = { workspace = true }
+serde = { version = "1.0.229", features = ["derive", "std"], default-features = false }
+serde_json = { version = "1.0.151" }
 
 # Process groups are signalled on Unix; nothing else is pulled in.
 [target.'cfg(unix)'.dependencies]
-libc = { workspace = true }
+libc = { version = "0.2.189" }
 
-[lints]
-workspace = true
+[lints.rust]
+unsafe_op_in_unsafe_fn = "deny"
+unused_must_use = "deny"
+unexpected_cfgs = { level = "warn", check-cfg = ["cfg(feature, values(\"browser\", \"gpu\", \"cuda\"))"] }
+

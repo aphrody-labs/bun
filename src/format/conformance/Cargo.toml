@@ -1,5 +1,6 @@
 [package]
 name = "bun_format_conformance"
+publish = false
 version.workspace = true
 edition.workspace = true
 

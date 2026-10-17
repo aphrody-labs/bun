@@ -1,6 +1,7 @@
 [package]
 edition = "2021"
 name = "bun-mdx-rs"
+publish = false
 version = "1.4.4"
 
 [lib]
@@ -10,15 +11,11 @@ crate-type = ["cdylib"]
 # Default enable napi4 feature, see https://nodejs.org/api/n-api.html#node-api-version-matrix
 napi = { version = "2.12.2", default-features = false, features = ["napi4"] }
 napi-derive = "2.12.2"
-mdxjs = "0.2.11"
+mdxjs = "1.0.4"
 bun-native-plugin = { path = "../bun-native-plugin-rs" }
 
 [build-dependencies]
 napi-build = "2.0.1"
 
-[profile.release]
-lto = true
-strip = "symbols"
 
-# Its own workspace: not a member of the Bun workspace at the repository root.
-[workspace]
+[lints]

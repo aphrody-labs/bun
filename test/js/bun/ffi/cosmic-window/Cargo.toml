@@ -7,9 +7,6 @@ license = "MIT"
 publish = false
 description = "libcosmic window cdylib loaded by test/js/bun/ffi/cosmic-window.fixture.ts through bun:ffi"
 
-# Standalone: libcosmic is a git dependency and its GUI stack must stay out of Bun's workspace.
-[workspace]
-
 [lib]
 crate-type = ["cdylib"]
 path = "src/lib.rs"
@@ -28,7 +25,4 @@ rev = "7f715bc5d2d383a070fd8c760aa52c5627df96b6"
 default-features = false
 features = ["winit", "tokio", "wayland", "x11"]
 
-[profile.release]
-lto = "thin"
-codegen-units = 1
-strip = true
+[lints]

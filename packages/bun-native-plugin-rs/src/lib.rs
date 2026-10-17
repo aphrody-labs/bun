@@ -280,7 +280,6 @@ unsafe impl Sync for BunPluginName {}
 use std::{
     any::TypeId,
     borrow::Cow,
-    cell::UnsafeCell,
     ffi::{c_char, c_void},
     marker::PhantomData,
     str::Utf8Error,

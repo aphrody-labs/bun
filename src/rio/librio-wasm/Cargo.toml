@@ -7,7 +7,6 @@ license = "MIT"
 keywords = ["graphics", "terminal", "application"]
 repository = "https://github.com/raphamorim/rio"
 description = "librio compiled to WebAssembly: the JS ABI behind the rioterm npm package"
-readme = "README.md"
 publish = false
 
 [lib]

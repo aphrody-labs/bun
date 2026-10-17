@@ -1,5 +1,6 @@
 [package]
 name = "bun_node_path"
+publish = false
 version.workspace = true
 edition.workspace = true
 
