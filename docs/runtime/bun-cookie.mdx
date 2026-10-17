@@ -1,0 +1,145 @@
+---
+title: bun cookie
+description: Keep browser cookies in jars on disk and turn them into Cookie headers
+---
+
+`bun cookie` stores cookies in jars, JSON files on disk, and prints the `Cookie` header a browser would send to a URL. It imports the formats that browsers and extensions export, so a logged-in session can be reused by a script, `curl` or `fetch`.
+
+```sh terminal icon="terminal"
+bun cookie import export.json --name work    # DevTools or extension JSON, cookies.txt, or a header string
+bun cookie list --name work                  # values hidden
+bun cookie header https://app.example.com/ --name work --reveal
+# Cookie: sid=...; theme=dark
+bun cookie check --name work                 # expired, Secure, SameSite, HttpOnly, prefixes
+```
+
+A package.json script named `cookie` does not run through `bun cookie`; use `bun run cookie`.
+
+## Jars
+
+A jar is a JSON array in `~/.aphrody/cookies/<name>.json`. Each element has the fields that Playwright and `bxc` use:
+
+```json
+{
+  "name": "sid",
+  "value": "...",
+  "domain": ".example.com",
+  "path": "/",
+  "expires": 4102444800,
+  "httpOnly": true,
+  "secure": true,
+  "sameSite": "Lax"
+}
+```
+
+`expires` is in Unix seconds, and `-1` marks a session cookie. A leading dot on `domain` means the cookie also goes to subdomains; without it the cookie is for that host only. `hostOnly` is stored when the source says so (Netscape files do).
+
+Jars are written atomically, as a temporary file renamed over the jar, with mode `0600` on Unix; a directory the command creates gets mode `0700`. The jar directory is `--dir`, else `BUN_COOKIE_DIR`, else `~/.aphrody/cookies`. A jar name is given with `--name` and defaults to `default`; it may contain letters, digits, `.`, `_` and `-`.
+
+Cookie values are never printed unless `--reveal` is given, in text and in JSON, including the output of `header`.
+
+## Subcommands
+
+### `import`
+
+```sh terminal icon="terminal"
+bun cookie import SOURCE [--name JAR] [--domain D] [--format F] [--replace]
+```
+
+`SOURCE` is a file, `-` for standard input, or the cookie string itself. The format is detected, or set with `--format json|netscape|header`:
+
+| Format   | Input                                                                                                                                                                                             |
+| -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| JSON     | An array of cookie objects, or an object with a `cookies` array (Playwright storage state). Accepted fields: `name`, `value`, `domain` (or `host`, `host_key`, or the host of `url`), `path`, `expires` (or `expirationDate`, `expiry`; seconds, or milliseconds above 1e11), `httpOnly`, `secure`, `sameSite` (`strict`, `lax`, `none`, `no_restriction`; `unspecified` leaves it unset), `hostOnly`, `session` |
+| Netscape | `cookies.txt`: seven tab-separated fields per line, `#HttpOnly_` prefix for HttpOnly cookies, `#` comments                                                                                       |
+| Header   | `a=b; c=d`, optionally starting with `Cookie:`; needs `--domain`                                                                                                                                  |
+
+`--domain` keeps the cookies of that domain and its subdomains when the source is JSON or Netscape, and gives a domain to the cookies that have none. For a header string it is the domain of every cookie.
+
+An import merges into the jar: a cookie with the same name, domain and path replaces the old one. `--replace` starts from an empty jar. The command prints the number of cookies and the jar path, never the values.
+
+### `jars`
+
+Lists the jars of the directory with their cookie counts.
+
+### `list`
+
+```sh terminal icon="terminal"
+bun cookie list [--name JAR] [--domain D] [--reveal] [--json]
+```
+
+Prints one line per cookie: domain, path, name, value, expiry (UTC, or `session`) and the `Secure`, `HttpOnly` and `SameSite` flags. `--domain` shows the cookies of that domain and its subdomains.
+
+### `get`
+
+```sh terminal icon="terminal"
+bun cookie get COOKIE [--name JAR] [--domain D] [--all] [--reveal] [--json]
+```
+
+Prints the value of the cookie called `COOKIE`. When several domains hold a cookie with that name, the command fails and lists the domains; pass `--domain` to pick one or `--all` to print them all.
+
+### `header`
+
+```sh terminal icon="terminal"
+bun cookie header URL [--name JAR] [--path P] [--insecure] [--value-only] [--reveal] [--json]
+```
+
+Prints `Cookie: a=b; c=d` for the cookies a browser would send to `URL`. A cookie is sent when:
+
+- it has not expired;
+- its domain matches the host (a cookie of `.example.com` also goes to `www.example.com`; a cookie of `example.com` without the dot goes only to `example.com`);
+- its path is a prefix of the request path on a `/` boundary;
+- it is not `Secure`, or the URL is `https`.
+
+`URL` may be a full URL or a bare host, optionally followed by a path. A bare host counts as `https`; `--insecure` makes it `http`. `--path` overrides the request path. Longer paths come first. With `--value-only` the output has no `Cookie: ` prefix. The status is 1 when no cookie applies.
+
+Values are hidden (`sid=********`) until `--reveal` is given:
+
+```sh terminal icon="terminal"
+curl -H "$(bun cookie header https://app.example.com/ --name work --reveal)" https://app.example.com/api/me
+```
+
+```ts title="fetch.ts" icon="/icons/typescript.svg"
+const cookie = await Bun.$`bun cookie header https://app.example.com/ --name work --reveal --value-only`.text();
+const response = await fetch("https://app.example.com/api/me", { headers: { cookie: cookie.trim() } });
+```
+
+### `rm`
+
+```sh terminal icon="terminal"
+bun cookie rm COOKIE [--name JAR] [--domain D]
+bun cookie rm --expired [--name JAR]
+bun cookie rm --all [--name JAR]
+```
+
+Removes the cookies with that name (optionally one domain), the expired cookies, or the whole jar file. The status is 1 when nothing matched.
+
+### `check`
+
+```sh terminal icon="terminal"
+bun cookie check [--name JAR] [--strict] [--json]
+```
+
+Reports problems per cookie, never printing values:
+
+| Code                     | Level   | Meaning                                                                                |
+| ------------------------ | ------- | -------------------------------------------------------------------------------------- |
+| `expired`                | error   | The expiry time has passed                                                             |
+| `expires-soon`           | warning | The cookie expires within 24 hours                                                     |
+| `samesite-none-insecure` | error   | `SameSite=None` without `Secure`; browsers reject the cookie                           |
+| `not-secure`             | warning | Not `Secure`: the cookie is sent over plain HTTP                                       |
+| `not-httponly`           | warning | Not `HttpOnly`: page scripts can read the cookie                                       |
+| `prefix-secure`          | error   | A `__Secure-` cookie that is not `Secure`                                              |
+| `prefix-host`            | error   | A `__Host-` cookie that is not `Secure`, has a path other than `/`, or is not host-only |
+
+The status is 1 when a cookie has an error, or a warning with `--strict`. The same prefix rules are available in code as [`cookie.hasValidPrefix()`](/runtime/cookies#prefixes).
+
+## Exit status
+
+| Status | Meaning                                                                          |
+| ------ | -------------------------------------------------------------------------------- |
+| `0`    | Success                                                                          |
+| `1`    | No match, a failed `check`, an input that cannot be parsed, or an I/O error      |
+| `2`    | Usage error: unknown subcommand or option, missing argument, invalid jar name    |
+
+See [Cookies](/runtime/cookies) for `Bun.Cookie` and `Bun.CookieMap`, and [`bun env`](/runtime/bun-env) for `.env` files.

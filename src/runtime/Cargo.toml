@@ -107,6 +107,7 @@ bun_lsp.workspace = true
 bun_md.workspace = true
 bun_no_window.workspace = true
 bun_host.workspace = true
+bun_env_cookie.workspace = true
 bun_mcp.workspace = true
 bun_node_path.workspace = true
 bun_options_types.workspace = true

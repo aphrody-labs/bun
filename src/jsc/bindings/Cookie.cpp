@@ -45,10 +45,11 @@ ExceptionOr<Ref<Cookie>> Cookie::create(const String& name, const String& value,
     if (!isValidCookiePath(path)) {
         return Exception { TypeError, "Invalid cookie path: contains invalid characters"_s };
     }
-    if (!isValidCookieDomain(domain)) {
+    String normalizedDomain = domain.convertToASCIILowercase();
+    if (!isValidCookieDomain(normalizedDomain)) {
         return Exception { TypeError, "Invalid cookie domain: contains invalid characters"_s };
     }
-    return adoptRef(*new Cookie(name, value, domain, path, expires, secure, sameSite, httpOnly, maxAge, partitioned));
+    return adoptRef(*new Cookie(name, value, normalizedDomain, path, expires, secure, sameSite, httpOnly, maxAge, partitioned));
 }
 
 ExceptionOr<Ref<Cookie>> Cookie::parse(StringView cookieString)
@@ -128,8 +129,20 @@ ExceptionOr<Ref<Cookie>> Cookie::parse(StringView cookieString)
                     }
                 }
             } else if (attributeName == "max-age"_s) {
-                if (auto parsed = WTF::parseIntegerAllowingTrailingJunk<int64_t>(attributeValue); parsed.has_value()) {
-                    maxAge = static_cast<double>(parsed.value());
+                // RFC 6265bis 5.6.2: an optional '-' followed by digits only; anything else
+                // ignores the attribute. Values beyond int64 clamp.
+                StringView digits = attributeValue;
+                bool negative = digits.startsWith('-');
+                if (negative)
+                    digits = digits.substring(1);
+                bool onlyDigits = !digits.isEmpty();
+                for (unsigned i = 0; i < digits.length() && onlyDigits; ++i)
+                    onlyDigits = digits[i] >= '0' && digits[i] <= '9';
+                if (onlyDigits) {
+                    if (auto parsed = WTF::parseInteger<int64_t>(attributeValue); parsed.has_value())
+                        maxAge = static_cast<double>(parsed.value());
+                    else
+                        maxAge = negative ? -9223372036854775808.0 : 9223372036854775807.0;
                 }
             } else if (attributeName == "secure"_s) {
                 secure = true;
@@ -164,6 +177,28 @@ bool Cookie::isExpired() const
 
     auto currentTime = WTF::WallTime::now().secondsSinceEpoch().seconds() * 1000.0;
     return currentTime > m_expires;
+}
+
+CookiePrefix Cookie::prefix() const
+{
+    if (m_name.startsWithIgnoringASCIICase("__Host-"_s))
+        return CookiePrefix::Host;
+    if (m_name.startsWithIgnoringASCIICase("__Secure-"_s))
+        return CookiePrefix::Secure;
+    return CookiePrefix::None;
+}
+
+bool Cookie::hasValidPrefix() const
+{
+    switch (prefix()) {
+    case CookiePrefix::None:
+        return true;
+    case CookiePrefix::Secure:
+        return m_secure;
+    case CookiePrefix::Host:
+        return m_secure && m_path == "/"_s && m_domain.isEmpty();
+    }
+    return true;
 }
 
 String Cookie::toString(JSC::VM& vm) const

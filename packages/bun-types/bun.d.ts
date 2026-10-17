@@ -11486,6 +11486,20 @@ declare module "bun" {
     httpOnly: boolean;
 
     /**
+     * The `__Host-` or `__Secure-` prefix of the cookie name (matched without regard to case),
+     * or `null` when the name has none.
+     */
+    readonly prefix: "__Host-" | "__Secure-" | null;
+
+    /**
+     * Returns `true` if the cookie meets the requirements of its name prefix
+     * ([RFC 6265bis 4.1.3](https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-rfc6265bis#section-4.1.3)):
+     * `__Secure-` needs `Secure`; `__Host-` needs `Secure`, `Path=/` and no `Domain`.
+     * Cookies without a prefix are always valid. Browsers drop prefixed cookies that are not.
+     */
+    hasValidPrefix(): boolean;
+
+    /**
      * Returns `true` if the cookie has expired
      */
     isExpired(): boolean;
@@ -11557,6 +11571,22 @@ declare module "bun" {
      * @returns An array of `Set-Cookie` header values
      */
     toSetCookieHeaders(): string[];
+
+    /**
+     * Returns the value of a request `Cookie` header for the cookies in this map,
+     * like `"name=value; foo=bar"`. Values are percent-encoded, which is what
+     * `new CookieMap(header)` decodes.
+     */
+    toCookieHeader(): string;
+
+    /**
+     * Creates a map from the `Set-Cookie` headers of a response, for example
+     * `CookieMap.fromSetCookie(response.headers.getSetCookie())`. Later headers replace earlier
+     * ones of the same name, and a header that expires its cookie removes it.
+     *
+     * @param headers - One `Set-Cookie` header value or an array of them
+     */
+    static fromSetCookie(headers: string | string[]): CookieMap;
 
     /**
      * Checks if a cookie with the given name exists.

@@ -47,6 +47,7 @@ describe.concurrent(".env file is loaded", () => {
       env: {
         ...bunEnv,
         BUN_DEBUG_SYS: "0",
+        BUN_DEBUG_cachefs: "0",
         BUN_DEBUG_ALL: undefined,
         BUN_DEBUG_QUIET_LOGS: quiet,
         DOTENV_QUIET_REGRESSION: undefined,
@@ -1546,5 +1547,209 @@ describe("JSC option environment variables", () => {
     expect(stderr).toContain("thresholdForJITAfterWarmUp=");
     expect(stderr).not.toContain("thresholdForJITAfterWarmUp=77");
     expect(exitCode).toBe(0);
+  });
+});
+
+describe("bun env", () => {
+  async function bunEnvCommand(cwd: string, args: string[], env: Record<string, string | undefined> = {}) {
+    await using proc = Bun.spawn({
+      cmd: [bunExe(), "env", ...args],
+      cwd,
+      env: { ...bunEnv, NODE_ENV: undefined, ...env },
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+    return { stdout, stderr, exitCode };
+  }
+
+  test.concurrent("set, get and unset edit one file and keep comments and order", async () => {
+    using dir = tempDir("bun-env-edit", { ".env": "# database\nDB_HOST=localhost\n\n# app\nNAME=world\n" });
+    const cwd = String(dir);
+
+    let result = await bunEnvCommand(cwd, ["set", "API_TOKEN=abc123", "GREETING=hello $NAME", "DB_HOST=db.internal"]);
+    expect(result.stdout).toBe("API_TOKEN set in .env\nGREETING set in .env\nDB_HOST set in .env\n");
+    expect(result.exitCode).toBe(0);
+    expect(await Bun.file(path.join(cwd, ".env")).text()).toBe(
+      "# database\nDB_HOST=db.internal\n\n# app\nNAME=world\nAPI_TOKEN=abc123\nGREETING=hello \\$NAME\n",
+    );
+
+    // Bun reads back exactly what was written
+    await Bun.write(path.join(cwd, "print.js"), "console.log(JSON.stringify(process.env.GREETING));");
+    expect(bunRunWithoutTrim(path.join(cwd, "print.js")).stdout).toBe('"hello $NAME"\n');
+
+    result = await bunEnvCommand(cwd, ["get", "DB_HOST"]);
+    expect(result).toEqual({ stdout: "db.internal\n", stderr: "", exitCode: 0 });
+
+    result = await bunEnvCommand(cwd, ["unset", "GREETING", "MISSING"]);
+    expect(result.stdout).toContain("GREETING removed");
+    expect(result.stdout).toContain("MISSING is not defined");
+    expect(result.exitCode).toBe(0);
+    expect(await Bun.file(path.join(cwd, ".env")).text()).toBe(
+      "# database\nDB_HOST=db.internal\n\n# app\nNAME=world\nAPI_TOKEN=abc123\n",
+    );
+  });
+
+  test.concurrent("secret values are hidden unless --reveal is given", async () => {
+    using dir = tempDir("bun-env-mask", {
+      ".env":
+        "API_TOKEN=abc123\nDATABASE_URL=postgres://user:hunter2@db/app\nPUBLIC_URL=https://example.com\nMY_APP_MODE=fast\n",
+    });
+    const cwd = String(dir);
+
+    let result = await bunEnvCommand(cwd, ["list"]);
+    expect(result.stdout).toBe(
+      "API_TOKEN=********\nDATABASE_URL=********\nMY_APP_MODE=fast\nPUBLIC_URL=https://example.com\n",
+    );
+
+    result = await bunEnvCommand(cwd, ["get", "API_TOKEN"]);
+    expect(result.stdout).toBe("********\n");
+
+    result = await bunEnvCommand(cwd, ["get", "API_TOKEN", "--reveal"]);
+    expect(result.stdout).toBe("abc123\n");
+
+    result = await bunEnvCommand(cwd, ["list", "--json"]);
+    const listed = JSON.parse(result.stdout);
+    expect(listed.variables.find((v: any) => v.name === "DATABASE_URL")).toEqual({
+      name: "DATABASE_URL",
+      value: "********",
+      masked: true,
+      sensitive: true,
+      source: ".env",
+      shadowed: [],
+    });
+    expect(result.stdout).not.toContain("hunter2");
+  });
+
+  test.concurrent("resolves in the order Bun loads files, and the process environment wins", async () => {
+    using dir = tempDir("bun-env-order", {
+      ".env": "A=env\nB=env\nC=env\nD=env\nURL=${NO_SUCH_HOST_VAR:-localhost}:$DB_PORT\n",
+      ".env.production": "B=prod\nC=prod\nD=prod\n",
+      ".env.local": "C=local\nD=local\nDB_PORT=5432\n",
+      ".env.production.local": "D=prodlocal\n",
+    });
+    const cwd = String(dir);
+
+    let result = await bunEnvCommand(cwd, ["list", "--sources"], { NODE_ENV: "production" });
+    expect(result.stdout).toBe(
+      "A=env\t# .env\nB=prod\t# .env.production\nC=local\t# .env.local\nD=prodlocal\t# .env.production.local\nDB_PORT=5432\t# .env.local\nURL=localhost:5432\t# .env\n",
+    );
+
+    // what a script run in the same directory sees
+    await Bun.write(
+      path.join(cwd, "print.js"),
+      "console.log([process.env.A, process.env.B, process.env.C, process.env.D, process.env.URL].join(','));",
+    );
+    expect(bunRunWithoutTrim(path.join(cwd, "print.js"), { NODE_ENV: "production" }).stdout).toBe(
+      "env,prod,local,prodlocal,localhost:5432\n",
+    );
+
+    // .env.local is not loaded in test mode
+    result = await bunEnvCommand(cwd, ["get", "C"], { NODE_ENV: "test" });
+    expect(result.stdout).toBe("env\n");
+
+    result = await bunEnvCommand(cwd, ["get", "D", "--mode", "development"], { D: "from-process" });
+    expect(result.stdout).toBe("from-process\n");
+    result = await bunEnvCommand(cwd, ["get", "D", "--mode", "development", "--no-process"], { D: "from-process" });
+    expect(result.stdout).toBe("local\n");
+
+    // --file replaces the defaults and a later file wins, like --env-file
+    result = await bunEnvCommand(cwd, ["get", "B", "--file", ".env.production,.env"]);
+    expect(result.stdout).toBe("env\n");
+    result = await bunEnvCommand(cwd, ["get", "B", "--file", ".env", "--file", ".env.production"]);
+    expect(result.stdout).toBe("prod\n");
+
+    result = await bunEnvCommand(cwd, ["files"], { NODE_ENV: "production" });
+    expect(result.stdout).toBe(
+      [
+        "mode: production",
+        "precedence, highest first:",
+        "  process environment",
+        "  .env.production.local  (1 variables)",
+        "  .env.local  (3 variables)",
+        "  .env.production  (3 variables)",
+        "  .env  (5 variables)",
+        "",
+      ].join("\n"),
+    );
+  });
+
+  test.concurrent("check compares .env.example with the defined variables", async () => {
+    using dir = tempDir("bun-env-check", {
+      ".env.example": "A=\nB=\nC=\n",
+      ".env": "A=1\nC=\nEXTRA=1\n",
+    });
+    const cwd = String(dir);
+
+    let result = await bunEnvCommand(cwd, ["check", "--no-process"]);
+    expect(result.stdout).toBe(
+      "missing  B\nempty    C\nextra    EXTRA\n1 of 3 variables from .env.example are set (check failed)\n",
+    );
+    expect(result.exitCode).toBe(1);
+
+    await Bun.write(path.join(cwd, ".env"), "A=1\nB=2\nC=3\n");
+    result = await bunEnvCommand(cwd, ["check", "--no-process", "--json"]);
+    expect(JSON.parse(result.stdout)).toMatchObject({ ok: 3, missing: [], empty: [], extra: [], passed: true });
+    expect(result.exitCode).toBe(0);
+  });
+
+  test.concurrent("a value is written so that Bun reads it back unchanged", async () => {
+    using dir = tempDir("bun-env-roundtrip", {});
+    const cwd = String(dir);
+    const values = [
+      "plain",
+      "with space",
+      " padded ",
+      "a#b",
+      'say "hi"',
+      "it's",
+      "$HOME and ${X:-y}",
+      "two\nlines",
+      "back\\slash",
+    ];
+    for (const [i, value] of values.entries()) {
+      const result = await bunEnvCommand(cwd, ["set", `V${i}`, value]);
+      expect(result.exitCode).toBe(0);
+    }
+    await Bun.write(
+      path.join(cwd, "print.js"),
+      `console.log(JSON.stringify(Object.keys(process.env).filter(k => /^V[0-9]$/.test(k)).sort().map(k => process.env[k])));`,
+    );
+    expect(JSON.parse(bunRunWithoutTrim(path.join(cwd, "print.js")).stdout)).toEqual(values);
+  });
+
+  test.concurrent("set reads a secret from stdin and keeps the file private", async () => {
+    using dir = tempDir("bun-env-stdin", {});
+    const cwd = String(dir);
+    await using proc = Bun.spawn({
+      cmd: [bunExe(), "env", "set", "PASSWORD", "--stdin", "--file", ".env.local"],
+      cwd,
+      env: bunEnv,
+      stdin: new Blob(["s3cret value\n"]),
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [stdout, exitCode] = await Promise.all([proc.stdout.text(), proc.exited]);
+    expect(stdout).toBe("PASSWORD set in .env.local\n");
+    expect(exitCode).toBe(0);
+    const file = path.join(cwd, ".env.local");
+    expect(await Bun.file(file).text()).toBe("PASSWORD=s3cret value\n");
+    if (!isWindows) expect(fs.statSync(file).mode & 0o777).toBe(0o600);
+  });
+
+  test.concurrent("exit codes", async () => {
+    using dir = tempDir("bun-env-exit", { ".env": "A=1\n" });
+    const cwd = String(dir);
+    expect(await bunEnvCommand(cwd, ["get", "NOPE"])).toEqual({
+      stdout: "",
+      stderr: "error: NOPE is not set\n",
+      exitCode: 1,
+    });
+    expect((await bunEnvCommand(cwd, ["frobnicate"])).exitCode).toBe(2);
+    expect((await bunEnvCommand(cwd, ["set", "NOEQUALS"])).exitCode).toBe(2);
+    expect((await bunEnvCommand(cwd, ["list", "--mode", "staging"])).exitCode).toBe(2);
+    const help = await bunEnvCommand(cwd, ["--help"]);
+    expect(help.stdout).toStartWith("bun env: read and edit .env files");
+    expect(help.exitCode).toBe(0);
   });
 });

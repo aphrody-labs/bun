@@ -37,7 +37,7 @@ Upstream commands (`run`, `test`, `build`, `install`, `add`, `remove`, `update`,
 | `bun dotnet` | Run the .NET SDK inside Bun, run C# files, call assemblies from `bun:dotnet` | `dotnet_command.rs`, [dotnet](/runtime/dotnet) |
 | `bun python`, `bun uv` | CPython host, `bun compile` for Python, embedded UV package manager | `python_command.rs`, `uv_command.rs`, [python](/runtime/python), [buv](/runtime/buv) |
 | `bun search` | Google search owner (SERP, discovery, cache, browser fallback) | `search_command.rs`, `src/google`, `packages/bun-google` |
-| `bun env`, `bun cookie` | `.env` and cookie-jar management from the command line | `env_command.rs`, `cookie_command.rs`, `src/env_cookie` |
+| `bun env`, `bun cookie` | `.env` files (`list`, `get`, `set`, `unset`, `check`, `files`; secrets hidden) and cookie jars (`import`, `jars`, `list`, `get`, `header`, `rm`, `check`) | `env_command.rs`, `cookie_command.rs`, `src/env_cookie`, [bun env](/runtime/bun-env), [bun cookie](/runtime/bun-cookie) |
 | `bunsh` (argv0) | Bun Shell as a system shell: `-c`, script, interactive, `--root` | `src/runtime/cli/bunsh.rs` |
 | Coreutils applets | uutils coreutils linked in; `bun` run under an applet name (`head`, `sort`, ...) runs that utility, Bun Shell uses them | `src/coreutils` |
 | `bun bd`, `bun factory` | Build the checkout (`bun bd [command]`), drive the VPS build factory (`sync`, `gen`, `build`, `all`, `slots`, `run -- <cmd>`) | `scripts/build.ts`, `scripts/factory/factory.ts`, [VPS factory](/project/vps-factory) |

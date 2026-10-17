@@ -243,6 +243,8 @@ static JSC_DECLARE_CUSTOM_SETTER(jsCookiePrototypeSetter_maxAge);
 static JSC_DECLARE_CUSTOM_GETTER(jsCookiePrototypeGetter_partitioned);
 static JSC_DECLARE_CUSTOM_SETTER(jsCookiePrototypeSetter_partitioned);
 static JSC_DECLARE_HOST_FUNCTION(jsCookiePrototypeFunction_isExpired);
+static JSC_DECLARE_HOST_FUNCTION(jsCookiePrototypeFunction_hasValidPrefix);
+static JSC_DECLARE_CUSTOM_GETTER(jsCookiePrototypeGetter_prefix);
 static JSC_DECLARE_CUSTOM_GETTER(jsCookieConstructor);
 
 class JSCookiePrototype final : public JSC::JSNonFinalObject {
@@ -410,7 +412,9 @@ static const HashTableValue JSCookiePrototypeTableValues[] = {
     { "httpOnly"_s, static_cast<unsigned>(JSC::PropertyAttribute::CustomAccessor), NoIntrinsic, { HashTableValue::GetterSetterType, jsCookiePrototypeGetter_httpOnly, jsCookiePrototypeSetter_httpOnly } },
     { "sameSite"_s, static_cast<unsigned>(JSC::PropertyAttribute::CustomAccessor), NoIntrinsic, { HashTableValue::GetterSetterType, jsCookiePrototypeGetter_sameSite, jsCookiePrototypeSetter_sameSite } },
     { "partitioned"_s, static_cast<unsigned>(JSC::PropertyAttribute::CustomAccessor), NoIntrinsic, { HashTableValue::GetterSetterType, jsCookiePrototypeGetter_partitioned, jsCookiePrototypeSetter_partitioned } },
+    { "prefix"_s, static_cast<unsigned>(JSC::PropertyAttribute::CustomAccessor | JSC::PropertyAttribute::ReadOnly), NoIntrinsic, { HashTableValue::GetterSetterType, jsCookiePrototypeGetter_prefix, 0 } },
     { "isExpired"_s, static_cast<unsigned>(JSC::PropertyAttribute::Function), NoIntrinsic, { HashTableValue::NativeFunctionType, jsCookiePrototypeFunction_isExpired, 0 } },
+    { "hasValidPrefix"_s, static_cast<unsigned>(JSC::PropertyAttribute::Function), NoIntrinsic, { HashTableValue::NativeFunctionType, jsCookiePrototypeFunction_hasValidPrefix, 0 } },
     { "toString"_s, static_cast<unsigned>(JSC::PropertyAttribute::Function), NoIntrinsic, { HashTableValue::NativeFunctionType, jsCookiePrototypeFunction_toString, 0 } },
     { "toJSON"_s, static_cast<unsigned>(JSC::PropertyAttribute::Function), NoIntrinsic, { HashTableValue::NativeFunctionType, jsCookiePrototypeFunction_toJSON, 0 } },
     { "serialize"_s, static_cast<unsigned>(JSC::PropertyAttribute::Function), NoIntrinsic, { HashTableValue::NativeFunctionType, jsCookiePrototypeFunction_serialize, 0 } },
@@ -878,6 +882,35 @@ static inline JSC::EncodedJSValue jsCookiePrototypeFunction_isExpiredBody(JSC::J
 JSC_DEFINE_HOST_FUNCTION(jsCookiePrototypeFunction_isExpired, (JSGlobalObject * lexicalGlobalObject, CallFrame* callFrame))
 {
     return IDLOperation<JSCookie>::call<jsCookiePrototypeFunction_isExpiredBody>(*lexicalGlobalObject, *callFrame, "isExpired");
+}
+
+// prefix getter: "__Host-", "__Secure-" or null
+JSC_DEFINE_CUSTOM_GETTER(jsCookiePrototypeGetter_prefix, (JSGlobalObject * lexicalGlobalObject, JSC::EncodedJSValue thisValue, PropertyName))
+{
+    auto& vm = JSC::getVM(lexicalGlobalObject);
+    auto throwScope = DECLARE_THROW_SCOPE(vm);
+    auto* thisObject = dynamicDowncast<JSCookie>(JSValue::decode(thisValue));
+    if (!thisObject) [[unlikely]]
+        return throwThisTypeError(*lexicalGlobalObject, throwScope, "Cookie"_s, "prefix"_s);
+    switch (thisObject->wrapped().prefix()) {
+    case CookiePrefix::Host:
+        return JSValue::encode(jsNontrivialString(vm, "__Host-"_s));
+    case CookiePrefix::Secure:
+        return JSValue::encode(jsNontrivialString(vm, "__Secure-"_s));
+    case CookiePrefix::None:
+        break;
+    }
+    return JSValue::encode(jsNull());
+}
+
+static inline JSC::EncodedJSValue jsCookiePrototypeFunction_hasValidPrefixBody(JSC::JSGlobalObject* lexicalGlobalObject, JSC::CallFrame* callFrame, typename IDLOperation<JSCookie>::ClassParameter castedThis)
+{
+    return JSValue::encode(JSC::jsBoolean(castedThis->wrapped().hasValidPrefix()));
+}
+
+JSC_DEFINE_HOST_FUNCTION(jsCookiePrototypeFunction_hasValidPrefix, (JSGlobalObject * lexicalGlobalObject, CallFrame* callFrame))
+{
+    return IDLOperation<JSCookie>::call<jsCookiePrototypeFunction_hasValidPrefixBody>(*lexicalGlobalObject, *callFrame, "hasValidPrefix");
 }
 
 GCClient::IsoSubspace* JSCookie::subspaceForImpl(VM& vm)

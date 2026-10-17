@@ -48,6 +48,8 @@ CookieMap* toWrapped(JSGlobalObject& lexicalGlobalObject, ExceptionThrower&& exc
 
 static JSC_DECLARE_HOST_FUNCTION(jsCookieMapPrototypeFunction_get);
 static JSC_DECLARE_HOST_FUNCTION(jsCookieMapPrototypeFunction_toSetCookieHeaders);
+static JSC_DECLARE_HOST_FUNCTION(jsCookieMapPrototypeFunction_toCookieHeader);
+static JSC_DECLARE_HOST_FUNCTION(jsCookieMapStaticFunction_fromSetCookie);
 static JSC_DECLARE_HOST_FUNCTION(jsCookieMapPrototypeFunction_has);
 static JSC_DECLARE_HOST_FUNCTION(jsCookieMapPrototypeFunction_set);
 static JSC_DECLARE_HOST_FUNCTION(jsCookieMapPrototypeFunction_delete);
@@ -215,12 +217,16 @@ template<> JSValue JSCookieMapDOMConstructor::prototypeForStructure(JSC::VM& vm,
 template<> void JSCookieMapDOMConstructor::initializeProperties(VM& vm, JSDOMGlobalObject& globalObject)
 {
     initializeBaseProperties(vm, 1, "CookieMap"_s, JSCookieMap::prototype(vm, globalObject));
+
+    JSC::JSFunction* fromSetCookieFunction = JSC::JSFunction::create(vm, &globalObject, 1, "fromSetCookie"_s, jsCookieMapStaticFunction_fromSetCookie, JSC::ImplementationVisibility::Public, JSC::NoIntrinsic);
+    putDirect(vm, Identifier::fromString(vm, "fromSetCookie"_s), fromSetCookieFunction, static_cast<unsigned>(JSC::PropertyAttribute::DontDelete));
 }
 
 static const HashTableValue JSCookieMapPrototypeTableValues[] = {
     { "constructor"_s, static_cast<unsigned>(JSC::PropertyAttribute::DontEnum), NoIntrinsic, { HashTableValue::GetterSetterType, jsCookieMapConstructor, 0 } },
     { "get"_s, static_cast<unsigned>(JSC::PropertyAttribute::Function), NoIntrinsic, { HashTableValue::NativeFunctionType, jsCookieMapPrototypeFunction_get, 1 } },
     { "toSetCookieHeaders"_s, static_cast<unsigned>(JSC::PropertyAttribute::Function), NoIntrinsic, { HashTableValue::NativeFunctionType, jsCookieMapPrototypeFunction_toSetCookieHeaders, 0 } },
+    { "toCookieHeader"_s, static_cast<unsigned>(JSC::PropertyAttribute::Function), NoIntrinsic, { HashTableValue::NativeFunctionType, jsCookieMapPrototypeFunction_toCookieHeader, 0 } },
     { "has"_s, static_cast<unsigned>(JSC::PropertyAttribute::Function), NoIntrinsic, { HashTableValue::NativeFunctionType, jsCookieMapPrototypeFunction_has, 1 } },
     { "set"_s, static_cast<unsigned>(JSC::PropertyAttribute::Function), NoIntrinsic, { HashTableValue::NativeFunctionType, jsCookieMapPrototypeFunction_set, 2 } },
     { "delete"_s, static_cast<unsigned>(JSC::PropertyAttribute::Function), NoIntrinsic, { HashTableValue::NativeFunctionType, jsCookieMapPrototypeFunction_delete, 1 } },
@@ -349,6 +355,80 @@ static inline JSC::EncodedJSValue jsCookieMapPrototypeFunction_toSetCookieHeader
 JSC_DEFINE_HOST_FUNCTION(jsCookieMapPrototypeFunction_toSetCookieHeaders, (JSGlobalObject * lexicalGlobalObject, CallFrame* callFrame))
 {
     return IDLOperation<JSCookieMap>::call<jsCookieMapPrototypeFunction_toSetCookieHeadersBody>(*lexicalGlobalObject, *callFrame, "toSetCookieHeaders");
+}
+
+static inline JSC::EncodedJSValue jsCookieMapPrototypeFunction_toCookieHeaderBody(JSC::JSGlobalObject* lexicalGlobalObject, JSC::CallFrame* callFrame, typename IDLOperation<JSCookieMap>::ClassParameter castedThis)
+{
+    auto& vm = JSC::getVM(lexicalGlobalObject);
+    return JSValue::encode(jsString(vm, castedThis->wrapped().toCookieHeader(vm)));
+}
+
+JSC_DEFINE_HOST_FUNCTION(jsCookieMapPrototypeFunction_toCookieHeader, (JSGlobalObject * lexicalGlobalObject, CallFrame* callFrame))
+{
+    return IDLOperation<JSCookieMap>::call<jsCookieMapPrototypeFunction_toCookieHeaderBody>(*lexicalGlobalObject, *callFrame, "toCookieHeader");
+}
+
+// CookieMap.fromSetCookie(header | headers): a map holding the cookies that Set-Cookie headers set.
+// A header that expires its cookie (Max-Age <= 0 or a past Expires) removes the name instead.
+JSC_DEFINE_HOST_FUNCTION(jsCookieMapStaticFunction_fromSetCookie, (JSGlobalObject * lexicalGlobalObject, CallFrame* callFrame))
+{
+    auto& vm = JSC::getVM(lexicalGlobalObject);
+    auto throwScope = DECLARE_THROW_SCOPE(vm);
+
+    JSValue input = callFrame->argument(0);
+    Vector<String> headers;
+    if (input.isString()) {
+        auto header = convert<IDLUSVString>(*lexicalGlobalObject, input);
+        RETURN_IF_EXCEPTION(throwScope, {});
+        headers.append(WTF::move(header));
+    } else if (auto* array = dynamicDowncast<JSArray>(input)) {
+        uint32_t length = array->length();
+        for (uint32_t i = 0; i < length; ++i) {
+            auto element = array->getIndex(lexicalGlobalObject, i);
+            RETURN_IF_EXCEPTION(throwScope, {});
+            if (!element.isString()) {
+                throwTypeError(lexicalGlobalObject, throwScope, "Expected each Set-Cookie header to be a string"_s);
+                return {};
+            }
+            auto header = convert<IDLUSVString>(*lexicalGlobalObject, element);
+            RETURN_IF_EXCEPTION(throwScope, {});
+            headers.append(WTF::move(header));
+        }
+    } else {
+        throwTypeError(lexicalGlobalObject, throwScope, "Expected a Set-Cookie header string or an array of them"_s);
+        return {};
+    }
+
+    auto created = CookieMap::create(String());
+    if (created.hasException()) {
+        WebCore::propagateException(lexicalGlobalObject, throwScope, created.releaseException());
+        RELEASE_AND_RETURN(throwScope, {});
+    }
+    auto map = created.releaseReturnValue();
+
+    for (const auto& header : headers) {
+        if (!WebCore::isValidHTTPHeaderValue(header)) [[unlikely]] {
+            throwTypeError(lexicalGlobalObject, throwScope, "Set-Cookie header is not a valid HTTP header value"_s);
+            return {};
+        }
+        auto parsed = Cookie::parse(header);
+        if (parsed.hasException()) {
+            WebCore::propagateException(lexicalGlobalObject, throwScope, parsed.releaseException());
+            RELEASE_AND_RETURN(throwScope, {});
+        }
+        auto cookie = parsed.releaseReturnValue();
+        if (cookie->isExpired()) {
+            auto removed = map->remove(CookieStoreDeleteOptions { cookie->name(), cookie->domain(), cookie->path() });
+            if (removed.hasException()) {
+                WebCore::propagateException(lexicalGlobalObject, throwScope, removed.releaseException());
+                RELEASE_AND_RETURN(throwScope, {});
+            }
+        } else {
+            map->set(WTF::move(cookie));
+        }
+    }
+
+    RELEASE_AND_RETURN(throwScope, JSValue::encode(toJSNewlyCreated(lexicalGlobalObject, defaultGlobalObject(lexicalGlobalObject), WTF::move(map))));
 }
 
 // Implementation of the has method

@@ -13,6 +13,13 @@ enum class CookieSameSite : uint8_t {
     None
 };
 
+// RFC 6265bis 4.1.3: names that start with these prefixes carry attribute requirements.
+enum class CookiePrefix : uint8_t {
+    None,
+    Secure,
+    Host
+};
+
 JSC::JSValue toJS(JSC::JSGlobalObject*, CookieSameSite);
 
 struct CookieInit {
@@ -50,9 +57,6 @@ public:
         if (!isValidCookiePath(init.path)) {
             return Exception { TypeError, "Invalid cookie path: contains invalid characters"_s };
         }
-        if (!isValidCookieDomain(init.domain)) {
-            return Exception { TypeError, "Invalid cookie domain: contains invalid characters"_s };
-        }
 
         return create(init.name, init.value, init.domain, init.path, init.expires, init.secure, init.sameSite, init.httpOnly, init.maxAge, init.partitioned);
     }
@@ -67,10 +71,12 @@ public:
     const String& domain() const { return m_domain; }
     ExceptionOr<void> setDomain(const String& domain)
     {
-        if (!isValidCookieDomain(domain)) {
+        // Host names are case-insensitive; store them lowercased like Cookie.parse does.
+        String normalized = domain.convertToASCIILowercase();
+        if (!isValidCookieDomain(normalized)) {
             return Exception { TypeError, "Invalid cookie domain: contains invalid characters"_s };
         }
-        m_domain = domain;
+        m_domain = WTF::move(normalized);
         return {};
     }
 
@@ -104,6 +110,9 @@ public:
     void setPartitioned(bool partitioned) { m_partitioned = partitioned; }
 
     bool isExpired() const;
+
+    CookiePrefix prefix() const;
+    bool hasValidPrefix() const;
 
     void appendTo(JSC::VM& vm, StringBuilder& builder) const;
     String toString(JSC::VM& vm) const;

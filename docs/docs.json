@@ -126,6 +126,7 @@
             "icon": "database",
             "pages": [
               "/runtime/cookies",
+              "/runtime/bun-cookie",
               "/runtime/file-io",
               "/runtime/streams",
               "/runtime/binary-data",
@@ -146,6 +147,7 @@
             "icon": "computer",
             "pages": [
               "/runtime/environment-variables",
+              "/runtime/bun-env",
               "/runtime/shell",
               "/runtime/child-process",
               "/runtime/terminal",

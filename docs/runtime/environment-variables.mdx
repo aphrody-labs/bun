@@ -61,6 +61,14 @@ Or set them programmatically by assigning a property to `process.env`.
 process.env.FOO = "hello";
 ```
 
+To read and edit `.env` files from the command line, and to see which files Bun loads and which one a value comes from, use [`bun env`](/runtime/bun-env):
+
+```sh
+bun env files        # the .env files Bun loads here, highest precedence first
+bun env list --sources
+bun env set API_URL=https://example.com
+```
+
 ---
 
 ## Manually specifying `.env` files
@@ -142,6 +150,15 @@ DB_HOST=localhost
 DB_PORT=5432
 DB_URL=postgres://$DB_USER:$DB_PASSWORD@$DB_HOST:$DB_PORT/$DB_NAME
 ```
+
+Bun also expands the braced form `${NAME}` and a default with `${NAME:-default}`, which is used when `NAME` is not set. A default can contain another reference.
+
+```ini .env icon="settings"
+DB_HOST=${DATABASE_HOST:-localhost}
+DB_URL=postgres://${DB_HOST}:${DB_PORT:-5432}/app
+```
+
+A reference sees the process environment and the variables of the files loaded with a higher precedence, and a variable of the same file even if it is defined further down. A reference to an unset variable becomes an empty string. Expansion applies to quoted and unquoted values alike.
 
 To disable expansion, escape the `$` with a backslash.
 

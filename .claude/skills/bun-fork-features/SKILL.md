@@ -18,6 +18,7 @@ Route by need:
 
 - Type check, lint, format, migrate: `bun check`, `bun lint`, `bun fmt`, `bun n2b` (native; never `tsc`, `eslint`, `prettier` or `bunx` wrappers).
 - Hosts and network: `bun ssh`, `bun docker`, `bun vpn`, `bun host`, `bun rsync --native`.
+- Configuration and sessions: `bun env` (`.env` files), `bun cookie` (cookie jars, `Cookie` headers).
 - Agents: `bun mcp`, `bun agent-plugin`, `bun lsp`, `bun docs`; skills and memory come from the plugin.
 - Media and web: `Bun.Video`, `Bun.Image`, `Bun.HTML`, `Bun.Crawl`, `Bun.WebDetect`, `Bun.WebView`, `bun:chromium`, `bun:google`.
 - Platform layers: `bun:windows`, `bun:winrt`, `bun:winui`, `bun msvc`, `bun winmd`, `bun:linux`, `bun:cosmic`.

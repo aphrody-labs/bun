@@ -8,6 +8,7 @@
 #include <JavaScriptCore/ObjectConstructor.h>
 #include "HTTPParsers.h"
 #include "decodeURIComponentSIMD.h"
+#include "EncodeURIComponent.h"
 #include "BunString.h"
 #include <wtf/HashSet.h>
 namespace WebCore {
@@ -241,6 +242,27 @@ JSC::JSValue CookieMap::toJSON(JSC::JSGlobalObject* globalObject) const
     }
 
     return object;
+}
+
+String CookieMap::toCookieHeader(JSC::VM& vm) const
+{
+    StringBuilder builder;
+    auto append = [&](const String& name, const String& value) {
+        if (!builder.isEmpty())
+            builder.append("; "_s);
+        builder.append(name);
+        builder.append('=');
+        // An unpaired surrogate cannot reach here: values were already converted to USVString.
+        (void)encodeURIComponent(vm, value, builder);
+    };
+    for (const auto& cookie : m_modifiedCookies) {
+        if (cookie->value().isEmpty())
+            continue;
+        append(cookie->name(), cookie->value());
+    }
+    for (const auto& cookie : m_originalCookies)
+        append(cookie.key, cookie.value);
+    return builder.toString();
 }
 
 size_t CookieMap::memoryCost() const

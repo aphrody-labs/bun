@@ -1,0 +1,142 @@
+---
+title: bun env
+description: Read and edit .env files, and see which variables Bun loads and from which file
+---
+
+`bun env` reads and edits `.env` files from the command line. It follows the same rules as Bun's own loader: the files, their precedence, the parser and `$VAR` expansion. What `bun env get` prints is what `process.env` holds in a script started from the same directory.
+
+```sh terminal icon="terminal"
+bun env set API_TOKEN=abc123 PORT=3000   # add or update variables in .env
+bun env list                             # variables Bun loads here, secrets hidden
+bun env get PORT                         # one resolved value
+bun env unset PORT                       # remove a variable
+bun env check                            # compare .env.example with what is defined
+bun env files                            # the files Bun loads, in precedence order
+```
+
+A package.json script named `env` does not run through `bun env`; use `bun run env`.
+
+## Files and precedence
+
+Without `--file`, `bun env` reads the files that Bun loads for the current mode, from the lowest to the highest precedence:
+
+1. `.env`
+2. `.env.production`, `.env.development` or `.env.test`
+3. `.env.local` (not read in test mode)
+4. `.env.production.local`, `.env.development.local` or `.env.test.local`
+
+The process environment wins over every file. The mode comes from `NODE_ENV` (`production` and `test` select their files; anything else is `development`) or from `--mode`. Files that do not exist are skipped.
+
+`--file` (alias `--env-file`, repeatable, or comma separated) replaces this list, like `bun --env-file`: only the given files are read, and a later file wins over an earlier one. Relative paths are resolved against the current directory, or `--cwd`.
+
+References are expanded as Bun expands them: `$NAME`, `${NAME}` and `${NAME:-default}` see the process environment and the files of higher precedence. `--no-expand` shows the values as written, `--no-process` ignores the process environment.
+
+## Subcommands
+
+### `list`
+
+```sh terminal icon="terminal"
+bun env list [--file F]... [--sources] [--process] [--reveal] [--json]
+```
+
+Prints `NAME=value` for every variable that a file defines, sorted by name. `--sources` appends the file that supplies each value (`process` when the process environment overrides the files). `--process` adds the variables only the process environment defines. With `--json`, the output holds the mode, the files and one object per variable:
+
+```json
+{
+  "name": "DATABASE_URL",
+  "value": "********",
+  "masked": true,
+  "sensitive": true,
+  "source": ".env.local",
+  "shadowed": [".env"]
+}
+```
+
+`shadowed` lists the lower-precedence sources that define the same name.
+
+### `get`
+
+```sh terminal icon="terminal"
+bun env get KEY [--file F]... [--reveal] [--json]
+```
+
+Prints one resolved value. The exit status is 1 when the variable is not set.
+
+### `set`
+
+```sh terminal icon="terminal"
+bun env set KEY=VALUE [KEY=VALUE]... [--file F]
+bun env set KEY VALUE [--file F]
+bun env set KEY --stdin [--file F]
+```
+
+Sets variables in one file, `.env` by default. An existing variable is changed in place and a new one is appended. `--stdin` reads the value from standard input (one trailing newline is dropped), so a secret does not appear in the process list or the shell history.
+
+The command never prints values. It chooses the quoting so that Bun reads the value back unchanged: bare when possible, otherwise double, single or backtick quotes, and `$` is written as `\$` so it is not expanded. A value that no form can represent is refused.
+
+### `unset`
+
+```sh terminal icon="terminal"
+bun env unset KEY... [--file F]
+```
+
+Removes every definition of the variables, including multi-line quoted values. A name that is not defined is reported and is not an error.
+
+### `check`
+
+```sh terminal icon="terminal"
+bun env check [--example .env.example] [--file F]... [--strict] [--json]
+```
+
+Compares the variable names of an example file with the variables defined in the files (or the process environment). It reports:
+
+- `missing`: in the example, defined nowhere.
+- `empty`: defined, with an empty value.
+- `extra`: defined, absent from the example.
+
+The exit status is 1 when a variable is missing or empty, and with `--strict` also when one is extra.
+
+### `files`
+
+```sh terminal icon="terminal"
+bun env files [--file F]... [--mode MODE] [--json]
+```
+
+Lists the files in precedence order, highest first, with the number of variables each one defines. This is the list of `.env` files Bun loads in the current directory.
+
+## Secrets
+
+`list` and `get` hide a value as `********` when the name looks secret or the value carries a password. The rule is a heuristic on the name: it contains `SECRET`, `TOKEN`, `PASSWORD`, `PASSWD`, `PASSPHRASE`, `CREDENTIAL`, `PRIVATE`, `API_KEY`, `APIKEY`, `ACCESS_KEY`, `SIGNING`, `COOKIE`, `SESSION`, `AUTH` or `DSN`, has a `KEY` or `PASS` segment, or ends in `KEY`; or the value is a URL with a password (`postgres://user:password@host/db`). `--reveal` prints the real values.
+
+## File writes
+
+`set` and `unset` change only the lines they touch. Comments, blank lines, the order of variables, `export` prefixes, the line endings (LF or CRLF) and a UTF-8 byte order mark are kept. The file is written to a temporary file in the same directory and renamed over the original, so a reader never sees a partial file, and a symbolic link is followed rather than replaced.
+
+On Unix, the permissions of an existing file are kept. A file that holds a secret loses its group and other permission bits, and a new file that holds one is created with mode `0600`.
+
+## Exit status
+
+| Status | Meaning                                                                      |
+| ------ | ---------------------------------------------------------------------------- |
+| `0`    | Success                                                                      |
+| `1`    | A variable is not set, `check` failed, or a file could not be read or written |
+| `2`    | Usage error: unknown subcommand or option, missing argument, invalid mode    |
+
+## Options
+
+| Option                       | Applies to            | Meaning                                              |
+| ---------------------------- | --------------------- | ---------------------------------------------------- |
+| `-f`, `--file F`, `--env-file F` | all               | `.env` file; repeatable, comma separated             |
+| `--cwd DIR`                  | all                   | Directory of the default files and relative paths    |
+| `--mode MODE`                | all                   | `development`, `production` or `test`                |
+| `--no-process`               | `list`, `get`, `check` | Ignore the process environment                      |
+| `--no-expand`                | `list`, `get`, `check` | Keep `$VAR` references as written                   |
+| `--process`                  | `list`                | Include variables only the process environment defines |
+| `--sources`                  | `list`                | Print the file that provides each value              |
+| `--stdin`                    | `set`                 | Read the value from standard input                   |
+| `--example F`                | `check`               | Example file (default `.env.example`)                |
+| `--strict`                   | `check`               | Extra variables fail the check                       |
+| `--reveal`                   | `list`, `get`         | Print secret values                                  |
+| `--json`                     | `list`, `get`, `check`, `files` | Machine-readable output                    |
+
+See [Environment variables](/runtime/environment-variables) for how Bun loads `.env` files at run time.

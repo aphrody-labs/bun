@@ -527,3 +527,168 @@ describe("invalid delete usage", () => {
     }).toThrow("Cookie name is required");
   });
 });
+
+describe("Cookie.parse Max-Age (RFC 6265bis 5.6.2)", () => {
+  test("only an optional '-' followed by digits is accepted", () => {
+    expect(Bun.Cookie.parse("a=b; Max-Age=60").maxAge).toBe(60);
+    expect(Bun.Cookie.parse("a=b; Max-Age=-5").maxAge).toBe(-5);
+    expect(Bun.Cookie.parse("a=b; Max-Age=0").maxAge).toBe(0);
+    for (const bad of ["3600abc", "+60", "1.5", "", "abc", "-", "6 0", "0x10"]) {
+      expect(Bun.Cookie.parse(`a=b; Max-Age=${bad}`).maxAge).toBeUndefined();
+    }
+  });
+
+  test("an invalid Max-Age leaves an earlier valid one in place", () => {
+    expect(Bun.Cookie.parse("a=b; Max-Age=60; Max-Age=oops").maxAge).toBe(60);
+    expect(Bun.Cookie.parse("a=b; Max-Age=60; Max-Age=90").maxAge).toBe(90);
+  });
+
+  test("values beyond int64 clamp instead of being dropped", () => {
+    const huge = Bun.Cookie.parse("a=b; Max-Age=99999999999999999999999").maxAge!;
+    expect(huge).toBeGreaterThan(9e18);
+    expect(Bun.Cookie.parse("a=b; Max-Age=99999999999999999999999").isExpired()).toBe(false);
+    expect(Bun.Cookie.parse("a=b; Max-Age=-99999999999999999999999").isExpired()).toBe(true);
+  });
+});
+
+describe("Cookie domain is case-insensitive", () => {
+  test("constructors store the domain lowercased", () => {
+    expect(new Bun.Cookie("a", "b", { domain: "Example.COM" }).domain).toBe("example.com");
+    expect(new Bun.Cookie({ name: "a", value: "b", domain: "SUB.Example.com" }).domain).toBe("sub.example.com");
+    expect(Bun.Cookie.from("a", "b", { domain: "EXAMPLE.com" }).serialize()).toContain("Domain=example.com");
+  });
+
+  test("the domain setter lowercases and still validates", () => {
+    const cookie = new Bun.Cookie("a", "b");
+    cookie.domain = "Example.ORG";
+    expect(cookie.domain).toBe("example.org");
+    expect(() => {
+      cookie.domain = "exa mple.com";
+    }).toThrow("Invalid cookie domain");
+  });
+
+  test("CookieMap.set applies the same normalization", () => {
+    const map = new Bun.CookieMap();
+    map.set({ name: "a", value: "b", domain: "Example.COM" });
+    expect(map.toSetCookieHeaders()[0]).toContain("Domain=example.com");
+  });
+});
+
+describe("Cookie name prefixes (RFC 6265bis 4.1.3)", () => {
+  test("prefix reports __Host- and __Secure- without regard to case", () => {
+    expect(new Bun.Cookie("id", "1").prefix).toBeNull();
+    expect(new Bun.Cookie("__Host-id", "1").prefix).toBe("__Host-");
+    expect(new Bun.Cookie("__host-id", "1").prefix).toBe("__Host-");
+    expect(new Bun.Cookie("__Secure-id", "1").prefix).toBe("__Secure-");
+    expect(new Bun.Cookie("__SECURE-id", "1").prefix).toBe("__Secure-");
+    expect(new Bun.Cookie("_Host-id", "1").prefix).toBeNull();
+    expect(Bun.Cookie.parse("__Host-id=1; Secure; Path=/").prefix).toBe("__Host-");
+  });
+
+  test("hasValidPrefix checks the attribute requirements", () => {
+    expect(new Bun.Cookie("id", "1").hasValidPrefix()).toBe(true);
+    expect(new Bun.Cookie("__Secure-id", "1").hasValidPrefix()).toBe(false);
+    expect(new Bun.Cookie("__Secure-id", "1", { secure: true }).hasValidPrefix()).toBe(true);
+    expect(new Bun.Cookie("__Secure-id", "1", { secure: true, domain: "example.com" }).hasValidPrefix()).toBe(true);
+
+    expect(new Bun.Cookie("__Host-id", "1").hasValidPrefix()).toBe(false);
+    expect(new Bun.Cookie("__Host-id", "1", { secure: true }).hasValidPrefix()).toBe(true);
+    expect(new Bun.Cookie("__Host-id", "1", { secure: true, path: "/app" }).hasValidPrefix()).toBe(false);
+    expect(new Bun.Cookie("__Host-id", "1", { secure: true, domain: "example.com" }).hasValidPrefix()).toBe(false);
+  });
+
+  test("parse keeps the attributes, so hasValidPrefix reflects the header", () => {
+    expect(Bun.Cookie.parse("__Host-id=1; Secure; Path=/; HttpOnly").hasValidPrefix()).toBe(true);
+    expect(Bun.Cookie.parse("__Host-id=1; Path=/").hasValidPrefix()).toBe(false);
+    expect(Bun.Cookie.parse("__Host-id=1; Secure; Path=/; Domain=example.com").hasValidPrefix()).toBe(false);
+    expect(Bun.Cookie.parse("__Secure-id=1; Secure").hasValidPrefix()).toBe(true);
+  });
+
+  test("prefix is not an own property and does not appear in toJSON", () => {
+    const cookie = new Bun.Cookie("__Host-id", "1", { secure: true });
+    expect(Object.keys(cookie.toJSON())).not.toContain("prefix");
+    expect(Object.hasOwn(cookie, "prefix")).toBe(false);
+  });
+});
+
+describe("CookieMap.toCookieHeader", () => {
+  test("is the inverse of the header constructor", () => {
+    expect(new Bun.CookieMap("a=1; b=two").toCookieHeader()).toBe("a=1; b=two");
+    expect(new Bun.CookieMap("a=b%20c; d=%E2%9C%93").toCookieHeader()).toBe("a=b%20c; d=%E2%9C%93");
+    const map = new Bun.CookieMap({ q: "x y&z=1;w", plain: "ok" });
+    const header = map.toCookieHeader();
+    expect(header).toBe("q=x%20y%26z%3D1%3Bw; plain=ok");
+    expect(new Bun.CookieMap(header).toJSON()).toEqual({ q: "x y&z=1;w", plain: "ok" });
+  });
+
+  test("is empty for an empty map", () => {
+    expect(new Bun.CookieMap().toCookieHeader()).toBe("");
+  });
+
+  test("reflects set and delete", () => {
+    const map = new Bun.CookieMap("a=1; b=2; c=3");
+    map.set("d", "4");
+    map.delete("b");
+    map.set("a", "one");
+    expect(map.toCookieHeader()).toBe("d=4; a=one; c=3");
+    expect(map.size).toBe(3);
+  });
+
+  test("throws for a non-CookieMap receiver", () => {
+    expect(() => Bun.CookieMap.prototype.toCookieHeader.call({})).toThrow();
+  });
+});
+
+describe("CookieMap.fromSetCookie", () => {
+  test("builds a map from Set-Cookie headers", () => {
+    const map = Bun.CookieMap.fromSetCookie([
+      "session=abc123; Path=/; Secure; HttpOnly; SameSite=Strict",
+      "theme=dark; Max-Age=3600",
+    ]);
+    expect(map.toJSON()).toEqual({ session: "abc123", theme: "dark" });
+    expect(map.get("session")).toBe("abc123");
+    expect(map.size).toBe(2);
+    expect(map.toCookieHeader()).toBe("session=abc123; theme=dark");
+    expect(map.toSetCookieHeaders()).toEqual([
+      "session=abc123; Path=/; Secure; HttpOnly; SameSite=Strict",
+      "theme=dark; Path=/; Max-Age=3600; SameSite=Lax",
+    ]);
+  });
+
+  test("accepts a single header and later headers replace earlier ones", () => {
+    expect(Bun.CookieMap.fromSetCookie("a=1").toJSON()).toEqual({ a: "1" });
+    expect(Bun.CookieMap.fromSetCookie(["a=1", "b=2", "a=3"]).toJSON()).toEqual({ b: "2", a: "3" });
+    expect(Bun.CookieMap.fromSetCookie([]).size).toBe(0);
+  });
+
+  test("a header that expires the cookie removes it", () => {
+    const map = Bun.CookieMap.fromSetCookie([
+      "a=1; Path=/",
+      "b=2",
+      "a=; Path=/; Expires=Thu, 01 Jan 1970 00:00:00 GMT",
+      "b=gone; Max-Age=0",
+    ]);
+    expect(map.toJSON()).toEqual({});
+    expect(map.has("a")).toBe(false);
+    expect(map.toCookieHeader()).toBe("");
+  });
+
+  test("validates its argument", () => {
+    // @ts-expect-error
+    expect(() => Bun.CookieMap.fromSetCookie()).toThrow("Set-Cookie");
+    // @ts-expect-error
+    expect(() => Bun.CookieMap.fromSetCookie({})).toThrow("Set-Cookie");
+    // @ts-expect-error
+    expect(() => Bun.CookieMap.fromSetCookie([1])).toThrow("string");
+    expect(() => Bun.CookieMap.fromSetCookie("novalue")).toThrow();
+    expect(() => Bun.CookieMap.fromSetCookie("a=b\r\nInjected: 1")).toThrow();
+  });
+
+  test("works with a real Response", () => {
+    const headers = new Headers();
+    headers.append("Set-Cookie", "a=1; Path=/");
+    headers.append("Set-Cookie", "b=2; Secure");
+    const map = Bun.CookieMap.fromSetCookie(headers.getSetCookie());
+    expect(map.toCookieHeader()).toBe("a=1; b=2");
+  });
+});

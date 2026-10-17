@@ -37,6 +37,8 @@ public:
     ExceptionOr<void> remove(const CookieStoreDeleteOptions& options);
 
     JSC::JSValue toJSON(JSC::JSGlobalObject*) const;
+    // The request `Cookie:` header value: `name=value; name2=value2`, values percent-encoded.
+    String toCookieHeader(JSC::VM&) const;
     size_t size() const;
     size_t memoryCost() const;
 

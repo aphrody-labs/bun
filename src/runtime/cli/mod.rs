@@ -120,6 +120,10 @@ pub(crate) mod agent_plugin_command;
 pub(crate) mod docker_command;
 #[path = "dotnet_command.rs"]
 pub(crate) mod dotnet_command;
+#[path = "cookie_command.rs"]
+pub(crate) mod cookie_command;
+#[path = "env_command.rs"]
+pub(crate) mod env_command;
 #[path = "host_command.rs"]
 pub(crate) mod host_command;
 #[path = "search_command.rs"]
@@ -524,6 +528,8 @@ pub(crate) mod help_command {
   <b><blue>agent-plugin <d>[install]<r>         Install Bun's plugin into Claude Code, Codex and Antigravity
   <b><blue>ssh <d>\\<host\\> [command]<r>           SSH client, copies, forwards and server (system OpenSSH or built in)
   <b><blue>msvc <d>\\<command\\><r>                 Find MSVC and the Windows SDK, print or run with their environment
+  <b><blue>env <d>\\<command\\><r>                  Read and edit .env files, show the variables Bun loads
+  <b><blue>cookie <d>\\<command\\><r>               Keep browser cookies in jars and build Cookie headers
   <b><blue>lsp <d>[query]<r>                    Language server for TypeScript, Python, Rust, C/C++ and C#
   <b><blue>winmd <d>\\<options\\><r>                Generate Rust or bun:ffi bindings from Windows metadata
   <b><blue>dotnet <d>\\<command\\><r>               Run the .NET SDK (dotnet) inside Bun
@@ -1211,6 +1217,21 @@ pub(crate) mod command {
                 })
             {
                 super::host_command::exec(invocation);
+            }
+            if let Some(invocation) = super::env_command::Invocation::from_argv(argv0, first)
+                .or_else(|| {
+                    (first == Some(b"env") && be_bun()).then_some(super::env_command::Invocation)
+                })
+            {
+                super::env_command::exec(invocation);
+            }
+            if let Some(invocation) = super::cookie_command::Invocation::from_argv(argv0, first)
+                .or_else(|| {
+                    (first == Some(b"cookie") && be_bun())
+                        .then_some(super::cookie_command::Invocation)
+                })
+            {
+                super::cookie_command::exec(invocation);
             }
             if first == Some(b"lsp") && (super::lsp_command::is_bun(argv0) || be_bun()) {
                 super::lsp_command::exec();

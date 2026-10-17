@@ -1,0 +1,18 @@
+[package]
+name = "bun_env_cookie"
+version.workspace = true
+edition.workspace = true
+publish = false
+license = "MIT"
+
+[lib]
+path = "lib.rs"
+
+[lints]
+workspace = true
+
+# Leaf crate on std and serde_json only (no bun_core/bun_sys), like `bun_host`: `bun env` and
+# `bun cookie` run before the runtime starts, so `cargo test -p bun_env_cookie` links without
+# Bun's C++ objects.
+[dependencies]
+serde_json = { version = "1.0.150", features = ["preserve_order"] }

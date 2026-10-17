@@ -94,6 +94,7 @@ members = [
   "src/md",
   "src/readability",
   "src/host",
+  "src/env_cookie",
   "src/mcp",
   "src/agent_tools",
   "src/workspace",
@@ -358,6 +359,7 @@ default-members = [
   "src/md",
   "src/readability",
   "src/host",
+  "src/env_cookie",
   "src/mcp",
   "src/agent_tools",
   "src/workspace",
@@ -1001,6 +1003,7 @@ bun_lsp = { path = "src/lsp" }
 bun_md = { path = "src/md" }
 bun_readability = { path = "src/readability" }
 bun_host = { path = "src/host" }
+bun_env_cookie = { path = "src/env_cookie" }
 bun_mcp = { path = "src/mcp" }
 bun_agent_tools = { path = "src/agent_tools" }
 bun_vfs = { path = "src/vfs" }

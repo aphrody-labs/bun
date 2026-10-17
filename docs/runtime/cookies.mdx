@@ -170,6 +170,33 @@ server.listen(3000, () => {
 });
 ```
 
+#### `toCookieHeader(): string`
+
+Returns the value of a request `Cookie` header for the cookies in the map, like `"session=abc123; theme=dark"`. It is the inverse of `new CookieMap(header)`: values are percent-encoded, and cookies that were deleted are left out.
+
+```ts title="to-cookie-header.ts" icon="/icons/typescript.svg"
+const cookies = new Bun.CookieMap("session=abc123; note=a%20b");
+cookies.set("theme", "dark");
+cookies.delete("session");
+
+cookies.toCookieHeader(); // => "theme=dark; note=a%20b"
+```
+
+#### `CookieMap.fromSetCookie(headers: string | string[]): CookieMap`
+
+Creates a map from the `Set-Cookie` headers of a response, for example to carry cookies from one request to the next. Later headers replace earlier ones with the same name, and a header that expires its cookie (`Max-Age` of 0 or less, or a past `Expires`) removes it. The map keeps the attributes of each cookie, so `toSetCookieHeaders()` returns the headers again.
+
+```ts title="from-set-cookie.ts" icon="/icons/typescript.svg"
+const response = await fetch("https://example.com/login");
+const jar = Bun.CookieMap.fromSetCookie(response.headers.getSetCookie());
+
+await fetch("https://example.com/account", {
+  headers: { cookie: jar.toCookieHeader() },
+});
+```
+
+The map has no notion of domain or path. To keep cookies per site, or in a file, use [`bun cookie`](/runtime/bun-cookie).
+
 ### Iteration
 
 `CookieMap` provides several methods for iteration:
@@ -272,7 +299,10 @@ cookie.sameSite; // "strict" | "lax" | "none" - SameSite setting
 cookie.partitioned; // boolean - Whether the cookie is partitioned (CHIPS)
 cookie.maxAge; // number | undefined - Max age in seconds
 cookie.httpOnly; // boolean - Accessible only via HTTP (not JavaScript)
+cookie.prefix; // "__Host-" | "__Secure-" | null - Name prefix (read-only)
 ```
+
+The `domain` is case-insensitive: Bun stores it in lowercase, so `domain: "Example.COM"` becomes `"example.com"`.
 
 ### Methods
 
@@ -301,6 +331,29 @@ console.log(deletedCookie.isExpired()); // true
 const sessionCookie = new Bun.Cookie("name", "value");
 console.log(sessionCookie.isExpired()); // false
 ```
+
+#### `hasValidPrefix(): boolean`
+
+<a id="prefixes" />
+
+Names that start with `__Secure-` or `__Host-` (matched without regard to case) must meet the rules of [RFC 6265bis, section 4.1.3](https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-rfc6265bis#section-4.1.3), or browsers drop the cookie without an error. `hasValidPrefix()` checks them:
+
+| Prefix      | Requires                                  |
+| ----------- | ----------------------------------------- |
+| `__Secure-` | `secure`                                  |
+| `__Host-`   | `secure`, `path` of `/`, and no `domain`  |
+
+A cookie without a prefix is always valid. `cookie.prefix` returns the prefix as `"__Host-"` or `"__Secure-"`, or `null`.
+
+```ts title="prefix.ts" icon="/icons/typescript.svg"
+new Bun.Cookie("__Host-id", "1").hasValidPrefix(); // false: not Secure
+new Bun.Cookie("__Host-id", "1", { secure: true }).hasValidPrefix(); // true
+new Bun.Cookie("__Host-id", "1", { secure: true, domain: "example.com" }).hasValidPrefix(); // false
+
+Bun.Cookie.parse("__Secure-id=1; Secure; Path=/").prefix; // "__Secure-"
+```
+
+Bun does not change or reject a cookie for this; check it where a wrong cookie would otherwise go unnoticed.
 
 #### `serialize(): string`
 
@@ -365,6 +418,8 @@ console.log(cookie.secure); // true
 console.log(cookie.sameSite); // "lax"
 ```
 
+`Cookie.parse` follows [RFC 6265bis](https://datatracker.ietf.org/doc/html/draft-ietf-httpbis-rfc6265bis) for the attributes: names are case-insensitive, the last occurrence of an attribute wins, `Domain` is lowercased, and `Max-Age` is accepted only as an integer (an optional `-` and digits, so `Max-Age=3600abc` and `Max-Age=+60` are ignored and an earlier valid `Max-Age` stays). A `Max-Age` beyond the 64-bit range is clamped. `Max-Age` takes precedence over `Expires` in `isExpired()`.
+
 #### `Cookie.from(name: string, value: string, options?: CookieInit): Cookie`
 
 Factory method to create a cookie.
@@ -423,8 +478,10 @@ class Cookie {
   partitioned: boolean;
   maxAge?: number;
   httpOnly: boolean;
+  readonly prefix: "__Host-" | "__Secure-" | null;
 
   isExpired(): boolean;
+  hasValidPrefix(): boolean;
 
   serialize(): string;
   toString(): string;
@@ -436,10 +493,12 @@ class Cookie {
 
 class CookieMap implements Iterable<[string, string]> {
   constructor(init?: string[][] | Record<string, string> | string);
+  static fromSetCookie(headers: string | string[]): CookieMap;
 
   get(name: string): string | null;
 
   toSetCookieHeaders(): string[];
+  toCookieHeader(): string;
 
   has(name: string): boolean;
   set(name: string, value: string, options?: CookieInit): void;

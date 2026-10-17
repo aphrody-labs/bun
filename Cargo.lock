@@ -3856,6 +3856,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "bun_env_cookie"
+version = "1.4.6"
+dependencies = [
+ "serde_json",
+]
+
+[[package]]
 name = "bun_errno"
 version = "1.4.6"
 dependencies = [
@@ -5532,6 +5539,7 @@ dependencies = [
  "bun_docker",
  "bun_dotenv",
  "bun_ecma_api",
+ "bun_env_cookie",
  "bun_errno",
  "bun_event_loop",
  "bun_format_conformance",
