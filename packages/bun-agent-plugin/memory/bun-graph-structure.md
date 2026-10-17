@@ -5,7 +5,7 @@ metadata:
   type: reference
 ---
 
-Sources: `aphrody graph --source graph:bun report|explain|path|query`, a Bun script over `~\.aphrody\graphs\bun\graph.json` (keys `nodes`, `links`, `hyperedges`=0, `built_at_commit`=null), `aphrody scan tree|manifests`, `aphrody ingest --subpath … --include "*.rs" --json`. HEAD fe43d1d685a, 2026-10-08. Graph setup: `bun-aphrody-graph-memory`.
+Sources: `aphrody graph --source graph:bun report|explain|path|query`, a Bun script over `~\.aphrody\graphs\bun\graph.json` (keys `nodes`, `links`, `hyperedges`=0, `built_at_commit`=null), `aphrody scan tree|manifests`, `aphrody ingest --subpath … --include "*.rs" --json`. graph rebuilt 2026-10-17 at b47fbbd13f9; the community and god-node lists below date from fe43d1d685a (2026-10-08) and the 114 k-node era. Graph setup: `bun-aphrody-graph-memory`.
 
 **Size facts**
 
@@ -16,7 +16,7 @@ Sources: `aphrody graph --source graph:bun report|explain|path|query`, a Bun scr
 - Disk (scan tree): `build/debug` 16.5 GB / 16 186 files (12 303 `.o`); `vendor` 0.33 GB (boringssl 231 MB); `test` 15 030 files (test/js 8 314, test/bundler 3 787); `src/jsc` 1 428 files (681 `.h`, 557 `.cpp`, 112 `.rs`).
 - LLM digest cost (`aphrody ingest`, `.rs` only): src/install 998 k tokens, js_parser 841 k, bundler 622 k, jsc 553 k, runtime/server 255 k, resolver 181 k — no crate fits a context window whole; feed single files.
 
-**Graph totals**: 114 065 nodes, 304 039 edges (references 87 k, calls 72 k, contains 49 k, imports_from 38 k, method 36 k, case_of 12 k, implements 1.6 k, inherits 117); 98 % EXTRACTED.
+**Graph totals** (2026-10-17, b47fbbd13f9): 479 390 nodes, 1 167 167 edges, 21 946 communities, modularity 0.90 (calls 359 k, contains 286 k, references 211 k, imports_from 130 k, method 103 k, imports 44 k, case_of 25 k, implements 8.4 k, inherits 274); 88 % EXTRACTED, 11 % INFERRED (avg confidence 0.86). Languages: rust 7 663 files / 198 797 nodes, typescript 19 285 / 109 523, javascript 13 031 / 77 012, markdown 11 811 / 82 712. 562 packages; largest: @aphrody/bun-video 94 504 nodes, bun 42 184, test 36 702, aphrody-m3 21 321, bun_runtime 19 085.
 
 **Communities decoded** (id: label, size → dominant dirs → meaning)
 
