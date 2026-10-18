@@ -1,6 +1,6 @@
 // Live suite: every check reads the public episodes wiki and the Shenron CDN, not local fixtures.
 // The suite is skipped (with the reason printed) only when the wiki cannot be reached at all.
-import { beforeAll, describe, expect, test } from "bun:test";
+import { describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
@@ -36,12 +36,50 @@ live("episodes wiki and Shenron CDN", () => {
     expect(frameUrls().length).toBeGreaterThan(10);
   });
 
-  // The CDN advertises accept-ranges: bytes but answers a Range request with 200 and the whole body.
-  // test.failing passes while that holds and fails once ranges work, so it then becomes a plain test.
-  test.failing("CDN answers a Range request with 206", async () => {
+  // Diagnosed 2026-10-18: the R2 worker (deploy/cloudflare/cdn-worker.ts in the Shenron repo) answers
+  // Range with 206 and Content-Range (its own tests cover it, and the first test below sees it on a
+  // URL that is not in the edge cache). A URL already in the Cloudflare edge cache (cf-cache-status:
+  // HIT) is served as a 200 with the whole body although accept-ranges: bytes is sent, so a player
+  // that seeks by range downloads the full file. Fixing it is a Cloudflare cache or worker routing
+  // change, not a code change here: test.failing passes while that holds and fails once it is fixed,
+  // so it then becomes a plain test.
+  test("CDN answers a Range request with 206 on an uncached URL", async () => {
+    const url = `${posterUrls()[0]!}?range-probe=${crypto.randomUUID()}`;
+    const response = await fetch(url, { headers: { Range: "bytes=0-99" }, signal: deadline() });
+    expect(response.status).toBe(206);
+    expect(response.headers.get("content-range")).toMatch(/^bytes 0-99\//);
+    expect((await response.arrayBuffer()).byteLength).toBe(100);
+  });
+
+  test.failing("CDN answers a Range request with 206 on a URL cached at the edge", async () => {
     const response = await fetch(posterUrls()[0]!, { headers: { Range: "bytes=0-99" }, signal: deadline() });
     expect(response.status).toBe(206);
     expect(response.headers.get("content-range")).toMatch(/^bytes 0-99\//);
+  });
+
+  // The qualified Beerus episode MP4 is served by the origin that honours ranges even from the edge cache.
+  test("the qualified episode MP4 supports byte ranges and starts with its moov atom", async () => {
+    const url = `${CDN}/media/episodes/beerus-01/optimized-720p.mp4`;
+    const response = await fetch(url, { headers: { Range: "bytes=0-65535" }, signal: deadline() });
+    expect(response.status).toBe(206);
+    expect(response.headers.get("content-type")).toBe("video/mp4");
+    const range = /^bytes 0-65535\/(\d+)$/.exec(response.headers.get("content-range") ?? "");
+    expect(range).not.toBeNull();
+    expect(Number(range![1])).toBeGreaterThan(1_000_000);
+    const head = new Uint8Array(await response.arrayBuffer());
+    expect(head.byteLength).toBe(65536);
+    expect(new TextDecoder().decode(head.subarray(4, 8))).toBe("ftyp");
+    // Walk the top-level boxes: faststart means moov comes before mdat so playback starts without a tail seek.
+    const view = new DataView(head.buffer);
+    const order: string[] = [];
+    for (let offset = 0; offset + 8 <= head.byteLength && order.length < 8;) {
+      const size = view.getUint32(offset);
+      order.push(new TextDecoder().decode(head.subarray(offset + 4, offset + 8)));
+      if (size < 8) break;
+      offset += size;
+    }
+    expect(order.indexOf("moov")).toBeGreaterThan(-1);
+    if (order.includes("mdat")) expect(order.indexOf("moov")).toBeLessThan(order.indexOf("mdat"));
   });
 
   test("CDN serves a poster with caching headers", async () => {
@@ -120,7 +158,7 @@ live.skipIf(!webViewAvailable)("episodes wiki in Bun.WebView", () => {
     expect(links).toBeGreaterThan(10);
 
     // Every <img> the page has started loading from the CDN must decode with real pixels.
-    const images = await view.evaluate(
+    const images: { src: string; w: number; h: number }[] = await view.evaluate(
       `(async () => {
         const imgs = [...document.images].filter(i => i.src.startsWith(${JSON.stringify(CDN)})).slice(0, 12);
         const settle = (i) => Promise.race([i.decode().catch(() => {}), new Promise(r => setTimeout(r, 8000))]);

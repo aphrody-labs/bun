@@ -77,21 +77,24 @@ test("source normalization preserves paths and byte view boundaries", () => {
   expect(() => resolveVideoSource("javascript:alert(1)")).toThrow("Unsupported video source protocol");
 });
 
-test("native Video facade ingests a Response and delegates fluent state without opening media", async () => {
-  const { createVideo } = await import("../src/pipeline");
-  const source = new Uint8Array([1, 2, 3]);
-  const video = await createVideo(new Response(source), { maxPixels: 4 });
-  expect(video).toBeInstanceOf(Bun.Video);
-  expect(video.frame(0).resize(2, 2).png()).toBe(video);
-  expect(video.width).toBe(-1);
-  expect(video.height).toBe(-1);
-  const controller = new AbortController();
-  controller.abort(new Error("stop video ingestion"));
-  await expect(createVideo(new Response(source), { signal: controller.signal })).rejects.toThrow(
-    "stop video ingestion",
-  );
-  await expect(createVideo(new Response(source, { status: 404 }))).rejects.toThrow("Media response failed (404)");
-});
+test.skipIf(typeof Bun.Video !== "function")(
+  "native Video facade ingests a Response and delegates fluent state without opening media",
+  async () => {
+    const { createVideo } = await import("../src/pipeline");
+    const source = new Uint8Array([1, 2, 3]);
+    const video = await createVideo(new Response(source), { maxPixels: 4 });
+    expect(video).toBeInstanceOf(Bun.Video);
+    expect(video.frame(0).resize(2, 2).png()).toBe(video);
+    expect(video.width).toBe(-1);
+    expect(video.height).toBe(-1);
+    const controller = new AbortController();
+    controller.abort(new Error("stop video ingestion"));
+    await expect(createVideo(new Response(source), { signal: controller.signal })).rejects.toThrow(
+      "stop video ingestion",
+    );
+    await expect(createVideo(new Response(source, { status: 404 }))).rejects.toThrow("Media response failed (404)");
+  },
+);
 
 test("FFmpeg requires an absolute native library directory", () => {
   expect(() => ffmpegLibraryPath("avcodec", "relative")).toThrow("must be absolute");

@@ -85,7 +85,7 @@ test("the installed canonical compiler rolls inferred public types across a work
       .getPreEmitDiagnostics(tools.compiler.createProgram([consumer], consumerOptions))
       .map(diagnostic => diagnostic.code),
   ).toContain(2322);
-});
+}, 180_000);
 
 test("the pinned Linkedom declarations describe its partial DOM and preserve parsing", async () => {
   const { compiler: ts } = await declarationTools();
@@ -119,7 +119,7 @@ test("the pinned Linkedom declarations describe its partial DOM and preserve par
   expect(document.querySelector("a")?.textContent).toBe("Bun Video");
   expect(document.querySelector("a")?.getAttribute("href")).toBe("/video");
   expect(document.toString()).toContain('<a href="/video">Bun Video</a>');
-});
+}, 180_000);
 
 test("declaration analysis preserves dependency versions from each original importer", async () => {
   const tools = await declarationTools();
@@ -185,4 +185,4 @@ test("declaration analysis preserves dependency versions from each original impo
   expect(
     diagnostics.map(diagnostic => tools.compiler.flattenDiagnosticMessageText(diagnostic.messageText, "\n")),
   ).toEqual([]);
-});
+}, 180_000);

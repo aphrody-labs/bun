@@ -10,7 +10,9 @@ export async function writeFamilyConfigs(root = resolve(import.meta.dir, "..")) 
   const { modulePaths } = await runtimeClosure(root);
   for (const family of absorbedFamilies) {
     const file = join(root, family, familyConfigs[family]);
-    const config = (await Bun.file(file).exists()) ? Bun.JSONC.parse(await Bun.file(file).text()) : {};
+    const config: { compilerOptions?: { paths?: Record<string, string[]> } } = (await Bun.file(file).exists())
+      ? (Bun.JSONC.parse(await Bun.file(file).text()) as object)
+      : {};
     config.compilerOptions ??= {};
     config.compilerOptions.paths = Object.fromEntries(
       Object.entries(modulePaths).map(([name, [path]]) => [

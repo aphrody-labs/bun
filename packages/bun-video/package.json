@@ -7,7 +7,7 @@
     "bun-video": "./dist/umbrella-src/cli.ts"
   },
   "scripts": {
-    "check:types": "bun check --threads=1 --project tsconfig.check.json --noEmit && bun check --threads=1 --project tsconfig.scripts.check.json --noEmit",
+    "check:types": "bun scripts/check-types.ts",
     "check:engines": "bun scripts/check-engines.ts",
     "repair:engines": "bun scripts/repair-engine-migration.ts",
     "lint": "bun lint src test",

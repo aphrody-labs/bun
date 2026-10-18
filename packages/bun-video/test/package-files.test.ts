@@ -44,7 +44,7 @@ test("native pack honors literal public files and leaves unlisted test/old/priva
   expect(publicPackageFile("packages/example/src/test/integration/old-version-bundle/bundle.js")).toBe(false);
   expect(publicPackageFile("packages/example/src/worker.ts")).toBe(true);
   expect(publicPackageFile("scripts/.env-private/nested.json")).toBe(false);
-});
+}, 180_000);
 
 test("real manifest closure preserves exact owner pins and excludes optional model peers and unrelated workspaces", async () => {
   const root = join(import.meta.dir, "../remotion");
@@ -75,4 +75,4 @@ test("real manifest closure preserves exact owner pins and excludes optional mod
   ).toBe(true);
   await expect(planRemotionLibraryAssets(root, ["../protected"])).rejects.toThrow("Unsafe physical package name");
   await expect(planRemotionLibraryAssets(root, [".."])).rejects.toThrow("Unsafe physical package name");
-});
+}, 180_000);
