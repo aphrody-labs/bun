@@ -5174,6 +5174,9 @@
     "react": "19.2.3",
     "react-dom": "19.2.3"
   },
+  "optionalDependencies": {
+    "yauzl": "2.10.0"
+  },
   "engines": {
     "bun": ">=1.4.4"
   },

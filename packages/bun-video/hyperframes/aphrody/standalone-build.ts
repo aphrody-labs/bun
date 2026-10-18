@@ -1,5 +1,8 @@
+import { existsSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
+import type { BunPlugin } from "bun";
+import packageTsconfig from "../../tsconfig.json";
 import { resolveNativeCompositionTarget, sharpNativePlugin } from "./sharp-native-plugin";
 import { hyperframesRuntimeAssetsPlugin } from "./runtime-assets-plugin";
 import { remotionSourcePlugin } from "../../remotion/.aphrody/standalone-build";
@@ -25,6 +28,38 @@ export async function prepareHyperframesStandalone(): Promise<void> {
     const code = await process.exited;
     if (code !== 0) throw new Error(`Hyperframes core ${script} failed with exit ${code}`);
   }
+}
+
+/**
+ * The absorbed HyperFrames tree has no own alias table for the generated core modules and no installed
+ * dependencies. Resolve those from the owned bun-video tsconfig aliases, then from the pinned build registry.
+ */
+export function hyperframesDependencyPlugin(): BunPlugin {
+  const aliases: Record<string, string[]> = packageTsconfig.compilerOptions.paths;
+  const registry = resolve(hyperframesRoot, "../remotion/.aphrody/build-deps");
+  return {
+    name: "hyperframes-dependency-resolution",
+    setup(build) {
+      build.onResolve({ filter: /^[^./]/ }, ({ path, importer }) => {
+        if (!importer.startsWith(hyperframesRoot)) return;
+        if (path.startsWith("node:") || path.startsWith("bun:") || path === "bun") return;
+        const alias = aliases[path];
+        if (alias?.length === 1 && path.startsWith("@hyperframes/")) {
+          const target = resolve(hyperframesRoot, "..", alias[0]!);
+          if (existsSync(target)) return { path: target };
+        }
+        try {
+          Bun.resolveSync(path, importer);
+          return;
+        } catch {}
+        try {
+          return { path: Bun.resolveSync(path, registry) };
+        } catch {
+          return;
+        }
+      });
+    },
+  };
 }
 
 export async function hyperframesStandaloneConfig(options: {

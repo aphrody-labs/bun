@@ -1,6 +1,11 @@
 import { mkdir, stat, unlink } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve } from "node:path";
-import { prepareHyperframesStandalone, hyperframesStandaloneConfig } from "../hyperframes/aphrody/standalone-build";
+import {
+  hyperframesDependencyPlugin,
+  prepareHyperframesStandalone,
+  hyperframesStandaloneConfig,
+} from "../hyperframes/aphrody/standalone-build";
+import { generateHyperframes } from "./generate-hyperframes";
 import { remotionSourcePlugin } from "../remotion/.aphrody/standalone-build";
 import { sharpNativePlugin } from "../hyperframes/aphrody/sharp-native-plugin";
 import { remotionModuleAssetsPlugin } from "../remotion/.aphrody/module-assets";
@@ -47,6 +52,7 @@ if (library && previous.size === 0) {
     throw new Error("An unowned output prevents a fresh library build");
 }
 await prepareHyperframesStandalone();
+await generateHyperframes();
 const declarations = library ? await buildLibraryDeclarations(root) : undefined;
 const hyperframes = await hyperframesStandaloneConfig({
   outfile,
@@ -64,6 +70,7 @@ const result = await Bun.build({
     await remotionSourcePlugin(),
     await sharpNativePlugin(),
     hyperframesRuntimeAssetsPlugin(),
+    hyperframesDependencyPlugin(),
     await remotionModuleAssetsPlugin(
       library ? { libraryPackages: ["@remotion/cli", "@remotion/renderer", "remotion"] } : undefined,
     ),
@@ -158,8 +165,12 @@ if (plan) {
   await Bun.write(join(outfile, sdkNoticeName), sdkNotice);
   outputHashes.set(sdkNoticeName, new Bun.CryptoHasher("sha256").update(sdkNotice).digest("hex"));
   outputs.push({ name: sdkNoticeName, bytes: sdkNotice.length, sha256: outputHashes.get(sdkNoticeName)! });
+  const checkout = resolve(root, "../..");
   for (const path of new Set([...sourceNames].map(name => resolve(root, name)))) {
     if (!(await Bun.file(path).exists())) continue; // Plugin namespaces are recorded by the native metafile.
+    // Store packages are pinned by the lock and their payload is already compiled; only checkout sources are receipt inputs.
+    const member = relative(checkout, path);
+    if (isAbsolute(member) || member.startsWith("..")) continue;
     const bytes = await Bun.file(path).bytes();
     inputs.push({
       name: relative(root, path).replaceAll("\\", "/"),
