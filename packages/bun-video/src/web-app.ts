@@ -18,6 +18,8 @@ export interface VideoWebAppOptions {
   readonly dashLab?: { readonly inputPath: string; readonly mode?: "capture" | "live" };
   /** Enables the HLS lab, prepared from the protected local inputs when first requested. */
   readonly hlsLab?: boolean;
+  /** Name of the cookie bundle stored in the OS credential store (bun.secrets); values never leave the store. */
+  readonly hlsCookieSecret?: string;
   /** Mounts the video data site API under /api/ and its client under /site/. */
   readonly dataSite?: { readonly privateRoot?: string; readonly dbPath?: string };
   /** Mounts the episode workbench under /episode/ for this episode directory. */
@@ -138,7 +140,8 @@ export function createVideoWebApp(options: VideoWebAppOptions): VideoWebApp {
 
     if (path === "/labs/hls/" || path === "/labs/hls") {
       if (!options.hlsLab) return json({ error: "lab_not_configured" }, 404);
-      hlsLab ??= prepareHlsLab(["--mounted"]).catch(() => {
+      const secretArgs = options.hlsCookieSecret ? ["--cookie-secret", options.hlsCookieSecret] : [];
+      hlsLab ??= prepareHlsLab(["--mounted", ...secretArgs]).catch(() => {
         hlsLab = undefined;
         return undefined;
       });
