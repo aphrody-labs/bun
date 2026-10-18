@@ -259,13 +259,15 @@ export async function remotionModuleAssetsPlugin(options?: {
         throw new Error("Materialized scoped assets exceed their payload bound");
       files.push({ source: path, destination: path.slice(stage.length + 1).replaceAll("\\", "/") });
     }
-    const receiptFiles = await Promise.all(
-      files.map(async (file) => ({
+    // Sequential hashing keeps one open handle at a time; a parallel map exhausts file descriptors.
+    const receiptFiles = [];
+    for (const file of files) {
+      receiptFiles.push({
         name: file.destination,
         bytes: Bun.file(file.source).size,
         sha256: new Bun.CryptoHasher("sha256").update(await Bun.file(file.source).bytes()).digest("hex"),
-      })),
-    );
+      });
+    }
     await Bun.write(
       join(stage, "library-module-assets-receipt.json"),
       JSON.stringify(

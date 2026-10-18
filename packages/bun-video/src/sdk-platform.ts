@@ -8,7 +8,23 @@ import {
   type LinuxABI,
 } from "@aphrody/bun-runtime-sdk/target";
 
-export type MediaSDKTarget = keyof typeof manifest.targets;
+export type MediaSDKTarget =
+  | "windows-x64"
+  | "linux-x64"
+  | "windows-arm64"
+  | "linux-arm64"
+  | "linux-x64-musl"
+  | "linux-arm64-musl"
+  | "darwin-x64"
+  | "darwin-arm64";
+// Keeps the literal union exact against the pinned manifest without exposing the JSON module in declarations.
+type ManifestTarget = keyof typeof manifest.targets;
+const manifestTargetsExact: [MediaSDKTarget] extends [ManifestTarget]
+  ? [ManifestTarget] extends [MediaSDKTarget]
+    ? true
+    : never
+  : never = true;
+void manifestTargetsExact;
 
 export interface MediaSDKPlatform {
   platform: string;

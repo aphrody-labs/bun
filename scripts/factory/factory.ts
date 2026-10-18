@@ -1,11 +1,12 @@
 #!/usr/bin/env bun
-// Google-style build factory for the VPS: depot_tools, gclient/repo sync, gn gen, autoninja.
+// Build factory: VPS depot_tools/gclient/GN and native host build-slot execution.
 // Heavy steps take build slots from tools/config/fusion-factory.json. In multi mode, slot i is a
 // flock on `heavy.lock` (i = 0) or `heavy.<i>.lock` and owns `jobsPerSlot` CPUs through taskset,
 // so concurrent builds run side by side. A step also takes every other free slot, so a build alone
-// uses all CPUs. Scripts that flock `heavy.lock` hold slot 0.
+// uses all CPUs. Scripts that flock `heavy.lock` hold slot 0. Windows uses global OS mutexes
+// keyed by checkout-local lock paths, and Job Objects keep child lifetimes within each reservation.
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
-import { posix } from "node:path";
+import { posix, delimiter, resolve } from "node:path";
 
 const { join } = posix;
 import factory from "../../tools/config/fusion-factory.json";
@@ -55,6 +56,10 @@ Mode: ${builds.mode} (BUN_FACTORY_MODE=single|multi), ${builds.slots} slots of $
 Targets: ${Object.keys(targets).join(", ")}`;
 
 export function slotLocks(): string[] {
+  if (process.platform === "win32") {
+    const root = resolve(process.env.BUN_FACTORY_LOCK_ROOT ?? resolve(import.meta.dir, "../../build/factory/locks"));
+    return Array.from({ length: slotCount() }, (_, i) => resolve(root, i ? `heavy.${i}.lock` : "heavy.lock"));
+  }
   return Array.from({ length: slotCount() }, (_, i) =>
     i === 0 ? factory.lockPath : factory.lockPath.replace(/\.lock$/, `.${i}.lock`),
   );
@@ -81,10 +86,11 @@ export function slotSets(k: number, n = slotCount()): number[][] {
 }
 
 export function env(): Record<string, string> {
+  if (process.platform === "win32") return { ...(process.env as Record<string, string>) };
   const cache = google.cacheRoot;
   return {
     ...(process.env as Record<string, string>),
-    PATH: `${google.depotTools}:${process.env.PATH ?? ""}`,
+    PATH: `${google.depotTools}${delimiter}${process.env.PATH ?? ""}`,
     DEPOT_TOOLS_UPDATE: "0",
     GIT_CACHE_PATH: join(cache, "git"),
     SCCACHE_DIR: join(cache, "sccache"),
@@ -97,6 +103,16 @@ export function env(): Record<string, string> {
 
 /** `argv` under the flocks of `held`, pinned to their CPUs in multi mode. */
 export function wrap(argv: string[], held: number[], wait: boolean): string[] {
+  if (process.platform === "win32")
+    return [
+      process.execPath,
+      import.meta.path,
+      "--windows-locks",
+      wait ? "wait" : "try",
+      held.join(","),
+      "--",
+      ...argv,
+    ];
   const locks = slotLocks();
   const out: string[] = [];
   for (const i of held) out.push("flock", ...(wait ? [] : ["-n", "-E", String(BUSY)]), locks[i]!);
@@ -145,7 +161,7 @@ export function plan(name: string, config = "release"): Step[] {
       cwd: src,
       argv: ["autoninja", "-C", out, "-j", JOBS, ...t.ninjaTargets],
       slots: clamp(t.slots ?? 1),
-      maxSlots: t.maxSlots,
+      ...(t.maxSlots === undefined ? {} : { maxSlots: t.maxSlots }),
     });
   return steps;
 }
@@ -170,6 +186,7 @@ function spawn(cwd: string, argv: string[], held: number) {
     cwd,
     env: { ...env(), ...(held ? vars : {}) },
     stdio: ["inherit", "inherit", "inherit"],
+    windowsHide: true,
   }).exitCode;
 }
 
@@ -189,7 +206,7 @@ export function run(step: Step, dry: boolean) {
       );
       if (!held) break;
       console.log(
-        `factory: ${held.length} slot(s), CPUs ${multi() ? cpuList(held) : "all"}, ${jobs(held.length)} jobs`,
+        `factory: ${held.length} slot(s), CPUs ${multi() && process.platform !== "win32" ? cpuList(held) : "all"}, ${jobs(held.length)} jobs`,
       );
       code = spawn(step.cwd, wrap(withJobs(step.argv, held.length), held, false), held.length);
     }
@@ -204,11 +221,55 @@ export function run(step: Step, dry: boolean) {
 }
 
 export function slots(): { lock: string; cpus: string; taken: boolean }[] {
+  if (process.platform === "win32")
+    return slotLocks().map((lock, i) => {
+      const release = windowsSlotLock(i, false);
+      const taken = !release;
+      release?.();
+      return { lock, cpus: "all", taken };
+    });
   return slotLocks().map((lock, i) => ({
     lock,
     cpus: multi() ? cpuList([i]) : "all",
     taken: Bun.spawnSync(["flock", "-n", "-E", String(BUSY), lock, "true"]).exitCode === BUSY,
   }));
+}
+
+/** Kernel-owned mutex handles release after process death, including an interrupted build. */
+export function windowsSlotLock(slot: number, wait: boolean): (() => void) | undefined {
+  if (process.platform !== "win32") throw new Error("Windows factory locks require Windows");
+  const lock = slotLocks()[slot];
+  if (!lock) throw new RangeError("Unknown factory slot");
+  const { dlopen, ptr } = require("bun:ffi") as typeof import("bun:ffi");
+  const kernel = dlopen("kernel32.dll", {
+    CreateMutexW: { args: ["ptr", "i32", "ptr"], returns: "ptr" },
+    WaitForSingleObject: { args: ["ptr", "u32"], returns: "u32" },
+    ReleaseMutex: { args: ["ptr"], returns: "i32" },
+    CloseHandle: { args: ["ptr"], returns: "i32" },
+  });
+  const digest = new Bun.CryptoHasher("sha256").update(lock.toLowerCase()).digest("hex");
+  const name = Buffer.from(`Global\\BunFactory-${digest}\0`, "utf16le");
+  const handle = kernel.symbols.CreateMutexW(null, 0, ptr(name));
+  if (!handle) {
+    kernel.close();
+    throw new Error("CreateMutexW failed for factory slot");
+  }
+  const status = kernel.symbols.WaitForSingleObject(handle, wait ? 30_000 : 0);
+  if (status !== 0 && status !== 0x80) {
+    kernel.symbols.CloseHandle(handle);
+    kernel.close();
+    if (status === 258) return undefined;
+    throw new Error(`Factory mutex wait failed: ${status}`);
+  }
+  let released = false;
+  return () => {
+    if (released) return;
+    released = true;
+    const ok = kernel.symbols.ReleaseMutex(handle);
+    kernel.symbols.CloseHandle(handle);
+    kernel.close();
+    if (!ok) throw new Error("Factory mutex release failed");
+  };
 }
 
 function depot(dry: boolean) {
@@ -241,7 +302,42 @@ function timer(dry: boolean) {
   );
 }
 
-export function main(argv = process.argv.slice(2)) {
+export async function main(argv = process.argv.slice(2)) {
+  if (argv[0] === "--windows-locks") {
+    const separator = argv.indexOf("--");
+    if (separator !== 3 || !["wait", "try"].includes(argv[1]!)) throw new Error("Invalid Windows factory lock command");
+    const held = argv[2]!.split(",").map(Number);
+    if (!held.length || held.some((slot, i) => !Number.isInteger(slot) || slot < 0 || (i > 0 && slot <= held[i - 1]!)))
+      throw new Error("Factory slots must be unique and ascending");
+    const releases: (() => void)[] = [];
+    try {
+      for (const slot of held) {
+        const release = windowsSlotLock(slot, argv[1] === "wait");
+        if (!release) {
+          process.exitCode = BUSY;
+          return;
+        }
+        releases.push(release);
+      }
+      const command = argv.slice(separator + 1);
+      if (!command.length) throw new Error("Factory lock command requires an executable");
+      const { Job } = await import("bun:windows");
+      using job = new Job({ killOnClose: true });
+      const n = String(jobs(held.length));
+      const child = job.spawn(command, {
+        cwd: process.cwd(),
+        env: { ...env(), BUN_FACTORY_JOBS: n, CARGO_BUILD_JOBS: n, CMAKE_BUILD_PARALLEL_LEVEL: n },
+        stdin: "inherit",
+        stdout: "inherit",
+        stderr: "inherit",
+        windowsHide: true,
+      });
+      process.exitCode = await child.exited;
+    } finally {
+      for (const release of releases.reverse()) release();
+    }
+    return;
+  }
   const sep = argv.indexOf("--");
   const command = sep >= 0 ? argv.slice(sep + 1) : [];
   const args = sep >= 0 ? argv.slice(0, sep) : argv;
@@ -272,7 +368,7 @@ export function main(argv = process.argv.slice(2)) {
       if (!command.length) throw new Error("run needs a command after --");
       const n = clamp(Number(value("--slots") ?? 1));
       const max = value("--max-slots");
-      return run({ cwd: process.cwd(), argv: command, slots: n, maxSlots: max ? Number(max) : undefined }, dry);
+      return run({ cwd: process.cwd(), argv: command, slots: n, ...(max ? { maxSlots: Number(max) } : {}) }, dry);
     }
     case "sync":
     case "gen":
@@ -292,4 +388,4 @@ export function main(argv = process.argv.slice(2)) {
   }
 }
 
-if (import.meta.main) main();
+if (import.meta.main) await main();

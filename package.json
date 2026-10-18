@@ -9,7 +9,7 @@
     "./packages/bun-types",
     "./packages/bun-web",
     "./packages/bun-plugin-tailwind",
-    "./packages/bun-plugin-neon",
+    "./packages/bun-sql",
     "./packages/bun-m3",
     "./packages/bun-next",
     "./packages/web",

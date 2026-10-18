@@ -154,7 +154,8 @@ async function selfCheck() {
   );
 }
 
-export async function main(argv = Bun.argv.slice(2)) {
+/** Builds the HLS lab handler; `main` owns the listener, the web app mounts `handle` under `prefix`. */
+export async function prepareHlsLab(argv = Bun.argv.slice(2)) {
   args = argv;
   if (args.includes("--help")) {
     console.log(
@@ -219,13 +220,10 @@ export async function main(argv = Bun.argv.slice(2)) {
     return `${prefix}/media/${id}`;
   };
   let manifestPath = config.src ? register(config.src) : null;
-  const server = Bun.serve({
-    hostname: "127.0.0.1",
-    port: 0,
-    async fetch(req) {
+  const handle = async (req: Request): Promise<Response> => {
+    {
       const requestURL = new URL(req.url);
-      if (requestURL.host !== server.url.host || !requestURL.pathname.startsWith(prefix))
-        return new Response("Not found", { status: 404 });
+      if (!requestURL.pathname.startsWith(prefix)) return new Response("Not found", { status: 404 });
       const path = requestURL.pathname.slice(prefix.length);
       const headers = {
         "Cache-Control": "no-store",
@@ -257,7 +255,7 @@ export async function main(argv = Bun.argv.slice(2)) {
           { headers },
         );
       if (req.method === "POST" && path === "/source") {
-        if (req.headers.get("origin") !== server.url.origin) return new Response("Origin rejected", { status: 403 });
+        if (req.headers.get("origin") !== requestURL.origin) return new Response("Origin rejected", { status: 403 });
         try {
           const next = validateHlsConfig({
             ...(await req.json()),
@@ -312,9 +310,17 @@ export async function main(argv = Bun.argv.slice(2)) {
         }
       }
       return new Response("Not found", { status: 404 });
-    },
-  });
-  const url = new URL(`${prefix}/`, server.url).href;
+    }
+  };
+  return { handle, prefix, cookies };
+}
+
+export async function main(argv = Bun.argv.slice(2)) {
+  const lab = await prepareHlsLab(argv);
+  if (!lab) return;
+  const { cookies } = lab;
+  const server = Bun.serve({ hostname: "127.0.0.1", port: 0, fetch: lab.handle });
+  const url = new URL(`${lab.prefix}/`, server.url).href;
   console.log(`HLS lab ready: ${url}`);
   const endpoint = option("--endpoint");
   if (endpoint) {

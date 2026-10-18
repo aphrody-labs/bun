@@ -262,3 +262,4 @@ src/runtime/hawk_root.rs
 /packages/bun-video/packages/*/packages/*/tests/**/output/
 # Native command receipts of nested checkouts.
 **/var/runs/
+*.har

@@ -53,14 +53,24 @@ export function prepareCapturedDash(xml: string, baseURL: string, localRoot: str
   return { manifest: rewritten, resources, summary };
 }
 
-export async function startDashLab(inputPath: string, mode: "capture" | "live" = "capture") {
+export interface DashLabOptions {
+  readonly inputPath: string;
+  readonly mode?: "capture" | "live";
+  /** Public origin of the server that mounts this lab; manifest URLs are rewritten against it. */
+  readonly origin: string;
+  /** Path prefix ending in "/" under which the lab is mounted. */
+  readonly prefix: string;
+}
+
+/** Builds the DASH lab handler without starting a server; the caller owns the listener. */
+export async function createDashLab({ inputPath, mode = "capture", origin, prefix }: DashLabOptions) {
+  if (!prefix.startsWith("/") || !prefix.endsWith("/")) throw new RangeError("Lab prefix must start and end with /");
   const capture = mode === "capture" ? await loadHarCapture(resolve(inputPath)) : null;
   const descriptor = capture?.selectManifest({ kind: "dash" });
   if (capture && !descriptor) throw new Error("No captured DASH manifest is available.");
   const live = mode === "live" ? createDashLiveTransport(await readPrivateLiveConfig(inputPath)) : null;
   const source = live ? await live.fetchSource() : null;
-  const capability = crypto.randomUUID();
-  const route = `/lab/${capability}/`;
+  const route = prefix;
   const browser = await Bun.build({
     entrypoints: [resolve(import.meta.dir, "../dash.ts")],
     target: "browser",
@@ -74,13 +84,10 @@ export async function startDashLab(inputPath: string, mode: "capture" | "live" =
     summary: ReturnType<typeof inspectDashManifest>;
     resources: string[];
   };
-  let serverOrigin = "";
-  const server = Bun.serve({
-    hostname: "127.0.0.1",
-    port: 0,
-    async fetch(request) {
+  const handle = async (request: Request): Promise<Response> => {
+    {
       const url = new URL(request.url);
-      if (url.origin !== serverOrigin || !url.pathname.startsWith(route)) return new Response(null, { status: 404 });
+      if (!url.pathname.startsWith(route)) return new Response(null, { status: 404 });
       const relative = url.pathname.slice(route.length);
       const headers = { "Cache-Control": "no-store", "Referrer-Policy": "no-referrer" };
       if (request.method !== "GET" && !(live && relative.startsWith("live/") && request.method === "HEAD"))
@@ -145,30 +152,46 @@ export async function startDashLab(inputPath: string, mode: "capture" | "live" =
         );
       }
       return new Response(null, { status: 404 });
-    },
-  });
-  serverOrigin = server.url.origin;
-  try {
-    const localRoot = `${server.url.origin}${route}`;
-    if (live && source) {
-      const urlForToken = (token: string) => `${localRoot}live/${token}`;
-      prepared = {
-        manifest: await live.rewriteDashManifest(source.text, source.baseURL, urlForToken),
-        summary: inspectDashManifest(source.text),
-        resources: [],
-      };
-    } else {
-      prepared = prepareCapturedDash(
-        capture!.readManifest(descriptor!.entryIndex),
-        "https://offline.invalid/",
-        localRoot,
-      );
     }
+  };
+  const localRoot = `${origin}${route}`;
+  if (live && source) {
+    const urlForToken = (token: string) => `${localRoot}live/${token}`;
+    prepared = {
+      manifest: await live.rewriteDashManifest(source.text, source.baseURL, urlForToken),
+      summary: inspectDashManifest(source.text),
+      resources: [],
+    };
+  } else {
+    prepared = prepareCapturedDash(
+      capture!.readManifest(descriptor!.entryIndex),
+      "https://offline.invalid/",
+      localRoot,
+    );
+  }
+  return { fetch: handle, url: `${origin}${route}`, summary: prepared.summary };
+}
+
+/** Standalone lab: one loopback server whose origin is known before the manifest is rewritten. */
+export async function startDashLab(inputPath: string, mode: "capture" | "live" = "capture") {
+  let lab: Awaited<ReturnType<typeof createDashLab>> | undefined;
+  const server = Bun.serve({
+    hostname: "127.0.0.1",
+    port: 0,
+    fetch: request => (lab ? lab.fetch(request) : new Response(null, { status: 404 })),
+  });
+  try {
+    lab = await createDashLab({
+      inputPath,
+      mode,
+      origin: server.url.origin,
+      prefix: `/lab/${crypto.randomUUID()}/`,
+    });
   } catch (error) {
     server.stop(true);
     throw error;
   }
-  return { server, url: `${server.url.origin}${route}`, summary: prepared.summary };
+  return { server, url: lab.url, summary: lab.summary };
 }
 
 const dashboardCode = `import { attachDashPlayback } from './adapter.js';

@@ -1,5 +1,5 @@
 import { isAbsolute, join } from "node:path";
-import { applyMigrations, createNeonClient } from "@aphrody/bun-plugin-neon";
+import { applyMigrations, createNeonClient } from "@aphrody/bun-sql/neon";
 import { publishPublicSiteSnapshot, readPublicSiteSnapshot } from "./site-neon-import";
 import { readProtected } from "../cloudflare/scripts/site-release";
 

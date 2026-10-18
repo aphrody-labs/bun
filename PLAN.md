@@ -1,5 +1,62 @@
 # Plan — aphrody-labs/bun, noyau d'Aphrody
 
+## FilmCraft / PhotoCraft native extraction — 2026-10-18
+
+The current owner request explicitly adds canonical Git submodules in `vendor`
+for the real `aphrody-labs` forks of `storytold/filmcraft` and
+`storytold/photocraft`, aggressive native n2b, a REA audit, and complete reuse of
+codecs, formats, compression, conversion, editors and timelines through Bun
+owners. Preserve native desktop features while qualifying headless, WASM and web
+library boundaries separately. This explicit source-submodule request supersedes
+the earlier blanket no-vendor wording for these two canonical source owners.
+
+Both submodules are registered in the shared index. PhotoCraft was fast-forwarded
+and pushed; local and remote `main` are `9185b64b94c07458038e768f4b31778590ba93ee`.
+FilmCraft preserves its Bun tooling commit `87b845138e2cecf43e97e2c2e011b820a6e70ecd`
+and has an uncommitted, conflict-free upstream merge to
+`6c3948a36c80e4996d924766ba7157eec4fca85e`. Do not abort or overwrite this merge.
+Its existing `filmcraft-lib` dependency at `9b7893a2` comes from the distinct
+`origin/claude/library-facade` branch and is absent from this merged main source;
+The facade and its prerequisite owner hooks from `9ad49b1b` are now ported into
+the merged source. Its container-only gate passes 31 native Windows x64 tests,
+including doctests, packet identity and HDR metadata preservation. Default
+decode/encode feature qualification is running. Do not change the native
+provider's source dependency before that gate and the remaining compatibility
+checks pass.
+
+REA actually analyzed the audio worklet; see
+`docs/project/filmcraft-photocraft-rea-audit.md`. Four genuine native n2b preview
+and aggressive-application commands pass, produce nonempty reports, and make no
+rewrites. Eleven Bun tooling/worklet checks pass; see
+`docs/project/craft-n2b-qualification.md`. Neither result proves Rust/WASM parity.
+
+The ingestion/root-independence and Windows factory changes are uncommitted,
+with focused installed-release tests passing. Checkout qualification remains
+open: the release factory build was stopped when an unrelated concurrent debug
+build reduced free RAM to about 2 GiB. Its compiled outputs are preserved. Do not
+start a second heavy build while that debug build remains live. Preserve the
+concurrent Neon/Supabase/fusion changes and the pre-existing untracked benchmark
+and skill directory. Delivery must commit exact owned paths only.
+
+The former process handles are terminal/missing and no heavy build remained on
+resumption. The root Git index was found entirely zero-filled; reconstructing
+HEAD plus the three last-known staged submodule registration entries restored
+it without staging concurrent source edits. Interrupted owned release
+intermediates were reclaimed; sources and protected stores were preserved.
+MSVC 14.52 is incomplete (`msvcrt.lib` absent), and its installer resume requires
+elevation. The existing native `bun msvc cross` owner installed a SHA-verified
+14.44 x64 CRT/SDK sysroot in the user store. Native Cargo gates retain the
+canonical `cargo-serial.ts --msvc` wrapper, with the owner's target linker and
+encoded native library flags applied to both rustc and rustdoc. This qualifies
+Windows x64; it does not certify any other target.
+
+The provider now has an optional `filmcraft-encode` Rust session implementation
+under test, but no new JSC/C ABI surface yet. Its memory mode is explicitly
+bounded and cannot stand in for full-length streaming encoding. A fragmented
+owner encoder and atomic file publication remain required. PhotoCraft's
+existing engine gains byte export using its existing Save As encoder/options;
+the three new native headless tests still need execution before delivery.
+
 ## Fork stability and MCP — 2026-10-15
 
 - MCP: the plugin launched `~/.bun/bin/bun-1.4.4 mcp`; the versioned argv0 was not

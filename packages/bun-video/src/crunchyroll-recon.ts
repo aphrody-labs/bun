@@ -182,7 +182,10 @@ export type ReconTier = "fetch" | "lightpanda" | "obscura";
 
 /** Runs a headless-browser CLI on a URL and returns the serialized DOM; null when the tool is absent or fails. */
 async function renderWith(tier: Exclude<ReconTier, "fetch">, url: string): Promise<string | null> {
-  const command = tier === "lightpanda" ? ["lightpanda", "fetch", "--dump", "html", url] : ["obscura", "fetch", url, "--dump", "html"];
+  const command =
+    tier === "lightpanda"
+      ? ["lightpanda", "fetch", "--dump", "html", url]
+      : ["obscura", "fetch", url, "--dump", "html"];
   if (!Bun.which(command[0]!)) return null;
   try {
     const child = Bun.spawn(command, { stdout: "pipe", stderr: "ignore", stdin: "ignore" });

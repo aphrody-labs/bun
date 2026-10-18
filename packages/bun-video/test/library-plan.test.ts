@@ -84,6 +84,7 @@ worker.terminate();console.log(JSON.stringify({alias:main===engine,value:main.va
       PATH: Bun.env.PATH ?? "",
       TEMP: tmpdir(),
       TMP: tmpdir(),
+      BUN_DEBUG_QUIET_LOGS: "1",
     },
     stdout: "pipe",
     stderr: "pipe",

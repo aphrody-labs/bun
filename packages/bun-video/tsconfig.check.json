@@ -173,14 +173,10 @@
       "@aphrody/bun-video/video-cookies": ["./src/video-cookies.ts"],
       "@aphrody/bun-video/data-site": ["./src/video-data-site.ts"],
       "@aphrody/bun-video/publish": ["./src/video-publish.ts"],
-      "react": ["./remotion/node_modules/.bun/@types+react@19.2.7/node_modules/@types/react/index.d.ts"],
-      "react/*": ["./remotion/node_modules/.bun/@types+react@19.2.7/node_modules/@types/react/*.d.ts"],
-      "react-dom": [
-        "./remotion/node_modules/.bun/@types+react-dom@19.2.3+b3aeb48c1f537661/node_modules/@types/react-dom/index.d.ts"
-      ],
-      "react-dom/*": [
-        "./remotion/node_modules/.bun/@types+react-dom@19.2.3+b3aeb48c1f537661/node_modules/@types/react-dom/*.d.ts"
-      ]
+      "react": ["./node_modules/.bun/@types+react@19.2.7/node_modules/@types/react/index.d.ts"],
+      "react/*": ["./node_modules/.bun/@types+react@19.2.7/node_modules/@types/react/*.d.ts"],
+      "react-dom": ["./node_modules/.bun/@types+react-dom@19.2.3+b3aeb48c1f537661/node_modules/@types/react-dom/index.d.ts"],
+      "react-dom/*": ["./node_modules/.bun/@types+react-dom@19.2.3+b3aeb48c1f537661/node_modules/@types/react-dom/*.d.ts"]
     },
     "typeRoots": ["../../packages/bun-types/node_modules/@types"]
   }

@@ -162,8 +162,22 @@ export async function inspectPackageArchive(input: Uint8Array) {
       name => manifest.peerDependenciesMeta[name].optional === true,
     ),
     qualificationPeers: qualificationPeers as Record<string, string>,
+    // The probe imports the React export, so the consumer pins the React runtime that the archive itself declares.
+    consumerReact: Object.fromEntries(
+      ["react", "react-dom"]
+        .filter(name => manifest.dependencies?.[name])
+        .map(name => [name, manifest.dependencies[name]]),
+    ) as Record<string, string>,
   };
 }
+
+const declarationTypeOwners: Record<string, string> = {
+  "@types/node": "26.6.5",
+  "puppeteer-core": "25.13.0",
+  execa: "5.1.1",
+  "source-map": "0.8.0",
+  zod: "4.5.4",
+};
 
 /** Install the real archive in one unrelated, credential-free temporary consumer. */
 export async function qualifyPackageConsumer(
@@ -214,6 +228,9 @@ export async function qualifyPackageConsumer(
       dependencies: {
         "@aphrody/bun-video": "file:" + archive.replaceAll("\\", "/"),
         ...snapshot.qualificationPeers,
+        ...snapshot.consumerReact,
+        // The declaration surface names these type owners; the consumer must install them to check the public types.
+        ...(types ? declarationTypeOwners : {}),
         ...(types
           ? {
               "@aphrody/bun-types": options.typesArchive
@@ -280,7 +297,7 @@ try {
   const dash=await import('@aphrody/bun-video/dash');
   const parsed=dash.inspectDashManifest('<MPD xmlns="urn:mpeg:dash:schema:mpd:2011"><Period><AdaptationSet><Representation width="320" height="180" bandwidth="1234"/></AdaptationSet></Period></MPD>');
   checks.dashMetadata=parsed.periodCount===1&&parsed.representations[0].width===320&&parsed.representations[0].height===180;
-  using catalog=new main.VideoCatalog('consumer-fixture.sqlite');
+  using catalog=new main.VideoCatalog(import.meta.dir+'/consumer-fixture.sqlite');
   catalog.registerProvider({id:'synthetic',name:'Synthetic',family:'test'});
   checks.sqliteCatalogue=catalog.listProviders().some(provider=>provider.id==='synthetic');
   const worker=new Worker(new URL('./frame-worker.ts',import.meta.resolve('@aphrody/bun-video')),{type:'module'});

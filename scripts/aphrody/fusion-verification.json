@@ -2,13 +2,12 @@
   "schema": 1,
   "vpsHostnames": ["vps-203bea89"],
   "factory": {
-    "resource": "/home/ubuntu/src/aphrody/packages/infra/workspace/src/build-factory-cleanup.ts",
-    "config": "/home/ubuntu/builds/bun-browser-fusion/tools/config/fusion-factory.json",
-    "cargoWrapper": "/home/ubuntu/src/aphrody/scripts/build/rust/cargo-serial.sh"
+    "resource": "scripts/factory/factory.ts",
+    "cargoWrapper": "scripts/build/rust/cargo-serial.ts"
   },
   "execution": {
     "maxCpu": 6,
-    "cargoTargetDir": "/home/ubuntu/builds/bun-os-factory/cache/cargo"
+    "cargoTargetDir": "/home/ubuntu/build/bun/factory/cache/cargo"
   },
   "research": ["https://bun.sh/blog/bun-v1.4.3", "https://bun.sh", "https://bun.sh/docs"],
   "pipeline": ".buildkite/ci.ts",

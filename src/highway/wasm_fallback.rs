@@ -774,3 +774,62 @@ pub(crate) unsafe fn highway_xxhash64_digest(state: *const u8) -> u64 {
     };
     xxh64_finalize(h.wrapping_add(st.total_len), &st.mem[..st.memsize as usize])
 }
+
+// Scalar ports of the three Highway helpers that the wasm target lacks. They mirror the native reference in
+// `src/sema/standalone/native.rs`; only the bounds-checked slice access differs.
+
+/// Writes the offset after every line feed of `text`; returns how many were written.
+///
+/// # Safety
+/// `text` is valid for `len` bytes and `out` has room for one `u32` per line feed of `text`.
+pub(crate) unsafe fn highway_line_starts(text: *const u8, len: usize, out: *mut u32) -> usize {
+    let text = if len == 0 { &[][..] } else { unsafe { core::slice::from_raw_parts(text, len) } };
+    let mut written = 0;
+    for (i, &c) in text.iter().enumerate() {
+        if c == b'\n' {
+            unsafe { out.add(written).write(i as u32 + 1) };
+            written += 1;
+        }
+    }
+    written
+}
+
+/// One bit per 64-byte block that contains a byte outside the printable-ASCII/whitespace set.
+///
+/// # Safety
+/// `text` is valid for `len` bytes and `out` has one `u64` for every 64 blocks of 64 bytes of `text`.
+pub(crate) unsafe fn highway_odd_blocks(text: *const u8, len: usize, out: *mut u64) {
+    let text = if len == 0 { &[][..] } else { unsafe { core::slice::from_raw_parts(text, len) } };
+    let is_odd = |c: &u8| !matches!(c, 0x20..=0x5B | 0x5D..=0x7E | b'\t' | b'\n' | b'\r');
+    for (word, blocks) in text.chunks(64 * 64).enumerate() {
+        let marks = blocks
+            .chunks(64)
+            .enumerate()
+            .fold(0u64, |m, (i, block)| m | u64::from(block.iter().any(is_odd)) << i);
+        unsafe { out.add(word).write(marks) };
+    }
+}
+
+/// Three run-stop bitmaps (identifier, blank, plain), `plane_len` bytes apart, 8 bytes per 64 bytes of text.
+///
+/// # Safety
+/// `text` is valid for `len` bytes and `out` holds `2 * plane_len + len.div_ceil(64) * 8` bytes.
+pub(crate) unsafe fn highway_scanner_run_stops(text: *const u8, len: usize, out: *mut u8, plane_len: usize) {
+    let text = if len == 0 { &[][..] } else { unsafe { core::slice::from_raw_parts(text, len) } };
+    let planes = unsafe { core::slice::from_raw_parts_mut(out, 2 * plane_len + len.div_ceil(64) * 8) };
+    for (block, chunk) in text.chunks(64).enumerate() {
+        let mut stops = [u64::MAX; 3];
+        for (i, &c) in chunk.iter().enumerate() {
+            let is_name = c.is_ascii_alphanumeric() || c == b'_' || c == b'$';
+            let is_blank = c == b'\t' || c == b' ';
+            let is_plain = (0x20..0x80).contains(&c) && !matches!(c, b'"' | b'\'' | b'`' | b'$' | b'\\');
+            for (plane, is_in_run) in stops.iter_mut().zip([is_name, is_blank, is_plain]) {
+                *plane &= !(u64::from(is_in_run) << i);
+            }
+        }
+        for (plane, stops) in stops.iter().enumerate() {
+            let at = plane * plane_len + block * 8;
+            planes[at..at + 8].copy_from_slice(&stops.to_le_bytes());
+        }
+    }
+}

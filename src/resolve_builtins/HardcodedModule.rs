@@ -37,6 +37,8 @@ pub enum HardcodedModule {
     BunNginx,
     #[strum(serialize = "bun:yolo")]
     BunYolo,
+    #[strum(serialize = "bun:fetch")]
+    BunFetch,
     #[strum(serialize = "bun:python")]
     BunPython,
     #[strum(serialize = "bun:privacy")]
@@ -275,6 +277,7 @@ bun_core::comptime_string_map! {
         b"bun:adblock" => HardcodedModule::BunAdblock,
         b"bun:nginx" => HardcodedModule::BunNginx,
         b"bun:yolo" => HardcodedModule::BunYolo,
+        b"bun:fetch" => HardcodedModule::BunFetch,
         b"bun:python" => HardcodedModule::BunPython,
         b"bun:privacy" => HardcodedModule::BunPrivacy,
         b"bun:jsc" => HardcodedModule::BunJsc,
@@ -823,6 +826,7 @@ const BUN_EXTRA_ALIAS_KVS: &[AliasKv] = &[
     entry!("bun:adblock"),
     entry!("bun:nginx"),
     entry!("bun:yolo"),
+    entry!("bun:fetch"),
     (
         b"bun:Nginixx",
         Alias {

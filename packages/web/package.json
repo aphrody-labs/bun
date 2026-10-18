@@ -13,7 +13,7 @@
   },
   "type": "module",
   "dependencies": {
-    "@aphrody/bun-plugin-neon": "workspace:*",
+    "@aphrody/bun-sql": "workspace:*",
     "@aphrody/typesafe-sdk": "0.6.2"
   }
 }

@@ -74,7 +74,7 @@ function App() {
   const [theme, setTheme] = useState<{ seed: string; time: number; source: "video" | "poster" }>();
   async function load() {
     try {
-      const response = await fetch("/api/manifest");
+      const response = await fetch("api/manifest");
       if (!response.ok) throw new Error(await response.text());
       setManifest(await response.json());
       setError("");
@@ -141,7 +141,7 @@ function App() {
       gpuBusy = true;
       lastGpu = performance.now();
       try {
-        const response = await fetch(`/api/frame-analysis?width=${canvas.width}&height=${canvas.height}`, {
+        const response = await fetch(`api/frame-analysis?width=${canvas.width}&height=${canvas.height}`, {
           method: "POST",
           headers: { "Content-Type": "application/octet-stream" },
           body: pixels.data,
@@ -679,7 +679,7 @@ function App() {
                 <h3>Manifeste</h3>
                 <p>Chronologie et métadonnées de toutes les ressources.</p>
               </div>
-              <Button variant="outlined" className="download" href="/api/manifest" download="manifest.json">
+              <Button variant="outlined" className="download" href="api/manifest" download="manifest.json">
                 JSON<span aria-hidden="true">↓</span>
               </Button>
             </article>

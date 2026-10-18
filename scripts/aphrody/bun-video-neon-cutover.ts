@@ -2,7 +2,7 @@ import { Database } from "bun:sqlite";
 import { existsSync } from "node:fs";
 import { rename, rm } from "node:fs/promises";
 import { dirname, join } from "node:path";
-import { createNeonClient } from "../../packages/bun-plugin-neon/src";
+import { createNeonClient } from "../../packages/bun-sql/src/neon";
 import { defaultVideoCatalogPath } from "../../packages/bun-video/src/video-catalog";
 import { importVideoCatalog, snapshotVideoCatalog } from "../../packages/bun-video/src/video-neon-migrate";
 

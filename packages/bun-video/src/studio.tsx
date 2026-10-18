@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { extractYtDlp, type YtDlpResult } from "./ytdlp";
+import type { YtDlpResult } from "./ytdlp";
 import type { CrawlerCache } from "./cache";
 
 export interface StudioSubtitle {
@@ -186,9 +186,14 @@ export function VideoStudio({
     try {
       const key = `yt-dlp:${selected.src}`;
       const cached = await cache?.get<YtDlpResult>(key);
-      const result = cached ?? (await extractYtDlp(selected.src));
+      const result =
+        cached ??
+        (await fetch(`/api/video/extract?src=${encodeURIComponent(selected.src)}`).then(async response => {
+          if (!response.ok) throw new Error(`HTTP ${response.status}`);
+          return (await response.json()) as YtDlpResult;
+        }));
       if (!cached) await cache?.set(key, result);
-      setMetadata(result);
+      setMetadata(result ?? null);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
     } finally {

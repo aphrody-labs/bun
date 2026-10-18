@@ -1,5 +1,5 @@
-import { mkdir, realpath, symlink, lstat } from "node:fs/promises";
-import { dirname, isAbsolute, join, relative, resolve } from "node:path";
+import { cp, mkdir, readdir, realpath, rm, symlink, lstat } from "node:fs/promises";
+import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import type * as TypeScript from "../mediabunny/node_modules/typescript";
 import type * as ApiExtractor from "../mediabunny/node_modules/@microsoft/api-extractor";
 import { absorbedFamilies, familyManifests } from "./modules";
@@ -31,7 +31,6 @@ function declarationNamespaceImports(
         if (
           ts.isImportTypeNode(node) &&
           node.isTypeOf &&
-          !node.qualifier &&
           ts.isLiteralTypeNode(node.argument) &&
           ts.isStringLiteral(node.argument.literal)
         ) {
@@ -44,7 +43,19 @@ function declarationNamespaceImports(
             alias = context.factory.createIdentifier(name);
             imports.set(path, alias);
           }
-          return context.factory.createTypeQueryNode(alias, node.typeArguments);
+          // typeof import("x").a.b keeps its member chain: the extractor drops a typeof import() with a qualifier.
+          let entity: TypeScript.EntityName = alias;
+          if (node.qualifier) {
+            const parts: TypeScript.Identifier[] = [];
+            let qualifier: TypeScript.EntityName = node.qualifier;
+            while (ts.isQualifiedName(qualifier)) {
+              parts.unshift(qualifier.right);
+              qualifier = qualifier.left;
+            }
+            parts.unshift(qualifier as TypeScript.Identifier);
+            for (const part of parts) entity = context.factory.createQualifiedName(entity, part);
+          }
+          return context.factory.createTypeQueryNode(entity, node.typeArguments);
         }
         return ts.visitEachChild(node, visit, context);
       };
@@ -98,9 +109,17 @@ export async function producerReactTypes(root = packageRoot) {
     ["@types/react", "react"],
     ["@types/react-dom", "react-dom"],
   ] as const) {
-    const file = Bun.resolveSync(name + "/package.json", join(root, "remotion/core"));
+    // Resolve the catalog-pinned version inside this package's own install store, not the workspace root's
+    // (which pins a different React major and lives outside the package).
+    const version = manifest.workspaces.catalog[name];
+    const storeName = `${name.replace("/", "+")}@${version}`;
+    const store = join(root, "node_modules/.bun");
+    const matches = (await readdir(store)).filter(entry => entry === storeName || entry.startsWith(storeName + "+"));
+    if (matches.length !== 1)
+      throw new Error("Producer React declarations are not installed at the captured catalog version");
+    const file = join(store, matches[0]!, "node_modules", name, "package.json");
     const metadata = await Bun.file(file).json();
-    if (metadata.name !== name || metadata.version !== manifest.workspaces.catalog[name])
+    if (metadata.name !== name || metadata.version !== version)
       throw new Error("Producer React declarations diverge from the captured catalog");
     const prefix = "./" + relative(root, dirname(file)).replaceAll("\\", "/");
     if (prefix.startsWith("./../")) throw new Error("Producer React types escape the captured package owners");
@@ -344,20 +363,25 @@ export async function emitDeclarationSurface(
   }
   if (emitted.length > 6000) throw new Error("Emitted declaration closure exceeds its bound");
   const declarationFor = (source: string) => source.replace(/\.(?:[cm]?[jt]s|[jt]sx)$/, ".d.ts");
+  // The canonical owner declares "bun" and "bun:*" as ambient modules; a file alias would shadow them.
+  const ambientBunAlias = (name: string) =>
+    options.canonicalBunTypes !== undefined && (name === "bun" || name.startsWith("bun:"));
   const paths = Object.fromEntries(
-    Object.entries(compilerOptions.paths ?? {}).map(([name, targets]) => [
-      name,
-      targets.map(target => {
-        const source = resolve(root, target);
-        const member = relative(sourceRoot, source);
-        return !isAbsolute(member) &&
-          !member.startsWith("..") &&
-          !source.endsWith(".d.ts") &&
-          /\.(?:[cm]?[jt]s|[jt]sx)$/.test(member)
-          ? join(stage, declarationFor(emittedMember(target)))
-          : source;
-      }),
-    ]),
+    Object.entries(compilerOptions.paths ?? {})
+      .filter(([name]) => !ambientBunAlias(name))
+      .map(([name, targets]) => [
+        name,
+        targets.map(target => {
+          const source = resolve(root, target);
+          const member = relative(sourceRoot, source);
+          return !isAbsolute(member) &&
+            !member.startsWith("..") &&
+            !source.endsWith(".d.ts") &&
+            /\.(?:[cm]?[jt]s|[jt]sx)$/.test(member)
+            ? join(stage, declarationFor(emittedMember(target)))
+            : source;
+        }),
+      ]),
   );
   const jsonOptions = { ...compilerOptions };
   delete jsonOptions.pathsBasePath;
@@ -393,20 +417,18 @@ export async function emitDeclarationSurface(
   };
   trace("configure-rollup");
   const aggregate = join(stage, "public-aggregate.d.ts");
-  await Bun.write(
-    aggregate,
-    options.entries
-      .map(
-        (entry, index) =>
-          `export * as Public${index} from ${JSON.stringify(
-            "./" +
-              relative(stage, join(stage, declarationFor(emittedMember(entry))))
-                .replaceAll("\\", "/")
-                .replace(/\.d\.ts$/, ""),
-          )};`,
-      )
-      .join("\n") + "\n",
+  // Emitted declarations reference the ambient "bun" module; the analysis program must load its owner explicitly.
+  const bunReference = options.canonicalBunTypes ? '/// <reference types="@aphrody/bun-types" />\n' : "";
+  const exports = options.entries.map(
+    (entry, index) =>
+      `export * as Public${index} from ${JSON.stringify(
+        "./" +
+          relative(stage, join(stage, declarationFor(emittedMember(entry))))
+            .replaceAll("\\", "/")
+            .replace(/\.d\.ts$/, ""),
+      )};`,
   );
+  await Bun.write(aggregate, bunReference + exports.join("\n") + "\n");
   const prepare = () =>
     api.ExtractorConfig.prepare({
       configObject: {
@@ -448,6 +470,7 @@ export async function emitDeclarationSurface(
   };
   host.resolveModuleNames = (names, containingFile) =>
     names.map(name => {
+      if (ambientBunAlias(name)) return undefined;
       const relativeFile = relative(stage, containingFile);
       const original =
         isAbsolute(relativeFile) || relativeFile.startsWith("..")
@@ -566,7 +589,12 @@ export async function emitDeclarationSurface(
   }
   if (references.length) {
     const surface = outputs.find(file => file.name === "_surface.d.ts")!;
-    await Bun.write(surface.path, references.join("\n") + "\n" + (await Bun.file(surface.path).text()));
+    // The ambient owner supplies these declarations; the emitted types directive would load a second copy of them.
+    const emitted = (await Bun.file(surface.path).text()).replace(
+      /^\/\/\/ <reference types="dom-mediacapture-transform" \/>\r?\n/m,
+      "",
+    );
+    await Bun.write(surface.path, references.join("\n") + "\n" + emitted);
     const bytes = await Bun.file(surface.path).bytes();
     surface.bytes = bytes.length;
     surface.sha256 = new Bun.CryptoHasher("sha256").update(bytes).digest("hex");
@@ -587,6 +615,8 @@ export async function buildLibraryDeclarations(root = packageRoot, checkOnly = f
   const parsed = compiler.parseJsonConfigFileContent(config.config, compiler.sys, root);
   if (parsed.errors.length) throw new Error("Canonical source type configuration is invalid");
   Object.assign((parsed.options.paths ??= {}), await producerReactTypes(root));
+  // @babel/parser's typings are resolved from the global store, which has no @babel/types sibling; map the owned copy.
+  parsed.options.paths["@babel/types"] = ["./node_modules/@babel/types/lib/index.d.ts"];
   parsed.options.typeRoots = [...new Set([...(parsed.options.typeRoots ?? []), join(root, "node_modules/@types")])];
   parsed.options.types = [...new Set([...(parsed.options.types ?? []), "dom-mediacapture-transform"])];
   parsed.options.rootDir = resolve(root, "../..");
@@ -607,7 +637,24 @@ export async function buildLibraryDeclarations(root = packageRoot, checkOnly = f
     sdkPath !== (await realpath(join(sdkRoot, sdkEntry)))
   )
     throw new Error("Installed SDK HLS owner diverges from its package pin");
-  parsed.options.paths["@aphrody/bun-runtime-sdk/video/hls"] = [relative(root, sdkPath).replaceAll("\\", "/")];
+  // The installed SDK lives in the global store, outside the workspace source root. Its surface modules
+  // only import node:*, bun and bun:* plus sibling files, so the pinned tree is copied into the owned build
+  // tree and each exported subpath is analyzed from its copy, which lets its declarations be emitted.
+  const sdkOwnedRoot = resolve(root, "../tmp/bun-video-build/owners/bun-runtime-sdk/src");
+  await rm(dirname(sdkOwnedRoot), { recursive: true, force: true });
+  await cp(join(sdkRoot, "src"), sdkOwnedRoot, { recursive: true });
+  const sdkOwnedEntries = ["./gpu", "./browser", "./target", "./video/hls"];
+  const sdkOwned: string[] = [];
+  for (const key of sdkOwnedEntries) {
+    const target = sdkManifest.exports?.[key];
+    if (typeof target !== "string" || !target.startsWith("./src/") || !target.endsWith(".ts"))
+      throw new Error("Canonical runtime SDK owner entry changed");
+    const copy = join(sdkOwnedRoot, "..", target.slice(2));
+    const copied = resolve(copy);
+    if (!copied.startsWith(sdkOwnedRoot + sep)) throw new Error("Runtime SDK owner entry escapes its copy");
+    sdkOwned.push(copied);
+    parsed.options.paths["@aphrody/bun-runtime-sdk" + key.slice(1)] = [relative(root, copied).replaceAll("\\", "/")];
+  }
   const manifests = await Promise.all(
     absorbedFamilies.map(async family =>
       Object.values(await familyManifests(join(root, family))).map(manifest => manifest.name),
@@ -620,12 +667,17 @@ export async function buildLibraryDeclarations(root = packageRoot, checkOnly = f
       stage: resolve(root, "../tmp/bun-video-build/declarations"),
       output: resolve(root, "../tmp/bun-video-build/declarations/public"),
       entries,
-      additionalSources: [sdkPath],
+      additionalSources: sdkOwned,
       ambientDeclarations: [
         {
           source: join(captureRoot, "index.d.ts"),
           name: "ambient/dom-mediacapture-transform.d.ts",
           license: join(captureRoot, "LICENSE"),
+        },
+        {
+          source: join(root, "scripts/ambient/html-in-canvas.d.ts"),
+          name: "ambient/html-in-canvas.d.ts",
+          license: join(root, "remotion/LICENSE.md"),
         },
       ],
       compilerOptions: parsed.options,

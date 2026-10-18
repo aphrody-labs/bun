@@ -39,7 +39,7 @@ export async function buildBitmovinBrowser(options: BitmovinBrowserBuildOptions)
     0,
     Math.max(installedEntry.lastIndexOf("/"), installedEntry.lastIndexOf("\\")),
   );
-  const assets: { path: string; file: Bun.BunFile }[] = [];
+  const assets: { path: string; file: Blob }[] = [];
   for await (const path of new Bun.Glob("{*.js,*.css,THIRD_PARTY_NOTICES}").scan(packageRoot)) {
     const file = Bun.file(`${packageRoot}/${path}`);
     if (options.outdir) await Bun.write(`${options.outdir}/${path}`, file);

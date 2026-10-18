@@ -59,7 +59,7 @@ export function readPublicNativeGraph(db: Database, source: string, index: Nativ
   const ids = new Map<string, string>();
   const sha = (id: string) => new Bun.CryptoHasher("sha256").update(id).digest("hex");
   const priority = (domain: string) => {
-    const primary = ["src/runtime", "src/js", "packages/bun-video", "packages/bun-plugin-neon", "packages/web"];
+    const primary = ["src/runtime", "src/js", "packages/bun-video", "packages/bun-sql", "packages/web"];
     const index = primary.indexOf(domain);
     return index >= 0 ? index : domain.startsWith("src/") ? 10 : 20;
   };

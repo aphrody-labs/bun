@@ -19,6 +19,7 @@ const owners = {
   crunchyroll: () => import("./crunchyroll"),
   "crunchyroll-api": () => import("./crunchyroll-api"),
   "crunchyroll-cli": () => import("./crunchyroll-cli"),
+  "crunchyroll-service": () => import("./crunchyroll-service"),
   "crunchyroll-watchlist": () => import("./crunchyroll-watchlist"),
   "frame-theme": () => import("./frame-theme"),
   "frame-analysis": () => import("./frame-analysis"),
@@ -60,6 +61,7 @@ const owners = {
 } as const;
 
 export type VideoAPIFamily = keyof typeof owners;
+export type VideoAPIModule<Family extends VideoAPIFamily> = Awaited<ReturnType<(typeof owners)[Family]>>;
 export interface VideoAPIDescriptor {
   readonly id: VideoAPIFamily;
   readonly module: string;
@@ -86,6 +88,7 @@ const definitions: readonly [VideoAPIFamily, string, VideoAPIDescriptor["scope"]
   ["bitmovin", "Licensed Bitmovin browser player integration", "protocol"],
   ["crunchyroll", "Isolated Crunchyroll acquisition client", "acquisition"],
   ["crunchyroll-api", "Crunchyroll HTTP API owner", "acquisition"],
+  ["crunchyroll-service", "Crunchyroll service composition owner", "service"],
   ["crunchyroll-cli", "Crunchyroll CLI owner", "service"],
   ["crunchyroll-watchlist", "Authorized Crunchyroll watchlist owner", "acquisition"],
   ["frame-theme", "Frame-derived semantic color roles", "render"],
@@ -141,7 +144,7 @@ export const VIDEO_APIS: readonly VideoAPIDescriptor[] = Object.freeze(
         "hyperframes-native",
       ].includes(id)
         ? `./src/${id}.ts`
-        : `@aphrody/bun-video/${id.replace("remotion-renderer", "remotion/renderer").replace("hyperframes-engine", "hyperframes/engine").replace("crunchyroll-api", "crunchyroll/api").replace("crunchyroll-cli", "crunchyroll/cli").replace("crunchyroll-watchlist", "crunchyroll/watchlist")}`,
+        : `@aphrody/bun-video/${id.replace("remotion-renderer", "remotion/renderer").replace("hyperframes-engine", "hyperframes/engine").replace("crunchyroll-api", "crunchyroll/api").replace("crunchyroll-service", "crunchyroll/service").replace("crunchyroll-cli", "crunchyroll/cli").replace("crunchyroll-watchlist", "crunchyroll/watchlist")}`,
       description,
       scope,
     }),
@@ -153,9 +156,9 @@ export function describeVideoAPIs(): readonly VideoAPIDescriptor[] {
   return VIDEO_APIS;
 }
 
-export async function loadVideoAPI(family: VideoAPIFamily): Promise<Record<string, unknown>> {
+export async function loadVideoAPI<Family extends VideoAPIFamily>(family: Family): Promise<VideoAPIModule<Family>> {
   if (!Object.hasOwn(owners, family)) throw new TypeError(`Unknown Bun Video API family: ${family}`);
-  return await owners[family]();
+  return (await owners[family]()) as VideoAPIModule<Family>;
 }
 
 /** Export names and kinds only; no values, sessions or credentials are serialized. */
@@ -165,8 +168,8 @@ export async function inspectVideoAPI(family: VideoAPIFamily) {
     family,
     loaded: true,
     qualification: "module-load-only" as const,
-    exports: Object.keys(module)
-      .sort()
-      .map(name => ({ name, kind: typeof module[name] })),
+    exports: Object.entries(module)
+      .sort(([a], [b]) => (a === b ? 0 : a < b ? -1 : 1))
+      .map(([name, value]) => ({ name, kind: typeof value })),
   };
 }

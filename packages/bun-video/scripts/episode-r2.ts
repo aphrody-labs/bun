@@ -495,7 +495,7 @@ async function singleRestUpload(
       { account_id: accountId, prefix: entry.key },
       { maxRetries: 0 },
     );
-    return page.getPaginatedItems().find(object => object.key === entry.key);
+    return page.getPaginatedItems().find((object: { key?: string }) => object.key === entry.key);
   };
   await markPhase("rest-readonly-list");
   const existing = await lookup();

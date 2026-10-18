@@ -60,7 +60,7 @@ test("JIT workspace discovery reads the immutable patterns and excludes other pa
     ["package.json", JSON.stringify({ workspaces: ["./packages/*", "apps/*"] })],
     ["bun.lock", '{"lockfileVersion":2}'],
     ["packages/web/package.json", '{"name":"@aphrody/web"}'],
-    ["packages/neon/package.json", '{"name":"@aphrody/bun-plugin-neon"}'],
+    ["packages/neon/package.json", '{"name":"@aphrody/bun-sql"}'],
     ["apps/desktop/package.json", '{"name":"desktop"}'],
     ["packages/foreign/vendor/package.json", '{"name":"not-a-workspace"}'],
   ]);
@@ -88,16 +88,16 @@ test("a filtered JIT install and bundle resolve fresh workspace HTTP code instea
       name: "@aphrody/web",
       private: true,
       version: "1.0.0",
-      dependencies: { "@aphrody/bun-plugin-neon": "workspace:*" },
+      dependencies: { "@aphrody/bun-sql": "workspace:*" },
     }),
     "packages/neon/package.json": JSON.stringify({
-      name: "@aphrody/bun-plugin-neon",
+      name: "@aphrody/bun-sql",
       version: "1.0.0",
-      exports: { "./http": "./http.ts" },
+      exports: { "./neon/http": "./neon/http.ts" },
     }),
-    "packages/neon/http.ts": 'export const owner="fresh-immutable-source";',
+    "packages/neon/neon/http.ts": 'export const owner="fresh-immutable-source";',
     "packages/unused/package.json": JSON.stringify({ name: "unused", version: "1.0.0" }),
-    "packages/web/check.ts": 'import {owner} from "@aphrody/bun-plugin-neon/http";console.log(owner);',
+    "packages/web/check.ts": 'import {owner} from "@aphrody/bun-sql/neon/http";console.log(owner);',
   });
   const root = String(fixture);
   const run = (argv: string[], cwd: string) => {
@@ -113,16 +113,16 @@ test("a filtered JIT install and bundle resolve fresh workspace HTTP code instea
   const out = join(root, "jit");
   mkdirSync(out);
   // The source export owns entry files; this helper supplies their unchanged workspace metadata.
-  for (const [path, bytes] of tree.readBytes(["packages/neon/http.ts", "packages/web/check.ts"]))
+  for (const [path, bytes] of tree.readBytes(["packages/neon/neon/http.ts", "packages/web/check.ts"]))
     await Bun.write(join(out, path), bytes);
   const metadata = await exportJitWorkspaceMetadata(tree, out);
   expect(metadata.source).toBe(tree.sha);
   const lock = await Bun.file(join(out, "bun.lock")).bytes();
   await Bun.write(
-    join(root, "node_modules/@aphrody/bun-plugin-neon/package.json"),
-    JSON.stringify({ name: "@aphrody/bun-plugin-neon", version: "0.1.0", exports: { "./http": "./http.ts" } }),
+    join(root, "node_modules/@aphrody/bun-sql/package.json"),
+    JSON.stringify({ name: "@aphrody/bun-sql", version: "0.1.0", exports: { "./neon/http": "./neon/http.ts" } }),
   );
-  await Bun.write(join(root, "node_modules/@aphrody/bun-plugin-neon/http.ts"), 'export const owner="stale-ancestor";');
+  await Bun.write(join(root, "node_modules/@aphrody/bun-sql/neon/http.ts"), 'export const owner="stale-ancestor";');
   run(
     [
       process.execPath,
