@@ -7,18 +7,19 @@ license = "MIT"
 
 [features]
 default = []
-filmcraft = ["dep:filmcraft-codecs", "dep:filmcraft-frame", "dep:filmcraft-media", "dep:filmcraft-time", "dep:filmcraft-isobmff", "dep:gif"]
+filmcraft = ["dep:filmcraft-lib", "dep:filmcraft-codecs", "dep:filmcraft-frame", "dep:filmcraft-media", "dep:filmcraft-time", "dep:filmcraft-isobmff", "dep:gif"]
 gpu = ["dep:gpu-video"]
 libav = ["dep:ffmpeg-sys-next", "dep:serde_json", "dep:sha2"]
 mpv = ["dep:libloading"]
 
 [dependencies]
 gif = { version = "=0.14.2", optional = true }
-filmcraft-codecs = { git = "https://github.com/aphrody-labs/filmcraft.git", rev = "cee1feb185e675a108f78067f71ad86a640ace3d", optional = true }
-filmcraft-frame = { git = "https://github.com/aphrody-labs/filmcraft.git", rev = "cee1feb185e675a108f78067f71ad86a640ace3d", optional = true }
-filmcraft-media = { git = "https://github.com/aphrody-labs/filmcraft.git", rev = "cee1feb185e675a108f78067f71ad86a640ace3d", optional = true }
-filmcraft-time = { git = "https://github.com/aphrody-labs/filmcraft.git", rev = "cee1feb185e675a108f78067f71ad86a640ace3d", optional = true }
-filmcraft-isobmff = { git = "https://github.com/aphrody-labs/filmcraft.git", rev = "cee1feb185e675a108f78067f71ad86a640ace3d", optional = true }
+filmcraft-codecs = { git = "https://github.com/aphrody-labs/filmcraft.git", rev = "9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2", optional = true }
+filmcraft-frame = { git = "https://github.com/aphrody-labs/filmcraft.git", rev = "9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2", optional = true }
+filmcraft-media = { git = "https://github.com/aphrody-labs/filmcraft.git", rev = "9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2", optional = true }
+filmcraft-time = { git = "https://github.com/aphrody-labs/filmcraft.git", rev = "9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2", optional = true }
+filmcraft-isobmff = { git = "https://github.com/aphrody-labs/filmcraft.git", rev = "9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2", optional = true }
+filmcraft-lib = { git = "https://github.com/aphrody-labs/filmcraft.git", rev = "9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2", default-features = false, features = ["container"], optional = true }
 ffmpeg-sys-next = { version = "=9.0.1", optional = true, default-features = false, features = ["avcodec", "avformat", "swscale"] }
 gpu-video = { git = "https://github.com/software-mansion/smelter.git", rev = "6637f3df71282c816140cd3bb9821d69b30be2ba", package = "gpu-video", default-features = true, optional = true }
 png = "=0.17.16"

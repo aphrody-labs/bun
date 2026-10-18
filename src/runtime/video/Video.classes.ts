@@ -41,6 +41,7 @@ export default [
       frames: { fn: "doFrames", length: 1, async: true },
       audio: { fn: "doAudio", length: 1, async: true },
       remux: { fn: "doRemux", length: 1, async: true },
+      hls: { fn: "doHls", length: 1, async: true },
       gif: { fn: "doGif", length: 1, async: true },
       width: { getter: "getWidth" },
       height: { getter: "getHeight" },

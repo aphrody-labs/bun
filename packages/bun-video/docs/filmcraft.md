@@ -54,6 +54,19 @@ require:
 The FilmCraft build profile must not link, bundle or ship FFmpeg/libmpv. Bun
 Video's separately requested native FFI path remains outside that profile.
 
-No FilmCraft code or dependency is integrated yet. The pinned GPU and time source
-files were fetched through the native Aphrody GitHub API into the local build
-reference cache for the next native integration batch.
+## What is integrated
+
+Bun Video links the FilmCraft crates natively (`native/src/filmcraft.rs`, feature `filmcraft`,
+pinned by git `rev` in `native/Cargo.toml`). Only the decode, container, color, frame and time
+crates are linked; the GPU, editor and UI crates are not.
+
+| Operation | Owner |
+| --- | --- |
+| MP4 and QuickTime probe, bounded sample-table frame sessions, audio windows | FilmCraft ISO base media owner |
+| WebM, Matroska, AVI, MPEG-TS and other containers: probe, frames, audio | FilmCraft `MediaSource` (generic session) |
+| MP4 to MP4 lossless remux with byte-identical access units | `remux_mp4` (strict) |
+| Remux between MP4, MOV, Matroska and WebM without re-encoding | `filmcraft-lib` facade |
+| GIF and WAV export | Bun Video, from decoded RGBA and PCM |
+
+The GPU and time source files remain reference material: no GPU composition is wired into
+Bun Video yet.

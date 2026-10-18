@@ -1693,6 +1693,10 @@ pub(crate) enum VideoOperation {
         sample_rate: u32,
     },
     Remux(Vec<u8>),
+    Hls {
+        directory: Vec<u8>,
+        target_ms: u32,
+    },
     Gif {
         start: f64,
         duration: f64,
@@ -1816,11 +1820,22 @@ fn run_video_operation(
         }
         VideoOperation::Remux(output) => {
             let written = if let Some(path) = path {
-                filmcraft::remux_mp4_path(path, output)?
+                filmcraft::remux_path(path, output)?
             } else {
-                filmcraft::remux_mp4_bytes(std::sync::Arc::from(bytes), output)?
+                filmcraft::remux_bytes(std::sync::Arc::from(bytes), output)?
             };
             Ok(TaskResult::VideoCount(written))
+        }
+        VideoOperation::Hls {
+            directory,
+            target_ms,
+        } => {
+            let segments = if let Some(path) = path {
+                filmcraft::package_hls_path(path, directory, *target_ms)?
+            } else {
+                filmcraft::package_hls_bytes(std::sync::Arc::from(bytes), directory, *target_ms)?
+            };
+            Ok(TaskResult::VideoCount(segments))
         }
         VideoOperation::Gif {
             start,

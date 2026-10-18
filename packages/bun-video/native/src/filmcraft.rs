@@ -4,6 +4,7 @@
 use filmcraft_codecs::video::VideoDecoder;
 use filmcraft_frame::VideoFrame;
 use filmcraft_isobmff::{ByteSource, Mp4File, Mp4Writer, TrackKind, WriteSample};
+use filmcraft_lib::Demuxer;
 use filmcraft_media::{SharedReader, SharedSource, reader::MemReader};
 use filmcraft_time::Tick;
 use std::{
@@ -181,6 +182,19 @@ fn reader(input: VideoInput<'_>) -> Result<SharedReader, VideoError> {
     Ok(Arc::new(BoundedReader(inner)))
 }
 
+fn demux_limits() -> filmcraft_lib::Limits {
+    let mut limits = filmcraft_lib::Limits::default();
+    limits.max_input_bytes = MAX_PATH_BYTES;
+    limits
+}
+
+/// Matroska and WebM carry an exact packet table; other containers fall back to duration times rate.
+fn exact_packet_frames(demuxer: filmcraft_lib::Result<Demuxer>) -> Option<u64> {
+    let demuxer = demuxer.ok()?;
+    let track = demuxer.first_track(filmcraft_lib::TrackKind::Video)?;
+    demuxer.tracks().get(track).map(|info| info.packets)
+}
+
 fn open(
     input: VideoInput<'_>,
     max_pixels: u64,
@@ -188,6 +202,12 @@ fn open(
     if max_pixels == 0 || max_pixels > (MAX_MEMORY_BYTES / 4) as u64 {
         return Err(VideoError::Invalid("invalid pixel budget"));
     }
+    let packet_frames = match &input {
+        VideoInput::Path(path) => exact_packet_frames(Demuxer::open_path(path, &demux_limits())),
+        VideoInput::Bytes(bytes) => {
+            exact_packet_frames(Demuxer::open_bytes(Arc::clone(bytes), &demux_limits()))
+        }
+    };
     let reader = reader(input)?;
     // ISO base media keeps the budgeted sample-table path; other containers use FilmCraft owners.
     let indexed_frames = if is_iso_base_media(&*reader) {
@@ -221,7 +241,7 @@ fn open(
     if video.frame_rate.num <= 0 || video.frame_rate.den <= 0 {
         return Err(VideoError::Invalid("invalid source frame rate"));
     }
-    let frame_count = indexed_frames.unwrap_or_else(|| {
+    let frame_count = indexed_frames.or(packet_frames).unwrap_or_else(|| {
         let seconds = info.duration.seconds();
         let rate = video.frame_rate.num as f64 / video.frame_rate.den as f64;
         if seconds.is_finite() && seconds > 0.0 {
@@ -262,14 +282,16 @@ pub fn probe_video_path(path_utf8: &[u8], max_pixels: u64) -> Result<VideoMetada
 }
 
 /// True when bytes 4..8 name an ISO base media box (`ftyp`) or a QuickTime top-level atom.
+fn iso_box_tag(tag: &[u8]) -> bool {
+    matches!(
+        tag,
+        b"ftyp" | b"moov" | b"mdat" | b"free" | b"skip" | b"wide" | b"pnot"
+    )
+}
+
 fn is_iso_base_media(reader: &dyn filmcraft_media::ByteReader) -> bool {
     filmcraft_media::reader::read_range(reader, 4, 4)
-        .map(|tag| {
-            matches!(
-                tag.as_slice(),
-                b"ftyp" | b"moov" | b"mdat" | b"free" | b"skip" | b"wide" | b"pnot"
-            )
-        })
+        .map(|tag| iso_box_tag(&tag))
         .unwrap_or(false)
 }
 
@@ -1014,6 +1036,210 @@ fn output_path(path_utf8: &[u8]) -> Result<std::path::PathBuf, VideoError> {
         Ok(std::env::current_dir()?.join(path))
     }
 }
+const REMUX_DEADLINE: Duration = Duration::from_secs(600);
+
+fn output_container(output: &Path) -> Result<filmcraft_lib::OutputContainer, VideoError> {
+    output
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .and_then(filmcraft_lib::OutputContainer::from_extension)
+        .ok_or(VideoError::Invalid(
+            "remux output must end in .mp4, .m4v, .mov, .mkv or .webm",
+        ))
+}
+
+fn starts_iso_base_media(input: &VideoInput<'_>) -> Result<bool, VideoError> {
+    let mut head = [0u8; 8];
+    match input {
+        VideoInput::Bytes(bytes) => {
+            let Some(prefix) = bytes.get(..8) else {
+                return Ok(false);
+            };
+            head.copy_from_slice(prefix);
+        }
+        VideoInput::Path(path) => {
+            use std::io::Read;
+            if std::fs::File::open(path)?.read_exact(&mut head).is_err() {
+                return Ok(false);
+            }
+        }
+    }
+    Ok(iso_box_tag(&head[4..8]))
+}
+
+/// Copies compressed packets between MP4, QuickTime, Matroska and WebM without re-encoding.
+fn remux_container(
+    input: VideoInput<'_>,
+    output: &Path,
+    container: filmcraft_lib::OutputContainer,
+) -> Result<u64, VideoError> {
+    let demuxer = open_demuxer(input)?;
+    let file = std::fs::OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create_new(true)
+        .open(output)?;
+    let result = (|| {
+        let options = filmcraft_lib::RemuxOptions::new(container);
+        let control = filmcraft_lib::Control::new().with_timeout(REMUX_DEADLINE);
+        let (file, report) =
+            filmcraft_lib::remux(&demuxer, file, &options, &control).map_err(owner)?;
+        if report.copied.is_empty() {
+            return Err(VideoError::Invalid(
+                "no audio or video track can be remuxed",
+            ));
+        }
+        file.sync_all()?;
+        Ok(file.metadata()?.len())
+    })();
+    if result.is_err() {
+        std::fs::remove_file(output)?;
+    }
+    result
+}
+
+/// The output extension selects the container. MP4 sources written to an MP4 keep the strict,
+/// byte-exact sample-table path; every other pair goes through the FilmCraft library remuxer.
+pub fn remux(input: VideoInput<'_>, output: &Path) -> Result<u64, VideoError> {
+    if !output.is_absolute() {
+        return Err(VideoError::Invalid("remux output path must be absolute"));
+    }
+    let container = output_container(output)?;
+    if container == filmcraft_lib::OutputContainer::Mp4 && starts_iso_base_media(&input)? {
+        return remux_mp4(input, output);
+    }
+    remux_container(input, output, container)
+}
+pub fn remux_path(input_utf8: &[u8], output_utf8: &[u8]) -> Result<u64, VideoError> {
+    let input = input_path(input_utf8)?;
+    remux(VideoInput::Path(&input), &output_path(output_utf8)?)
+}
+pub fn remux_bytes(input: Arc<[u8]>, output_utf8: &[u8]) -> Result<u64, VideoError> {
+    remux(VideoInput::Bytes(input), &output_path(output_utf8)?)
+}
+const HLS_DEADLINE: Duration = Duration::from_secs(1800);
+const HLS_MAX_SEGMENTS: usize = 100_000;
+
+fn open_demuxer(input: VideoInput<'_>) -> Result<Demuxer, VideoError> {
+    let limits = demux_limits();
+    match input {
+        VideoInput::Path(path) => {
+            let metadata = std::fs::metadata(path)?;
+            if !metadata.is_file() || metadata.len() == 0 {
+                return Err(VideoError::Invalid(
+                    "video input must be a regular nonempty file",
+                ));
+            }
+            Demuxer::open_path(path, &limits).map_err(owner)
+        }
+        VideoInput::Bytes(bytes) => {
+            if <[u8]>::is_empty(&bytes) || <[u8]>::len(&bytes) > MAX_MEMORY_BYTES {
+                return Err(VideoError::Invalid(
+                    "in-memory video must be nonempty and at most 256 MiB",
+                ));
+            }
+            Demuxer::open_bytes(bytes, &limits).map_err(owner)
+        }
+    }
+}
+
+/// Cuts an MP4, QuickTime, Matroska or WebM source into CMAF segments without re-encoding and writes
+/// `init.mp4`, `segment-NNNNN.m4s` and a VOD `playlist.m3u8` into a directory that must not exist.
+/// Segments are written as they are produced, so memory stays bounded by one segment.
+pub fn package_hls(
+    input: VideoInput<'_>,
+    directory: &Path,
+    target_ms: u32,
+) -> Result<u64, VideoError> {
+    use filmcraft_lib::{SegmentEvent, SegmentOptions};
+    use std::fmt::Write as _;
+    if !directory.is_absolute() {
+        return Err(VideoError::Invalid("HLS output directory must be absolute"));
+    }
+    if !(500..=60_000).contains(&target_ms) {
+        return Err(VideoError::Invalid(
+            "HLS segment length must be between 0.5 and 60 seconds",
+        ));
+    }
+    let demuxer = open_demuxer(input)?;
+    std::fs::create_dir(directory)?;
+    let result = (|| {
+        let mut options = SegmentOptions::new();
+        options.target_ms = target_ms;
+        options.limits = demux_limits();
+        let control = filmcraft_lib::Control::new().with_timeout(HLS_DEADLINE);
+        let mut durations: Vec<f64> = Vec::new();
+        filmcraft_lib::segment_with(&demuxer, &options, &control, |event| {
+            match event {
+                SegmentEvent::Init(bytes) => std::fs::write(directory.join("init.mp4"), bytes)?,
+                SegmentEvent::Segment(segment) => {
+                    if durations.len() >= HLS_MAX_SEGMENTS {
+                        return Err(filmcraft_lib::Error::new(
+                            filmcraft_lib::ErrorKind::LimitExceeded,
+                            "HLS output exceeds 100000 segments",
+                        ));
+                    }
+                    std::fs::write(
+                        directory.join(format!("segment-{:05}.m4s", segment.index)),
+                        &segment.data,
+                    )?;
+                    durations.push(segment.duration.seconds());
+                }
+                _ => {}
+            }
+            Ok(())
+        })
+        .map_err(owner)?;
+        if durations.is_empty() {
+            return Err(VideoError::Invalid(
+                "no audio or video track can be segmented",
+            ));
+        }
+        let target = durations
+            .iter()
+            .map(|seconds| seconds.ceil() as u64)
+            .max()
+            .unwrap_or(1)
+            .max(1);
+        let mut playlist = format!(
+            "#EXTM3U\n#EXT-X-VERSION:7\n#EXT-X-INDEPENDENT-SEGMENTS\n#EXT-X-TARGETDURATION:{target}\n#EXT-X-MEDIA-SEQUENCE:0\n#EXT-X-PLAYLIST-TYPE:VOD\n#EXT-X-MAP:URI=\"init.mp4\"\n"
+        );
+        for (index, seconds) in durations.iter().enumerate() {
+            let _ = write!(playlist, "#EXTINF:{seconds:.6},\nsegment-{index:05}.m4s\n");
+        }
+        playlist.push_str("#EXT-X-ENDLIST\n");
+        std::fs::write(directory.join("playlist.m3u8"), playlist)?;
+        Ok(durations.len() as u64)
+    })();
+    if result.is_err() {
+        std::fs::remove_dir_all(directory)?;
+    }
+    result
+}
+pub fn package_hls_path(
+    input_utf8: &[u8],
+    directory_utf8: &[u8],
+    target_ms: u32,
+) -> Result<u64, VideoError> {
+    let input = input_path(input_utf8)?;
+    package_hls(
+        VideoInput::Path(&input),
+        &output_path(directory_utf8)?,
+        target_ms,
+    )
+}
+pub fn package_hls_bytes(
+    input: Arc<[u8]>,
+    directory_utf8: &[u8],
+    target_ms: u32,
+) -> Result<u64, VideoError> {
+    package_hls(
+        VideoInput::Bytes(input),
+        &output_path(directory_utf8)?,
+        target_ms,
+    )
+}
+
 pub fn remux_mp4_path(input_utf8: &[u8], output_utf8: &[u8]) -> Result<u64, VideoError> {
     let input = input_path(input_utf8)?;
     remux_mp4(VideoInput::Path(&input), &output_path(output_utf8)?)
@@ -1253,6 +1479,170 @@ mod tests {
         assert!(dimensions(0, 1080, 1920 * 1080).is_err());
     }
 
+    fn remux_scratch(name: &str) -> std::path::PathBuf {
+        let root = std::env::temp_dir().join(format!("bun-video-{name}-{}", std::process::id()));
+        std::fs::create_dir_all(&root).unwrap();
+        root
+    }
+
+    fn packet_counts(path: &Path) -> Vec<(String, u64)> {
+        let demuxer =
+            filmcraft_lib::Demuxer::open_path(path, &filmcraft_lib::Limits::default()).unwrap();
+        demuxer
+            .tracks()
+            .iter()
+            .map(|track| (track.codec.clone(), track.packets))
+            .collect()
+    }
+
+    #[test]
+    fn remux_converts_between_mp4_and_matroska_keeping_every_packet() {
+        let source = filmcraft_lib::doc_fixtures::mp4_h264_aac();
+        let root = remux_scratch("remux-convert");
+        let source_path = root.join("source.mp4");
+        std::fs::write(&source_path, &source).unwrap();
+        let expected = packet_counts(&source_path);
+        assert_eq!(expected.len(), 2);
+
+        let mkv = root.join("copy.mkv");
+        let written = remux_bytes(source.into(), mkv.to_str().unwrap().as_bytes()).unwrap();
+        let bytes = std::fs::read(&mkv).unwrap();
+        assert_eq!(written, bytes.len() as u64);
+        assert_eq!(&bytes[..4], &[0x1a, 0x45, 0xdf, 0xa3]);
+        assert_eq!(packet_counts(&mkv), expected);
+
+        let back = root.join("back.mp4");
+        remux_path(
+            mkv.to_str().unwrap().as_bytes(),
+            back.to_str().unwrap().as_bytes(),
+        )
+        .unwrap();
+        assert_eq!(packet_counts(&back), expected);
+
+        let quicktime = root.join("copy.mov");
+        remux_path(
+            mkv.to_str().unwrap().as_bytes(),
+            quicktime.to_str().unwrap().as_bytes(),
+        )
+        .unwrap();
+        assert_eq!(packet_counts(&quicktime), expected);
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn remux_refuses_bad_targets_and_never_leaves_partial_output() {
+        let source: Arc<[u8]> = filmcraft_lib::doc_fixtures::mp4_h264_aac().into();
+        let root = remux_scratch("remux-refuse");
+        let target = |name: &str| root.join(name).to_str().unwrap().as_bytes().to_vec();
+
+        assert!(matches!(
+            remux(
+                VideoInput::Bytes(Arc::clone(&source)),
+                Path::new("relative.mkv")
+            ),
+            Err(VideoError::Invalid("remux output path must be absolute"))
+        ));
+        assert!(matches!(
+            remux_bytes(Arc::clone(&source), &target("clip.avi")),
+            Err(VideoError::Invalid(message)) if message.contains(".webm")
+        ));
+        assert!(!root.join("clip.avi").exists());
+
+        // WebM carries VP8/VP9/AV1 and Opus/Vorbis only: H.264 and AAC have no mapping.
+        assert!(remux_bytes(Arc::clone(&source), &target("clip.webm")).is_err());
+        assert!(!root.join("clip.webm").exists());
+
+        let first = target("first.mkv");
+        remux_bytes(Arc::clone(&source), &first).unwrap();
+        let before = std::fs::read(root.join("first.mkv")).unwrap();
+        assert!(remux_bytes(source, &first).is_err());
+        assert_eq!(std::fs::read(root.join("first.mkv")).unwrap(), before);
+
+        // Not a supported container for the library remuxer.
+        assert!(remux_bytes(Arc::from(&b"RIFF....AVI LIST"[..]), &target("avi.mkv")).is_err());
+        assert!(!root.join("avi.mkv").exists());
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn mp4_to_mp4_keeps_the_strict_byte_exact_path() {
+        let source = filmcraft_lib::doc_fixtures::mp4_h264_aac();
+        let root = remux_scratch("remux-strict");
+        let output = root.join("same.mp4");
+        // Both paths succeed on this fixture; the strict one must be the one chosen.
+        let strict = {
+            let strict_output = root.join("strict.mp4");
+            remux_mp4(VideoInput::Bytes(source.clone().into()), &strict_output).unwrap();
+            std::fs::read(strict_output).unwrap()
+        };
+        remux_bytes(source.into(), output.to_str().unwrap().as_bytes()).unwrap();
+        assert_eq!(std::fs::read(output).unwrap(), strict);
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    #[test]
+    fn hls_packaging_writes_a_playable_cmaf_ladder_and_refuses_existing_directories() {
+        let source: Arc<[u8]> = filmcraft_lib::doc_fixtures::mp4_h264_aac().into();
+        let root = remux_scratch("hls");
+        let directory = root.join("out");
+        let name = directory.to_str().unwrap().as_bytes().to_vec();
+        let count = package_hls_bytes(Arc::clone(&source), &name, 500).unwrap();
+        assert!(count >= 1);
+        let init = std::fs::read(directory.join("init.mp4")).unwrap();
+        assert_eq!(&init[4..8], b"ftyp");
+        let playlist = std::fs::read_to_string(directory.join("playlist.m3u8")).unwrap();
+        assert!(playlist.starts_with("#EXTM3U\n"));
+        assert!(playlist.contains("#EXT-X-MAP:URI=\"init.mp4\""));
+        assert!(playlist.trim_end().ends_with("#EXT-X-ENDLIST"));
+        assert_eq!(playlist.matches("#EXTINF:").count() as u64, count);
+
+        // init + every segment is one fragmented MP4 holding every original packet.
+        let mut joined = init;
+        for index in 0..count {
+            assert!(playlist.contains(&format!("segment-{index:05}.m4s")));
+            joined
+                .extend(std::fs::read(directory.join(format!("segment-{index:05}.m4s"))).unwrap());
+        }
+        let original = Demuxer::open_bytes(Arc::clone(&source), &demux_limits()).unwrap();
+        let rebuilt = Demuxer::open_bytes(joined, &demux_limits()).unwrap();
+        let packets = |demuxer: &Demuxer| {
+            demuxer
+                .tracks()
+                .iter()
+                .map(|track| track.packets)
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(packets(&rebuilt), packets(&original));
+
+        let before = std::fs::read(directory.join("playlist.m3u8")).unwrap();
+        assert!(package_hls_bytes(Arc::clone(&source), &name, 500).is_err());
+        assert_eq!(
+            std::fs::read(directory.join("playlist.m3u8")).unwrap(),
+            before
+        );
+        for bad in [0, 499, 60_001] {
+            assert!(matches!(
+                package_hls_bytes(Arc::clone(&source), &target_name(&root, "bad"), bad),
+                Err(VideoError::Invalid(_))
+            ));
+        }
+        assert!(!root.join("bad").exists());
+        assert!(
+            package_hls_bytes(
+                Arc::from(&b"not a media file"[..]),
+                &target_name(&root, "junk"),
+                500
+            )
+            .is_err()
+        );
+        assert!(!root.join("junk").exists());
+        std::fs::remove_dir_all(root).unwrap();
+    }
+
+    fn target_name(root: &Path, name: &str) -> Vec<u8> {
+        root.join(name).to_str().unwrap().as_bytes().to_vec()
+    }
+
     #[test]
     fn declared_sample_explosion_is_rejected_before_owner_allocation() {
         fn boxed(kind: [u8; 4], body: &[u8]) -> Vec<u8> {
@@ -1336,6 +1726,32 @@ mod tests {
         assert_eq!(std::fs::read(&output).unwrap(), restored);
         std::fs::remove_file(output).unwrap();
         std::fs::remove_dir(root).unwrap();
+    }
+
+    #[test]
+    #[ignore = "requires BUN_VIDEO_FILMCRAFT_TEST_VIDEO selecting an authorized local MP4, Matroska or WebM"]
+    fn native_path_remuxes_a_real_source_to_matroska_keeping_its_frames() {
+        let path =
+            std::env::var_os("BUN_VIDEO_FILMCRAFT_TEST_VIDEO").expect("explicit fixture path");
+        let path = Path::new(&path);
+        let before = probe_video(VideoInput::Path(path), 3840 * 2160).unwrap();
+        let root = remux_scratch("remux-real");
+        let output = root.join("copy.mkv");
+        let result = remux(VideoInput::Path(path), &output);
+        let extension = path.extension().and_then(|value| value.to_str());
+        if matches!(extension, Some("mp4" | "m4v" | "mov" | "mkv" | "webm")) {
+            assert!(result.is_ok(), "{result:?}");
+            let after = probe_video(VideoInput::Path(&output), 3840 * 2160).unwrap();
+            assert_eq!(
+                (after.width, after.height, after.frame_count),
+                (before.width, before.height, before.frame_count)
+            );
+        } else {
+            // The library remuxer reads MP4, QuickTime, Matroska and WebM only.
+            assert!(result.is_err());
+            assert!(!output.exists());
+        }
+        std::fs::remove_dir_all(root).unwrap();
     }
 
     #[test]

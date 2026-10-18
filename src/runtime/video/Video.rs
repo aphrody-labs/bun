@@ -304,8 +304,9 @@ impl Video {
     pub(crate) fn do_remux(&self, global: &JSGlobalObject, frame: &CallFrame) -> JsResult<JSValue> {
         let destination = frame.argument(0);
         if !destination.is_string() {
-            return Err(global
-                .throw_invalid_arguments(format_args!("Video.remux expects a new MP4 file path")));
+            return Err(global.throw_invalid_arguments(format_args!(
+                "Video.remux expects a new .mp4, .mov, .mkv or .webm file path"
+            )));
         }
         let path = destination
             .to_bun_string(global)?
@@ -318,6 +319,43 @@ impl Video {
             )));
         }
         self.schedule_operation(global, frame, VideoOperation::Remux(path))
+    }
+
+    #[bun_jsc::host_fn(method)]
+    pub(crate) fn do_hls(&self, global: &JSGlobalObject, frame: &CallFrame) -> JsResult<JSValue> {
+        let destination = frame.argument(0);
+        if !destination.is_string() {
+            return Err(global
+                .throw_invalid_arguments(format_args!("Video.hls expects a new directory path")));
+        }
+        let directory = destination
+            .to_bun_string(global)?
+            .into_utf8()
+            .slice()
+            .to_vec();
+        if directory.is_empty() || bun_core::strings::contains_char(&directory, 0) {
+            return Err(global.throw_invalid_arguments(format_args!(
+                "Video.hls expects a nonempty directory path without NUL"
+            )));
+        }
+        let options = frame.argument(1);
+        let seconds = if options.is_undefined_or_null() {
+            6.0
+        } else if options.is_object() {
+            Self::option(global, options, "segmentSeconds", 6.0, 0.5, 60.0, false)?
+        } else {
+            return Err(global.throw_invalid_arguments(format_args!(
+                "Video.hls options must be an object"
+            )));
+        };
+        self.schedule_operation(
+            global,
+            frame,
+            VideoOperation::Hls {
+                directory,
+                target_ms: (seconds * 1000.0).round() as u32,
+            },
+        )
     }
 
     #[bun_jsc::host_fn(method)]

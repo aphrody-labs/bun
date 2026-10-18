@@ -10,12 +10,14 @@ const help = `Usage: bun video <command> [options]
   frames <input> <new-directory>         Export a bounded PNG frame batch
   audio <input> <output.wav>             Extract PCM16 WAV audio
   gif <input> <output.gif>               Export a bounded palette GIF
-  remux <input> <output.mp4>             Preserve access units in a new MP4
+  remux <input> <output>                 Copy packets into a new .mp4, .mov, .mkv or .webm
+  hls <input> <new-directory>            Cut CMAF segments and a VOD playlist.m3u8
 
 Frame options: --time SECONDS --width N --height N --format png|jpeg|webp|heic|avif
 Batch options: --start SECONDS --end SECONDS --step SECONDS --max-frames N
 Audio options: --start SECONDS --duration SECONDS --stream N --sample-rate N
 GIF options:   --start SECONDS --duration SECONDS --fps N --width N
+HLS options:   --segment-seconds SECONDS (0.5 to 60, default 6)
 Every command accepts --json and --help. Existing output files are refused.
 
 Optional compiled extension: remotion, hyperframes, site, workers, ytdlp,
@@ -167,6 +169,7 @@ async function main() {
     info: [],
     metadata: [],
     remux: [],
+    hls: ["segment-seconds"],
     frame: ["time", "width", "height", "format"],
     frames: ["start", "end", "step", "max-frames"],
     audio: ["start", "duration", "stream", "sample-rate"],
@@ -270,7 +273,12 @@ async function main() {
     report({ output, bytes, start, duration, fps, width, format: "palette-gif" }, flags.json);
   } else if (command === "remux") {
     const bytes = await video.remux(output!);
-    report({ output, bytes, format: "mp4" }, flags.json);
+    report({ output, bytes, format: extname(output!).slice(1) }, flags.json);
+  } else if (command === "hls") {
+    const segmentSeconds = number(flags, "segment-seconds", 6)!;
+    if (segmentSeconds < 0.5 || segmentSeconds > 60) throw new Error("--segment-seconds must be within [0.5, 60]");
+    const segments = await video.hls(output!, { segmentSeconds });
+    report({ output, segments, playlist: join(output!, "playlist.m3u8") }, flags.json);
   }
   return 0;
 }

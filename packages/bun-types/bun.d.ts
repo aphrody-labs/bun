@@ -10037,8 +10037,19 @@ declare module "bun" {
     frames(options: Video.FramesOptions): Promise<Video.Frame[]>;
     /** PCM WAV from a native audio stream, at most 30 seconds and 64 MiB. */
     audio(options: Video.AudioOptions): Promise<Uint8Array>;
-    /** Preserve encoded audio/video access units in a new MP4 file; refuses overwriting. */
+    /**
+     * Copy encoded audio/video packets into a new file without re-encoding; the extension selects the
+     * container (.mp4, .m4v, .mov, .mkv, .webm). MP4 to MP4 keeps every access unit byte for byte;
+     * other pairs read MP4, QuickTime, Matroska or WebM. Refuses to overwrite and resolves to the
+     * written size in bytes.
+     */
     remux(destination: string): Promise<number>;
+    /**
+     * Cut an MP4, QuickTime, Matroska or WebM source into CMAF segments without re-encoding, writing
+     * `init.mp4`, `segment-NNNNN.m4s` and a VOD `playlist.m3u8` into a directory that must not
+     * exist. Resolves to the segment count.
+     */
+    hls(directory: string, options?: Video.HlsOptions): Promise<number>;
     /** Palette GIF; at most 5 seconds, 120 frames, 640×360 and 32 MiB. */
     gif(options: Video.GifOptions): Promise<Uint8Array>;
     readonly width: number;
@@ -10046,6 +10057,10 @@ declare module "bun" {
   }
 
   namespace Video {
+    interface HlsOptions {
+      /** Target segment length in seconds, 0.5 to 60; each segment ends at the next keyframe. Default 6. */
+      segmentSeconds?: number;
+    }
     interface ConstructorOptions {
       /** Maximum decoded pixel count; shared with Bun.Image. */
       maxPixels?: number;

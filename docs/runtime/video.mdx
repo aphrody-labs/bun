@@ -1,6 +1,6 @@
 ---
 title: Bun.Video
-description: Read video metadata, extract frames, audio and GIFs, and remux MP4 files with Bun's native video API.
+description: Read video metadata, extract frames, audio and GIFs, remux between MP4, MOV, Matroska and WebM, and cut HLS segments with Bun's native video API.
 ---
 
 `Bun.Video` is Bun's native video API. Its built-in decoder (FilmCraft, reported
@@ -23,8 +23,9 @@ and optional FFmpeg/mpv adapters on top of it.
 decoder; it does not guarantee support for every codec. MP4 and QuickTime input
 keeps the budgeted sample-table path. Other containers (WebM, Matroska, AVI, MPEG-TS and the
 rest that FilmCraft opens) decode frames, audio and GIFs through FilmCraft's container owners;
-`remux` still accepts MP4 only. The crate tests decode VP8 and VP9 WebM, H.264 Matroska and
-MJPEG AVI fixtures; codec profiles outside those are unqualified and may be rejected. Use `Bun.Image` for still images.
+`remux` and `hls` read MP4, QuickTime, Matroska and WebM. For Matroska and WebM `frameCount` is the
+exact packet count of the video track; for AVI and the other containers it is the duration times the
+frame rate, rounded. The tests decode VP8 and VP9 WebM, H.264 Matroska and MJPEG AVI fixtures; codec profiles outside those are unqualified and may be rejected. Use `Bun.Image` for still images.
 
 ## Command line
 
@@ -39,6 +40,8 @@ bun video frames clip.mp4 frames --start 0 --end 1 --step 0.25 --max-frames 4
 bun video audio clip.mp4 audio.wav --start 0 --duration 1 --sample-rate 16000
 bun video gif clip.mp4 preview.gif --duration 1 --fps 8 --width 64
 bun video remux clip.mp4 remux.mp4
+bun video remux clip.mp4 clip.mkv
+bun video hls clip.mp4 hls --segment-seconds 4
 ```
 
 Output files must not already exist, and `frames` requires a new directory.
@@ -100,19 +103,34 @@ Each batch uses one decoder session. Frame batches preserve source resolution;
 use `frame(time)` to transform an individual frame. This API does not keep an
 entire episode decoded in memory.
 
-## Audio, GIF and MP4 remux
+## Audio, GIF, remux and HLS
 
 ```ts
 await Bun.write("audio.wav", await video.audio({ start: 10, duration: 20, sampleRate: 16000 }));
 await Bun.write("moment.gif", await video.gif({ start: 638, duration: 5, fps: 12, width: 640 }));
 await video.remux("episode-remux.mp4");
+await video.remux("episode.mkv");
+const segments = await video.hls("episode-hls", { segmentSeconds: 4 });
 ```
 
 Audio extraction returns PCM16 WAV and is limited to 30 seconds and 64 MiB.
 GIF export is palette-quantized and therefore lossy; it is limited to five
 seconds, 24 frames per second, 640×360 and 32 MiB. Remux copies the encoded
-samples into a new MP4 without re-encoding and refuses to overwrite an existing
-destination; it does not make the file smaller.
+packets into a new file without re-encoding; the extension selects the container
+(`.mp4`, `.m4v`, `.mov`, `.mkv` or `.webm`). MP4 to MP4 keeps every access unit byte for
+byte through the strict sample-table path; every other pair goes through FilmCraft's
+container library, which refuses a codec the target cannot carry (for example H.264 in
+WebM) and leaves no partial file. Remux refuses to overwrite an existing destination
+and does not make the file smaller.
+
+`hls(directory, { segmentSeconds })` cuts an MP4, QuickTime, Matroska or WebM source into
+CMAF segments without re-encoding and writes `init.mp4`, `segment-00000.m4s`, ... and a VOD
+`playlist.m3u8` into a directory that must not exist; it resolves to the segment count.
+Segments are written as they are produced, so memory stays bounded by one segment. Each
+segment ends at the first keyframe at or after `segmentSeconds` (0.5 to 60, default 6), so
+a source with sparse keyframes yields longer segments. Codecs without an ISO base media
+mapping, such as VP8, are rejected. Serve the directory with `Accept-Ranges` and CORS headers
+and open `playlist.m3u8` in any HLS player.
 
 ## Frame analysis with WebGPU
 
