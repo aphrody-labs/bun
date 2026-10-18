@@ -3,6 +3,7 @@
 The Bun fork owns this external component. It is not a dependency of the Bun
 engine: CPython is loaded only when the caller explicitly uses the host.
 No interpreter, model, cache, credential or provider history is copied here.
+TODO : migre  C:\bun\packages\bun-python-native\python\setup.py   to bun internal  and all best python scrapper to compare bbun vs pyhon scraper on a real website the user  give to claude
 
 - `bun-python-host` owns the shared-library loader and the historical
   `aphrody_py_*` C ABI. Its source was transferred unchanged from
