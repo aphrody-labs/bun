@@ -6,7 +6,6 @@ build-backend = "setuptools.build_meta"
 name = "cloudscraper"
 version = "3.0.0"
 description = "Enhanced Python module to bypass Cloudflare's anti-bot page with support for v2 challenges, proxy rotation, and stealth mode."
-readme = "README.md"
 license = {text = "MIT"}
 authors = [
     {name = "VeNoMouS", email = "venom@cloudscraper.io"},
