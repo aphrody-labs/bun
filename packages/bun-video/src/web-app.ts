@@ -17,6 +17,8 @@ export interface VideoWebAppOptions {
   readonly dashLab?: { readonly inputPath: string; readonly mode?: "capture" | "live" };
   /** Enables the HLS lab, prepared from the protected local inputs when first requested. */
   readonly hlsLab?: boolean;
+  /** Mounts the video data site API under /api/ and its client under /site/. */
+  readonly dataSite?: { readonly privateRoot?: string; readonly dbPath?: string };
 }
 
 export interface VideoWebApp {
@@ -53,22 +55,28 @@ async function loaded(load: () => Promise<unknown>): Promise<boolean> {
   }
 }
 
-/** Bundles the studio client once, lazily, from its TSX entry. */
-let studioBundle: Promise<string> | undefined;
-function studioScript(): Promise<string> {
-  studioBundle ??= (async () => {
-    const build = await Bun.build({
-      entrypoints: [resolve(import.meta.dir, "apps/web-studio.tsx")],
-      target: "browser",
-      format: "esm",
-      minify: true,
-      define: { "process.env.NODE_ENV": '"production"' },
-    });
-    if (!build.success) throw new Error("Studio bundle failed");
-    return await build.outputs[0]!.text();
-  })();
-  return studioBundle;
+/** Bundles a browser client once, lazily, from its TSX entry. */
+const bundles = new Map<string, Promise<string>>();
+function clientScript(entry: string): Promise<string> {
+  let bundle = bundles.get(entry);
+  if (!bundle) {
+    bundle = (async () => {
+      const build = await Bun.build({
+        entrypoints: [resolve(import.meta.dir, "apps", entry)],
+        target: "browser",
+        format: "esm",
+        minify: true,
+        define: { "process.env.NODE_ENV": '"production"' },
+      });
+      if (!build.success) throw new Error(`${entry} bundle failed`);
+      return await build.outputs[0]!.text();
+    })();
+    bundles.set(entry, bundle);
+  }
+  return bundle;
 }
+
+const DATA_API = /^\/api\/(overview|query|import|export|exports\/|publish|jobs)(\/|$)/;
 
 const page = (title: string, body: string) => `<!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -83,6 +91,7 @@ export function createVideoWebApp(options: VideoWebAppOptions): VideoWebApp {
   let dashLab: ReturnType<typeof createDashLab> | undefined;
   let hlsLab: ReturnType<typeof prepareHlsLab> | undefined;
   let hls: Awaited<ReturnType<typeof prepareHlsLab>> | undefined;
+  let dataSite: Promise<{ handle: (request: Request) => Promise<Response> }> | undefined;
 
   const routes = async (request: Request): Promise<Response> => {
     const url = new URL(request.url);
@@ -123,6 +132,16 @@ export function createVideoWebApp(options: VideoWebAppOptions): VideoWebApp {
     }
 
     if (path.startsWith("/pwa/") || path.startsWith("/extension/") || path === "/health") return shortcuts(request);
+
+    if (DATA_API.test(path) && options.dataSite) {
+      dataSite ??= import("./video-data-site")
+        .then(m => m.createVideoDataSite({ ...options.dataSite, listen: false }))
+        .catch(error => {
+          dataSite = undefined;
+          throw error;
+        });
+      return (await dataSite).handle(request);
+    }
 
     if (request.method !== "GET" && request.method !== "HEAD") return json({ error: "method_not_allowed" }, 405);
 
@@ -178,6 +197,19 @@ export function createVideoWebApp(options: VideoWebAppOptions): VideoWebApp {
       }
     }
 
+    if (path === "/api/video/extract") {
+      const source = url.searchParams.get("src");
+      if (!source || source.length > 2048) return json({ error: "invalid_source" }, 400);
+      const parsed = URL.canParse(source) ? new URL(source) : undefined;
+      if (!parsed || !["http:", "https:"].includes(parsed.protocol)) return json({ error: "invalid_source" }, 400);
+      try {
+        const { extractYtDlp } = await import("./ytdlp");
+        return json(await extractYtDlp(parsed.href));
+      } catch {
+        return json({ error: "extraction_failed" }, 422);
+      }
+    }
+
     if (path === "/api/compositions") {
       const [remotion, hyperframes] = await Promise.all([
         loaded(() => import("./render-runtime").then(m => m.loadRemotionCore())),
@@ -186,9 +218,27 @@ export function createVideoWebApp(options: VideoWebAppOptions): VideoWebApp {
       return json({ remotion: { loaded: remotion }, hyperframes: { loaded: hyperframes } });
     }
 
+    if (path === "/site/" || path === "/site")
+      return new Response(
+        page("Données vidéo", `<div id="root"></div><script type="module" src="/site/app.js"></script>`),
+        { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } },
+      );
+
+    if (path === "/site/app.js") {
+      try {
+        return new Response(await clientScript("video-data-site-client.tsx"), {
+          headers: { "content-type": "text/javascript; charset=utf-8" },
+        });
+      } catch {
+        return json({ error: "site_unavailable" }, 500);
+      }
+    }
+
     if (path === "/studio/app.js") {
       try {
-        return new Response(await studioScript(), { headers: { "content-type": "text/javascript; charset=utf-8" } });
+        return new Response(await clientScript("web-studio.tsx"), {
+          headers: { "content-type": "text/javascript; charset=utf-8" },
+        });
       } catch {
         return json({ error: "studio_unavailable" }, 500);
       }

@@ -19,6 +19,8 @@ export interface VideoDataSiteOptions {
   catalog?: VideoCatalog | NeonVideoCatalog;
   dbPath?: string;
   port?: number;
+  /** Set to false to mount the handler in another server; no listener is started. */
+  listen?: boolean;
   privateRoot?: string;
   redisURL?: string;
   workers?: number;
@@ -95,14 +97,13 @@ export async function createVideoDataSite(options: VideoDataSiteOptions = {}) {
     if (ownsCatalog) await catalog.close();
     throw error;
   }
-  let server: Bun.Server<undefined>;
+  let server: Bun.Server<undefined> | undefined;
 
   const handle = async (request: Request): Promise<Response> => {
     const url = new URL(request.url);
-    if (request.headers.get("host") !== server.url.host || url.host !== server.url.host) return httpError(403);
     if (!url.pathname.startsWith("/api/")) return httpError(404);
     if (request.method !== "GET" && request.method !== "HEAD" && request.method !== "POST") return httpError(405);
-    if (request.method === "POST" && request.headers.get("origin") !== server.url.origin) return httpError(403);
+    if (request.method === "POST" && request.headers.get("origin") !== url.origin) return httpError(403);
     if (Number(request.headers.get("content-length") ?? 0) > MAX_BODY) return httpError(413);
     try {
       if (url.pathname === "/api/overview") {
@@ -291,13 +292,21 @@ export async function createVideoDataSite(options: VideoDataSiteOptions = {}) {
     }
   };
   try {
-    server = Bun.serve({
+    server =
+      options.listen === false
+        ? undefined
+        : Bun.serve({
       hostname: "127.0.0.1",
       port: options.port ?? 0,
       maxRequestBodySize: MAX_BODY,
       development: false,
       routes: { "/": site },
-      fetch: handle,
+      fetch(request) {
+        const self = server!;
+        if (request.headers.get("host") !== self.url.host || new URL(request.url).host !== self.url.host)
+          return httpError(403);
+        return handle(request);
+      },
       error() {
         return httpError(500);
       },
@@ -311,7 +320,7 @@ export async function createVideoDataSite(options: VideoDataSiteOptions = {}) {
   const close = async () => {
     if (closed) return;
     closed = true;
-    server.stop(true);
+    server?.stop(true);
     await pipeline.close();
     await Promise.allSettled(active);
     cache.close();
@@ -319,7 +328,8 @@ export async function createVideoDataSite(options: VideoDataSiteOptions = {}) {
   };
   return {
     server,
-    url: server.url.href,
+    handle,
+    url: server?.url.href ?? "",
     catalog,
     pipeline,
     close,

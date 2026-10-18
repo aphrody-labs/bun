@@ -81,3 +81,19 @@ describe("mounted HLS lab", () => {
     expect(await response.json()).toEqual({ error: "lab_not_configured" });
   });
 });
+
+describe("mounted data site and clients", () => {
+  test("data API is absent when the data site is not configured", async () => {
+    const response = await app.fetch(new Request("http://localhost/api/overview"));
+    expect(response.status).toBe(404);
+  });
+
+  test("data site and studio clients bundle as browser scripts", async () => {
+    const site = await app.fetch(new Request("http://localhost/site/app.js"));
+    expect(site.status).toBe(200);
+    expect(site.headers.get("content-type")).toContain("javascript");
+    expect((await site.text()).length).toBeGreaterThan(1000);
+    const studio = await app.fetch(new Request("http://localhost/studio/app.js"));
+    expect(studio.status).toBe(200);
+  });
+});
