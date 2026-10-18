@@ -134,3 +134,23 @@ describe("unified pipeline capture", () => {
     expect(await response.json()).toEqual({ error: "endpoint_must_be_loopback" });
   });
 });
+
+describe("unified pipeline run", () => {
+  test("runs stages in order, skips unrequested ones and reports per-stage status", async () => {
+    const response = await app.fetch(
+      new Request("http://localhost/api/pipeline/run", { method: "POST", body: JSON.stringify({}) }),
+    );
+    const report = (await response.json()) as { ok: boolean; stages: { id: string; status: string }[] };
+    expect(report.stages.map(stage => stage.id)).toEqual(["capture", "probe", "frame", "webgpu", "compositions"]);
+    expect(report.stages.find(stage => stage.id === "capture")?.status).toBe("skipped");
+    expect(report.stages.find(stage => stage.id === "webgpu")?.status).toBe("skipped");
+    expect(["ok", "failed"]).toContain(report.stages.find(stage => stage.id === "compositions")!.status);
+  });
+
+  test("rejects a media path outside the root before running", async () => {
+    const response = await app.fetch(
+      new Request("http://localhost/api/pipeline/run", { method: "POST", body: JSON.stringify({ media: "../x.mp4" }) }),
+    );
+    expect(response.status).toBe(400);
+  });
+});

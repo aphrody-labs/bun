@@ -195,6 +195,71 @@ export function createVideoWebApp(options: VideoWebAppOptions): VideoWebApp {
 
     if (path === "/api/pipeline/capture" && request.method === "POST") return capture(request);
 
+    if (path === "/api/pipeline/run" && request.method === "POST") {
+      const body = (await request.json().catch(() => null)) as {
+        url?: unknown;
+        endpoint?: unknown;
+        media?: unknown;
+        webgpu?: unknown;
+      } | null;
+      if (!body) return json({ error: "invalid_body" }, 400);
+      const media = typeof body.media === "string" ? resolveMediaPath(options.mediaRoot, body.media) : undefined;
+      if (typeof body.media === "string" && !media) return json({ error: "invalid_media_path" }, 400);
+      const { runPipeline } = await import("./pipeline-run");
+      const captureURL = typeof body.url === "string" && URL.canParse(body.url) ? body.url : undefined;
+      const endpoint = typeof body.endpoint === "string" ? body.endpoint : undefined;
+      const stages = [
+        {
+          id: "capture",
+          enabled: captureURL !== undefined,
+          run: async () => {
+            const pipeline = await unifiedPipeline();
+            await pipeline.capture(captureURL!, endpoint ? { endpoint } : {});
+            return captureURL;
+          },
+        },
+        {
+          id: "probe",
+          enabled: media !== undefined && Bun.Video.available,
+          run: async () => {
+            await new Bun.Video(media!).metadata();
+            return "métadonnées lues";
+          },
+        },
+        {
+          id: "frame",
+          enabled: media !== undefined && Bun.Video.available,
+          run: async () => {
+            const bytes = await new Bun.Video(media!).frame(0).resize(640).jpeg({ quality: 85 }).bytes();
+            return `${bytes.byteLength} octets`;
+          },
+        },
+        {
+          id: "webgpu",
+          enabled: body.webgpu === true,
+          run: async () => {
+            const { probeChromiumWebGpu } = await import("./webgpu");
+            const info = await probeChromiumWebGpu({ origin: url.origin, timeout: 15000 });
+            return info.available ? "adaptateur disponible" : "indisponible";
+          },
+        },
+        {
+          id: "compositions",
+          enabled: true,
+          run: async () => {
+            const [remotion, hyperframes] = await Promise.all([
+              loaded(() => import("./render-runtime").then(m => m.loadRemotionCore())),
+              loaded(() => import("./render-runtime").then(m => m.loadHyperframesCore())),
+            ]);
+            if (!remotion || !hyperframes) throw new Error("composition runtime unavailable");
+            return "Remotion et HyperFrames chargés";
+          },
+        },
+      ];
+      const report = await runPipeline(stages);
+      return json(report, report.ok ? 200 : 207);
+    }
+
     if (request.method !== "GET" && request.method !== "HEAD") return json({ error: "method_not_allowed" }, 405);
 
     if (path === "/api/health")
