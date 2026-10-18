@@ -41,6 +41,7 @@ export const plugins: Plugin[] = [
   { name: "ssh", package: "bun_plugin_ssh" },
   { name: "docker", package: "bun_plugin_docker" },
   { name: "just", package: "bun_plugin_just" },
+  { name: "winmd", package: "bun_plugin_winmd" },
 ];
 
 /** Emit every plugin; returns the executables in the binary directory. */

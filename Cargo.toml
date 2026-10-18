@@ -51,6 +51,7 @@ members = [
   "src/plugins/ssh",
   "src/plugins/docker",
   "src/plugins/just",
+  "src/plugins/winmd",
   "src/browser/crates/api",
   "src/browser/crates/browser",
   "src/browser/crates/cdp",

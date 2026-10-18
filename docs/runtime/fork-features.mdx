@@ -33,7 +33,7 @@ Upstream commands (`run`, `test`, `build`, `install`, `add`, `remove`, `update`,
 | `bun vpn` | Mullvad VPN (the `vpn` plugin): `daemon`, `status`, `connect`, `disconnect`, `login --stdin` and `login --from-env NAME` | `src/bun_vpn`, `src/plugins/vpn`, [vpn](/vpn/index) |
 | `bun host` | Resource inventory of a machine and a signed registry shared between machines: `collect`, `schema`, `push`, `sync`, `list`, `find` | `src/host`, [host](/runtime/host) |
 | `bun msvc` | Resolve and cache Visual Studio, MSVC and the Windows SDK; cross-compile for Windows | `msvc_command.rs`, [msvc](/runtime/msvc) |
-| `bun winmd` | Generate Rust or `bun:ffi` bindings from Windows metadata | `winmd_command.rs`, [msvc](/runtime/msvc) |
+| `bun winmd` | Generate Rust or `bun:ffi` bindings from Windows metadata (the `winmd` plugin) | `winmd_command.rs`, `src/plugins/winmd`, [msvc](/runtime/msvc) |
 | `bun dotnet` | Run the .NET SDK inside Bun, run C# files, call assemblies from `bun:dotnet` | `dotnet_command.rs`, [dotnet](/runtime/dotnet) |
 | `bun python`, `bun uv` | CPython host, `bun compile` for Python, UV package manager (the `uv` plugin) | `python_command.rs`, `uv_command.rs`, `src/plugins/uv`, [python](/runtime/python), [buv](/runtime/buv) |
 | `bun plugin list \| install \| remove` | Plugins: cold subsystems built as separate `bun-<name>` executables, fetched on first use from the release of the running bun and checked against its `SHA256SUMS.txt` | `plugin_command.rs`, `scripts/build/plugins.ts`, [plugins](/runtime/bun-plugin) |

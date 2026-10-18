@@ -5351,6 +5351,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "bun_plugin_winmd"
+version = "1.4.6"
+dependencies = [
+ "find-msvc-tools 0.1.14",
+ "windows-bindgen",
+ "zstd 0.13.3",
+]
+
+[[package]]
 name = "bun_privacy"
 version = "1.4.6"
 dependencies = [
@@ -5692,7 +5701,6 @@ dependencies = [
  "strum 0.28.0",
  "thiserror 2.0.21",
  "tokio",
- "windows-bindgen",
 ]
 
 [[package]]

@@ -151,7 +151,6 @@ bun_install_jsc.workspace = true
 bun_patch_jsc.workspace = true
 bun_css_jsc.workspace = true
 bun-dotnet-host = { path = "../../packages/bun-dotnet-native/crates/bun-dotnet-host", default-features = false }
-windows-bindgen = { path = "../../vendor/windows-rs/crates/libs/bindgen" }
 find-msvc-tools = { path = "../../vendor/find-msvc-tools" }
 
 [features]
