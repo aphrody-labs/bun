@@ -75,7 +75,7 @@ use crate::pipeline::Pipeline;
 use crate::settings::{AudioCodec, BitrateMode};
 use crate::{
     AudioEncoder, ColorSignal, EncodedPacket, EncoderFrame, ExportError, ExportSettings, Format, H264Pass, Out, Progress, Report, Result, Stage, VideoEncoder,
-    audio_factories, export_range, frame_span, note_stage, timed, video_factories,
+    audio_factories, export_range, frame_span, note_stage, timed,
 };
 
 /// Output frames per interleaved group: the video packets of these frames, then the audio up to
@@ -205,12 +205,7 @@ pub(crate) fn hdr_output(working_hdr: bool, sdr: bool, format: Format, hdr_avail
 }
 
 fn make_venc(settings: &ExportSettings, w: u32, h: u32, rate: FrameRate) -> Result<Box<dyn VideoEncoder>> {
-    video_factories()
-        .read()
-        .unwrap_or_else(|e| e.into_inner())
-        .iter()
-        .find_map(|fac| fac(settings.video_format(), w, h, rate, settings))
-        .ok_or_else(|| ExportError::Unsupported(format!("{} encoder not available yet", settings.video_format().label())))?
+    crate::create_video_encoder(settings, w, h, rate)
 }
 
 impl Exporter {
@@ -297,7 +292,8 @@ impl Exporter {
         (self.f1 - self.f0).max(0) as u64
     }
 
-    /// Frames per [`Self::step`] (default: one per core); 1 keeps web UI frames short.
+    /// Requested frames per [`Self::step`] (default: one per core), capped by GPU renderer
+    /// capacity and the overlap memory budget. 1 keeps web UI frames short.
     pub fn set_batch(&mut self, n: i64) {
         self.batch = n.max(1);
     }
@@ -333,9 +329,10 @@ impl Exporter {
         self.ahead.as_ref().map_or(0, |a| a.frames.len())
     }
 
-    /// Frames in the next batch: [`Self::set_batch`], lowered to the memory budget when overlapping.
+    /// Frames in the next batch, bounded before Rayon can steal nested frame tasks.
     fn batch_len(&self) -> i64 {
-        if self.overlapping() { overlap_batch(self.batch, frame_bytes(self.pipe.w, self.pipe.h, self.pipe.hdr_out), self.budget) } else { self.batch }
+        let batch = self.pipe.render_batch_limit(self.batch);
+        if self.overlapping() { overlap_batch(batch, frame_bytes(self.pipe.w, self.pipe.h, self.pipe.hdr_out), self.budget) } else { batch }
     }
 
     fn sample_at_frame(&self, f: i64, sr: u32) -> i64 {
