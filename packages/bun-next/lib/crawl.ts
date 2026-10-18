@@ -45,7 +45,10 @@ function parseOrigin(origin: string): URL {
 
 /** Absolute URL of a route on `origin`; throws when the route points at another origin. */
 export function absoluteUrl(path: string, origin: string): string {
-  const base = parseOrigin(origin);
+  return resolveOnOrigin(path, parseOrigin(origin));
+}
+
+function resolveOnOrigin(path: string, base: URL): string {
   const url = new URL(path, base);
   if (url.origin !== base.origin) throw new RangeError(`route ${path} is not on origin ${base.origin}`);
   url.hash = "";
@@ -73,9 +76,10 @@ function lastmodValue(value: string | Date): string {
  */
 export function sitemapXml(routes: readonly (string | SitemapRoute)[], origin: string): string {
   const entries = new Map<string, SitemapRoute>();
+  const base = parseOrigin(origin);
   for (const route of routes) {
     const item = typeof route === "string" ? { path: route } : route;
-    entries.set(absoluteUrl(item.path, origin), item);
+    entries.set(resolveOnOrigin(item.path, base), item);
   }
   if (entries.size > SITEMAP_MAX_URLS)
     throw new RangeError(`a sitemap holds at most ${SITEMAP_MAX_URLS} URLs, got ${entries.size}`);

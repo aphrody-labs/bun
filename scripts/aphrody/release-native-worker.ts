@@ -598,7 +598,7 @@ async function packageNativeRuntime(
     "test",
     "--max-concurrency=2",
     "./test/js/bun/image/image.test.ts",
-    "./test/js/bun/video/test.ts",
+    "./test/js/bun/video/video.test.ts",
     "./test/js/bun/yolo/yolo.test.ts",
     "./test/js/bun/sqlite/sqlite.test.js",
   ]);
@@ -1072,7 +1072,7 @@ async function produce(input: WorkerInput, component: "media" | "runtime" = "med
     "test",
     "--max-concurrency=2",
     "./test/js/bun/image/image.test.ts",
-    "./test/js/bun/video/test.ts",
+    "./test/js/bun/video/video.test.ts",
     "./test/cli/video/video.test.ts",
     "./test/js/bun/yolo/yolo.test.ts",
     "./test/js/bun/sqlite/sqlite.test.js",
