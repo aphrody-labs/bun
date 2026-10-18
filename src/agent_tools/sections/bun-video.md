@@ -33,7 +33,7 @@ Preserve these boundaries when choosing operations:
   64 frames and 64 MiB per batch. Use `frame(time)` for individual transforms.
 - `audio` returns PCM16 WAV, limited to 30 seconds and 64 MiB. `gif` is
   palette-quantized and limited to five seconds, 120 frames, 640×360 and 32 MiB.
-- `remux` preserves encoded access units in a new MP4 and refuses overwriting.
+- `remux` copies encoded packets into a new .mp4, .mov, .mkv or .webm (by extension; MP4 to MP4 keeps access units byte for byte) and `hls` cuts CMAF segments plus a VOD playlist; both refuse overwriting.
   `.png/.jpeg/.webp/.heic/.avif` select still-image output for frame terminals.
 - Local path input uses bounded reads, with a 64 GiB file limit; memory input
   is limited to 256 MiB. Validate caller-supplied file paths before opening them.
@@ -64,7 +64,7 @@ For package compute, read `packages/bun-video/docs/webgpu.md` and
 provide the runtime reference; `examples_search` with `Bun.Video frame metadata`
 selects source-backed examples from the installed dataset.
 
-Use `bun bd test test/js/bun/video/test.ts` and the relevant Image tests for
+Use `bun bd test test/js/bun/video/video.test.ts` and the relevant Image tests for
 native changes. Qualify stage manifests, SDK linkage, codecs, browser capture,
 compute and encoding separately on each release target. Keep cookies, HAR
 captures, credentials, datasets and signed media URLs in their protected stores.
