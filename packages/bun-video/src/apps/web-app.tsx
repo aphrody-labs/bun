@@ -46,7 +46,12 @@ function Library() {
       .then(body => setAssets(body.assets))
       .catch(() => setError("Bibliothèque indisponible."));
   }, []);
-  if (error) return <p role="alert" className="notice">{error}</p>;
+  if (error)
+    return (
+      <p role="alert" className="notice">
+        {error}
+      </p>
+    );
   if (assets.length === 0) return <p className="notice">Aucun média dans la racine configurée.</p>;
   return <VideoStudio assets={assets} storageKey="bun-video-web-app" />;
 }
@@ -81,8 +86,12 @@ function Compositions() {
   return (
     <>
       <p className="notice">{status}</p>
-      <button type="button" className="action" onClick={runProbe}>Sonder WebGPU</button>
-      <p className="notice" role="status" aria-live="polite">{probe}</p>
+      <button type="button" className="action" onClick={runProbe}>
+        Sonder WebGPU
+      </button>
+      <p className="notice" role="status" aria-live="polite">
+        {probe}
+      </p>
     </>
   );
 }
@@ -123,8 +132,12 @@ function Pipeline() {
           onChange={event => setEndpoint(event.currentTarget.value)}
         />
       </label>
-      <button type="submit" className="action" disabled={busy}>Lancer la capture</button>
-      <p className="notice" role="status" aria-live="polite">{state}</p>
+      <button type="submit" className="action" disabled={busy}>
+        Lancer la capture
+      </button>
+      <p className="notice" role="status" aria-live="polite">
+        {state}
+      </p>
     </form>
   );
 }
@@ -160,17 +173,15 @@ function App() {
   const current = sections.find(item => item.id === section)!;
   return (
     <div className="shell">
-      <a className="skip" href="#content">Aller au contenu</a>
+      <a className="skip" href="#content">
+        Aller au contenu
+      </a>
       <nav aria-label="Sections">
         <div className="brand">Bun Video</div>
         <ul>
           {sections.map(item => (
             <li key={item.id}>
-              <button
-                type="button"
-                aria-current={item.id === section ? "page" : undefined}
-                onClick={() => go(item.id)}
-              >
+              <button type="button" aria-current={item.id === section ? "page" : undefined} onClick={() => go(item.id)}>
                 <span>{item.label}</span>
                 <small>{item.hint}</small>
               </button>
@@ -178,7 +189,11 @@ function App() {
           ))}
         </ul>
         <footer role="status" aria-live="polite">
-          {health ? (health.video.available ? "Fournisseur vidéo actif" : "Fournisseur vidéo indisponible") : "Hors ligne"}
+          {health
+            ? health.video.available
+              ? "Fournisseur vidéo actif"
+              : "Fournisseur vidéo indisponible"
+            : "Hors ligne"}
         </footer>
       </nav>
       <main id="content" tabIndex={-1} ref={main}>

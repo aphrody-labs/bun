@@ -125,9 +125,7 @@ async function withChromiumPage<T>(
     const targets = await browser.connection.send<{
       targetInfos: Array<{ targetId: string; type: string; url: string }>;
     }>("Target.getTargets");
-    const target = targets.targetInfos.find(
-      item => item.type === "page" && item.url === `${base}/webgpu`,
-    );
+    const target = targets.targetInfos.find(item => item.type === "page" && item.url === `${base}/webgpu`);
     if (!target) throw new Error("Chromium did not create the WebGPU probe page");
     const attached = await browser.connection.send<{ sessionId: string }>("Target.attachToTarget", {
       targetId: target.targetId,

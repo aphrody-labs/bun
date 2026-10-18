@@ -30,7 +30,12 @@ export async function runPipeline(stages: readonly PipelineStage[], signal?: Abo
     try {
       signal?.throwIfAborted();
       const detail = await stage.run(signal ?? new AbortController().signal);
-      reports.push({ id: stage.id, status: "ok", ...(detail ? { detail } : {}), ms: Math.round(performance.now() - started) });
+      reports.push({
+        id: stage.id,
+        status: "ok",
+        ...(detail ? { detail } : {}),
+        ms: Math.round(performance.now() - started),
+      });
     } catch (error) {
       const detail = error instanceof Error ? error.name : "error";
       reports.push({ id: stage.id, status: "failed", detail, ms: Math.round(performance.now() - started) });

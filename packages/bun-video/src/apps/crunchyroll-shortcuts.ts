@@ -44,10 +44,9 @@ export function createCrunchyrollShortcutsHandler(): (request: Request) => Promi
         headers: { ...Object.fromEntries(headers), Location: "/pwa/" },
       });
     if (url.pathname === "/health")
-      return new Response(
-        request.method === "HEAD" ? null : JSON.stringify({ service: "bun-crunchyroll-shortcuts" }),
-        { headers: { ...Object.fromEntries(headers), "Content-Type": "application/json" } },
-      );
+      return new Response(request.method === "HEAD" ? null : JSON.stringify({ service: "bun-crunchyroll-shortcuts" }), {
+        headers: { ...Object.fromEntries(headers), "Content-Type": "application/json" },
+      });
     const path = assets.get(url.pathname);
     if (!path) return new Response("Not found", { status: 404, headers });
     const file = Bun.file(path);

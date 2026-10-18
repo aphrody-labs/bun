@@ -120,7 +120,11 @@ export function createVideoWebApp(options: VideoWebAppOptions): VideoWebApp {
     const endpoint = typeof body?.endpoint === "string" ? body.endpoint : undefined;
     if (endpoint !== undefined) {
       const parsed = URL.canParse(endpoint) ? new URL(endpoint) : undefined;
-      if (!parsed || !["ws:", "http:"].includes(parsed.protocol) || !["127.0.0.1", "localhost", "[::1]"].includes(parsed.hostname))
+      if (
+        !parsed ||
+        !["ws:", "http:"].includes(parsed.protocol) ||
+        !["127.0.0.1", "localhost", "[::1]"].includes(parsed.hostname)
+      )
         return json({ error: "endpoint_must_be_loopback" }, 400);
     }
     try {
@@ -168,14 +172,14 @@ export function createVideoWebApp(options: VideoWebAppOptions): VideoWebApp {
     if (path === "/episode") return Response.redirect(new URL("/episode/", url.origin), 301);
 
     if (path.startsWith("/episode/") && options.episodeStudio) {
-      episode ??= import("./apps/episode-studio/server")
+      const handler = await (episode ??= import("./apps/episode-studio/server")
         .then(m => m.createEpisodeServer({ ...options.episodeStudio!, listen: false }))
         .catch(error => {
           episode = undefined;
           throw error;
-        });
+        }));
       const mounted = new Request(new URL(path.slice("/episode".length) + url.search, url.origin), request);
-      return (await episode).fetch(mounted);
+      return handler.fetch(mounted);
     }
 
     if (path.startsWith("/api/crunchyroll")) {
@@ -275,7 +279,9 @@ export function createVideoWebApp(options: VideoWebAppOptions): VideoWebApp {
     if (path === "/api/video/library") {
       const entries = await readdir(resolve(options.mediaRoot), { withFileTypes: true }).catch(() => []);
       const assets = entries
-        .filter(entry => entry.isFile() && MEDIA_EXTENSIONS.has(entry.name.slice(entry.name.lastIndexOf(".")).toLowerCase()))
+        .filter(
+          entry => entry.isFile() && MEDIA_EXTENSIONS.has(entry.name.slice(entry.name.lastIndexOf(".")).toLowerCase()),
+        )
         .map(entry => ({
           id: entry.name,
           title: entry.name,
@@ -311,7 +317,9 @@ export function createVideoWebApp(options: VideoWebAppOptions): VideoWebApp {
       if (!Bun.Video.available) return json({ error: "video_provider_unavailable" }, 503);
       try {
         const bytes = await new Bun.Video(file).frame(seconds).resize(640).jpeg({ quality: 85 }).bytes();
-        return new Response(bytes, { headers: { "content-type": "image/jpeg", "cache-control": "no-store" } });
+        return new Response(Uint8Array.from(bytes), {
+          headers: { "content-type": "image/jpeg", "cache-control": "no-store" },
+        });
       } catch {
         return json({ error: "frame_unavailable" }, 422);
       }
@@ -330,7 +338,10 @@ export function createVideoWebApp(options: VideoWebAppOptions): VideoWebApp {
       }
     }
 
-    if (path === "/webgpu") return new Response(WEBGPU_PROBE_HTML, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
+    if (path === "/webgpu")
+      return new Response(WEBGPU_PROBE_HTML, {
+        headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
+      });
 
     if (path === "/api/webgpu/probe") {
       try {
@@ -345,8 +356,6 @@ export function createVideoWebApp(options: VideoWebAppOptions): VideoWebApp {
       const pipeline = await unifiedPipeline();
       return json({ families: pipeline.apis() });
     }
-
-    if (path === "/api/pipeline/capture" && request.method === "POST") return json({ error: "use_post_on_pipeline" }, 405);
 
     if (path === "/api/compositions") {
       const [remotion, hyperframes] = await Promise.all([
@@ -384,10 +393,7 @@ export function createVideoWebApp(options: VideoWebAppOptions): VideoWebApp {
 
     if (path === "/studio/" || path === "/studio")
       return new Response(
-        page(
-          "Studio vidéo",
-          `<div id="root"></div><script type="module" src="/studio/app.js"></script>`,
-        ),
+        page("Studio vidéo", `<div id="root"></div><script type="module" src="/studio/app.js"></script>`),
         { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } },
       );
 
@@ -406,11 +412,13 @@ export function createVideoWebApp(options: VideoWebAppOptions): VideoWebApp {
         headers: { "content-type": "text/css; charset=utf-8", "cache-control": "no-store" },
       });
 
-    if (path === "/") return new Response(shellDocument, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
+    if (path === "/")
+      return new Response(shellDocument, {
+        headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
+      });
 
     return json({ error: "not_found" }, 404);
   };
 
   return { fetch: routes };
 }
-

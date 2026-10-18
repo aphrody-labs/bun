@@ -9,7 +9,7 @@ import { rehydrateEpisodeVolume, type EpisodePackageManifest } from "../../episo
 
 describe("Atelier épisode : fichiers confinés et lecture vidéo", () => {
   let directory: string;
-  let server: Awaited<ReturnType<typeof createEpisodeServer>>;
+  let server: Bun.Server<undefined>;
   const manifest: EpisodeManifest = {
     schemaVersion: 1,
     id: "fixture",

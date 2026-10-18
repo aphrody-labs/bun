@@ -296,21 +296,21 @@ export async function createVideoDataSite(options: VideoDataSiteOptions = {}) {
       options.listen === false
         ? undefined
         : Bun.serve({
-      hostname: "127.0.0.1",
-      port: options.port ?? 0,
-      maxRequestBodySize: MAX_BODY,
-      development: false,
-      routes: { "/": site },
-      fetch(request) {
-        const self = server!;
-        if (request.headers.get("host") !== self.url.host || new URL(request.url).host !== self.url.host)
-          return httpError(403);
-        return handle(request);
-      },
-      error() {
-        return httpError(500);
-      },
-    });
+            hostname: "127.0.0.1",
+            port: options.port ?? 0,
+            maxRequestBodySize: MAX_BODY,
+            development: false,
+            routes: { "/": site },
+            fetch(request) {
+              const self = server!;
+              if (request.headers.get("host") !== self.url.host || new URL(request.url).host !== self.url.host)
+                return httpError(403);
+              return handle(request);
+            },
+            error() {
+              return httpError(500);
+            },
+          });
   } catch (error) {
     cache.close();
     await pipeline.close();

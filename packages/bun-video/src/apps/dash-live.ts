@@ -154,24 +154,20 @@ export async function createDashLab({ inputPath, mode = "capture", origin, prefi
       return new Response(null, { status: 404 });
     }
   };
-  try {
-    const localRoot = `${origin}${route}`;
-    if (live && source) {
-      const urlForToken = (token: string) => `${localRoot}live/${token}`;
-      prepared = {
-        manifest: await live.rewriteDashManifest(source.text, source.baseURL, urlForToken),
-        summary: inspectDashManifest(source.text),
-        resources: [],
-      };
-    } else {
-      prepared = prepareCapturedDash(
-        capture!.readManifest(descriptor!.entryIndex),
-        "https://offline.invalid/",
-        localRoot,
-      );
-    }
-  } catch (error) {
-    throw error;
+  const localRoot = `${origin}${route}`;
+  if (live && source) {
+    const urlForToken = (token: string) => `${localRoot}live/${token}`;
+    prepared = {
+      manifest: await live.rewriteDashManifest(source.text, source.baseURL, urlForToken),
+      summary: inspectDashManifest(source.text),
+      resources: [],
+    };
+  } else {
+    prepared = prepareCapturedDash(
+      capture!.readManifest(descriptor!.entryIndex),
+      "https://offline.invalid/",
+      localRoot,
+    );
   }
   return { fetch: handle, url: `${origin}${route}`, summary: prepared.summary };
 }

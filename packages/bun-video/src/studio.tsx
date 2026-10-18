@@ -193,7 +193,7 @@ export function VideoStudio({
           return (await response.json()) as YtDlpResult;
         }));
       if (!cached) await cache?.set(key, result);
-      setMetadata(result);
+      setMetadata(result ?? null);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : String(cause));
     } finally {

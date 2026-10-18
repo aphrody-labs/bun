@@ -98,7 +98,7 @@ export function byteRange(header: string, size: number): { start: number; end: n
 
 const document = `<!doctype html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content=""><title>Bun Video · Atelier épisode</title><link rel="stylesheet" href="style.css"></head><body><div id="root"></div><script type="module" src="app.js"></script></body></html>`;
 
-export async function createEpisodeServer(options: {
+type EpisodeServerOptions = {
   episodeDir: string;
   port?: number;
   /** false mounts the handler in another server; no listener is started. */
@@ -107,7 +107,14 @@ export async function createEpisodeServer(options: {
   chromiumExecutable?: string;
   analyzeFrame?: FrameAnalyzer;
   rehydrateVolume?: typeof rehydrateEpisodeVolume;
-}) {
+};
+type EpisodeHandler = { fetch: (request: Request) => Promise<Response> };
+
+export function createEpisodeServer(options: EpisodeServerOptions & { listen?: true }): Promise<Bun.Server<undefined>>;
+export function createEpisodeServer(options: EpisodeServerOptions & { listen: false }): Promise<EpisodeHandler>;
+export async function createEpisodeServer(
+  options: EpisodeServerOptions,
+): Promise<Bun.Server<undefined> | EpisodeHandler> {
   const episodeRoot = await realpath(resolve(options.episodeDir));
   let analyzing = false;
   let rebuildingArchive = false;
