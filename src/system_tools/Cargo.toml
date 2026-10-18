@@ -1,0 +1,16 @@
+[package]
+name = "bun_system_tools"
+description = "Discovery and verification of the system tools `bun ssh`, `bun git` and `bun rsync` run"
+version.workspace = true
+edition.workspace = true
+publish = false
+license = "Apache-2.0"
+
+[lib]
+path = "lib.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+sha2 = "=0.11.0"

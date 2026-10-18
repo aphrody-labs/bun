@@ -45,7 +45,7 @@ fn installed_tool(tool: &str) -> Option<std::path::PathBuf> {
     let pin = &manifest["assets"][name];
     let bytes = pin["bytes"].as_u64().unwrap_or(0);
     let hash = pin["sha256"].as_str().unwrap_or("");
-    bun_ssh::system::verify_installed_tool(&path, bytes, hash)
+    bun_system_tools::verify_installed_tool(&path, bytes, hash)
         .unwrap_or_else(|error| super::msvc_command::fail(format_args!("bun {tool}: {error}")));
     Some(path)
 }
@@ -67,9 +67,8 @@ pub(crate) fn dispatch() {
         return;
     }
     if first == "rsync" && args.iter().skip(2).any(|arg| arg == "--native") {
-        let mut forwarded = vec!["cp".into(), "--delta".into()];
-        forwarded.extend(args.into_iter().skip(2));
-        Global::exit(bun_ssh::cli::main(forwarded, "bun rsync --native").clamp(0, 255) as u32);
+        let forwarded = std::iter::once("rsync".into()).chain(args.into_iter().skip(2));
+        super::plugin_command::exec("ssh", forwarded);
     }
     let override_name = match first {
         "git" => "BUN_GIT_BIN",
@@ -87,7 +86,7 @@ pub(crate) fn dispatch() {
     } else if cfg!(windows) && first == "rsync" {
         None
     } else {
-        installed_tool(first).or_else(|| bun_ssh::system::find(first))
+        installed_tool(first).or_else(|| bun_system_tools::find(first))
     };
     if args.get(2).is_some_and(|arg| arg == "--backend-info") {
         println!(

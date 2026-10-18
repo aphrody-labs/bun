@@ -9,6 +9,7 @@
 
 import { resolve } from "node:path";
 import type { Config } from "./config.ts";
+import { WINFW_SYSTEM_LIBRARIES } from "./deps/winfw.ts";
 import type { Ninja } from "./ninja.ts";
 import { cargoBuildInvocation } from "./rust.ts";
 import { quote, quoteArgs } from "./shell.ts";
@@ -18,34 +19,39 @@ export interface Plugin {
   name: string;
   /** Cargo package of the plugin's executable. */
   package: string;
+  /** Build outputs of bun's graph the plugin links, their environment for cargo and extra rustflags. */
+  native?: (cfg: Config) => { inputs: string[]; env: Record<string, string>; rustflags: string[] };
 }
 
-export const plugins: Plugin[] = [{ name: "uv", package: "bun_plugin_uv" }];
-
-/** Release asset name of a plugin, as `plugin_command.rs` `asset_name` computes it. */
-export function pluginAssetName(plugin: string, os: string, arch: string, abi = "", exeSuffix = ""): string {
-  return `bun-${plugin}-${os}-${arch}${abi}${exeSuffix}`;
-}
+export const plugins: Plugin[] = [
+  { name: "uv", package: "bun_plugin_uv" },
+  {
+    name: "vpn",
+    package: "bun_plugin_vpn",
+    // talpid-core links the Windows firewall library bun's graph compiles (deps/winfw.ts).
+    native: cfg =>
+      cfg.windows
+        ? {
+            inputs: [resolve(cfg.buildDir, "deps/winfw/winfw.lib")],
+            env: { BUN_WINFW_STATIC: "1", WINFW_LIB_DIR: resolve(cfg.buildDir, "deps/winfw") },
+            rustflags: WINFW_SYSTEM_LIBRARIES.map(lib => `-Clink-arg=${lib}`),
+          }
+        : { inputs: [], env: {}, rustflags: [] },
+  },
+  { name: "ssh", package: "bun_plugin_ssh" },
+  { name: "docker", package: "bun_plugin_docker" },
+];
 
 /** Emit every plugin; returns the executables in the binary directory. */
 export function emitPlugins(n: Ninja, cfg: Config): string[] {
   if (cfg.cargo === undefined || plugins.length === 0) return [];
   const hostWin = cfg.host.os === "windows";
-  const { unitEnv, linker, triple } = cargoBuildInvocation(cfg);
+  const { unitEnv, triple } = cargoBuildInvocation(cfg);
+  // What bun's graph compiles is LLVM bitcode under LTO (deps/winfw for the vpn plugin), which only lld reads.
+  const linker = cfg.windows ? cfg.ld : cfg.cxx;
   const targetDir = resolve(cfg.buildDir, "plugin-target");
   const profile = cfg.debug ? "dev" : "plugin";
   const profileDir = cfg.debug ? "debug" : "plugin";
-  const env: Record<string, string> = {
-    ...unitEnv,
-    CARGO_TERM_COLOR: "always",
-    // As for bun's own rustc edges, no compiler wrapper.
-    RUSTC_WRAPPER: "",
-    CARGO_BUILD_RUSTC_WRAPPER: "",
-    [`CARGO_TARGET_${triple.toUpperCase().replace(/-/g, "_")}_LINKER`]: linker,
-  };
-  const envArgs = Object.entries(env)
-    .map(([k, v]) => `--env=${k}=${quote(v, hostWin)}`)
-    .join(" ");
   const copy = resolve(cfg.cwd, "scripts/build/copy-executable.ts");
   n.rule("plugin_copy", {
     command: `${quote(cfg.jsRuntime, hostWin)} ${quote(copy, hostWin)} $in $out`,
@@ -56,6 +62,25 @@ export function emitPlugins(n: Ninja, cfg: Config): string[] {
   n.phony("plugin-always", []);
   const outputs: string[] = [];
   for (const plugin of plugins) {
+    const native = plugin.native?.(cfg) ?? { inputs: [], env: {}, rustflags: [] };
+    // The C/C++ bun's graph compiles for Windows uses the static CRT (/MT); so does every plugin, which then
+    // needs no Visual C++ runtime installed.
+    const rustflags = [
+      ...(cfg.windows ? ["-Ctarget-feature=+crt-static"] : ["-Clink-arg=-fuse-ld=lld"]),
+      ...native.rustflags,
+    ];
+    const env: Record<string, string> = {
+      ...unitEnv,
+      ...native.env,
+      CARGO_TERM_COLOR: "always",
+      // As for bun's own rustc edges, no compiler wrapper.
+      RUSTC_WRAPPER: "",
+      CARGO_BUILD_RUSTC_WRAPPER: "",
+      // aws-lc-sys (russh, rustls) assembles with nasm from PATH; its prebuilt objects need none.
+      ...(cfg.windows ? { AWS_LC_SYS_PREBUILT_NASM: "1" } : {}),
+      [`CARGO_TARGET_${triple.toUpperCase().replace(/-/g, "_")}_LINKER`]: linker,
+      ...(rustflags.length > 0 ? { RUSTFLAGS: rustflags.join(" ") } : {}),
+    };
     const exe = `bun-${plugin.name}${cfg.exeSuffix}`;
     const built = resolve(targetDir, triple, profileDir, exe);
     const args = [
@@ -75,8 +100,15 @@ export function emitPlugins(n: Ninja, cfg: Config): string[] {
       outputs: [built],
       rule: "dep_cargo",
       inputs: [],
-      implicitInputs: ["plugin-always", cfg.cargo, resolve(cfg.cwd, "rust-toolchain.toml")],
-      vars: { name: `plugin-${plugin.name}`, manifestdir: cfg.cwd, env: envArgs, args: quoteArgs(args, hostWin) },
+      implicitInputs: ["plugin-always", cfg.cargo, resolve(cfg.cwd, "rust-toolchain.toml"), ...native.inputs],
+      vars: {
+        name: `plugin-${plugin.name}`,
+        manifestdir: cfg.cwd,
+        env: Object.entries(env)
+          .map(([k, v]) => `--env=${k}=${quote(v, hostWin)}`)
+          .join(" "),
+        args: quoteArgs(args, hostWin),
+      },
     });
     const out = resolve(cfg.binaryDir, exe);
     n.build({ outputs: [out], rule: "plugin_copy", inputs: [built], implicitInputs: [copy] });

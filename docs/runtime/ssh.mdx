@@ -3,7 +3,7 @@ title: SSH
 description: Run commands, copy files, forward ports and serve SSH with bun ssh, through the system OpenSSH or Bun's built-in client and server
 ---
 
-`bun ssh` drives the OpenSSH that is already installed and falls back to a client built into Bun when there is none. On Windows the OpenSSH can be the Windows feature (`System32\OpenSSH`) or Git for Windows; on Linux and macOS it is the system `ssh`. With the system OpenSSH, your `~/.ssh/config`, agent, `known_hosts` and `ProxyJump` setup apply unchanged. The built-in client is [russh](https://github.com/Eugeny/russh) (Apache-2.0) with [russh-sftp](https://github.com/AspectUnk/russh-sftp) (Apache-2.0, in `vendor/russh-sftp`). It reads the same configuration and uses the same agent and `known_hosts` files.
+`bun ssh` runs the `ssh` [plugin](/runtime/bun-plugin) (`bun-ssh`, downloaded on first use). It drives the OpenSSH that is already installed and falls back to a built-in client when there is none. On Windows the OpenSSH can be the Windows feature (`System32\OpenSSH`) or Git for Windows; on Linux and macOS it is the system `ssh`. With the system OpenSSH, your `~/.ssh/config`, agent, `known_hosts` and `ProxyJump` setup apply unchanged. The built-in client is [russh](https://github.com/Eugeny/russh) (Apache-2.0) with [russh-sftp](https://github.com/AspectUnk/russh-sftp) (Apache-2.0, in `vendor/russh-sftp`). It reads the same configuration and uses the same agent and `known_hosts` files.
 
 ```sh terminal icon="terminal"
 bun ssh user@example.com uptime          # same as `ssh user@example.com uptime`

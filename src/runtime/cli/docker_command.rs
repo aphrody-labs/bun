@@ -1,6 +1,4 @@
 // SPDX-License-Identifier: Apache-2.0
-use bun_core::Global;
-
 pub(crate) struct Invocation;
 
 impl Invocation {
@@ -29,6 +27,5 @@ pub(crate) fn exec(_: Invocation) -> ! {
             "bun docker: mutations are experimental; set BUN_FEATURE_FLAG_EXPERIMENTAL_DOCKER_MUTATIONS=1 to enable them"
         ));
     }
-    let code = bun_docker::cli::main(args);
-    Global::exit(code.clamp(0, 255) as u32);
+    super::plugin_command::exec("docker", args);
 }

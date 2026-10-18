@@ -15,7 +15,7 @@ use bun_http as HTTP;
 use super::upgrade_command::{CURRENT_RELEASE_PREFIX, UpgradeCommand, Version};
 
 /// Every plugin the core knows how to dispatch to.
-pub(crate) const PLUGINS: &[&str] = &["uv"];
+pub(crate) const PLUGINS: &[&str] = &["uv", "vpn", "ssh", "docker"];
 
 const EXE_SUFFIX: &str = if cfg!(windows) { ".exe" } else { "" };
 const ABI_SUFFIX: &str = if Environment::IS_MUSL {

@@ -1,7 +1,5 @@
-//! `bun ssh`: the `bun_ssh` crate's command line, dispatched before the runtime starts like
+//! `bun ssh`: the `ssh` plugin (`bun_ssh`), dispatched before the runtime starts like
 //! `bun msvc`. It drives the system OpenSSH when installed and falls back to the in-process client.
-
-use bun_core::Global;
 
 pub(crate) struct Invocation;
 
@@ -23,7 +21,6 @@ impl Invocation {
 
 #[cold]
 pub(crate) fn exec(_: Invocation) -> ! {
-    let args = bun_core::os_args().into_iter().skip(2).collect();
-    let code = bun_ssh::cli::main(args, "bun ssh");
-    Global::exit(code.clamp(0, 255) as u32);
+    let args = bun_core::os_args().into_iter().skip(2);
+    super::plugin_command::exec("ssh", std::iter::once("ssh".into()).chain(args));
 }

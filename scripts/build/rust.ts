@@ -854,7 +854,6 @@ export function emitRust(n: Ninja, cfg: Config, inputs: RustBuildInputs): { rlib
   }
 
   const graph = buildRustGraph(runtime.plan, runtime.dir);
-  if (cfg.windows) packageInputs["talpid-core"] = [resolve(cfg.buildDir, "deps/winfw/winfw.lib")];
   assert(
     graph.root.kind === "lib",
     `rust plan root ${graph.root.crateName} is a ${graph.root.kind}, expected a library`,

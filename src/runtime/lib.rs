@@ -103,8 +103,3 @@ pub(crate) use cli::{
 
 pub(crate) mod webview;
 
-pub mod vpn {
-    #[cfg(not(target_os = "android"))]
-    pub use bun_vpn::VpnClient;
-    pub use bun_vpn::{Error, TunnelState};
-}

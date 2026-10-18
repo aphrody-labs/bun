@@ -49,14 +49,12 @@ test.concurrent("bun vpn login --from-env rejects a malformed value without echo
     VPN_TEST_ACCOUNT: "12345678901234x6",
   });
   expect(result.stdout).toBe("");
-  expect(result.stderr).toBe("bun vpn: VPN account stdin must contain exactly sixteen ASCII digits
-");
+  expect(result.stderr).toBe("bun vpn: VPN account stdin must contain exactly sixteen ASCII digits\n");
   expect(result.exitCode).toBe(2);
 });
 
 test.concurrent("bun vpn login --from-env reports an unset variable", async () => {
   const result = await runVpn(["login", "--from-env", "VPN_TEST_ACCOUNT_UNSET"]);
-  expect(result.stderr).toBe("bun vpn: VPN account environment variable is not set
-");
+  expect(result.stderr).toBe("bun vpn: VPN account environment variable is not set\n");
   expect(result.exitCode).toBe(2);
 });

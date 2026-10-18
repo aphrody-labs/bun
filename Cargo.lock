@@ -5315,11 +5315,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "bun_plugin_docker"
+version = "1.4.6"
+dependencies = [
+ "bun_docker",
+]
+
+[[package]]
+name = "bun_plugin_ssh"
+version = "1.4.6"
+dependencies = [
+ "bun_ssh",
+]
+
+[[package]]
 name = "bun_plugin_uv"
 version = "1.4.6"
 dependencies = [
  "uv",
  "uv-command-support",
+]
+
+[[package]]
+name = "bun_plugin_vpn"
+version = "1.4.6"
+dependencies = [
+ "bun_vpn",
 ]
 
 [[package]]
@@ -5563,7 +5584,6 @@ dependencies = [
  "bun_css",
  "bun_css_jsc",
  "bun_dns",
- "bun_docker",
  "bun_dotenv",
  "bun_ecma_api",
  "bun_env_cookie",
@@ -5627,10 +5647,10 @@ dependencies = [
  "bun_sourcemap_jsc",
  "bun_spawn",
  "bun_sql_jsc",
- "bun_ssh",
  "bun_standalone_graph",
  "bun_sys",
  "bun_sys_jsc",
+ "bun_system_tools",
  "bun_tcc_sys",
  "bun_text_diff",
  "bun_threading",
@@ -5638,7 +5658,6 @@ dependencies = [
  "bun_uws",
  "bun_uws_sys",
  "bun_valkey",
- "bun_vpn",
  "bun_vt",
  "bun_watcher",
  "bun_which",
@@ -5957,6 +5976,7 @@ dependencies = [
 name = "bun_ssh"
 version = "1.4.6"
 dependencies = [
+ "bun_system_tools",
  "clap",
  "fast_rsync",
  "libc",
@@ -6037,6 +6057,13 @@ dependencies = [
  "bun_core",
  "bun_jsc",
  "bun_sys",
+]
+
+[[package]]
+name = "bun_system_tools"
+version = "1.4.6"
+dependencies = [
+ "sha2 0.11.0",
 ]
 
 [[package]]
@@ -6178,7 +6205,6 @@ dependencies = [
 name = "bun_vpn"
 version = "1.4.6"
 dependencies = [
- "bun_sys",
  "log",
  "mullvad-api",
  "mullvad-daemon",

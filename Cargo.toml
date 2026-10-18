@@ -47,6 +47,9 @@ members = [
   "src/rio/libsugarloaf",
   "crates/aphrody-jev",
   "src/plugins/uv",
+  "src/plugins/vpn",
+  "src/plugins/ssh",
+  "src/plugins/docker",
   "src/browser/crates/api",
   "src/browser/crates/browser",
   "src/browser/crates/cdp",
@@ -211,6 +214,7 @@ members = [
   "src/spawn_sys",
   "src/no_window",
   "src/ssh",
+  "src/system_tools",
   "src/docker",
   "src/bunfig",
   "src/transpiler/ecma_api",
@@ -476,6 +480,7 @@ default-members = [
   "src/spawn_sys",
   "src/no_window",
   "src/ssh",
+  "src/system_tools",
   "src/docker",
   "src/bunfig",
   "src/transpiler/ecma_api",
@@ -1113,6 +1118,7 @@ bun_patch_jsc = { path = "src/patch_jsc" }
 bun_router = { path = "src/router" }
 bun_shell_parser = { path = "src/shell_parser" }
 bun_ssh = { path = "src/ssh" }
+bun_system_tools = { path = "src/system_tools" }
 bun_docker = { path = "src/docker" }
 bun_vpn = { path = "src/bun_vpn" }
 bun_spawn = { path = "src/spawn" }

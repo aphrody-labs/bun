@@ -31,7 +31,7 @@ pub mod known_hosts;
 pub mod native;
 pub mod rsync;
 pub mod server;
-pub mod system;
+pub use bun_system_tools as system;
 pub mod term;
 
 pub use config::{Destination, HostConfig};
@@ -68,13 +68,7 @@ pub(crate) fn other(message: impl Into<String>) -> Error {
 }
 
 /// User home directory (`USERPROFILE` on Windows, `HOME` elsewhere).
-pub fn home_dir() -> Option<std::path::PathBuf> {
-    #[cfg(windows)]
-    let var = std::env::var_os("USERPROFILE").or_else(|| std::env::var_os("HOME"));
-    #[cfg(not(windows))]
-    let var = std::env::var_os("HOME");
-    var.filter(|v| !v.is_empty()).map(std::path::PathBuf::from)
-}
+pub use bun_system_tools::home_dir;
 
 /// `~/.bun/ssh`, created on demand with owner-only permissions where the OS supports them.
 pub fn state_dir() -> Result<std::path::PathBuf> {

@@ -1069,11 +1069,6 @@ export const linkerFlags: Flag[] = [
     desc: "Emit a large PDB so the crash handler can symbolize stack traces",
   },
   {
-    flag: "/delayload:winfw.dll",
-    when: c => c.windows,
-    desc: "Load the optional VPN firewall library only when its API is called",
-  },
-  {
     flag: [
       "/LTCG",
       "/OPT:REF",
@@ -1106,7 +1101,6 @@ export const linkerFlags: Flag[] = [
       "/delayload:OLEAUT32.dll",
       "/delayload:USERENV.dll",
       "/delayload:dnsapi.dll",
-      "/delayload:winfw.dll",
     ],
     when: c => c.windows && c.release,
     desc: "Release link opts + delay-load non-critical DLLs (faster startup)",

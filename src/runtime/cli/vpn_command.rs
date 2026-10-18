@@ -1,6 +1,4 @@
-//! `bun vpn` forwards one command to Bun's native Mullvad management client.
-
-use bun_core::Global;
+//! `bun vpn` forwards one command to the `vpn` plugin, Bun's native Mullvad management client.
 
 pub(crate) struct Invocation;
 
@@ -21,11 +19,5 @@ impl Invocation {
 
 #[cold]
 pub(crate) fn exec(_: Invocation) -> ! {
-    let args = bun_core::os_args()
-        .into_iter()
-        .skip(2)
-        .map(|arg| arg.to_string_lossy().into_owned())
-        .collect::<Vec<_>>();
-    let code = bun_vpn::cli(&args);
-    Global::exit(code.clamp(0, 255) as u32);
+    super::plugin_command::exec("vpn", bun_core::os_args().into_iter().skip(2));
 }

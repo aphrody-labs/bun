@@ -27,10 +27,10 @@ Upstream commands (`run`, `test`, `build`, `install`, `add`, `remove`, `update`,
 | `bun mcp [install]` | Model Context Protocol server for coding agents (stdio and HTTP) | `src/mcp`, [mcp](/runtime/mcp), [agent tools](/project/agent-tools) |
 | `bun agent-plugin [install]` | Install the plugin into Claude Code, Codex, Antigravity, Gemini CLI and OpenCode | `packages/bun-agent-plugin`, [agent plugin](/project/agent-plugin) |
 | `bun lsp [query]` | One language server for TypeScript, JavaScript, Python, Rust, C, C++ and C# | `src/lsp`, [lsp](/runtime/lsp) |
-| `bun ssh <host> [command]` | SSH client, copy, forwards, server and connection pool, via system OpenSSH or the built-in client | `src/ssh`, [ssh](/runtime/ssh) |
+| `bun ssh <host> [command]` | SSH client, copy, forwards, server and connection pool, via system OpenSSH or the built-in client | `src/ssh`, `src/plugins/ssh` (the `ssh` plugin), [ssh](/runtime/ssh) |
 | `bun git`, `bun rclone`, `bun rsync` | Pinned installed tools; `bun rsync --native` uses the built-in delta copy | `tools_command.rs`, `packages/bun-tools` |
-| `bun docker` | Native Docker Engine client (`version`, `info`, `ps`, `images`, `start`, `stop`; plan unless `--apply`) | `src/docker` |
-| `bun vpn` | Embedded Mullvad VPN: `daemon`, `status`, `connect`, `disconnect`, `login --stdin` and `login --from-env NAME` | `src/bun_vpn`, [vpn](/vpn/index) |
+| `bun docker` | Native Docker Engine client (`version`, `info`, `ps`, `images`, `start`, `stop`; plan unless `--apply`) | `src/docker`, `src/plugins/docker` (the `docker` plugin) |
+| `bun vpn` | Mullvad VPN (the `vpn` plugin): `daemon`, `status`, `connect`, `disconnect`, `login --stdin` and `login --from-env NAME` | `src/bun_vpn`, `src/plugins/vpn`, [vpn](/vpn/index) |
 | `bun host` | Resource inventory of a machine and a signed registry shared between machines: `collect`, `schema`, `push`, `sync`, `list`, `find` | `src/host`, [host](/runtime/host) |
 | `bun msvc` | Resolve and cache Visual Studio, MSVC and the Windows SDK; cross-compile for Windows | `msvc_command.rs`, [msvc](/runtime/msvc) |
 | `bun winmd` | Generate Rust or `bun:ffi` bindings from Windows metadata | `winmd_command.rs`, [msvc](/runtime/msvc) |

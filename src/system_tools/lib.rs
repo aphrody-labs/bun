@@ -9,7 +9,11 @@
 use std::path::{Path, PathBuf};
 
 /// Installed tool binaries are checked against the single shipped asset manifest before execution.
-pub fn verify_installed_tool(path: &Path, bytes: u64, expected_sha256: &str) -> crate::Result<()> {
+pub fn verify_installed_tool(
+    path: &Path,
+    bytes: u64,
+    expected_sha256: &str,
+) -> std::io::Result<()> {
     use sha2::{Digest, Sha256};
     use std::io::Read;
     let metadata = std::fs::symlink_metadata(path)?;
@@ -18,7 +22,7 @@ pub fn verify_installed_tool(path: &Path, bytes: u64, expected_sha256: &str) -> 
         || metadata.len() != bytes
         || bytes > 256 * 1024 * 1024
     {
-        return Err(crate::other(
+        return Err(std::io::Error::other(
             "Installed tool has an invalid file type or pinned size",
         ));
     }
@@ -33,7 +37,9 @@ pub fn verify_installed_tool(path: &Path, bytes: u64, expected_sha256: &str) -> 
         }
         total += read as u64;
         if total > bytes {
-            return Err(crate::other("Installed tool exceeded its pinned size"));
+            return Err(std::io::Error::other(
+                "Installed tool exceeded its pinned size",
+            ));
         }
         hash.update(&chunk[..read]);
     }
@@ -43,9 +49,18 @@ pub fn verify_installed_tool(path: &Path, bytes: u64, expected_sha256: &str) -> 
         .map(|byte| format!("{byte:02x}"))
         .collect::<String>();
     if total != bytes || actual != expected_sha256 {
-        return Err(crate::other("Installed tool SHA-256 mismatch"));
+        return Err(std::io::Error::other("Installed tool SHA-256 mismatch"));
     }
     Ok(())
+}
+
+/// The user's home directory: `USERPROFILE` (then `HOME`) on Windows, `HOME` elsewhere.
+pub fn home_dir() -> Option<PathBuf> {
+    #[cfg(windows)]
+    let var = std::env::var_os("USERPROFILE").or_else(|| std::env::var_os("HOME"));
+    #[cfg(not(windows))]
+    let var = std::env::var_os("HOME");
+    var.filter(|v| !v.is_empty()).map(PathBuf::from)
 }
 
 const EXE: &str = std::env::consts::EXE_SUFFIX;
@@ -117,7 +132,7 @@ fn well_known_dirs() -> Vec<PathBuf> {
         dirs.push(local.join("Programs").join("Git").join("cmd"));
         dirs.push(local.join("Programs").join("Git").join("usr").join("bin"));
     }
-    if let Some(scoop) = crate::home_dir().map(|h| h.join("scoop").join("shims")) {
+    if let Some(scoop) = home_dir().map(|h| h.join("scoop").join("shims")) {
         dirs.push(scoop);
     }
     dirs

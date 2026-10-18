@@ -1,6 +1,7 @@
 use std::io::Read;
 
-pub(crate) const USAGE: &str = "usage: bun vpn <daemon|status|connect|disconnect|login --stdin|login --from-env NAME>";
+pub(crate) const USAGE: &str =
+    "usage: bun vpn <daemon|status|connect|disconnect|login --stdin|login --from-env NAME>";
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Command {
@@ -121,8 +122,13 @@ mod tests {
         unsafe { std::env::set_var("BUN_VPN_TEST_ACCOUNT_BAD", "12345678901234x6") };
         let error = account_from_env("BUN_VPN_TEST_ACCOUNT_BAD").unwrap_err();
         assert!(!error.contains("1234567890"));
-        unsafe { std::env::set_var("BUN_VPN_TEST_ACCOUNT_OK", "1234567890123456
-") };
+        unsafe {
+            std::env::set_var(
+                "BUN_VPN_TEST_ACCOUNT_OK",
+                "1234567890123456
+",
+            )
+        };
         assert_eq!(
             account_from_env("BUN_VPN_TEST_ACCOUNT_OK").unwrap(),
             "1234567890123456"

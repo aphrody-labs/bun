@@ -438,6 +438,13 @@ function libraryPath(ctx: ManifestContext): ManifestCommon["libraryPath"] {
   return { variable: dylibPathVar(ctx.cfg.host.os), prepend: [ctx.graph.hostDeps] };
 }
 
+/** Build scripts also run tools by name: on Windows the search path is PATH, so the configured `nasm` (which aws-lc-sys runs) goes in front too. */
+function buildScriptLibraryPath(ctx: ManifestContext): ManifestCommon["libraryPath"] {
+  const path = libraryPath(ctx);
+  if (ctx.cfg.host.os !== "windows" || ctx.cfg.nasm === undefined) return path;
+  return { ...path, prepend: [...path.prepend, dirname(ctx.cfg.nasm)] };
+}
+
 function rustcUnitManifest(ctx: ManifestContext, unit: RustUnit): RustcUnitManifest {
   const { cfg, graph } = ctx;
   const plan = graph.plan;
@@ -720,10 +727,6 @@ function buildScriptRunManifest(ctx: ManifestContext, unit: RustUnit): BuildScri
     env.CXX = ctx.cfg.hostCxx;
     env.AR = ctx.cfg.hostAr;
   }
-  if (!isHost && info.triple.endsWith("-windows-msvc") && unit.pkg.name === "talpid-core") {
-    env.BUN_WINFW_STATIC = "1";
-    env.WINFW_LIB_DIR = join(ctx.cfg.buildDir, "deps/winfw");
-  }
   if (
     !isHost &&
     info.triple.endsWith("-windows-msvc") &&
@@ -783,7 +786,7 @@ function buildScriptRunManifest(ctx: ManifestContext, unit: RustUnit): BuildScri
     env,
     output: unit.output,
     depfile: join(unit.outDir, "output.d"),
-    libraryPath: libraryPath(ctx),
+    libraryPath: buildScriptLibraryPath(ctx),
     script: {
       program: compiled.unit.output,
       outDir: unit.scriptOutDir!,
