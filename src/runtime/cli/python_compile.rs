@@ -1,10 +1,9 @@
 // SPDX-License-Identifier: MIT
-//! Lazy Python compilation through the selected CPython host and embedded UV.
+//! Lazy Python compilation through the selected CPython host and the uv plugin.
 
 use std::ffi::OsString;
 
 use bun_core::{Global, ZStr};
-use uv_command_support::ExitStatus;
 
 const SOURCE: &str = include_str!("python_compile.py");
 const HELP: &str = "Usage: buv compile <entry.py> [--format exe|shared|wasm] [--outfile <path>]\n\
@@ -153,7 +152,6 @@ fn compile(argv: &[&ZStr]) -> Result<(), String> {
     let python = std::str::from_utf8(python)
         .map_err(|_| "BUN_PYTHON_EXECUTABLE must be a UTF-8 path".to_owned())?;
     let mut uv_arguments: Vec<OsString> = [
-        "uv",
         "run",
         "--isolated",
         "--no-project",
@@ -184,18 +182,10 @@ fn compile(argv: &[&ZStr]) -> Result<(), String> {
             )?));
     }
     uv_arguments.push(OsString::from("--backend-ready"));
-    // SAFETY: terminal compilation dispatch precedes JSC and worker initialization.
     // UV selects the compiler venv; --python already pins the base interpreter.
-    let status = unsafe {
-        std::env::remove_var("BUN_PYTHON_EXECUTABLE");
-        uv::main_status(uv_arguments)
-    };
-    Global::exit(match status {
-        ExitStatus::Success => 0,
-        ExitStatus::Failure => 1,
-        ExitStatus::Error => 2,
-        ExitStatus::External(code) => u32::from(code),
-    });
+    // SAFETY: terminal compilation dispatch precedes JSC and worker initialization.
+    unsafe { std::env::remove_var("BUN_PYTHON_EXECUTABLE") };
+    super::plugin_command::exec("uv", uv_arguments);
 }
 
 #[cfg(test)]

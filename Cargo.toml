@@ -46,6 +46,7 @@ members = [
   "src/rio/librio-wasm",
   "src/rio/libsugarloaf",
   "crates/aphrody-jev",
+  "src/plugins/uv",
   "src/browser/crates/api",
   "src/browser/crates/browser",
   "src/browser/crates/cdp",
@@ -613,6 +614,12 @@ strip = true
 [profile.runtime]
 inherits = "release"
 panic = "unwind"
+
+# `bun-<name>` plugin executables (scripts/build/plugins.ts): rustc links them, so no bitcode for bun's LTO.
+[profile.plugin]
+inherits = "release"
+debug = false
+strip = true
 
 [profile.unwind-release]
 inherits = "release"

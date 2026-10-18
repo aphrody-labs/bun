@@ -1,0 +1,30 @@
+---
+title: bun plugin
+description: Cold parts of Bun shipped as separate executables, fetched on first use.
+---
+
+Some commands of Bun run in a separate executable, a plugin, so the `bun` executable stays small and starts fast. `bun uv`, `uv`, `uvx` and Python compilation run the `uv` plugin, `bun-uv`.
+
+A plugin is looked up, in order:
+
+1. next to the `bun` executable (`bun-uv`, `bun-uv.exe`), where a build of the checkout puts it;
+2. in `$BUN_PLUGINS_DIR`, or `$BUN_INSTALL/plugins` (default `~/.bun/plugins`), under `<name>/<version>/`.
+
+When it is missing, the first command that needs it downloads it from the GitHub release of the running Bun (`aphrody-v<version>`, then `main-runtime-<revision>`), checks it against the release's `SHA256SUMS.txt`, and installs it in the plugin directory. Plugins of an older Bun are removed when the new one is installed, so `bun upgrade` needs no extra step.
+
+```sh
+bun plugin list            # every plugin and where it is
+bun plugin install uv      # download it now
+bun plugin remove uv       # delete the downloaded copy
+```
+
+The plugin receives the command's arguments, standard input and output, environment and working directory, and its exit status is the command's.
+
+| Variable                           | Effect                                                                               |
+| ---------------------------------- | ------------------------------------------------------------------------------------ |
+| `BUN_PLUGINS_DIR`                  | Plugin directory; when set, it is the only place looked at                           |
+| `BUN_PLUGIN_RELEASE_URL`           | Directory URL holding the assets and `SHA256SUMS.txt`, instead of the GitHub release |
+| `BUN_PLUGIN_NO_DOWNLOAD=1`         | Fail instead of downloading a missing plugin                                         |
+| `APHRODY_BUN_REPO`, `GITHUB_TOKEN` | Repository and token used for the release, as for `bun upgrade`                      |
+
+Release assets are named `bun-<name>-<os>-<arch>[-musl][.exe]`, for example `bun-uv-linux-x64` or `bun-uv-windows-x64.exe`.

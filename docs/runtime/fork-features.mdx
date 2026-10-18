@@ -35,7 +35,8 @@ Upstream commands (`run`, `test`, `build`, `install`, `add`, `remove`, `update`,
 | `bun msvc` | Resolve and cache Visual Studio, MSVC and the Windows SDK; cross-compile for Windows | `msvc_command.rs`, [msvc](/runtime/msvc) |
 | `bun winmd` | Generate Rust or `bun:ffi` bindings from Windows metadata | `winmd_command.rs`, [msvc](/runtime/msvc) |
 | `bun dotnet` | Run the .NET SDK inside Bun, run C# files, call assemblies from `bun:dotnet` | `dotnet_command.rs`, [dotnet](/runtime/dotnet) |
-| `bun python`, `bun uv` | CPython host, `bun compile` for Python, embedded UV package manager | `python_command.rs`, `uv_command.rs`, [python](/runtime/python), [buv](/runtime/buv) |
+| `bun python`, `bun uv` | CPython host, `bun compile` for Python, UV package manager (the `uv` plugin) | `python_command.rs`, `uv_command.rs`, `src/plugins/uv`, [python](/runtime/python), [buv](/runtime/buv) |
+| `bun plugin list \| install \| remove` | Plugins: cold subsystems built as separate `bun-<name>` executables, fetched on first use from the release of the running bun and checked against its `SHA256SUMS.txt` | `plugin_command.rs`, `scripts/build/plugins.ts`, [plugins](/runtime/bun-plugin) |
 | `bun search` | Google search owner (SERP, discovery, cache, browser fallback) | `search_command.rs`, `src/google`, `packages/bun-google` |
 | `bun env`, `bun cookie` | `.env` files (`list`, `get`, `set`, `unset`, `check`, `files`; secrets hidden) and cookie jars (`import`, `jars`, `list`, `get`, `header`, `rm`, `check`) | `env_command.rs`, `cookie_command.rs`, `src/env_cookie`, [bun env](/runtime/bun-env), [bun cookie](/runtime/bun-cookie) |
 | `bunsh` (argv0) | Bun Shell as a system shell: `-c`, script, interactive, `--root` | `src/runtime/cli/bunsh.rs` |

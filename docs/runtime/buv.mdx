@@ -1,9 +1,9 @@
 ---
 title: Buv and PyJS
-description: Run the UV Python package manager embedded in Bun, and use the PyJS file extensions.
+description: Run the UV Python package manager shipped with Bun as a plugin, and use the PyJS file extensions.
 ---
 
-Bun embeds the [UV](https://github.com/astral-sh/uv) Python package and project manager (UV 0.12.24). Run it with `bun uv`:
+Bun ships the [UV](https://github.com/astral-sh/uv) Python package and project manager (UV 0.12.24) as the `uv` [plugin](/runtime/bun-plugin), the `bun-uv` executable. Run it with `bun uv`:
 
 ```sh terminal icon="terminal"
 bun uv --version
@@ -17,7 +17,7 @@ On Windows, use `.venv/Scripts/python.exe` for a virtual environment's Python ex
 
 The same executable can be installed under the names `buv` and `pyjs`; `buv uv <command>` and `pyjs uv <command>` behave like `bun uv <command>`. When the executable is invoked as `uv` or `uvx` (for example through a renamed copy or a link), it behaves like the standalone `uv` and `uvx` commands.
 
-`bun uv` dispatches before the JavaScript engine starts. It preserves UV's arguments, Python discovery, project configuration, cache and exit statuses. UV's self-update command is disabled; update UV by upgrading Bun.
+`bun uv` dispatches to `bun-uv` before the JavaScript engine starts; the first use downloads the plugin matching the running Bun. It preserves UV's arguments, Python discovery, project configuration, cache and exit statuses. UV's self-update command is disabled; update UV by upgrading Bun.
 
 ## PyJS files
 

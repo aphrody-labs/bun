@@ -1,8 +1,5 @@
 use std::ffi::OsString;
 
-use bun_core::Global;
-use uv_command_support::ExitStatus;
-
 #[derive(Clone, Copy)]
 pub(crate) enum Invocation {
     Bun,
@@ -32,21 +29,13 @@ impl Invocation {
 #[cold]
 pub(crate) fn exec(invocation: Invocation) -> ! {
     let (skip, prefix): (usize, &[&str]) = match invocation {
-        Invocation::Bun => (2, &["uv"]),
-        Invocation::Uv => (1, &["uv"]),
-        Invocation::Uvx => (1, &["uv", "tool", "uvx"]),
+        Invocation::Bun => (2, &[]),
+        Invocation::Uv => (1, &[]),
+        Invocation::Uvx => (1, &["tool", "uvx"]),
     };
     let args = prefix
         .iter()
         .map(OsString::from)
         .chain(bun_core::os_args().into_iter().skip(skip));
-    // SAFETY: Command::start dispatches once, before Bun starts worker threads or JSC.
-    let status = unsafe { uv::main_status(args) };
-    let code = match status {
-        ExitStatus::Success => 0,
-        ExitStatus::Failure => 1,
-        ExitStatus::Error => 2,
-        ExitStatus::External(code) => u32::from(code),
-    };
-    Global::exit(code);
+    super::plugin_command::exec("uv", args);
 }

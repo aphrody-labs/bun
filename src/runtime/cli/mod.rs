@@ -116,30 +116,32 @@ pub(crate) mod arguments;
 pub(crate) use arguments as Arguments;
 #[path = "agent_plugin_command.rs"]
 pub(crate) mod agent_plugin_command;
+#[path = "cookie_command.rs"]
+pub(crate) mod cookie_command;
 #[path = "docker_command.rs"]
 pub(crate) mod docker_command;
 #[path = "dotnet_command.rs"]
 pub(crate) mod dotnet_command;
-#[path = "cookie_command.rs"]
-pub(crate) mod cookie_command;
 #[path = "env_command.rs"]
 pub(crate) mod env_command;
 #[path = "host_command.rs"]
 pub(crate) mod host_command;
-#[path = "search_command.rs"]
-pub(crate) mod search_command;
 #[path = "lsp_command.rs"]
 pub(crate) mod lsp_command;
 #[path = "mcp_command.rs"]
 pub(crate) mod mcp_command;
 #[path = "msvc_command.rs"]
 pub(crate) mod msvc_command;
+#[path = "plugin_command.rs"]
+pub(crate) mod plugin_command;
 #[path = "python_command.rs"]
 pub(crate) mod python_command;
 #[path = "python_compile.rs"]
 pub(crate) mod python_compile;
 #[path = "run_command.rs"]
 pub(crate) mod run_command;
+#[path = "search_command.rs"]
+pub(crate) mod search_command;
 #[path = "ssh_command.rs"]
 pub(crate) mod ssh_command;
 pub(crate) mod tools_command;
@@ -1210,6 +1212,11 @@ pub(crate) mod command {
             {
                 super::vpn_command::exec(invocation);
             }
+            if let Some(invocation) =
+                super::plugin_command::Invocation::from_argv(argv0, first, be_bun)
+            {
+                super::plugin_command::command(invocation);
+            }
             if let Some(invocation) = super::host_command::Invocation::from_argv(argv0, first)
                 .or_else(|| {
                     (first == Some(b"host") && be_bun())
@@ -1704,8 +1711,7 @@ pub(crate) mod command {
         command: &[u8],
     ) -> &'a [&'static bun_core::ZStr] {
         let bytes: Vec<_> = argv.iter().map(|arg| arg.as_bytes()).collect();
-        super::script_or_command::command_index(&bytes, command)
-            .map_or(&[], |at| &argv[at + 1..])
+        super::script_or_command::command_index(&bytes, command).map_or(&[], |at| &argv[at + 1..])
     }
 
     /// The flags of `command` that stand before it, as in `bun --check format` or `bun -c format`, and then what follows it. If
@@ -1837,7 +1843,8 @@ pub(crate) mod command {
 
     const DEFAULT_COMPLETIONS_LIST: &[&[u8]] = &[
         b"build", b"install", b"add", b"run", b"update", b"link", b"unlink", b"remove", b"create",
-        b"bun", b"upgrade", b"discord", b"test", b"pm", b"x", b"repl", b"info", b"video", b"search",
+        b"bun", b"upgrade", b"discord", b"test", b"pm", b"x", b"repl", b"info", b"video",
+        b"search",
     ];
 
     // DEFAULT_COMPLETIONS_LIST ++ extras; hand-rolled join (small, fixed).

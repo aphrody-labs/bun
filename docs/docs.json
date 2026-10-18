@@ -154,7 +154,8 @@
               "/runtime/webview",
               "/runtime/cron",
               "/runtime/python",
-              "/runtime/buv"
+              "/runtime/buv",
+              "/runtime/bun-plugin"
             ]
           },
           {

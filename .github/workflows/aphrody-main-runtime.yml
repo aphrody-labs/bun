@@ -44,9 +44,11 @@ jobs:
           - runner: ubuntu-24.04
             asset: bun-linux-x64
             executable: build/release/bun
+            plugin-suffix: linux-x64
           - runner: windows-2025
             asset: bun-windows-x64.exe
             executable: build/release/bun.exe
+            plugin-suffix: windows-x64.exe
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 355
     env:
@@ -92,10 +94,16 @@ jobs:
           case "$GITHUB_SHA" in "$suffix"*) ;; *) echo "revision differs: $revision"; exit 1;; esac
           mkdir -p "$RUNNER_TEMP/main-runtime"
           cp "${{ matrix.executable }}" "$RUNNER_TEMP/main-runtime/${{ matrix.asset }}"
+          # Plugins (scripts/build/plugins.ts) are release assets of their own, fetched on first use.
+          for plugin in uv; do
+            exe="build/release/bun-$plugin"; [ "$RUNNER_OS" = Windows ] && exe="$exe.exe"
+            "$exe" --version
+            cp "$exe" "$RUNNER_TEMP/main-runtime/bun-$plugin-${{ matrix.plugin-suffix }}"
+          done
       - uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.asset }}
-          path: ${{ runner.temp }}/main-runtime/${{ matrix.asset }}
+          path: ${{ runner.temp }}/main-runtime/*
           compression-level: 0
           if-no-files-found: error
 
@@ -124,8 +132,9 @@ jobs:
           fi
           suffix="${BASH_REMATCH[2]}"
           case "$GITHUB_SHA" in "$suffix"*) ;; *) echo "revision differs: $revision"; exit 1;; esac
-          sha256sum bun-linux-x64 bun-windows-x64.exe > SHA256SUMS.txt
+          assets=(bun-linux-x64 bun-windows-x64.exe bun-uv-linux-x64 bun-uv-windows-x64.exe)
+          sha256sum "${assets[@]}" > SHA256SUMS.txt
           gh release create "$TAG" -R "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
             --title "Aphrody Bun main ${GITHUB_SHA:0:12}" \
             --notes "Automatic exact-source runtime delivery for Windows, VPS and DBFR." \
-            --prerelease bun-linux-x64 bun-windows-x64.exe SHA256SUMS.txt
+            --prerelease "${assets[@]}" SHA256SUMS.txt

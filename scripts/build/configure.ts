@@ -35,6 +35,7 @@ import { mkdirAll, writeIfChanged } from "./fs.ts";
 import { ensureMacosSdk } from "./macos-sdk.ts";
 import { ensureNinja } from "./ninja-release.ts";
 import { Ninja } from "./ninja.ts";
+import { emitPlugins } from "./plugins.ts";
 import { getProfile } from "./profiles.ts";
 import { registerAllRules } from "./rules.ts";
 import { rustPlanFiles } from "./rust.ts";
@@ -482,6 +483,7 @@ async function generate<N extends string | undefined>(
   mkdirSync(cfg.binaryDir, { recursive: true });
   const output = emitBun(n, cfg, sources);
   mark("emitBun");
+  const pluginExes = emitPlugins(n, cfg);
   emitGeneratorRule(n, cfg, input);
 
   // Default targets: the `bun` phony (or stripped file); the smoke test
@@ -493,6 +495,7 @@ async function generate<N extends string | undefined>(
   // auto-trigger).
   const targets = [output.strippedExe !== undefined ? n.rel(output.strippedExe) : "bun"];
   if (output.dsym !== undefined) targets.push(n.rel(output.dsym));
+  targets.push(...pluginExes.map(exe => n.rel(exe)));
   n.default(targets);
 
   const { changed, ninjaPath } = await writeManifest(n, cfg, ninja, mark);

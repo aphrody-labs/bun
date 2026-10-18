@@ -5315,6 +5315,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "bun_plugin_uv"
+version = "1.4.6"
+dependencies = [
+ "uv",
+ "uv-command-support",
+]
+
+[[package]]
 name = "bun_privacy"
 version = "1.4.6"
 dependencies = [
@@ -5659,8 +5667,6 @@ dependencies = [
  "strum 0.28.0",
  "thiserror 2.0.21",
  "tokio",
- "uv",
- "uv-command-support",
  "windows-bindgen",
 ]
 

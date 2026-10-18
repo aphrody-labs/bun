@@ -87,14 +87,14 @@ test.concurrent("native buv and pyjs graph aliases share the SQLite and serializ
   );
 });
 
-test.concurrent("embedded uv reports its own version", async () => {
+test.concurrent("uv plugin reports its own version", async () => {
   const result = await run(["uv", "--version"]);
   expect(result.out).toMatch(/^uv 0\.12\.24(?: .*)?$/);
   expect(result.err).toBe("");
   expect(result.code).toBe(0);
 });
 
-test.concurrent("buv dispatches its embedded UV command", async () => {
+test.concurrent("buv dispatches to the uv plugin", async () => {
   const result = await run(["uv", "--version"], undefined, environment, "buv");
   expect(result.out).toMatch(/^uv 0\.12\.24(?: .*)?$/);
   expect(result.err).toBe("");
@@ -102,7 +102,7 @@ test.concurrent("buv dispatches its embedded UV command", async () => {
 });
 
 for (const command of ["uv", "uvx"]) {
-  test.concurrent(`${command} argv0 dispatches inside the same native executable`, async () => {
+  test.concurrent(`${command} argv0 dispatches to the uv plugin`, async () => {
     const result = await run(["--version"], undefined, environment, command);
     expect(result.out).toMatch(new RegExp(`^${command} 0\\.12\\.24(?: .*)?$`));
     expect(result.err).toBe("");
@@ -306,26 +306,26 @@ test.concurrent("Bun help advertises its embedded UV command", async () => {
   expect(result.code).toBe(0);
 });
 
-test.concurrent("embedded uv rejects unknown arguments", async () => {
+test.concurrent("uv plugin rejects unknown arguments", async () => {
   const result = await run(["uv", "--aphrody-invalid-option"]);
   expect(result.err).toContain("--aphrody-invalid-option");
   expect(result.code).toBe(2);
 });
 
-test.concurrent("embedded uv accepts its Python command namespace", async () => {
+test.concurrent("uv plugin accepts its Python command namespace", async () => {
   const result = await run(["uv", "python", "--help"]);
   expect(result.out).toContain("Manage Python versions");
   expect(result.code).toBe(0);
 });
 
-test.concurrent("embedded uv runs under its executable alias", async () => {
+test.concurrent("uv plugin runs under its executable alias", async () => {
   const result = await run(["--version"], undefined, environment, "uv");
   expect(result.out).toMatch(/^uv 0\.12\.24(?: .*)?$/);
   expect(result.err).toBe("");
   expect(result.code).toBe(0);
 });
 
-test.concurrent("embedded uv frees the paths it canonicalizes", async () => {
+test.concurrent("uv plugin frees the paths it canonicalizes", async () => {
   using dir = tempDir("uv-canonicalize", {});
   const result = await run(["uv", "tool", "dir"], undefined, {
     ...environment,
@@ -343,7 +343,7 @@ test.concurrent("embedded uvx uses its tool command namespace", async () => {
   expect(result.code).toBe(0);
 });
 
-test.concurrent("embedded uv honors explicit engine dispatch under another name", async () => {
+test.concurrent("uv plugin honors explicit engine dispatch under another name", async () => {
   const result = await run(["uv", "--version"], undefined, { ...environment, BUN_BE_BUN: "1" }, "custom-runtime");
   expect(result.out).toMatch(/^uv 0\.12\.24(?: .*)?$/);
   expect(result.err).toBe("");
@@ -365,7 +365,7 @@ test.concurrent("node alias keeps scripts named uv", async () => {
   expect(code).toBe(0);
 });
 
-test.skipIf(!python)("embedded uv preserves child process status offline", async () => {
+test.skipIf(!python)("uv plugin preserves child process status offline", async () => {
   const result = await run([
     "uv",
     "run",

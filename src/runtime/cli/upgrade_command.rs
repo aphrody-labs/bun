@@ -71,7 +71,7 @@ const DEFAULT_REPO: &str = "aphrody-labs/bun";
 /// (`n2b-v0.7.1`, …) belong to other packages.
 const RELEASE_TAG_PREFIX: &[u8] = b"aphrody-v";
 const UPSTREAM_TAG_PREFIX: &[u8] = b"bun-v";
-const CURRENT_RELEASE_PREFIX: &str =
+pub(crate) const CURRENT_RELEASE_PREFIX: &str =
     if Global::display_version.len() == Global::package_json_version.len() {
         "bun-v"
     } else {
@@ -158,7 +158,7 @@ impl Version {
 
     /// Lowercase hex SHA-256 of `name` in a `sha256sum`-style listing (`<hex>  <name>` or
     /// `<hex> *<name>`).
-    fn digest_from_sums(sums: &[u8], name: &[u8]) -> Option<Integrity> {
+    pub(crate) fn digest_from_sums(sums: &[u8], name: &[u8]) -> Option<Integrity> {
         for line in strings::split(sums, b"\n") {
             let line = bun_core::trim(line, b" \r\t");
             let Some((hex, rest)) = strings::split_once_char(line, b' ') else {
@@ -238,7 +238,7 @@ impl UpgradeCommand {
         }
     }
 
-    fn repo(env_loader: &DotEnv::Loader) -> &[u8] {
+    pub(crate) fn repo(env_loader: &DotEnv::Loader) -> &[u8] {
         let repo = match env_loader.map.get(b"APHRODY_BUN_REPO") {
             Some(repo) if !repo.is_empty() => repo,
             _ => return DEFAULT_REPO.as_bytes(),
@@ -291,7 +291,7 @@ impl UpgradeCommand {
 
     /// GET `url` into `body` and return the status. Only API requests (`api`) carry the token,
     /// so it never follows an asset download's redirect to the CDN.
-    fn http_get(
+    pub(crate) fn http_get(
         env_loader: &DotEnv::Loader,
         url: &'static [u8],
         api: bool,

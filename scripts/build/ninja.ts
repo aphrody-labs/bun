@@ -29,6 +29,7 @@ const ruleVars = {
   // bun.ts
   binary_verify: ["spec"],
   copy_exe: [],
+  plugin_copy: [],
   dsymutil: [],
   duplicate_symbols: [],
   rc: ["rcflags"],
