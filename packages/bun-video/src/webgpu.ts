@@ -20,7 +20,11 @@ export interface WebGpuOptions {
   readonly backend?: "native" | "chromium";
   readonly libraryPath?: string;
   readonly chromiumExecutable?: string;
+  /** Origin of an already mounted probe page; when set, no probe listener is started. */
+  readonly origin?: string;
 }
+
+export const WEBGPU_PROBE_HTML = PROBE_HTML;
 
 export type WebGpuAdapterEvidence =
   | { kind: "native"; selected: GpuReport["selected"]; limits: GpuReport["limits"] }
@@ -97,18 +101,21 @@ async function withChromiumPage<T>(
     AbortSignal.timeout(options.timeout ?? 15_000),
     ...(options.signal ? [options.signal] : []),
   ]);
-  const server = Bun.serve({
-    hostname: "127.0.0.1",
-    port: 0,
-    fetch: () => new Response(PROBE_HTML, { headers: { "content-type": "text/html; charset=utf-8" } }),
-  });
+  const server = options.origin
+    ? undefined
+    : Bun.serve({
+        hostname: "127.0.0.1",
+        port: 0,
+        fetch: () => new Response(PROBE_HTML, { headers: { "content-type": "text/html; charset=utf-8" } }),
+      });
+  const base = options.origin ?? `http://127.0.0.1:${server!.port}`;
   let browser: Awaited<ReturnType<ChromiumModule["launch"]>> | undefined;
   try {
     const { default: chromium } = (await import("bun:chromium")) as unknown as {
       default: ChromiumModule;
     };
     browser = await chromium.launch({
-      url: `http://127.0.0.1:${server.port}/webgpu`,
+      url: `${base}/webgpu`,
       ...(options.chromiumExecutable === undefined ? {} : { executable: options.chromiumExecutable }),
       headless: true,
       webgpu: true,
@@ -119,18 +126,18 @@ async function withChromiumPage<T>(
       targetInfos: Array<{ targetId: string; type: string; url: string }>;
     }>("Target.getTargets");
     const target = targets.targetInfos.find(
-      item => item.type === "page" && item.url === `http://127.0.0.1:${server.port}/webgpu`,
+      item => item.type === "page" && item.url === `${base}/webgpu`,
     );
     if (!target) throw new Error("Chromium did not create the WebGPU probe page");
     const attached = await browser.connection.send<{ sessionId: string }>("Target.attachToTarget", {
       targetId: target.targetId,
       flatten: true,
     });
-    await navigateComputePage(browser, attached.sessionId, `http://127.0.0.1:${server.port}/webgpu`, signal);
+    await navigateComputePage(browser, attached.sessionId, `${base}/webgpu`, signal);
     return await operation(browser.connection, attached.sessionId);
   } finally {
     await browser?.close();
-    server.stop(true);
+    server?.stop(true);
   }
 }
 

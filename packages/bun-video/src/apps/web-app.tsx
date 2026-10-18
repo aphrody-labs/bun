@@ -66,7 +66,24 @@ function Compositions() {
       )
       .catch(() => setStatus("État des compositions indisponible."));
   }, []);
-  return <p className="notice">{status}</p>;
+  const [probe, setProbe] = useState<string>("Aucun sondage lancé.");
+  const runProbe = () => {
+    setProbe("Sondage WebGPU en cours…");
+    fetch("/api/webgpu/probe", { cache: "no-store" })
+      .then(async response => {
+        if (!response.ok) throw new Error(String(response.status));
+        const body = (await response.json()) as { available?: boolean; adapter?: unknown };
+        setProbe(body.available ? "Adaptateur WebGPU disponible." : "WebGPU indisponible sur cet hôte.");
+      })
+      .catch(() => setProbe("Sondage WebGPU impossible (Chromium requis)."));
+  };
+  return (
+    <>
+      <p className="notice">{status}</p>
+      <button type="button" className="action" onClick={runProbe}>Sonder WebGPU</button>
+      <p className="notice" role="status" aria-live="polite">{probe}</p>
+    </>
+  );
 }
 
 const views: Record<Section, () => ReactNode> = {

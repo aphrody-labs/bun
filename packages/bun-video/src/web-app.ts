@@ -5,6 +5,7 @@ import { createCrunchyrollShortcutsHandler } from "./apps/crunchyroll-shortcuts"
 import { createCrunchyrollApi, type CrunchyrollApiOptions } from "./crunchyroll-api";
 import { createDashLab } from "./apps/dash-live";
 import { prepareHlsLab } from "./apps/hls-live";
+import { WEBGPU_PROBE_HTML } from "./webgpu";
 
 export interface VideoWebAppOptions {
   /** Directory that local media paths must stay inside. */
@@ -225,6 +226,17 @@ export function createVideoWebApp(options: VideoWebAppOptions): VideoWebApp {
         return json(await extractYtDlp(parsed.href));
       } catch {
         return json({ error: "extraction_failed" }, 422);
+      }
+    }
+
+    if (path === "/webgpu") return new Response(WEBGPU_PROBE_HTML, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
+
+    if (path === "/api/webgpu/probe") {
+      try {
+        const { probeChromiumWebGpu } = await import("./webgpu");
+        return json(await probeChromiumWebGpu({ origin: url.origin, timeout: 15000 }));
+      } catch {
+        return json({ error: "webgpu_probe_failed" }, 503);
       }
     }
 
