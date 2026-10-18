@@ -4,16 +4,16 @@ Browser SDK of the Bun fork. It is a library, not an additional executable or pu
 runtime stays `Bun.WebView` (Chrome over CDP) and the Rust engine in `src/browser/crates`. Importing a module never
 launches a browser, process, worker or network request.
 
-| Module | Role |
-| --- | --- |
-| `./cdp` | `BrowserPage`: one `Bun.WebView` tab on a CDP endpoint. `goto` settles on the load event (`waitUntil` `load` and `networkidle`), on `Page.domContentEventFired` (`domcontentloaded`) or at commit (`commit`). |
-| `./locator`, `./selectors` | Semantic locators (`getByRole`, `getByLabel`, `getByTestId`, ...) imported from the former web client. |
-| `./client` | `AgentBrowser` / `AgentPage`: the agent-browser command surface (snapshot refs, click, fill, wait, screenshot, PDF) over CDP. |
-| `./cli` | `yolo browser <command>`: one command, one JSON line. |
-| `./engine`, `./config` | Lifecycle of the local `aphrody-web` engine (`launch`) from `tools/config/web.json`. |
-| `./service`, `./runtime` | Web service client (fetch, scrape, crawl) and its shared runtime. |
-| `./tauri` | Tauri bridge. |
-| `./testing`, `./testing/next`, `./testing/sites` | Playwright-compatible test runner over the same pages. |
+| Module                                           | Role                                                                                                                                                                                                          |
+| ------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `./cdp`                                          | `BrowserPage`: one `Bun.WebView` tab on a CDP endpoint. `goto` settles on the load event (`waitUntil` `load` and `networkidle`), on `Page.domContentEventFired` (`domcontentloaded`) or at commit (`commit`). |
+| `./locator`, `./selectors`                       | Semantic locators (`getByRole`, `getByLabel`, `getByTestId`, ...) imported from the former web client.                                                                                                        |
+| `./client`                                       | `AgentBrowser` / `AgentPage`: the agent-browser command surface (snapshot refs, click, fill, wait, screenshot, PDF) over CDP.                                                                                 |
+| `./cli`                                          | `yolo browser <command>`: one command, one JSON line.                                                                                                                                                         |
+| `./engine`, `./config`                           | Lifecycle of the local `aphrody-web` engine (`launch`) from `tools/config/web.json`.                                                                                                                          |
+| `./service`, `./runtime`                         | Web service client (fetch, scrape, crawl) and its shared runtime.                                                                                                                                             |
+| `./tauri`                                        | Tauri bridge.                                                                                                                                                                                                 |
+| `./testing`, `./testing/next`, `./testing/sites` | Playwright-compatible test runner over the same pages.                                                                                                                                                        |
 
 ```ts
 import { BrowserPage, WebLocator, getByTestId } from "@aphrody/bun-web";

@@ -20,16 +20,16 @@ Harness: `bench/aphrody/browsers/browsers.ts`. Raw samples: `bench/aphrody/brows
 
 ## Results (median ms, 5 runs)
 
-| target | index ms | index ok | episode ms | episode ok | maxRSS MiB (index) |
-|---|---:|:---:|---:|:---:|---:|
-| aphrody web scrape --html (static profile) | 478 | 5/5 | 192 | 5/5 | 60 |
-| lightpanda fetch | 1117 | 5/5 | 805 | 5/5 | 60 |
-| obscura fetch | 1711 | 5/5 | 4237 | 5/5 | 88 |
-| Bun.WebView (Chrome) | 2375 | 5/5 | 1781 | 5/5 | 60 |
-| @aphrody/bun-web BrowserPage (Chrome) | 3421 | 5/5 | 2418 | 5/5 | 234 |
-| playwright (system Chrome) | 4605 | 5/5 | 4214 | 5/5 | 213 |
-| agent-browser 0.39 | 11464 | 5/5 | 7911 | 5/5 | 417 |
-| aphrody web browser snapshot | 1740 | 0/5 | 1719 | 5/5 | 200 |
+| target                                     | index ms | index ok | episode ms | episode ok | maxRSS MiB (index) |
+| ------------------------------------------ | -------: | :------: | ---------: | :--------: | -----------------: |
+| aphrody web scrape --html (static profile) |      478 |   5/5    |        192 |    5/5     |                 60 |
+| lightpanda fetch                           |     1117 |   5/5    |        805 |    5/5     |                 60 |
+| obscura fetch                              |     1711 |   5/5    |       4237 |    5/5     |                 88 |
+| Bun.WebView (Chrome)                       |     2375 |   5/5    |       1781 |    5/5     |                 60 |
+| @aphrody/bun-web BrowserPage (Chrome)      |     3421 |   5/5    |       2418 |    5/5     |                234 |
+| playwright (system Chrome)                 |     4605 |   5/5    |       4214 |    5/5     |                213 |
+| agent-browser 0.39                         |    11464 |   5/5    |       7911 |    5/5     |                417 |
+| aphrody web browser snapshot               |     1740 |   0/5    |       1719 |    5/5     |                200 |
 
 `aphrody web browser snapshot` prints truncated readable text without hrefs, so it cannot satisfy the index check.
 

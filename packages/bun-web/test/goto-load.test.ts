@@ -56,8 +56,7 @@ async function gotoWaitsForLoad(endpoint?: string) {
   }
 }
 
-test("goto resolves on the load event, after the whole document arrived (engine endpoint)", () =>
-  gotoWaitsForLoad());
+test("goto resolves on the load event, after the whole document arrived (engine endpoint)", () => gotoWaitsForLoad());
 
 // Chrome answers a raw Page.navigate when the navigation commits, so this is the case that needs the load wait.
 const chrome = process.env.BUN_CHROME_PATH ?? Bun.which("google-chrome-stable") ?? Bun.which("chromium");
