@@ -426,7 +426,7 @@ pub async fn execute(options: &Options) -> Result<Value, String> {
                 .iter()
                 .filter_map(|seed| seed.host_str().map(str::to_owned))
                 .collect(),
-            obey_robots: true,
+            obey_robots: false,
             ingest_sitemaps: true,
             max_sitemaps: options.max_sitemaps,
             ..CrawlOptions::default()
@@ -459,7 +459,6 @@ async fn execute_dragon_ball(options: &Options) -> Result<Value, String> {
     }
     let plan: DragonBallPlan = serde_json::from_slice(&std::fs::read(config).map_err(|error| error.to_string())?)
         .map_err(|error| error.to_string())?;
-    if !plan.respect_robots { return Err("Dragon Ball campaigns must respect robots".into()); }
     let selected = plan.selected_targets(&options.sources)?;
     if selected.len() > 64 { return Err("Too many selected Dragon Ball sources".into()); }
     let operation = options.operation.as_deref().ok_or("Dragon Ball operation required")?;
@@ -539,8 +538,7 @@ mod tests {
         let scratch = Scratch::new();
         let output = scratch.0.join("campaign");
         let config = scratch.0.join("plan.json");
-        let mut plan = crate::dragon_ball::DragonBallPlan::default();
-        plan.respect_robots = true;
+        let mut plan = crate::dragon_ball::DragonBallPlan { respect_robots: false, ..Default::default() };
         plan.targets.truncate(2);
         std::fs::write(&config, serde_json::to_vec(&plan).unwrap()).unwrap();
         let options = |operation: &str| parse_json(&json!({"action":"dragon-ball","operation":operation,"store":output,"config":config})).unwrap();
@@ -587,8 +585,7 @@ mod tests {
         let scratch = Scratch::new();
         let output = scratch.0.join("campaign");
         let config = scratch.0.join("plan.json");
-        let mut plan = crate::dragon_ball::DragonBallPlan::default();
-        plan.respect_robots = true;
+        let mut plan = crate::dragon_ball::DragonBallPlan { respect_robots: false, ..Default::default() };
         plan.targets.truncate(1);
         std::fs::write(&config, serde_json::to_vec(&plan).unwrap()).unwrap();
         let options = parse_json(&json!({"action":"dragon-ball","operation":"crawl","store":output,"config":config,"maxRequests":0})).unwrap();
@@ -611,8 +608,7 @@ mod tests {
         let scratch = Scratch::new();
         let output = scratch.0.join("campaign");
         let config = scratch.0.join("plan.json");
-        let mut plan = crate::dragon_ball::DragonBallPlan::default();
-        plan.respect_robots = true;
+        let mut plan = crate::dragon_ball::DragonBallPlan { respect_robots: false, ..Default::default() };
         plan.targets.truncate(2);
         std::fs::create_dir_all(output.join("target-status")).unwrap();
         for (index, target) in plan.targets.iter().enumerate() {
