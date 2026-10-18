@@ -504,8 +504,7 @@ export const initNav = () => console.log('Navigation initialized');`,
     entryPoints: ["/index.html"],
     onAfterBundle(api) {
       expect(api.readFile("out/index.html")).toBe(
-        '<!DOCTYPE html><html><head><title>Hello world</title></head><body><!--! license --><p>a <b>bold</b> <i>it</i></p><pre>  keep
-   this </pre><textarea> x  y </textarea> <span>inline</span><div title="a  b">x</div></body></html>',
+        '<!DOCTYPE html><html><head><title>Hello world</title></head><body><!--! license --><p>a <b>bold</b> <i>it</i></p><pre>  keep\n   this </pre><textarea> x  y </textarea> <span>inline</span><div title="a  b">x</div></body></html>',
       );
     },
   });

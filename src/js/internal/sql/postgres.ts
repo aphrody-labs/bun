@@ -70,9 +70,6 @@ const POSTGRES_ARRAY_TYPES = {
   // XML
   143: "XML", // xml_array
 
-  // UUID
-  2951: "UUID", // uuid_array
-
   // Geometric types
   1017: "POINT", // point_array
   1018: "LSEG", // lseg_array

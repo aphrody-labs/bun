@@ -141,15 +141,9 @@ describe("bundler", async () => {
         import ndjson from './rows.ndjson';
         console.write(JSON.stringify([rows, byExtension, ndjson]));
       `,
-          "/rows.log": '{"a":1}
-
-[2,3]
-',
-          "/rows.jsonl": '{"a":1}
-"b"',
-          "/rows.ndjson": "null
-true
-",
+          "/rows.log": '{"a":1}\n\n[2,3]\n',
+          "/rows.jsonl": '{"a":1}\n"b"',
+          "/rows.ndjson": "null\ntrue\n",
         },
         run: { stdout: '[[{"a":1},[2,3]],[{"a":1},"b"],[null,true]]' },
       });
@@ -161,16 +155,8 @@ true
         import byExtension from './conf.ini';
         console.write(JSON.stringify([conf, byExtension]));
       `,
-          "/conf.cfg": "name = demo
-[server]
-port = 8080
-secure = true
-",
-          "/conf.ini": "list[] = a
-list[] = b
-[a.b]
-c = ${HOME}
-",
+          "/conf.cfg": "name = demo\n[server]\nport = 8080\nsecure = true\n",
+          "/conf.ini": "list[] = a\nlist[] = b\n[a.b]\nc = ${HOME}\n",
         },
         run: {
           stdout: '[{"name":"demo","server":{"port":"8080","secure":true}},{"list":["a","b"],"a":{"b":{"c":"${HOME}"}}}]',
