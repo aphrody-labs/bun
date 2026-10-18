@@ -79,6 +79,19 @@ jobs:
           endpoint: ${{ secrets.R2_ENDPOINT }}
           access-key-id: ${{ secrets.R2_ACCESS_KEY_ID }}
           secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+      - name: Fetch pinned WinFw source archives
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          bun install --frozen-lockfile
+          bun -e '
+            import { join } from "node:path";
+            import { winfwSourceFetchCommands } from "./scripts/build/deps/winfw.ts";
+            for (const command of winfwSourceFetchCommands(process.cwd(), process.execPath, join(process.env.RUNNER_TEMP!, "source-cache"))) {
+              const code = await Bun.spawn(command, { stdout: "inherit", stderr: "inherit" }).exited;
+              if (code !== 0) process.exit(code);
+            }
+          '
       - name: Build exact main runtime
         shell: bash
         run: |

@@ -28,6 +28,9 @@ test("Rust sources linked into Bun do not use the streams of the standard librar
     ["src/coreutils/lib.rs", 3],
     ["src/react_compiler/pipeline.rs", 4],
     ["src/router/lib.rs", 4],
+    // dbg! under cfg(test) and the ZLIB_DEBUG trace macros: neither is compiled into a release build.
+    ["src/zlib_rs/src/inflate.rs", 3],
+    ["src/zlib_rs/src/lib.rs", 2],
   ]);
   // Imported before this rule applied to them: a ratchet that only goes down. Convert to `bun_core::Output`.
   const pending = new Map<string, number>([
