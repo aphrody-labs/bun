@@ -381,7 +381,7 @@ pub async fn run_batch(
             continue;
         }
         channel.wait_below(buffer).await;
-        let Ok(permit) = semaphore.clone().acquire_owned().await else {
+        let Ok(permit) = std::sync::Arc::clone(&semaphore).acquire_owned().await else {
             not_run += 1;
             continue;
         };
@@ -395,12 +395,12 @@ pub async fn run_batch(
         }
 
         let (client, run_options, channel_task, writer_task, stop_task, counters_task) = (
-            client.clone(),
-            run_options.clone(),
-            channel.clone(),
+            std::sync::Arc::clone(&client),
+            std::sync::Arc::clone(&run_options),
+            std::sync::Arc::clone(&channel),
             writer.clone(),
-            stop.clone(),
-            counters.clone(),
+            std::sync::Arc::clone(&stop),
+            std::sync::Arc::clone(&counters),
         );
         let stop_on_auth = options.stop_on_auth;
         let (id, name) = (op.id.clone(), op.op.clone());

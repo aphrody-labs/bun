@@ -29,9 +29,11 @@ use std::convert::TryInto;
 use crate::strobe_rng::StrobeRng;
 use strobe_rs::{SecParam, Strobe};
 
+#[cfg(test)]
 use zeroize::{Zeroize, ZeroizeOnDrop};
 
 pub use super::PPRFError;
+#[cfg(test)]
 use super::{PPRF, ggm::GGM};
 
 pub const COMPRESSED_POINT_LEN: usize = 32;
@@ -43,6 +45,7 @@ pub struct ProofDLEQ {
 }
 impl ProofDLEQ {
     // https://cfrg.github.io/draft-irtf-cfrg-voprf/draft-irtf-cfrg-voprf.html#name-proof-generation
+    #[cfg(test)]
     fn new_batch(
         key: &RistrettoScalar,
         public_value: &RistrettoPoint,
@@ -188,6 +191,7 @@ pub struct ServerPublicKey {
 impl ServerPublicKey {
     // Byte layout of upstream's postcard encoding: base point, varint
     // count, then (tag, point) pairs in ascending tag order.
+    #[cfg(test)]
     pub fn to_bytes(&self) -> Vec<u8> {
         let mut out = Vec::with_capacity(34 + self.md_pks.len() * 33);
         out.extend_from_slice(self.base_pk.as_bytes());
@@ -244,6 +248,7 @@ impl ServerPublicKey {
 
 impl ProofDLEQ {
     // Upstream postcard layout: c || s, canonical scalars.
+    #[cfg(test)]
     pub fn to_bytes(&self) -> [u8; 64] {
         let mut out = [0u8; 64];
         out[..32].copy_from_slice(self.c.as_bytes());
@@ -335,6 +340,7 @@ impl From<CurveScalar> for RistrettoScalar {
 }
 
 // The `Server` runs the server-side component of the PPOPRF protocol.
+#[cfg(test)]
 #[derive(Clone, Zeroize, ZeroizeOnDrop)]
 pub struct Server {
     oprf_key: RistrettoScalar,
@@ -342,6 +348,7 @@ pub struct Server {
     public_key: ServerPublicKey,
     pprf: GGM,
 }
+#[cfg(test)]
 impl Server {
     pub fn new(mds: Vec<u8>) -> Result<Self, PPRFError> {
         let oprf_key = RistrettoScalar::random(&mut OsRng);

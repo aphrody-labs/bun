@@ -15,5 +15,5 @@ quote = "1.0"
 napi = "2.16.13"
 anyhow = "1.0.94"
 
-
 [lints]
+workspace = true

@@ -39,3 +39,4 @@ embedded-domain-resolver = ["addr"]
 resource-assembler = []
 
 [lints]
+workspace = true

@@ -38,7 +38,7 @@ impl DebugLogger {
         let key = stack.last().unwrap_or(&EMPTY_STRING);
         let level = stack.len() * 4;
         let space = " ";
-        println!("{space:level$}{key}: {message}");
+        bun_core::output::print(format_args!("{space:level$}{key}: {message}\n"));
     }
 
     pub fn labelled_log(&self, label: &str, message: impl Display) {
@@ -46,7 +46,7 @@ impl DebugLogger {
         let key = stack.last().unwrap_or(&EMPTY_STRING);
         let level = stack.len() * 4;
         let space = " ";
-        println!("{space:level$}{key}: {label} {message}");
+        bun_core::output::print(format_args!("{space:level$}{key}: {label} {message}\n"));
     }
 
     pub fn debug_log(&self, message: impl Debug) {
@@ -54,7 +54,7 @@ impl DebugLogger {
         let key = stack.last().unwrap_or(&EMPTY_STRING);
         let level = stack.len() * 4;
         let space = " ";
-        println!("{space:level$}{key}: {message:?}");
+        bun_core::output::print(format_args!("{space:level$}{key}: {message:?}\n"));
     }
 
     pub fn labelled_debug_log(&self, label: &str, message: impl Debug) {
@@ -62,7 +62,7 @@ impl DebugLogger {
         let key = stack.last().unwrap_or(&EMPTY_STRING);
         let level = stack.len() * 4;
         let space = " ";
-        println!("{space:level$}{key}: {label} {message:?}");
+        bun_core::output::print(format_args!("{space:level$}{key}: {label} {message:?}\n"));
     }
 }
 
@@ -93,7 +93,7 @@ macro_rules! debug_log {
     // Blank newline
     () => {{
         #[cfg(feature = "debug")]
-        println!();
+        bun_core::output::print(format_args!("\n"));
     }};
 }
 

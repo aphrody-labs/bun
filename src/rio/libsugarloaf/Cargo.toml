@@ -28,3 +28,4 @@ rio-vt = { path = "../rio-vt", version = "0.5.28" }
 librio = { path = "../librio" }
 
 [lints]
+workspace = true

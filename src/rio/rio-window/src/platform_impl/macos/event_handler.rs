@@ -87,8 +87,7 @@ impl EventHandler {
                         // But if it _does_ happen, it is a serious error, and
                         // we must abort the process, it'd be unsound if we
                         // weren't able to unset the handler.
-                        eprintln!("tried to clear handler that is currently in use");
-                        std::process::abort();
+                        panic!("tried to clear handler that is currently in use");
                     }
                 }
             }

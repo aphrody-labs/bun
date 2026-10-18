@@ -39,6 +39,7 @@ pub const UNBLINDED_TOKEN_LENGTH: usize = 96;
 /// The length of a `VerificationSignature`, in bytes.
 pub const VERIFICATION_SIGNATURE_LENGTH: usize = 64;
 /// The length of wide scalar input, in bytes.
+#[cfg(test)]
 pub const SCALAR_WIDE_INPUT_LENGTH: usize = 64;
 
 /// Domain separation tag for the RFC 9497 hash-to-group derivation.
@@ -127,9 +128,6 @@ impl PartialEq for TokenPreimage {
     }
 }
 
-#[cfg(test)]
-impl_base64!(TokenPreimage);
-
 impl Debug for TokenPreimage {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
         write!(f, "TokenPreimage: {:?}", &self.0[..])
@@ -138,6 +136,7 @@ impl Debug for TokenPreimage {
 
 #[allow(non_snake_case)]
 impl TokenPreimage {
+    #[cfg(test)]
     pub(crate) fn T(&self) -> RistrettoPoint {
         RistrettoPoint::from_uniform_bytes(&self.0)
     }
@@ -201,9 +200,6 @@ impl Drop for Token {
     }
 }
 
-#[cfg(test)]
-impl_base64!(Token);
-
 #[allow(non_snake_case)]
 impl Token {
     /// Generates a new random `Token` using the provided random number generator.
@@ -234,17 +230,8 @@ impl Token {
         }
     }
 
-    /// Creates a new `Token`, using hashing to derive a `TokenPreimage` and a random blind
-    pub fn hash_from_bytes<D, T>(rng: &mut T, bytes: &[u8]) -> Self
-    where
-        D: Digest<OutputSize = U64> + Default,
-        T: Rng + CryptoRng,
-    {
-        let blinding_scalar = Scalar::random(rng);
-        Self::hash_from_bytes_with_blind::<D>(bytes, blinding_scalar)
-    }
-
     /// Blinds the `Token`, returning a `BlindedToken` to be sent to the server.
+    #[cfg(test)]
     pub fn blind(&self) -> BlindedToken {
         BlindedToken((self.r * self.t.T()).compress())
     }
@@ -324,7 +311,9 @@ impl Token {
 pub struct BlindedToken(pub(crate) CompressedRistretto);
 
 #[cfg(test)]
-impl_base64!(BlindedToken);
+impl_encode_base64!(BlindedToken);
+#[cfg(test)]
+impl_decode_base64!(BlindedToken);
 
 impl BlindedToken {
     /// Convert this `BlindedToken` to a byte array.
@@ -360,7 +349,7 @@ impl BlindedToken {
 pub struct PublicKey(pub(crate) CompressedRistretto);
 
 #[cfg(test)]
-impl_base64!(PublicKey);
+impl_encode_base64!(PublicKey);
 
 impl PublicKey {
     /// Convert this `PublicKey` to a byte array.
@@ -401,7 +390,7 @@ pub struct SigningKey {
 }
 
 #[cfg(test)]
-impl_base64!(SigningKey);
+impl_decode_base64!(SigningKey);
 
 /// Overwrite signing key with null when it goes out of scope.
 impl Drop for SigningKey {
@@ -426,6 +415,7 @@ impl SigningKey {
     ///
     /// The random bytes MUST be cryptographically strong, uniform random bytes
     /// such as those output from a CSPRNG or appropriately seeded KDF.
+    #[cfg(test)]
     pub fn from_random_bytes(bytes: &[u8]) -> Result<SigningKey, TokenError> {
         if bytes.len() != SCALAR_WIDE_INPUT_LENGTH {
             return Err(TokenError(InternalError::BytesLengthError {
@@ -461,6 +451,7 @@ impl SigningKey {
     /// Rederives an `UnblindedToken` via the token preimage of the provided `UnblindedToken`
     ///
     /// W' = T^k = H_1(t)^k
+    #[cfg(test)]
     pub fn rederive_unblinded_token(&self, t: &TokenPreimage) -> UnblindedToken {
         UnblindedToken {
             t: *t,
@@ -526,7 +517,7 @@ impl SigningKey {
 pub struct SignedToken(pub(crate) CompressedRistretto);
 
 #[cfg(test)]
-impl_base64!(SignedToken);
+impl_encode_base64!(SignedToken);
 
 impl SignedToken {
     /// Convert this `SignedToken` to a byte array.
@@ -570,10 +561,11 @@ pub struct UnblindedToken {
 }
 
 #[cfg(test)]
-impl_base64!(UnblindedToken);
+impl_encode_base64!(UnblindedToken);
 
 impl UnblindedToken {
     /// Derive the `VerificationKey` for this particular `UnblindedToken`
+    #[cfg(test)]
     pub fn derive_verification_key<D>(&self) -> VerificationKey
     where
         D: Digest<OutputSize = U64> + Default,
@@ -673,9 +665,6 @@ impl VerificationKey {
 #[repr(C)]
 #[derive(Clone)]
 pub struct VerificationSignature(GenericArray<u8, U64>);
-
-#[cfg(test)]
-impl_base64!(VerificationSignature);
 
 impl ConstantTimeEq for VerificationSignature {
     fn ct_eq(&self, other: &VerificationSignature) -> Choice {

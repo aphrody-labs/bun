@@ -273,8 +273,6 @@ impl Blocker {
             resources.get_redirect_resource(resource_name).or({
                 // It's acceptable to pass no redirection if no matching resource is loaded.
                 // TODO - it may be useful to return a status flag to indicate that this occurred.
-                #[cfg(test)]
-                eprintln!("Matched rule with redirect option but did not find corresponding resource to send");
                 None
             })
         });

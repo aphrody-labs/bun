@@ -6,7 +6,7 @@ extern crate alloc;
 pub mod fb {
 
     pub enum NetworkFilterOffset {}
-    #[derive(Copy, Clone, PartialEq)]
+    #[derive(Copy, Clone, PartialEq, Eq)]
 
     pub struct NetworkFilter<'a> {
         pub _tab: ::flatbuffers::Table<'a>,
@@ -610,7 +610,7 @@ pub mod fb {
         }
     }
     pub enum NetworkFilterListOffset {}
-    #[derive(Copy, Clone, PartialEq)]
+    #[derive(Copy, Clone, PartialEq, Eq)]
 
     pub struct NetworkFilterList<'a> {
         pub _tab: ::flatbuffers::Table<'a>,
@@ -955,7 +955,7 @@ pub mod fb {
         }
     }
     pub enum HostnameSpecificRulesOffset {}
-    #[derive(Copy, Clone, PartialEq)]
+    #[derive(Copy, Clone, PartialEq, Eq)]
 
     /// A table to store the most host-specific cosmetic rules.
     /// Although, the most common kind of rule (see hostname_inject_script_*
@@ -1300,7 +1300,7 @@ pub mod fb {
         }
     }
     pub enum StringVectorOffset {}
-    #[derive(Copy, Clone, PartialEq)]
+    #[derive(Copy, Clone, PartialEq, Eq)]
 
     pub struct StringVector<'a> {
         pub _tab: ::flatbuffers::Table<'a>,
@@ -1461,7 +1461,7 @@ pub mod fb {
         }
     }
     pub enum CosmeticFiltersOffset {}
-    #[derive(Copy, Clone, PartialEq)]
+    #[derive(Copy, Clone, PartialEq, Eq)]
 
     /// A table to store cosmetic filter rules (including supported structures).
     pub struct CosmeticFilters<'a> {
@@ -2404,7 +2404,7 @@ pub mod fb {
         }
     }
     pub enum SourceInfoOffset {}
-    #[derive(Copy, Clone, PartialEq)]
+    #[derive(Copy, Clone, PartialEq, Eq)]
 
     pub struct SourceInfo<'a> {
         pub _tab: ::flatbuffers::Table<'a>,
@@ -2733,7 +2733,7 @@ pub mod fb {
         }
     }
     pub enum EngineOffset {}
-    #[derive(Copy, Clone, PartialEq)]
+    #[derive(Copy, Clone, PartialEq, Eq)]
 
     /// A root type containing a serialized Engine.
     pub struct Engine<'a> {

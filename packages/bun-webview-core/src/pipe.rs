@@ -67,7 +67,7 @@ mod sys {
     use std::io::{Read, Write};
     use std::os::fd::FromRawFd;
 
-    pub fn fds() -> std::io::Result<(Box<dyn Read + Send>, Box<dyn Write + Send>)> {
+    pub(super) fn fds() -> std::io::Result<(Box<dyn Read + Send>, Box<dyn Write + Send>)> {
         // SAFETY: fcntl(F_GETFD) only probes whether the descriptor is open.
         let open = |fd| unsafe { libc_fcntl(fd) } != -1;
         if !open(3) || !open(4) {

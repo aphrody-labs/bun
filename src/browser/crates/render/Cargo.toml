@@ -15,6 +15,7 @@ bun-css = ["dep:bun_css"]
 paint = ["dep:bun_browser_ssrf", "dep:tiny-skia", "dep:ab_glyph", "dep:cosmic-text", "dep:swash", "dep:image", "dep:ureq", "dep:base64", "dep:resvg", "dep:usvg", "dep:url", "dep:wuff"]
 
 [dependencies]
+bun_core = { workspace = true }
 bun_css = { workspace = true, optional = true }
 taffy = { package = "bun_browser_layout", path = "../layout", version = "1.4.4", default-features = false, features = [
     "std",

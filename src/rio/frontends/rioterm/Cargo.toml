@@ -142,3 +142,4 @@ Rio terminal is a hardware-accelerated GPU terminal emulator, focusing to run in
 The supported platforms currently consist of BSD, Linux, MacOS and Windows."""
 
 [lints]
+workspace = true

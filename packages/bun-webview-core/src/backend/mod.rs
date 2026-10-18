@@ -14,13 +14,13 @@ use std::io::{Read, Write};
 
 /// Engines compiled into this build, in preference order.
 pub fn available() -> Vec<BackendKind> {
-    let mut v = Vec::new();
-    #[cfg(all(windows, feature = "wry"))]
-    v.push(BackendKind::WebView2);
-    #[cfg(all(target_os = "linux", feature = "gtk4"))]
-    v.push(BackendKind::WebKitGtk);
-    v.push(BackendKind::Mock);
-    v
+    Vec::from([
+        #[cfg(all(windows, feature = "wry"))]
+        BackendKind::WebView2,
+        #[cfg(all(target_os = "linux", feature = "gtk4"))]
+        BackendKind::WebKitGtk,
+        BackendKind::Mock,
+    ])
 }
 
 /// Serve CDP for `kind` over `input`/`output` until EOF. Returns the process exit code.

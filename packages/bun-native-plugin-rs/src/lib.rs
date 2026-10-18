@@ -247,6 +247,15 @@
 #![allow(non_upper_case_globals)]
 #![allow(non_camel_case_types)]
 #![allow(non_snake_case)]
+
+// Public SDK for native plugin authors: raw-pointer entry points keep their stable signatures, and it runs outside Bun's runtime crates.
+#![allow(
+    clippy::not_unsafe_ptr_arg_deref,
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros,
+)]
+
 pub use anyhow;
 pub use bun_macro::bun;
 
@@ -275,6 +284,7 @@ macro_rules! define_bun_plugin {
     };
 }
 
+// SAFETY: `BunPluginName` only holds a pointer to a `'static` NUL-terminated string that is never mutated.
 unsafe impl Sync for BunPluginName {}
 
 use std::{
@@ -301,7 +311,7 @@ struct SourceCodeContext {
 extern "C" fn free_plugin_source_code_context(ctx: *mut c_void) {
     // SAFETY: The ctx pointer is a pointer to the `SourceCodeContext` struct we allocated.
     unsafe {
-        drop(Box::from_raw(ctx as *mut SourceCodeContext));
+        drop(Box::from_raw(ctx.cast::<SourceCodeContext>()));
     }
 }
 
@@ -324,6 +334,7 @@ pub type BunLogLevel = sys::BunLogLevel;
 pub type BunLoader = sys::BunLoader;
 
 fn get_from_raw_str<'a>(ptr: *const u8, len: usize) -> PluginResult<Cow<'a, str>> {
+    // SAFETY: `ptr` and `len` describe a buffer owned by Bun that stays valid for the hook call.
     let slice: &'a [u8] = unsafe { std::slice::from_raw_parts(ptr, len) };
 
     // Windows allows invalid UTF-16 strings in the filesystem. These get converted to WTF-8 in Zig.
@@ -426,16 +437,20 @@ impl<'a> OnBeforeParse<'a> {
         args: *mut sys::OnBeforeParseArguments,
         result: *mut sys::OnBeforeParseResult,
     ) -> PluginResult<Self> {
-        if unsafe { (*args).__struct_size } < std::mem::size_of::<sys::OnBeforeParseArguments>()
-            || unsafe { (*result).__struct_size } < std::mem::size_of::<sys::OnBeforeParseResult>()
+        // SAFETY: Bun passes valid, initialized argument and result structs for the duration of the hook call.
+        let (args_size, result_size) = unsafe { ((*args).__struct_size, (*result).__struct_size) };
+        if args_size < std::mem::size_of::<sys::OnBeforeParseArguments>()
+            || result_size < std::mem::size_of::<sys::OnBeforeParseResult>()
         {
+            // SAFETY: as above.
+            let (path_ptr, path_len) = unsafe { ((*args).path_ptr, (*args).path_len) };
             let message = "This plugin is not compatible with the current version of Bun.";
             let mut log_options = sys::BunLogOptions {
                 __struct_size: std::mem::size_of::<sys::BunLogOptions>(),
                 message_ptr: message.as_ptr(),
                 message_len: message.len(),
-                path_ptr: unsafe { (*args).path_ptr },
-                path_len: unsafe { (*args).path_len },
+                path_ptr,
+                path_len,
                 source_line_text_ptr: std::ptr::null(),
                 source_line_text_len: 0,
                 level: BunLogLevel::BUN_LOG_LEVEL_ERROR as i8,
@@ -446,7 +461,7 @@ impl<'a> OnBeforeParse<'a> {
             };
             // SAFETY: The `log` function pointer is guaranteed to be valid by the Bun runtime.
             unsafe {
-                ((*result).log.unwrap())(args, &mut log_options);
+                ((*result).log.unwrap())(args, &raw mut log_options);
             }
             return Err(Error::IncompatiblePluginVersion);
         }
@@ -454,16 +469,18 @@ impl<'a> OnBeforeParse<'a> {
         Ok(Self {
             args_raw: args,
             result_raw: result,
-            compilation_context: std::ptr::null_mut() as *mut _,
+            compilation_context: std::ptr::null_mut(),
             __phantom: Default::default(),
         })
     }
 
     pub fn path(&self) -> PluginResult<Cow<'_, str>> {
+        // SAFETY: `args_raw` is the valid argument struct Bun passed to the hook; the path outlives `self`.
         unsafe { get_from_raw_str((*self.args_raw).path_ptr, (*self.args_raw).path_len) }
     }
 
     pub fn namespace(&self) -> PluginResult<Cow<'_, str>> {
+        // SAFETY: `args_raw` is the valid argument struct Bun passed to the hook; the namespace outlives `self`.
         unsafe {
             get_from_raw_str(
                 (*self.args_raw).namespace_ptr,
@@ -528,11 +545,13 @@ impl<'a> OnBeforeParse<'a> {
         &self,
         from_raw: unsafe fn(*mut c_void) -> Option<&'b T>,
     ) -> PluginResult<Option<&'b T>> {
+        // SAFETY: `args_raw` is the valid argument struct Bun passed to the hook.
         if unsafe { (*self.args_raw).external.is_null() } {
             return Ok(None);
         }
 
-        let external = unsafe { from_raw((*self.args_raw).external as *mut _) };
+        // SAFETY: the caller upholds the contract of this function for `from_raw` and the external.
+        let external = unsafe { from_raw((*self.args_raw).external.cast()) };
 
         Ok(external)
     }
@@ -546,11 +565,13 @@ impl<'a> OnBeforeParse<'a> {
         &mut self,
         from_raw: unsafe fn(*mut c_void) -> Option<&'b mut T>,
     ) -> PluginResult<Option<&'b mut T>> {
+        // SAFETY: `args_raw` is the valid argument struct Bun passed to the hook.
         if unsafe { (*self.args_raw).external.is_null() } {
             return Ok(None);
         }
 
-        let external = unsafe { from_raw((*self.args_raw).external as *mut _) };
+        // SAFETY: the caller upholds the contract of this function for `from_raw` and the external.
+        let external = unsafe { from_raw((*self.args_raw).external.cast()) };
 
         Ok(external)
     }
@@ -560,9 +581,10 @@ impl<'a> OnBeforeParse<'a> {
     /// On Windows, this function may return an `Err(Error::Utf8(...))` if the
     /// source code contains invalid UTF-8.
     pub fn input_source_code(&self) -> PluginResult<Cow<'_, str>> {
+        // SAFETY: `result_raw` and its `fetchSourceCode` callback are provided by Bun for the duration of the hook call.
         let fetch_result = unsafe {
             ((*self.result_raw).fetchSourceCode.unwrap())(
-                self.args_raw as *const _,
+                self.args_raw.cast_const(),
                 self.result_raw,
             )
         };
@@ -594,7 +616,7 @@ impl<'a> OnBeforeParse<'a> {
             // SAFETY: We don't hand out mutable references to `result_raw` so dereferencing it is safe.
             unsafe {
                 (*self.result_raw).plugin_source_code_context =
-                    self.compilation_context as *mut c_void;
+                    self.compilation_context.cast::<c_void>();
                 (*self.result_raw).free_plugin_source_code_context =
                     Some(free_plugin_source_code_context);
             }
@@ -633,6 +655,7 @@ impl<'a> OnBeforeParse<'a> {
 
     /// Get the output loader for the current file.
     pub fn output_loader(&self) -> BunLoader {
+        // SAFETY: `result_raw` is valid, and `loader` only ever holds a `BunLoader` discriminant (set by Bun or `set_output_loader`).
         unsafe { std::mem::transmute((*self.result_raw).loader as u32) }
     }
 
@@ -643,14 +666,12 @@ impl<'a> OnBeforeParse<'a> {
 
     /// Log a message with the given level.
     pub fn log(&self, message: &str, level: BunLogLevel) {
-        let mut log_options = log_from_message_and_level(
-            message,
-            level,
-            unsafe { (*self.args_raw).path_ptr },
-            unsafe { (*self.args_raw).path_len },
-        );
+        // SAFETY: `args_raw` is the valid argument struct Bun passed to the hook and outlives `self`.
+        let (path_ptr, path_len) = unsafe { ((*self.args_raw).path_ptr, (*self.args_raw).path_len) };
+        let mut log_options = log_from_message_and_level(message, level, path_ptr, path_len);
+        // SAFETY: `result_raw` and its `log` callback are provided by Bun for the duration of the hook call.
         unsafe {
-            ((*self.result_raw).log.unwrap())(self.args_raw, &mut log_options);
+            ((*self.result_raw).log.unwrap())(self.args_raw, &raw mut log_options);
         }
     }
 }
@@ -665,7 +686,7 @@ pub fn log_from_message_and_level(
         __struct_size: std::mem::size_of::<sys::BunLogOptions>(),
         message_ptr: message.as_ptr(),
         message_len: message.len(),
-        path_ptr: path as *const _,
+        path_ptr: path.cast(),
         path_len,
         source_line_text_ptr: std::ptr::null(),
         source_line_text_len: 0,

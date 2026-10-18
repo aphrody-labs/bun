@@ -38,6 +38,13 @@
 // The batch scheduler's spawned future nests the whole op dispatcher.
 #![recursion_limit = "256"]
 
+// Standalone host outside Bun's event loop: std I/O, collections and strings are intended here, as in bun_host and bun_docker.
+#![allow(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros,
+)]
+
 pub mod algorithm;
 pub mod api;
 pub mod archive;
@@ -210,13 +217,13 @@ pub fn tweet_to_algo_candidate(tweet: &Tweet, in_network: bool) -> algorithm::Po
 /// ```ignore
 /// let page: TweetPage = ...;
 /// let ctx = bun_x::algorithm::RankingContext { viewer_id: Some(uid), ..Default::default() };
-/// let ranked = bun_x::rank_tweets(&page.tweets, ctx, 20);
+/// let ranked = bun_x::rank_tweets(&page.tweets, &ctx, 20);
 /// ```
 pub fn rank_tweets(
     tweets: &[Tweet],
-    context: algorithm::RankingContext,
+    context: &algorithm::RankingContext,
     top_k: usize,
 ) -> Vec<algorithm::ScoredPost> {
     let cands: Vec<_> = tweets.iter().map(|t| tweet_to_algo_candidate(t, false)).collect();
-    algorithm::rank_posts(cands, &context, top_k)
+    algorithm::rank_posts(cands, context, top_k)
 }

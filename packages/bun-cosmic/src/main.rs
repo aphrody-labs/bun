@@ -15,6 +15,13 @@
 //! `{"event":"ready"}`, `{"event":"button","index":0,"label":"OK"}`, `{"event":"closed"}`,
 //! `{"event":"shown","id":3}`, `{"event":"action","action":"open"}`, `{"event":"error","message":"…"}`.
 
+// Standalone host outside Bun's event loop: std I/O, collections and strings are intended here, as in bun_host and bun_docker.
+#![allow(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros,
+)]
+
 use std::io::Write as _;
 use std::process::ExitCode;
 

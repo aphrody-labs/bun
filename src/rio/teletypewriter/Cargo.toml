@@ -31,3 +31,4 @@ miow = "0.6.1"
 parking_lot = { version = "0.12.5", features = ["nightly", "hardware-lock-elision"] }
 
 [lints]
+workspace = true

@@ -13,3 +13,4 @@ crate-type = ["cdylib"]
 pyo3 = { version = "=0.29.3", features = ["abi3-py311"] }
 
 [lints]
+workspace = true

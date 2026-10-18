@@ -845,8 +845,8 @@ async fn run_parallel_scrape(
     let mut handles = Vec::new();
 
     for (i, url) in urls.into_iter().enumerate() {
-        let sem = semaphore.clone();
-        let eval = eval.clone();
+        let sem = std::sync::Arc::clone(&semaphore);
+        let eval = std::sync::Arc::clone(&eval);
         let proxy = proxy.clone();
 
         let handle = tokio::spawn(async move {

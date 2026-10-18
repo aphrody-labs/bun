@@ -292,7 +292,7 @@ mod sys {
     use super::{Api, c_void};
     use std::ffi::{CStr, CString};
 
-    pub fn open(path: &str) -> *mut c_void {
+    pub(crate) fn open(path: &str) -> *mut c_void {
         let Ok(c) = CString::new(path) else {
             return std::ptr::null_mut();
         };
@@ -302,7 +302,7 @@ mod sys {
 
     /// The global scope of the process, when it already exports the CPython C API (the Bun
     /// fork opens the libpython `RTLD_GLOBAL`).
-    pub fn already_loaded() -> *mut c_void {
+    pub(crate) fn already_loaded() -> *mut c_void {
         if has(libc::RTLD_DEFAULT, c"Py_IsInitialized") {
             libc::RTLD_DEFAULT
         } else {
@@ -319,7 +319,7 @@ mod sys {
         !sym(handle, name).is_null()
     }
 
-    pub fn bind(handle: *mut c_void) -> Result<Api, String> {
+    pub(crate) fn bind(handle: *mut c_void) -> Result<Api, String> {
         super::bind_with(|name| sym(handle, name))
     }
 }
@@ -562,7 +562,7 @@ unsafe fn take_exception(api: &Api) {
             std::ptr::null_mut(),
             std::ptr::null_mut(),
         );
-        (api.err_fetch)(&mut t, &mut v, &mut tb);
+        (api.err_fetch)(&raw mut t, &raw mut v, &raw mut tb);
         let mut text = String::from("Python exception");
         let subject = if v.is_null() { t } else { v };
         if !subject.is_null() {
@@ -645,10 +645,10 @@ fn with_gil(body: impl FnOnce(&Api) -> i32) -> i32 {
 }
 
 unsafe fn cstr_arg<'a>(p: *const c_char) -> Option<&'a CStr> {
-    // SAFETY: caller contract (null or NUL-terminated).
     if p.is_null() {
         None
     } else {
+        // SAFETY: caller contract (null or NUL-terminated).
         Some(unsafe { CStr::from_ptr(p) })
     }
 }

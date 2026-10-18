@@ -45,12 +45,12 @@ pub fn extract_vector(path: impl AsRef<Path>, at_ms: Option<u64>) -> Result<Colo
         .stdin(Stdio::null())
         .stderr(Stdio::piped())
         .output()
-        .map_err(|e| ffmpeg_error("ffmpeg", path, e.to_string()))?;
+        .map_err(|e| ffmpeg_error("ffmpeg", path, &e.to_string()))?;
     if !output.status.success() {
         return Err(ffmpeg_error(
             "ffmpeg",
             path,
-            String::from_utf8_lossy(&output.stderr).trim().to_owned(),
+            String::from_utf8_lossy(&output.stderr).trim(),
         ));
     }
     if output.stdout.len() != frame_bytes {
@@ -122,7 +122,7 @@ pub fn index_video(
         .stdout(Stdio::piped())
         .stderr(Stdio::piped())
         .spawn()
-        .map_err(|e| ffmpeg_error("ffmpeg", video, e.to_string()))?;
+        .map_err(|e| ffmpeg_error("ffmpeg", video, &e.to_string()))?;
     let stdout = child
         .stdout
         .take()
@@ -150,7 +150,7 @@ pub fn index_video(
                     let _ = child.kill();
                     let _ = child.wait();
                     let _ = stderr_reader.join();
-                    return Err(ffmpeg_error("ffmpeg", video, error.to_string()));
+                    return Err(ffmpeg_error("ffmpeg", video, &error.to_string()));
                 },
             }
         }
@@ -161,7 +161,7 @@ pub fn index_video(
             let _ = child.kill();
             let _ = child.wait();
             let _ = stderr_reader.join();
-            return Err(ffmpeg_error("ffmpeg", video, "incomplete RGB frame".into()));
+            return Err(ffmpeg_error("ffmpeg", video, "incomplete RGB frame"));
         }
         let timestamp = sampled.len() as i64 * interval;
         match extract_color_layout(WIDTH, HEIGHT, &frame) {
@@ -174,13 +174,13 @@ pub fn index_video(
             },
         }
     }
-    let status = child.wait().map_err(|e| ffmpeg_error("ffmpeg", video, e.to_string()))?;
+    let status = child.wait().map_err(|e| ffmpeg_error("ffmpeg", video, &e.to_string()))?;
     let stderr = stderr_reader.join().unwrap_or_default();
     if !status.success() {
         return Err(ffmpeg_error(
             "ffmpeg",
             video,
-            String::from_utf8_lossy(&stderr).trim().to_owned(),
+            String::from_utf8_lossy(&stderr).trim(),
         ));
     }
     if sampled.is_empty() {
@@ -205,12 +205,12 @@ fn probe_duration(path: &Path) -> Result<i64> {
         ])
         .stdin(Stdio::null())
         .output()
-        .map_err(|e| ffmpeg_error("ffprobe", path, e.to_string()))?;
+        .map_err(|e| ffmpeg_error("ffprobe", path, &e.to_string()))?;
     if !output.status.success() {
         return Err(ffmpeg_error(
             "ffprobe",
             path,
-            String::from_utf8_lossy(&output.stderr).trim().to_owned(),
+            String::from_utf8_lossy(&output.stderr).trim(),
         ));
     }
     let parsed: ProbeOutput = serde_json::from_slice(&output.stdout)?;
@@ -253,12 +253,12 @@ fn probe_dimensions(path: &Path) -> Result<(u32, u32)> {
         ])
         .stdin(Stdio::null())
         .output()
-        .map_err(|e| ffmpeg_error("ffprobe", path, e.to_string()))?;
+        .map_err(|e| ffmpeg_error("ffprobe", path, &e.to_string()))?;
     if !output.status.success() {
         return Err(ffmpeg_error(
             "ffprobe",
             path,
-            String::from_utf8_lossy(&output.stderr).trim().to_owned(),
+            String::from_utf8_lossy(&output.stderr).trim(),
         ));
     }
     let parsed: ProbeStreams = serde_json::from_slice(&output.stdout)?;
@@ -289,7 +289,7 @@ fn checked_rgb_bytes(width: u32, height: u32) -> Result<usize> {
 fn format_time(ms: u64) -> String {
     format!("{:.3}", ms as f64 / 1000.0)
 }
-fn ffmpeg_error(tool: &str, path: &Path, reason: String) -> FramesError {
+fn ffmpeg_error(tool: &str, path: &Path, reason: &str) -> FramesError {
     FramesError::Ffmpeg(format!("{tool} failed for {}: {reason}", PathBuf::from(path).display()))
 }
 

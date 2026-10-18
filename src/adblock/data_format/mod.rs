@@ -44,7 +44,7 @@ const ADBLOCK_RUST_PKG_VERSION: [u8; 16] = {
 pub(crate) const HEADER_PREFIX_LENGTH: usize = PKG_VERSION_OFFSET + ADBLOCK_RUST_PKG_VERSION.len();
 
 /// Failure cases for deserialization of the [crate::Engine].
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq, Eq)]
 pub enum DeserializationError {
     /// The serialized buffer is missing the expected header bytes, including a fixed 4-byte
     /// sequence, version number, and checksum.

@@ -148,7 +148,7 @@ pub fn parse_news_item(
             } else if part.to_lowercase().contains("post") {
                 post_count = parse_post_count(part);
             } else if !part.is_empty() {
-                category = part.to_owned();
+                part.clone_into(&mut category);
             }
         }
     }
@@ -163,7 +163,7 @@ pub fn parse_news_item(
         trend_metadata.and_then(|m| m.get("domain_context")).and_then(Value::as_str)
         && (category == "Trending" || category == "News")
     {
-        category = domain.to_owned();
+        domain.clone_into(&mut category);
     }
 
     let id =

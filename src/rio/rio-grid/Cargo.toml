@@ -19,3 +19,4 @@ smallvec = { version = "1.15.2", default-features = false }
 rapidhash = { version = "4.4.1", default-features = false }
 
 [lints]
+workspace = true

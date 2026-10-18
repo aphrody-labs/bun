@@ -26,3 +26,4 @@ default-features = false
 features = ["winit", "tokio", "wayland", "x11"]
 
 [lints]
+workspace = true

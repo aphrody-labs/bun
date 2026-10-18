@@ -33,3 +33,4 @@ objc2-io-surface = { version = "0.3.2" }
 libc = { version = "0.2" }
 
 [lints]
+workspace = true

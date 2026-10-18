@@ -206,7 +206,7 @@ impl ResourceType {
 }
 
 /// Acceptable MIME types for resources used by `$redirect` and `+js(...)` adblock rules.
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq)]
 #[serde(into = "&str")]
 #[serde(from = "std::borrow::Cow<'static, str>")]
 pub enum MimeType {
@@ -254,8 +254,6 @@ impl MimeType {
                 "txt" => MimeType::TextPlain,
                 "xml" => MimeType::TextXml,
                 _ => {
-                    #[cfg(test)]
-                    eprintln!("Unrecognized file extension on: {resource_path:?}");
                     MimeType::Unknown
                 }
             }

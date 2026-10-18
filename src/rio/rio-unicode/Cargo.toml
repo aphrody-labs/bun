@@ -18,3 +18,4 @@ unicode-segmentation = "1.13"
 unicode-width-16 = "0.1.0"
 
 [lints]
+workspace = true

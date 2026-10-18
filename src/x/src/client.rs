@@ -290,7 +290,7 @@ impl XClient {
         if let Some(pages) = options.discovery_pages {
             query_ids = query_ids.with_discovery_pages(pages);
         }
-        let persist_session = options.persist_session.unwrap_or(session.source_path().is_some());
+        let persist_session = options.persist_session.unwrap_or_else(|| session.source_path().is_some());
 
         Ok(Self {
             inner,

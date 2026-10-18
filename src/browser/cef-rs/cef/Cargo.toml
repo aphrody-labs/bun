@@ -83,3 +83,4 @@ semver = { version = "1", optional = true }
 libc = { version = "0.2", optional = true }
 
 [lints]
+workspace = true

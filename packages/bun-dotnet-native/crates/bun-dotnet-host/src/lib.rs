@@ -68,7 +68,7 @@ impl Error {
             message: message.into(),
         }
     }
-    fn hostfxr(operation: &str, code: i32, detail: String) -> Self {
+    fn hostfxr(operation: &str, code: i32, detail: &str) -> Self {
         let detail = detail.trim();
         let message = if detail.is_empty() {
             format!("{operation} failed with status 0x{:08x}", code as u32)
@@ -387,9 +387,9 @@ fn nethost_location(nethost: &Path) -> Result<Location> {
     let mut buffer = vec![0 as CharT; 4096];
     let mut size = buffer.len();
     // SAFETY: buffer/size describe a writable buffer; null parameters select the default lookup.
-    let code = unsafe { get(buffer.as_mut_ptr(), &mut size, std::ptr::null()) };
+    let code = unsafe { get(buffer.as_mut_ptr(), &raw mut size, std::ptr::null()) };
     if code != 0 {
-        return Err(Error::hostfxr("get_hostfxr_path", code, String::new()));
+        return Err(Error::hostfxr("get_hostfxr_path", code, ""));
     }
     let len = buffer.iter().position(|&c| c == 0).unwrap_or(buffer.len());
     let hostfxr = from_char_t(&buffer[..len]);
@@ -689,8 +689,8 @@ impl Hostfxr {
                 (self.initialize_for_dotnet_command_line)(
                     argv.len() as i32,
                     argv.as_ptr(),
-                    &params,
-                    &mut handle,
+                    &raw const params,
+                    &raw mut handle,
                 )
             }
         });
@@ -702,7 +702,7 @@ impl Hostfxr {
             return Err(Error::hostfxr(
                 "hostfxr_initialize_for_dotnet_command_line",
                 code,
-                detail,
+                &detail,
             ));
         }
         // SAFETY: valid, initialised host context.
@@ -755,7 +755,7 @@ impl Hostfxr {
         let mut handle: Handle = std::ptr::null_mut();
         let (code, detail) = self.capture(|| {
             // SAFETY: strings/params outlive the call; handle is writable.
-            unsafe { (self.initialize_for_runtime_config)(config_t.as_ptr(), &params, &mut handle) }
+            unsafe { (self.initialize_for_runtime_config)(config_t.as_ptr(), &raw const params, &raw mut handle) }
         });
         if !(status::SUCCESS..=status::SUCCESS_DIFFERENT_RUNTIME_PROPERTIES).contains(&code) {
             if !handle.is_null() {
@@ -768,20 +768,20 @@ impl Hostfxr {
                     config.display()
                 ),
                 code,
-                detail,
+                &detail,
             ));
         }
         let delegate = |kind: i32, name: &str| -> Result<*mut c_void> {
             let mut out: *mut c_void = std::ptr::null_mut();
             let (code, detail) = self.capture(|| {
                 // SAFETY: valid host context; out is writable.
-                unsafe { (self.get_runtime_delegate)(handle, kind, &mut out) }
+                unsafe { (self.get_runtime_delegate)(handle, kind, &raw mut out) }
             });
             if code != status::SUCCESS || out.is_null() {
                 return Err(Error::hostfxr(
                     &format!("hostfxr_get_runtime_delegate({name})"),
                     code,
-                    detail,
+                    &detail,
                 ));
             }
             Ok(out)
@@ -905,7 +905,7 @@ impl Runtime {
                             method_t.as_ptr(),
                             delegate_ptr,
                             std::ptr::null_mut(),
-                            &mut out,
+                            &raw mut out,
                         )
                     }
                 })
@@ -919,7 +919,7 @@ impl Runtime {
                         delegate_ptr,
                         std::ptr::null_mut(),
                         std::ptr::null_mut(),
-                        &mut out,
+                        &raw mut out,
                     )
                 }
             }),
@@ -928,7 +928,7 @@ impl Runtime {
             return Err(Error::hostfxr(
                 &format!("{type_name}::{method}"),
                 code,
-                describe(code, detail),
+                &describe(code, detail),
             ));
         }
         Ok(out)
@@ -952,7 +952,7 @@ impl Runtime {
             return Err(Error::hostfxr(
                 &format!("load_assembly({})", assembly.display()),
                 code,
-                describe(code, detail),
+                &describe(code, detail),
             ));
         }
         Ok(())

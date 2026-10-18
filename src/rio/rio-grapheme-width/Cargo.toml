@@ -16,3 +16,4 @@ default = ["std"]
 std = ["ucd-trie/std", "phf/std"]
 
 [lints]
+workspace = true

@@ -33,3 +33,4 @@ glyph = ["dep:skrifa", "dep:parking_lot"]
 wgpu = ["dep:wgpu"]
 
 [lints]
+workspace = true

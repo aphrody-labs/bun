@@ -16,3 +16,4 @@ semver = { version = "1" }
 serde_json = { version = "1" }
 
 [lints]
+workspace = true

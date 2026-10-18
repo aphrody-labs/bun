@@ -135,7 +135,7 @@ impl ApplicationHandler for App {
         let window = Arc::new(event_loop.create_window(attrs).expect("create window"));
         let surface = self
             .instance
-            .create_surface(window.clone())
+            .create_surface(std::sync::Arc::clone(&window))
             .expect("create surface");
         let adapter =
             pollster::block_on(self.instance.request_adapter(&wgpu::RequestAdapterOptions {

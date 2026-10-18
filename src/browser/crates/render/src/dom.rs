@@ -3627,12 +3627,12 @@ fn add_relational_tree_invalidation(
             }
             if invalidation.unrepresentable_outer_path {
                 if std::env::var_os("OBSCURA_RENDER_TIMING").is_some() {
-                    eprintln!(
+                    bun_core::output::print_errorln(format_args!(
                         "[timing] retained-style fallback reason=relational-unrepresentable \
                          rule_order={} anchor={} mutation={mutation:?}",
                         invalidation.rule_order,
                         anchor.index(),
-                    );
+                    ));
                 }
                 return false;
             }
@@ -4043,12 +4043,12 @@ fn retained_style_plan(
                         || node_is_style_text(tree, node, Some(new_parent))
                     {
                         if std::env::var_os("OBSCURA_RENDER_TIMING").is_some() {
-                            eprintln!(
+                            bun_core::output::print_errorln(format_args!(
                                 "[timing] retained-style fallback reason=style-subtree-insert \
                                  node={} old_parent={old_parent:?} new_parent={}",
                                 node.index(),
                                 new_parent.index(),
-                            );
+                            ));
                         }
                         return RetainedStylePlan::Full;
                     }
@@ -4096,12 +4096,12 @@ fn retained_style_plan(
                         || node_is_style_text(tree, node, Some(old_parent))
                     {
                         if std::env::var_os("OBSCURA_RENDER_TIMING").is_some() {
-                            eprintln!(
+                            bun_core::output::print_errorln(format_args!(
                                 "[timing] retained-style fallback reason=style-subtree-remove \
                                  node={} old_parent={}",
                                 node.index(),
                                 old_parent.index(),
-                            );
+                            ));
                         }
                         return RetainedStylePlan::Full;
                     }
@@ -4124,11 +4124,11 @@ fn retained_style_plan(
                 TreeStyleMutation::Text { node, parent } => {
                     if node_is_style_text(tree, node, parent) {
                         if std::env::var_os("OBSCURA_RENDER_TIMING").is_some() {
-                            eprintln!(
+                            bun_core::output::print_errorln(format_args!(
                                 "[timing] retained-style fallback reason=style-text node={} \
                                  parent={parent:?}",
                                 node.index(),
-                            );
+                            ));
                         }
                         return RetainedStylePlan::Full;
                     }
@@ -4978,12 +4978,12 @@ fn layout_dom_with_web_fonts_pass_limit_and_query_seed(
                 // coverage threshold, not a site- or node-count heuristic.
                 if has_animation_damage && dirty.len().saturating_mul(2) >= retained.styles.len() {
                     if std::env::var_os("OBSCURA_RENDER_TIMING").is_some() {
-                        eprintln!(
+                        bun_core::output::print_errorln(format_args!(
                             "[timing] retained-style fallback reason=animation-dirty-coverage \
                              dirty={} retained={}",
                             dirty.len(),
                             retained.styles.len(),
-                        );
+                        ));
                     }
                     return None;
                 }
@@ -5024,7 +5024,7 @@ fn layout_dom_with_web_fonts_pass_limit_and_query_seed(
     if !sheet.has_container_queries() {
         if timing {
             let (r, i, c, a, l, u) = sheet.debug_stats();
-            eprintln!(
+            bun_core::output::print_errorln(format_args!(
                 "[timing] parse+index={:?} stylesheet_cache_hit={} cascade={:?} rules={} \
                  id_keys={} class_keys={} attr_keys={} local_keys={} universal={} cq_passes=1 \
                  cq_termination=no-queries retained_reused={} retained_fresh={} \
@@ -5041,7 +5041,7 @@ fn layout_dom_with_web_fonts_pass_limit_and_query_seed(
                 retained_reused,
                 retained_fresh,
                 retained_fallback
-            );
+            ));
         }
         return (
             laid,
@@ -5076,7 +5076,7 @@ fn layout_dom_with_web_fonts_pass_limit_and_query_seed(
     if let Some(termination) = inactive {
         if timing {
             let (r, i, c, a, l, u) = sheet.debug_stats();
-            eprintln!(
+            bun_core::output::print_errorln(format_args!(
                 "[timing] parse+index={:?} stylesheet_cache_hit={} cascade={:?} rules={} \
                  id_keys={} class_keys={} attr_keys={} local_keys={} universal={} cq_passes=1 \
                  cq_termination={:?} retained_reused={} retained_fresh={} retained_fallback={}",
@@ -5093,7 +5093,7 @@ fn layout_dom_with_web_fonts_pass_limit_and_query_seed(
                 retained_reused,
                 retained_fresh,
                 retained_fallback
-            );
+            ));
         }
         return (
             laid,
@@ -5244,7 +5244,7 @@ fn layout_dom_with_web_fonts_pass_limit_and_query_seed(
 
     if timing {
         let (r, i, c, a, l, u) = sheet.debug_stats();
-        eprintln!(
+        bun_core::output::print_errorln(format_args!(
             "[timing] parse+index={:?} stylesheet_cache_hit={} cascade_total={:?} rules={} \
              id_keys={} class_keys={} attr_keys={} local_keys={} universal={} cq_passes={} \
              cq_termination={:?} cq_evaluations={} cq_cache_hits={} cq_ancestor_steps={} \
@@ -5266,7 +5266,7 @@ fn layout_dom_with_web_fonts_pass_limit_and_query_seed(
             retained_reused,
             retained_fresh,
             retained_fallback
-        );
+        ));
     }
     (
         laid,

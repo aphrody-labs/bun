@@ -1,3 +1,10 @@
+// Standalone host outside Bun's event loop: std I/O, collections and strings are intended here, as in bun_host and bun_docker.
+#![allow(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros,
+)]
+
 use pyo3::prelude::*;
 use yolo_core::{compute_sum_squares, compute_summary};
 

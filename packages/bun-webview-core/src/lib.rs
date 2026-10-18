@@ -9,6 +9,13 @@
 //!   and [`backend::mock`] (no display, for tests). WKWebView and CEF host drivers
 //!   remain unimplemented; selecting them returns an explicit unavailable error.
 
+// Standalone host outside Bun's event loop: std I/O, collections and strings are intended here, as in bun_host and bun_docker.
+#![allow(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros,
+)]
+
 #[cfg(all(target_os = "linux", feature = "gtk4", feature = "gtk3"))]
 compile_error!("features `gtk4` and `gtk3` are exclusive: one GTK major per build");
 
@@ -143,14 +150,14 @@ pub struct KeyEvent {
     pub modifiers: u32,
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct HistoryEntry {
     pub id: u32,
     pub url: String,
     pub title: String,
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Bounds {
     pub left: i32,
     pub top: i32,
@@ -159,7 +166,7 @@ pub struct Bounds {
 }
 
 /// Result of a page-side evaluation (`Runtime.evaluate` with `returnByValue` + `awaitPromise`).
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum EvalOutcome {
     Undefined,
     /// JSON-serializable return value.
@@ -253,7 +260,11 @@ impl Events {
     pub fn console(&self, kind: &str, args: Value) {
         self.emit(
             "Runtime.consoleAPICalled",
-            serde_json::json!({ "type": kind, "args": args, "executionContextId": 1, "timestamp": now_seconds() * 1000.0 }),
+            {
+                let mut params = serde_json::json!({ "type": kind, "executionContextId": 1, "timestamp": now_seconds() * 1000.0 });
+                params["args"] = args;
+                params
+            },
         );
     }
 
@@ -276,14 +287,14 @@ fn now_seconds() -> f64 {
 }
 
 /// Encode an RGBA8 frame. PNG ignores `quality`; WebP is lossless.
-pub fn encode_rgba(rgba: Vec<u8>, width: u32, height: u32, format: ImageFormat, quality: u8) -> Result<Vec<u8>, String> {
+pub fn encode_rgba(rgba: &[u8], width: u32, height: u32, format: ImageFormat, quality: u8) -> Result<Vec<u8>, String> {
     use image::ImageEncoder;
     let mut out = Vec::new();
     let r = match format {
-        ImageFormat::Png => image::codecs::png::PngEncoder::new(&mut out).write_image(&rgba, width, height, image::ExtendedColorType::Rgba8),
-        ImageFormat::Webp => image::codecs::webp::WebPEncoder::new_lossless(&mut out).write_image(&rgba, width, height, image::ExtendedColorType::Rgba8),
+        ImageFormat::Png => image::codecs::png::PngEncoder::new(&mut out).write_image(rgba, width, height, image::ExtendedColorType::Rgba8),
+        ImageFormat::Webp => image::codecs::webp::WebPEncoder::new_lossless(&mut out).write_image(rgba, width, height, image::ExtendedColorType::Rgba8),
         ImageFormat::Jpeg => {
-            let rgb: Vec<u8> = rgba.chunks_exact(4).flat_map(|p| [p[0], p[1], p[2]]).collect();
+            let rgb: Vec<u8> = rgba.as_chunks::<4>().0.iter().flat_map(|p| [p[0], p[1], p[2]]).collect();
             let q = if quality == 0 { 80 } else { quality.min(100) };
             image::codecs::jpeg::JpegEncoder::new_with_quality(&mut out, q).write_image(&rgb, width, height, image::ExtendedColorType::Rgb8)
         }

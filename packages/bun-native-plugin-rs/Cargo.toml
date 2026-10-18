@@ -10,7 +10,5 @@ anyhow = "1.0.94"
 # use local path in dev and publish to crates.io in prod
 bun-macro = { path = "./bun-macro", version = "1.4.4" }
 
-
-
-
 [lints]
+workspace = true

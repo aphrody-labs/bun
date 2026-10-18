@@ -100,29 +100,31 @@ impl SdkRequest {
 
     pub fn from_global_json(path: &Path) -> Self {
         let parsed = read_json(path)
-            .map_err(|error| (None, error))
+            .map_err(|error| Box::new((None, error)))
             .and_then(|json| Self::from_json(&json));
         match parsed {
             Ok(mut request) => {
                 request.global_json = Some(path.to_path_buf());
                 request
             }
-            Err((Some(mut request), error)) => {
-                // Invalid version band: reported, the settings stay in force.
-                request.global_json = Some(path.to_path_buf());
-                request.global_json_error = Some(error);
-                request
-            }
-            Err((None, error)) => Self {
-                global_json: Some(path.to_path_buf()),
-                global_json_error: Some(error),
-                ..Self::default()
+            Err(failure) => match *failure {
+                (Some(mut request), error) => {
+                    // Invalid version band: reported, the settings stay in force.
+                    request.global_json = Some(path.to_path_buf());
+                    request.global_json_error = Some(error);
+                    request
+                }
+                (None, error) => Self {
+                    global_json: Some(path.to_path_buf()),
+                    global_json_error: Some(error),
+                    ..Self::default()
+                },
             },
         }
     }
 
-    fn from_json(json: &Value) -> Result<Self, (Option<Self>, String)> {
-        let fail = |message: String| Err((None, message));
+    fn from_json(json: &Value) -> Result<Self, Box<(Option<Self>, String)>> {
+        let fail = |message: String| Err(Box::new((None, message)));
         let mut request = Self::default();
         let Some(sdk) = json.get("sdk").filter(|sdk| !sdk.is_null()) else {
             return Ok(request);
@@ -183,7 +185,7 @@ impl SdkRequest {
                 "Version '{version}' is not valid for the 'sdk/version' value. SDK feature bands start at 1 - for example, {}.{}.100",
                 version.major, version.minor
             );
-            return Err((Some(request), message));
+            return Err(Box::new((Some(request), message)));
         }
         Ok(request)
     }
@@ -197,7 +199,7 @@ impl SdkRequest {
             .global_json
             .as_deref()
             .and_then(Path::parent)
-            .unwrap_or(Path::new("."));
+            .unwrap_or_else(|| Path::new("."));
         paths
             .iter()
             .map(|path| {
@@ -668,7 +670,7 @@ mod tests {
         let value: Value = serde_json::from_str(r#"{"sdk":{"rollForward":"patch"}}"#).unwrap();
         assert!(SdkRequest::from_json(&value).is_err());
         let value: Value = serde_json::from_str(r#"{"sdk":{"version":"8.0.0"}}"#).unwrap();
-        assert!(matches!(SdkRequest::from_json(&value), Err((Some(_), _))));
+        assert!(matches!(SdkRequest::from_json(&value), Err(failure) if failure.0.is_some()));
     }
 
     fn fx(roll: RollForward, apply_patches: bool, requested: &str, installed: &[&str]) -> Option<String> {

@@ -5,7 +5,7 @@ use thiserror::Error;
 use crate::url_parser;
 use crate::utils;
 
-#[derive(Clone, Copy, PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum RequestMethod {
     Connect,
     Delete,
@@ -38,7 +38,7 @@ impl std::str::FromStr for RequestMethod {
 }
 
 /// The type of resource requested from the URL endpoint.
-#[derive(Clone, PartialEq, Debug)]
+#[derive(Clone, PartialEq, Eq, Debug)]
 pub enum RequestType {
     Beacon,
     Csp,
@@ -60,7 +60,7 @@ pub enum RequestType {
 }
 
 /// Possible failure reasons when creating a [`Request`].
-#[derive(Debug, Error, PartialEq)]
+#[derive(Debug, Error, PartialEq, Eq)]
 pub enum RequestError {
     #[error("hostname parsing failed")]
     HostnameParseError,
@@ -185,7 +185,7 @@ impl Request {
             request_type,
             method,
             url: url.to_owned(),
-            url_lower_cased: url_lower_cased.to_owned(),
+            url_lower_cased: url_lower_cased.clone(),
             hostname: hostname.to_owned(),
             request_tokens: calculate_tokens(&url_lower_cased),
             source_hostname_hashes,

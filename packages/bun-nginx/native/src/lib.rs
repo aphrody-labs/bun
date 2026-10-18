@@ -1,4 +1,12 @@
 //! A real NGINX HTTP module. Requests, buffers and timers remain on its worker event loop.
+
+// Standalone host outside Bun's event loop: std I/O, collections and strings are intended here, as in bun_host and bun_docker.
+#![allow(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros,
+)]
+
 use core::cell::Cell;
 use core::ffi::{c_char, c_void};
 use core::ptr;

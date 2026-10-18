@@ -1,3 +1,10 @@
+// Standalone host outside Bun's event loop: std I/O, collections and strings are intended here, as in bun_host and bun_docker.
+#![allow(
+    clippy::disallowed_methods,
+    clippy::disallowed_types,
+    clippy::disallowed_macros,
+)]
+
 pub mod privilege;
 pub mod resources;
 #[cfg(feature = "repository-tools")]

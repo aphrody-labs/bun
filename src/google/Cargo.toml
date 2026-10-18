@@ -12,7 +12,7 @@ description = "Bun's Google SDK: public search (SERP, discovery, cache, browser 
 
 [features]
 default = []
-search = ["dep:tokio", "dep:rustls", "dep:bun_browser_dom", "dep:regex", "dep:reqwest", "dep:url", "dep:chrono"]
+search = ["dep:bun_core", "dep:tokio", "dep:rustls", "dep:bun_browser_dom", "dep:regex", "dep:reqwest", "dep:url", "dep:chrono"]
 search-cache = ["search", "dep:rusqlite"]
 browser-search = ["search", "dep:bun_browser"]
 
@@ -21,6 +21,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+bun_core = { workspace = true, optional = true }
 tokio = { workspace = true, optional = true, features = ["macros", "rt-multi-thread", "time"] }
 rustls = { workspace = true, optional = true }
 bun_browser_dom = { workspace = true, optional = true }
@@ -31,15 +32,6 @@ rusqlite = { workspace = true, optional = true }
 bun_browser = { workspace = true, optional = true }
 chrono = { workspace = true, optional = true }
 
-# Retained library lint baseline during native graph integration.
-[lints.rust]
-"unsafe_op_in_unsafe_fn" = "deny"
-"unused_must_use" = "deny"
-"non_ascii_idents" = "deny"
 
-[lints.clippy]
-"todo" = "deny"
-"unimplemented" = "deny"
-"dbg_macro" = "deny"
-"correctness" = { "level" = "warn", "priority" = -1 }
-"perf" = { "level" = "warn", "priority" = -1 }
+[lints]
+workspace = true
