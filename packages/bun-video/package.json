@@ -3710,6 +3710,7 @@
     "src/computer.ts",
     "src/crunchyroll-api.ts",
     "src/crunchyroll-cli.ts",
+    "src/crunchyroll-service.ts",
     "src/crunchyroll-watchlist.ts",
     "src/crunchyroll.ts",
     "src/dash.ts",
@@ -4928,6 +4929,11 @@
       "bun": "./dist/src/crunchyroll-api.ts",
       "default": "./dist/src/crunchyroll-api.ts"
     },
+    "./crunchyroll/service": {
+      "types": "./dist/types/src/crunchyroll-service.d.ts",
+      "bun": "./dist/src/crunchyroll-service.ts",
+      "default": "./dist/src/crunchyroll-service.ts"
+    },
     "./crunchyroll/cli": {
       "types": "./dist/types/src/crunchyroll-cli.d.ts",
       "bun": "./dist/src/crunchyroll-cli.ts",
@@ -5299,6 +5305,7 @@
       "./bitmovin": "./src/bitmovin.ts",
       "./crunchyroll": "./src/crunchyroll.ts",
       "./crunchyroll/api": "./src/crunchyroll-api.ts",
+      "./crunchyroll/service": "./src/crunchyroll-service.ts",
       "./crunchyroll/cli": "./src/crunchyroll-cli.ts",
       "./crunchyroll/watchlist": "./src/crunchyroll-watchlist.ts",
       "./oauth": "./src/oauth.ts",

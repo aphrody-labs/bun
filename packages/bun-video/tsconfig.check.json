@@ -130,6 +130,7 @@
       "@aphrody/bun-video/bitmovin": ["./src/bitmovin.ts"],
       "@aphrody/bun-video/crunchyroll": ["./src/crunchyroll.ts"],
       "@aphrody/bun-video/crunchyroll/api": ["./src/crunchyroll-api.ts"],
+      "@aphrody/bun-video/crunchyroll/service": ["./src/crunchyroll-service.ts"],
       "@aphrody/bun-video/crunchyroll/cli": ["./src/crunchyroll-cli.ts"],
       "@aphrody/bun-video/crunchyroll/watchlist": ["./src/crunchyroll-watchlist.ts"],
       "@aphrody/bun-video/oauth": ["./src/oauth.ts"],

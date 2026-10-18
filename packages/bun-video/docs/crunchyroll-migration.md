@@ -170,3 +170,27 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+## Long-running service
+
+`@aphrody/bun-video/crunchyroll/service` exports `createCrunchyrollService`, and
+`bun-video crunchyroll daemon --entries <observed.json> [--catalog <path>] [--interval <60..86400 s>]`
+runs it. One process holds four layers:
+
+- Crawler: a sync loop that re-reads the observed references every cycle and registers them in the video
+  catalog. With `BUN_VIDEO_CRUNCHYROLL_ACCESS_TOKEN` configured, series are expanded to seasons and episodes
+  through the existing client. A cycle is bounded by a timeout, never overlaps another, and backs off
+  exponentially (up to six hours) after failures; only a stable error code is retained.
+- Indexer: the catalog itself. `GET /v1/index/sources?kind=series|video&limit=N` (service token required) lists
+  the registered Crunchyroll sources.
+- API: the metadata routes of `createCrunchyrollApi` plus `GET /health`, which reports the sync state and answers
+  503 when no cycle succeeded within the longer of three intervals and the backoff cap.
+- Resolver: `GET /v1/resolve?url=<official URL>` or `?id=<content id>` returns the canonical URL, the catalog
+  entry and, when the deployment injects a `shenron(contentId)` mapping, the Shenron wiki episode ID.
+
+The entries file is the only input that carries account data. This service performs no sign-in and does not
+read cookies; producing the observed references from an authenticated watchlist is a separate step, and the
+watchlist page is rendered client-side, so a plain HTTP fetch of it returns no entries. Qualified status: the sync,
+index, health and resolver behaviour is covered by `test/crunchyroll-service.test.ts` with injected clients and a
+local run of the daemon; no live Crunchyroll account call has been qualified. `infra/systemd/bun-video-crunchyroll.service`
+is a hardened unit template for a 24/7 deployment.
