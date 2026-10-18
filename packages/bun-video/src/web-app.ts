@@ -5,6 +5,7 @@ import { createCrunchyrollShortcutsHandler } from "./apps/crunchyroll-shortcuts"
 import { createCrunchyrollApi, type CrunchyrollApiOptions } from "./crunchyroll-api";
 import { createDashLab } from "./apps/dash-live";
 import { prepareHlsLab } from "./apps/hls-live";
+import { probeSource } from "./web-probe";
 import { WEBGPU_PROBE_HTML } from "./webgpu";
 
 export interface VideoWebAppOptions {
@@ -349,6 +350,16 @@ export function createVideoWebApp(options: VideoWebAppOptions): VideoWebApp {
         return json(await probeChromiumWebGpu({ origin: url.origin, timeout: 15000 }));
       } catch {
         return json({ error: "webgpu_probe_failed" }, 503);
+      }
+    }
+
+    if (path === "/api/probe") {
+      const target = url.searchParams.get("url");
+      if (!target) return json({ error: "missing_url" }, 400);
+      try {
+        return json(await probeSource(target));
+      } catch (error) {
+        return json({ error: "invalid_url", detail: error instanceof Error ? error.message : String(error) }, 400);
       }
     }
 
