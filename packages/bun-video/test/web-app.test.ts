@@ -73,3 +73,11 @@ describe("mounted labs", () => {
     expect(await response.json()).toEqual({ error: "lab_not_configured" });
   });
 });
+
+describe("mounted HLS lab", () => {
+  test("HLS lab is refused when not configured", async () => {
+    const response = await app.fetch(new Request("http://localhost/labs/hls/"));
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: "lab_not_configured" });
+  });
+});

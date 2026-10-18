@@ -4,6 +4,7 @@ import { isAbsolute, relative, resolve, sep } from "node:path";
 import { createCrunchyrollShortcutsHandler } from "./apps/crunchyroll-shortcuts";
 import { createCrunchyrollApi, type CrunchyrollApiOptions } from "./crunchyroll-api";
 import { createDashLab } from "./apps/dash-live";
+import { prepareHlsLab } from "./apps/hls-live";
 
 export interface VideoWebAppOptions {
   /** Directory that local media paths must stay inside. */
@@ -14,6 +15,8 @@ export interface VideoWebAppOptions {
   readonly publicOrigin?: string;
   /** Captured or authorized live DASH source for the mounted lab under /labs/dash/. */
   readonly dashLab?: { readonly inputPath: string; readonly mode?: "capture" | "live" };
+  /** Enables the HLS lab, prepared from the protected local inputs when first requested. */
+  readonly hlsLab?: boolean;
 }
 
 export interface VideoWebApp {
@@ -78,10 +81,26 @@ export function createVideoWebApp(options: VideoWebAppOptions): VideoWebApp {
   const crunchyroll = createCrunchyrollApi(options.crunchyroll ?? {});
   const shortcuts = createCrunchyrollShortcutsHandler();
   let dashLab: ReturnType<typeof createDashLab> | undefined;
+  let hlsLab: ReturnType<typeof prepareHlsLab> | undefined;
+  let hls: Awaited<ReturnType<typeof prepareHlsLab>> | undefined;
 
   const routes = async (request: Request): Promise<Response> => {
     const url = new URL(request.url);
     const path = url.pathname;
+
+    if (hls && path.startsWith(hls.prefix)) return hls.handle(request);
+
+    if (path === "/labs/hls/" || path === "/labs/hls") {
+      if (!options.hlsLab) return json({ error: "lab_not_configured" }, 404);
+      hlsLab ??= prepareHlsLab(["--mounted"]).catch(() => {
+        hlsLab = undefined;
+        return undefined;
+      });
+      const prepared = await hlsLab;
+      if (!prepared) return json({ error: "lab_unavailable" }, 503);
+      hls = prepared;
+      return Response.redirect(new URL(`${prepared.prefix}/`, url.origin), 302);
+    }
 
     if (path.startsWith("/labs/dash/")) {
       if (!options.dashLab) return json({ error: "lab_not_configured" }, 404);
