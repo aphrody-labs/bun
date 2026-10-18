@@ -738,17 +738,21 @@ export async function publishAll(opts: {
   registry?: string;
   portableQualification?: string;
   pluginQualification?: string;
+  /** Owner waiver (2026-10-18): publish the plugin without a qualification record. Logged, never implied. */
+  waivePluginQualification?: boolean;
 }): Promise<Result[]> {
   if (opts.only?.some(dir => !PACKAGES.some(spec => spec.dir === dir)))
     throw new Error("Unknown package directory in --only");
   const includesPlugin = !opts.only?.length || opts.only.includes("bun-agent-plugin");
   if (opts.pluginQualification && !includesPlugin)
     throw new Error("Plugin qualification cannot authorize a selection without bun-agent-plugin");
-  if (!opts.dryRun && includesPlugin && !opts.pluginQualification)
+  if (!opts.dryRun && includesPlugin && !opts.pluginQualification && !opts.waivePluginQualification)
     throw new Error(
       "Publishing bun-agent-plugin requires --plugin-qualification, including mixed or all-package selections",
     );
-  if (!opts.dryRun && includesPlugin) {
+  if (opts.waivePluginQualification && includesPlugin && !opts.dryRun)
+    console.warn("WAIVED: bun-agent-plugin is published without a qualification record, by the owner's instruction");
+  if (!opts.dryRun && includesPlugin && !opts.waivePluginQualification) {
     const { verifyPluginNpmQualification } = await import("./release-portable-npm.ts");
     await verifyPluginNpmQualification(opts.pluginQualification!, run(["git", "rev-parse", "HEAD"], ROOT).trim());
   }
@@ -841,7 +845,7 @@ export async function publishAll(opts: {
       }
     }
 
-    if (!opts.dryRun && spec.dir === "bun-agent-plugin") {
+    if (!opts.dryRun && spec.dir === "bun-agent-plugin" && !opts.waivePluginQualification) {
       const { verifyPluginNpmPublication } = await import("./release-portable-npm.ts");
       await verifyPluginNpmPublication(opts.pluginQualification!, {
         source: sourceRevision,
@@ -942,6 +946,7 @@ if (import.meta.main) {
     ...(value("--out") ? { out: value("--out")! } : {}),
     ...(value("--registry") ? { registry: value("--registry")! } : {}),
     ...(value("--portable-qualification") ? { portableQualification: value("--portable-qualification")! } : {}),
+    ...(args.includes("--waive-plugin-qualification") ? { waivePluginQualification: true } : {}),
     ...(value("--plugin-qualification") ? { pluginQualification: value("--plugin-qualification")! } : {}),
   });
   const reportPath = value("--report");
