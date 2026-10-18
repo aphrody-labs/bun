@@ -97,7 +97,38 @@ export function createVideoWebApp(options: VideoWebAppOptions): VideoWebApp {
   let hlsLab: ReturnType<typeof prepareHlsLab> | undefined;
   let hls: Awaited<ReturnType<typeof prepareHlsLab>> | undefined;
   let dataSite: Promise<{ handle: (request: Request) => Promise<Response> }> | undefined;
+  let pipelineInstance: ReturnType<typeof import("./video-workflow").openConfiguredUnifiedVideoPipeline> | undefined;
   let episode: Promise<{ fetch: (request: Request) => Promise<Response> }> | undefined;
+
+  const unifiedPipeline = () => {
+    pipelineInstance ??= import("./video-workflow")
+      .then(m => m.openConfiguredUnifiedVideoPipeline())
+      .catch(error => {
+        pipelineInstance = undefined;
+        throw error;
+      });
+    return pipelineInstance;
+  };
+
+  /** Starts a network capture through the owner-configured local CDP endpoint only. */
+  const capture = async (request: Request): Promise<Response> => {
+    const body = (await request.json().catch(() => null)) as { url?: unknown; endpoint?: unknown } | null;
+    const target = typeof body?.url === "string" && URL.canParse(body.url) ? new URL(body.url) : undefined;
+    if (!target || !["https:", "http:"].includes(target.protocol)) return json({ error: "invalid_url" }, 400);
+    const endpoint = typeof body?.endpoint === "string" ? body.endpoint : undefined;
+    if (endpoint !== undefined) {
+      const parsed = URL.canParse(endpoint) ? new URL(endpoint) : undefined;
+      if (!parsed || !["ws:", "http:"].includes(parsed.protocol) || !["127.0.0.1", "localhost", "[::1]"].includes(parsed.hostname))
+        return json({ error: "endpoint_must_be_loopback" }, 400);
+    }
+    try {
+      const pipeline = await unifiedPipeline();
+      await pipeline.capture(target.href, endpoint ? { endpoint } : {});
+      return json({ status: "capture_finished", url: target.origin });
+    } catch {
+      return json({ error: "capture_failed" }, 422);
+    }
+  };
 
   const routes = async (request: Request): Promise<Response> => {
     const url = new URL(request.url);
@@ -161,6 +192,8 @@ export function createVideoWebApp(options: VideoWebAppOptions): VideoWebApp {
         });
       return (await dataSite).handle(request);
     }
+
+    if (path === "/api/pipeline/capture" && request.method === "POST") return capture(request);
 
     if (request.method !== "GET" && request.method !== "HEAD") return json({ error: "method_not_allowed" }, 405);
 
@@ -239,6 +272,13 @@ export function createVideoWebApp(options: VideoWebAppOptions): VideoWebApp {
         return json({ error: "webgpu_probe_failed" }, 503);
       }
     }
+
+    if (path === "/api/pipeline/status") {
+      const pipeline = await unifiedPipeline();
+      return json({ families: pipeline.apis() });
+    }
+
+    if (path === "/api/pipeline/capture" && request.method === "POST") return json({ error: "use_post_on_pipeline" }, 405);
 
     if (path === "/api/compositions") {
       const [remotion, hyperframes] = await Promise.all([

@@ -198,3 +198,35 @@ main:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
+
+.form {
+  display: grid;
+  gap: var(--space);
+  max-width: 40rem;
+}
+
+.form label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted-foreground);
+}
+
+.form input {
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--foreground);
+  font: inherit;
+}
+
+.form input:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+.action:disabled {
+  opacity: 0.5;
+  cursor: default;
+}

@@ -110,3 +110,27 @@ describe("mounted episode studio", () => {
     expect(missing.status).toBe(404);
   });
 });
+
+describe("unified pipeline capture", () => {
+  test("rejects non-HTTP URLs before opening any pipeline", async () => {
+    const response = await app.fetch(
+      new Request("http://localhost/api/pipeline/capture", {
+        method: "POST",
+        body: JSON.stringify({ url: "file:///etc/passwd" }),
+      }),
+    );
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "invalid_url" });
+  });
+
+  test("refuses a CDP endpoint that is not loopback", async () => {
+    const response = await app.fetch(
+      new Request("http://localhost/api/pipeline/capture", {
+        method: "POST",
+        body: JSON.stringify({ url: "https://www.crunchyroll.com/", endpoint: "ws://203.0.113.5:9222/devtools" }),
+      }),
+    );
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ error: "endpoint_must_be_loopback" });
+  });
+});

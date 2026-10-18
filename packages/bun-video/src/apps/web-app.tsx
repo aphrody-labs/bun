@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { VideoStudio, type StudioAsset } from "../studio";
 
-type Section = "library" | "episode" | "data" | "labs" | "shortcuts" | "compositions";
+type Section = "pipeline" | "library" | "episode" | "data" | "labs" | "shortcuts" | "compositions";
 
 interface Health {
   readonly status: string;
@@ -11,6 +11,7 @@ interface Health {
 }
 
 const sections: ReadonlyArray<{ id: Section; label: string; hint: string }> = [
+  { id: "pipeline", label: "Pipeline", hint: "Capture réseau, analyse, rendu" },
   { id: "library", label: "Bibliothèque", hint: "Lecture et métadonnées" },
   { id: "episode", label: "Atelier épisode", hint: "Analyse d’images" },
   { id: "data", label: "Données", hint: "Catalogue et exports" },
@@ -22,7 +23,7 @@ const sections: ReadonlyArray<{ id: Section; label: string; hint: string }> = [
 function useSection(): [Section, (section: Section) => void] {
   const read = (): Section => {
     const value = location.hash.slice(1) as Section;
-    return sections.some(section => section.id === value) ? value : "library";
+    return sections.some(section => section.id === value) ? value : "pipeline";
   };
   const [current, setCurrent] = useState<Section>(read);
   useEffect(() => {
@@ -86,7 +87,50 @@ function Compositions() {
   );
 }
 
+function Pipeline() {
+  const [url, setUrl] = useState("https://www.crunchyroll.com/");
+  const [endpoint, setEndpoint] = useState("");
+  const [state, setState] = useState<string>("");
+  const [busy, setBusy] = useState(false);
+  const submit = (event: { preventDefault(): void }) => {
+    event.preventDefault();
+    setBusy(true);
+    setState("Capture en cours…");
+    fetch("/api/pipeline/capture", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ url, ...(endpoint ? { endpoint } : {}) }),
+    })
+      .then(async response => {
+        const body = (await response.json()) as { status?: string; error?: string };
+        setState(response.ok ? "Capture terminée." : `Erreur : ${body.error ?? response.status}`);
+      })
+      .catch(() => setState("Capture impossible."))
+      .finally(() => setBusy(false));
+  };
+  return (
+    <form className="form" onSubmit={submit}>
+      <label>
+        URL à capturer
+        <input type="url" value={url} onChange={event => setUrl(event.currentTarget.value)} required />
+      </label>
+      <label>
+        Point de terminaison CDP local (optionnel)
+        <input
+          type="text"
+          value={endpoint}
+          placeholder="ws://127.0.0.1:9222/…"
+          onChange={event => setEndpoint(event.currentTarget.value)}
+        />
+      </label>
+      <button type="submit" className="action" disabled={busy}>Lancer la capture</button>
+      <p className="notice" role="status" aria-live="polite">{state}</p>
+    </form>
+  );
+}
+
 const views: Record<Section, () => ReactNode> = {
+  pipeline: () => <Pipeline />,
   library: () => <Library />,
   episode: () => <Embedded src="/episode/" title="Atelier épisode" />,
   data: () => <Embedded src="/site/" title="Données vidéo" />,
