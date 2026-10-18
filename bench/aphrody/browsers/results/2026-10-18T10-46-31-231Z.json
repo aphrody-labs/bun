@@ -1,0 +1,633 @@
+{
+  "origin": "https://dragonballfr.com",
+  "runs": 5,
+  "host": {
+    "cpus": 12
+  },
+  "bun": "1.4.5",
+  "results": {
+    "obscura": {
+      "index": [
+        {
+          "ms": 1962.5595389999999,
+          "maxRssMiB": 102.04296875,
+          "ok": true,
+          "detail": "113 episode links",
+          "exit": 0
+        },
+        {
+          "ms": 6019.805265000003,
+          "maxRssMiB": 114.98828125,
+          "ok": true,
+          "detail": "113 episode links",
+          "exit": 0
+        },
+        {
+          "ms": 1576.0425830000022,
+          "maxRssMiB": 86.5625,
+          "ok": true,
+          "detail": "113 episode links",
+          "exit": 0
+        },
+        {
+          "ms": 1410.291595000017,
+          "maxRssMiB": 88.1875,
+          "ok": true,
+          "detail": "113 episode links",
+          "exit": 0
+        },
+        {
+          "ms": 1711.1040309999953,
+          "maxRssMiB": 87.69140625,
+          "ok": true,
+          "detail": "113 episode links",
+          "exit": 0
+        }
+      ],
+      "episode": [
+        {
+          "ms": 4576.712735999987,
+          "maxRssMiB": 123.625,
+          "ok": true,
+          "detail": "player rendered",
+          "exit": 0
+        },
+        {
+          "ms": 3968.8089749999926,
+          "maxRssMiB": 120.9296875,
+          "ok": true,
+          "detail": "player rendered",
+          "exit": 0
+        },
+        {
+          "ms": 4236.603260999982,
+          "maxRssMiB": 122.4140625,
+          "ok": true,
+          "detail": "player rendered",
+          "exit": 0
+        },
+        {
+          "ms": 4746.466668999987,
+          "maxRssMiB": 93.5,
+          "ok": true,
+          "detail": "player rendered",
+          "exit": 0
+        },
+        {
+          "ms": 4234.649559999991,
+          "maxRssMiB": 93.90625,
+          "ok": true,
+          "detail": "player rendered",
+          "exit": 0
+        }
+      ]
+    },
+    "lightpanda": {
+      "index": [
+        {
+          "ms": 978.4319179999998,
+          "maxRssMiB": 49.21875,
+          "ok": true,
+          "detail": "113 episode links",
+          "exit": 0
+        },
+        {
+          "ms": 1116.9242649999942,
+          "maxRssMiB": 60.30859375,
+          "ok": true,
+          "detail": "113 episode links",
+          "exit": 0
+        },
+        {
+          "ms": 1889.6806260000012,
+          "maxRssMiB": 60.30859375,
+          "ok": true,
+          "detail": "113 episode links",
+          "exit": 0
+        },
+        {
+          "ms": 1375.0913319999818,
+          "maxRssMiB": 60.30859375,
+          "ok": true,
+          "detail": "113 episode links",
+          "exit": 0
+        },
+        {
+          "ms": 1110.3123719999858,
+          "maxRssMiB": 60.30859375,
+          "ok": true,
+          "detail": "113 episode links",
+          "exit": 0
+        }
+      ],
+      "episode": [
+        {
+          "ms": 581.6863900000171,
+          "maxRssMiB": 61.21875,
+          "ok": true,
+          "detail": "player rendered",
+          "exit": 0
+        },
+        {
+          "ms": 615.5740219999861,
+          "maxRssMiB": 61.21875,
+          "ok": true,
+          "detail": "player rendered",
+          "exit": 0
+        },
+        {
+          "ms": 804.9183750000084,
+          "maxRssMiB": 61.21875,
+          "ok": true,
+          "detail": "player rendered",
+          "exit": 0
+        },
+        {
+          "ms": 1023.4798430000083,
+          "maxRssMiB": 61.21875,
+          "ok": true,
+          "detail": "player rendered",
+          "exit": 0
+        },
+        {
+          "ms": 921.7257099999697,
+          "maxRssMiB": 61.21875,
+          "ok": true,
+          "detail": "player rendered",
+          "exit": 0
+        }
+      ]
+    },
+    "agent-browser": {
+      "index": [
+        {
+          "ms": 9567.481732,
+          "maxRssMiB": 417.58984375,
+          "ok": true,
+          "detail": "113 episode links",
+          "exit": 0
+        },
+        {
+          "ms": 12287.263276999998,
+          "maxRssMiB": 417.4140625,
+          "ok": true,
+          "detail": "113 episode links",
+          "exit": 0
+        },
+        {
+          "ms": 9441.470379999992,
+          "maxRssMiB": 417.3828125,
+          "ok": true,
+          "detail": "113 episode links",
+          "exit": 0
+        },
+        {
+          "ms": 13394.92996399998,
+          "maxRssMiB": 417.15625,
+          "ok": true,
+          "detail": "113 episode links",
+          "exit": 0
+        },
+        {
+          "ms": 11464.437845000008,
+          "maxRssMiB": 417.19921875,
+          "ok": true,
+          "detail": "113 episode links",
+          "exit": 0
+        }
+      ],
+      "episode": [
+        {
+          "ms": 5363.332748000015,
+          "maxRssMiB": 418.2265625,
+          "ok": true,
+          "detail": "player rendered",
+          "exit": 0
+        },
+        {
+          "ms": 5026.735717999982,
+          "maxRssMiB": 417.76953125,
+          "ok": true,
+          "detail": "player rendered",
+          "exit": 0
+        },
+        {
+          "ms": 10730.773856000014,
+          "maxRssMiB": 417.296875,
+          "ok": true,
+          "detail": "player rendered",
+          "exit": 0
+        },
+        {
+          "ms": 7911.052844999998,
+          "maxRssMiB": 417.61328125,
+          "ok": true,
+          "detail": "player rendered",
+          "exit": 0
+        },
+        {
+          "ms": 13715.846849999973,
+          "maxRssMiB": 417.18359375,
+          "ok": true,
+          "detail": "player rendered",
+          "exit": 0
+        }
+      ]
+    },
+    "playwright": {
+      "index": [
+        {
+          "ms": 3955.0923550000007,
+          "maxRssMiB": 213.39453125,
+          "ok": true,
+          "detail": "113 episode links",
+          "exit": 0
+        },
+        {
+          "ms": 2672.841456999995,
+          "maxRssMiB": 211.83984375,
+          "ok": true,
+          "detail": "113 episode links",
+          "exit": 0
+        },
+        {
+          "ms": 8197.574275000006,
+          "maxRssMiB": 212.44921875,
+          "ok": true,
+          "detail": "113 episode links",
+          "exit": 0
+        },
+        {
+          "ms": 5679.927889999992,
+          "maxRssMiB": 212.765625,
+          "ok": true,
+          "detail": "113 episode links",
+          "exit": 0
+        },
+        {
+          "ms": 4604.500849999982,
+          "maxRssMiB": 213.5625,
+          "ok": true,
+          "detail": "113 episode links",
+          "exit": 0
+        }
+      ],
+      "episode": [
+        {
+          "ms": 2511.150602000009,
+          "maxRssMiB": 213.921875,
+          "ok": true,
+          "detail": "player rendered",
+          "exit": 0
+        },
+        {
+          "ms": 4214.233039000013,
+          "maxRssMiB": 218.28515625,
+          "ok": true,
+          "detail": "player rendered",
+          "exit": 0
+        },
+        {
+          "ms": 7521.501351999992,
+          "maxRssMiB": 217.2734375,
+          "ok": true,
+          "detail": "player rendered",
+          "exit": 0
+        },
+        {
+          "ms": 3773.098754000006,
+          "maxRssMiB": 213.25390625,
+          "ok": true,
+          "detail": "player rendered",
+          "exit": 0
+        },
+        {
+          "ms": 7056.018678000022,
+          "maxRssMiB": 218.59765625,
+          "ok": true,
+          "detail": "player rendered",
+          "exit": 0
+        }
+      ]
+    },
+    "bun-webview": {
+      "index": [
+        {
+          "ms": 2156.525719000001,
+          "maxRssMiB": 50.23828125,
+          "ok": true,
+          "detail": "113 episode links",
+          "exit": 0
+        },
+        {
+          "ms": 2375.2177850000007,
+          "maxRssMiB": 56.1796875,
+          "ok": true,
+          "detail": "113 episode links",
+          "exit": 0
+        },
+        {
+          "ms": 4808.562319000004,
+          "maxRssMiB": 60.30859375,
+          "ok": true,
+          "detail": "113 episode links",
+          "exit": 0
+        },
+        {
+          "ms": 5942.786516000007,
+          "maxRssMiB": 60.30859375,
+          "ok": true,
+          "detail": "113 episode links",
+          "exit": 0
+        },
+        {
+          "ms": 1922.9154130000097,
+          "maxRssMiB": 61.21875,
+          "ok": true,
+          "detail": "113 episode links",
+          "exit": 0
+        }
+      ],
+      "episode": [
+        {
+          "ms": 2969.369524000009,
+          "maxRssMiB": 61.21875,
+          "ok": true,
+          "detail": "player rendered",
+          "exit": 0
+        },
+        {
+          "ms": 1780.939653999987,
+          "maxRssMiB": 61.21875,
+          "ok": true,
+          "detail": "player rendered",
+          "exit": 0
+        },
+        {
+          "ms": 4050.150597,
+          "maxRssMiB": 61.21875,
+          "ok": true,
+          "detail": "player rendered",
+          "exit": 0
+        },
+        {
+          "ms": 1724.3445190000057,
+          "maxRssMiB": 61.21875,
+          "ok": true,
+          "detail": "player rendered",
+          "exit": 0
+        },
+        {
+          "ms": 1765.5201499999966,
+          "maxRssMiB": 61.21875,
+          "ok": true,
+          "detail": "player rendered",
+          "exit": 0
+        }
+      ]
+    },
+    "bun-web": {
+      "index": [
+        {
+          "ms": 2451.510972,
+          "maxRssMiB": 233.390625,
+          "ok": true,
+          "detail": "113 episode links",
+          "exit": 0
+        },
+        {
+          "ms": 3421.119928,
+          "maxRssMiB": 232.34375,
+          "ok": true,
+          "detail": "113 episode links",
+          "exit": 0
+        },
+        {
+          "ms": 9162.147448999996,
+          "maxRssMiB": 237.68359375,
+          "ok": true,
+          "detail": "113 episode links",
+          "exit": 0
+        },
+        {
+          "ms": 8337.277636000013,
+          "maxRssMiB": 239.28515625,
+          "ok": true,
+          "detail": "113 episode links",
+          "exit": 0
+        },
+        {
+          "ms": 2800.470945000008,
+          "maxRssMiB": 233.62890625,
+          "ok": true,
+          "detail": "113 episode links",
+          "exit": 0
+        }
+      ],
+      "episode": [
+        {
+          "ms": 2788.9751479999977,
+          "maxRssMiB": 230.609375,
+          "ok": true,
+          "detail": "player rendered",
+          "exit": 0
+        },
+        {
+          "ms": 2418.1028430000006,
+          "maxRssMiB": 231.54296875,
+          "ok": true,
+          "detail": "player rendered",
+          "exit": 0
+        },
+        {
+          "ms": 2152.1827740000153,
+          "maxRssMiB": 231.890625,
+          "ok": true,
+          "detail": "player rendered",
+          "exit": 0
+        },
+        {
+          "ms": 2251.3430410000146,
+          "maxRssMiB": 230.9765625,
+          "ok": true,
+          "detail": "player rendered",
+          "exit": 0
+        },
+        {
+          "ms": 3933.576554999978,
+          "maxRssMiB": 238.34375,
+          "ok": true,
+          "detail": "player rendered",
+          "exit": 0
+        }
+      ]
+    },
+    "aphrody-web": {
+      "index": [
+        {
+          "ms": 326.352350000001,
+          "maxRssMiB": 50.26953125,
+          "ok": true,
+          "detail": "113 episode links",
+          "exit": 0
+        },
+        {
+          "ms": 322.20128699999987,
+          "maxRssMiB": 53.01953125,
+          "ok": true,
+          "detail": "113 episode links",
+          "exit": 0
+        },
+        {
+          "ms": 594.9023479999887,
+          "maxRssMiB": 60.30859375,
+          "ok": true,
+          "detail": "113 episode links",
+          "exit": 0
+        },
+        {
+          "ms": 478.2381349999923,
+          "maxRssMiB": 60.30859375,
+          "ok": true,
+          "detail": "113 episode links",
+          "exit": 0
+        },
+        {
+          "ms": 479.46555900000385,
+          "maxRssMiB": 61.21875,
+          "ok": true,
+          "detail": "113 episode links",
+          "exit": 0
+        }
+      ],
+      "episode": [
+        {
+          "ms": 155.57475599998725,
+          "maxRssMiB": 61.21875,
+          "ok": true,
+          "detail": "player rendered",
+          "exit": 0
+        },
+        {
+          "ms": 389.43526499997824,
+          "maxRssMiB": 61.21875,
+          "ok": true,
+          "detail": "player rendered",
+          "exit": 0
+        },
+        {
+          "ms": 192.02887999999803,
+          "maxRssMiB": 61.21875,
+          "ok": true,
+          "detail": "player rendered",
+          "exit": 0
+        },
+        {
+          "ms": 166.17209400000866,
+          "maxRssMiB": 61.21875,
+          "ok": true,
+          "detail": "player rendered",
+          "exit": 0
+        },
+        {
+          "ms": 283.47114699997474,
+          "maxRssMiB": 61.21875,
+          "ok": true,
+          "detail": "player rendered",
+          "exit": 0
+        }
+      ]
+    },
+    "aphrody-web-browser": {
+      "index": [
+        {
+          "ms": 1739.714097,
+          "maxRssMiB": 199.890625,
+          "ok": false,
+          "detail": "0 episode links",
+          "exit": 0
+        },
+        {
+          "ms": 1559.2357899999988,
+          "maxRssMiB": 198.171875,
+          "ok": false,
+          "detail": "0 episode links",
+          "exit": 0
+        },
+        {
+          "ms": 1877.107158999992,
+          "maxRssMiB": 200.91796875,
+          "ok": false,
+          "detail": "0 episode links",
+          "exit": 0
+        },
+        {
+          "ms": 2248.7581780000037,
+          "maxRssMiB": 205.55078125,
+          "ok": false,
+          "detail": "0 episode links",
+          "exit": 0
+        },
+        {
+          "ms": 1224.9886159999878,
+          "maxRssMiB": 199.40234375,
+          "ok": false,
+          "detail": "0 episode links",
+          "exit": 0
+        }
+      ],
+      "episode": [
+        {
+          "ms": 1718.979638000019,
+          "maxRssMiB": 198.16796875,
+          "ok": true,
+          "detail": "player rendered",
+          "exit": 0
+        },
+        {
+          "ms": 1786.497516000003,
+          "maxRssMiB": 196.75390625,
+          "ok": true,
+          "detail": "player rendered",
+          "exit": 0
+        },
+        {
+          "ms": 1498.831927000021,
+          "maxRssMiB": 201.40234375,
+          "ok": true,
+          "detail": "player rendered",
+          "exit": 0
+        },
+        {
+          "ms": 1534.1241089999967,
+          "maxRssMiB": 203.1484375,
+          "ok": true,
+          "detail": "player rendered",
+          "exit": 0
+        },
+        {
+          "ms": 2303.8748880000203,
+          "maxRssMiB": 197.56640625,
+          "ok": true,
+          "detail": "player rendered",
+          "exit": 0
+        }
+      ]
+    }
+  },
+  "crawls": [
+    {
+      "id": "bun-fetch (sequential baseline)",
+      "ms": 9165.916593000002,
+      "ok": true,
+      "detail": "25/25 pages"
+    },
+    {
+      "id": "aphrody web crawl-index (crawl + index)",
+      "ms": 9918.763817000028,
+      "ok": false,
+      "detail": "21/25 pages, 21 written, 21 indexed, 0 errors"
+    }
+  ],
+  "skipped": {}
+}

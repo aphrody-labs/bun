@@ -6,7 +6,7 @@
  * (see the `env` block of the file), explicit options passed by the caller. Secrets are never
  * read from or written to this file.
  */
-import { existsSync, readFileSync, realpathSync, statSync } from "node:fs";
+import { existsSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 
@@ -191,7 +191,11 @@ export function engineBinaryCandidates(
   return [...(explicit ? [resolve(expandHome(explicit))] : []), ...listed];
 }
 
-/** Resolves the `aphrody-web` binary or throws with remediation. */
+/**
+ * Resolves the `aphrody-web` binary or throws with remediation. The path is not canonicalized: the
+ * installed `aphrody-web` is a symlink to the multi-call `aphrody` binary, which dispatches on the
+ * invocation name, so resolving the link would start the wrong program.
+ */
 export function resolveEngineBinary(
   config: WebConfig = loadWebConfig(),
   env: Record<string, string | undefined> = process.env,
@@ -200,17 +204,17 @@ export function resolveEngineBinary(
   if (explicit) {
     const path = existsSync(explicit) ? explicit : Bun.which(explicit);
     if (!path) throw new Error(`${config.engine.binaryEnv} points to a missing binary: ${explicit}`);
-    return realpathSync(resolve(path));
+    return resolve(path);
   }
   // Among the existing candidates the most recently built binary wins, so a fresh
   // `cargo build` is preferred over an older installed copy.
   const existing = engineBinaryCandidates(config, env)
     .filter(candidate => existsSync(candidate))
-    .map(candidate => ({ path: realpathSync(candidate), mtime: statSync(candidate).mtimeMs }))
+    .map(candidate => ({ path: resolve(candidate), mtime: statSync(candidate).mtimeMs }))
     .toSorted((a, b) => b.mtime - a.mtime);
   if (existing[0]) return existing[0].path;
   const onPath = Bun.which(config.engine.binary);
-  if (onPath) return realpathSync(onPath);
+  if (onPath) return resolve(onPath);
   throw new Error(
     `aphrody-web binary not found. Build it with \`cargo build -p bun_browser_engine\` or set ${config.engine.binaryEnv}.`,
   );

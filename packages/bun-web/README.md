@@ -1,43 +1,49 @@
-# Internal Bun browser SDK
+# @aphrody/bun-web
 
-These are library modules of Bun, not an additional executable, MCP server,
-FFI provider or published product. They reuse the fork's existing `Bun.WebView`
-CDP backend and preserve the imported semantic locator implementation. Import
-does not launch a browser, process, worker or network request.
+Browser SDK of the Bun fork. It is a library, not an additional executable or published product: the browser
+runtime stays `Bun.WebView` (Chrome over CDP) and the Rust engine in `src/browser/crates`. Importing a module never
+launches a browser, process, worker or network request.
+
+| Module | Role |
+| --- | --- |
+| `./cdp` | `BrowserPage`: one `Bun.WebView` tab on a CDP endpoint. `goto` settles on the load event (`waitUntil` `load` and `networkidle`), on `Page.domContentEventFired` (`domcontentloaded`) or at commit (`commit`). |
+| `./locator`, `./selectors` | Semantic locators (`getByRole`, `getByLabel`, `getByTestId`, ...) imported from the former web client. |
+| `./client` | `AgentBrowser` / `AgentPage`: the agent-browser command surface (snapshot refs, click, fill, wait, screenshot, PDF) over CDP. |
+| `./cli` | `yolo browser <command>`: one command, one JSON line. |
+| `./engine`, `./config` | Lifecycle of the local `aphrody-web` engine (`launch`) from `tools/config/web.json`. |
+| `./service`, `./runtime` | Web service client (fetch, scrape, crawl) and its shared runtime. |
+| `./tauri` | Tauri bridge. |
+| `./testing`, `./testing/next`, `./testing/sites` | Playwright-compatible test runner over the same pages. |
 
 ```ts
-import { BrowserPage, WebLocator, getByTestId } from "./src/index.ts";
+import { BrowserPage, WebLocator, getByTestId } from "@aphrody/bun-web";
 
 const page = await BrowserPage.connect("ws://127.0.0.1:9222/devtools/browser");
 try {
   await page.goto("https://example.com/");
-  const title = await page.title();
-  const locator = new WebLocator(page, getByTestId("submit"));
-  await locator.click();
+  console.log(await page.title());
+  await new WebLocator(page, getByTestId("submit")).click();
 } finally {
   await page.close();
 }
 ```
 
-The endpoint is the caller's existing Bun browser provider; the SDK never
-spawns a legacy engine CLI to supply it. A missing endpoint throws an error.
-It does not grant remote documents access to Bun APIs or host credentials.
-Transport calls are serialized because a Bun.WebView accepts one CDP request
-in flight per view. Navigation preserves the observed response status, and
-remote evaluation exceptions reject the caller's promise.
+The endpoint is the caller's existing provider: the Obscura-based `aphrody-web launch` engine, or any Chrome started
+with `--remote-debugging-port`. A missing endpoint throws. Remote documents get no access to Bun APIs or host
+credentials. CDP calls are serialized because a `Bun.WebView` accepts one request in flight per view.
+
+## Tests
+
+`bun test test/` (the preload in `bunfig.toml` starts one `aphrody-web` engine for the run). The engine binary is
+resolved without following symlinks: the installed `aphrody-web` is a link to the multi-call `aphrody` binary, which
+dispatches on its invocation name. `test/goto-load.test.ts` also starts the system Chrome when one is installed
+(`BUN_CHROME_PATH`, `google-chrome-stable` or `chromium`; `--no-sandbox` is passed).
 
 ## Qualification boundary
 
-Transferred source is not a qualified replacement for the former service
-client. Fetch profiles, static extraction, persistent crawling, media, frames,
-X/Grok integration and runtime lifecycle are owned by separate lazy modules.
-Their consumers stay on the qualified existing provider until Bun parity gates
-pass on the VPS. No binary-size or speed reduction is claimed by this import.
-
-The imported role and label selectors are heuristics, not the browser's full
-accessibility tree. Imported visibility checks inspect attributes; they do not
-prove layout-backed actionability. Keep these limitations in the parity suite.
-
-Provenance and inventory are recorded in
-[`../../src/browser/BROWSER-MIGRATION.json`](../../src/browser/BROWSER-MIGRATION.json)
-and the [migration matrix](../../src/browser/docs/browser-migration.md).
+The imported role and label selectors are heuristics, not the browser's accessibility tree, and the visibility check
+inspects attributes rather than layout. Keep those limits in the parity suite. Provenance is recorded in
+[`../../src/browser/BROWSER-MIGRATION.json`](../../src/browser/BROWSER-MIGRATION.json) and the
+[migration matrix](../../src/browser/docs/browser-migration.md); `bun src/browser/scripts/verify-migration.ts`
+checks the hashes (`--update` rewrites the integrated hashes after an intentional edit). No binary-size or speed
+claim is made by this import.

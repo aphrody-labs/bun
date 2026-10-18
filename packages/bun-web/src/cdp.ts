@@ -105,7 +105,18 @@ export class BrowserPage {
     waitUntil: "load" | "domcontentloaded" | "commit" | "networkidle" = "load",
   ): Promise<NavigationResponse> {
     this.#documentResponse = null;
-    await this._send("Page.navigate", { url, waitUntil });
+    if (waitUntil === "load" || waitUntil === "networkidle") {
+      // A raw Page.navigate answers once the navigation commits; Bun.WebView settles on the load event.
+      await timeout(this.#view.navigate(url), 30_000, "Bun browser CDP navigation timed out");
+    } else if (waitUntil === "domcontentloaded") {
+      const reached = new Promise<void>(resolve => {
+        const stop = listen(this.#view, "Page.domContentEventFired", () => (stop(), resolve()));
+      });
+      await this._send("Page.navigate", { url });
+      await timeout(reached, 30_000, "Bun browser CDP navigation timed out");
+    } else {
+      await this._send("Page.navigate", { url });
+    }
     const tree = await this._send("Page.getFrameTree", {});
     const frameTree = tree.frameTree as { frame?: { url?: string } } | undefined;
     this.#url = frameTree?.frame?.url ?? url;

@@ -1,4 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
+import pkg from "../package.json" with { type: "json" };
 import { AgentBrowser, type AgentPage } from "./client.ts";
 import type { LaunchOptions } from "./types.ts";
 
@@ -16,7 +17,7 @@ export async function runAgentBrowser(raw: readonly string[]): Promise<number> {
     return 0;
   }
   if (raw.includes("--version") || raw[0] === "version") {
-    console.log("@aphrody/bun-web 1.0.0-canary");
+    console.log(`${pkg.name} ${pkg.version}`);
     return 0;
   }
 

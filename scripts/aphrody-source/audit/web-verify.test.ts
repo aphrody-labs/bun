@@ -102,7 +102,8 @@ describe("web verify planning", () => {
 
 describe("config contract check", () => {
   test("the repository config and its documents are valid", () => {
-    expect(checkConfigFile(repositoryRoot())).toEqual([]);
+    // An empty environment: APHRODY_ROOT may point at another checkout on the host.
+    expect(checkConfigFile(repositoryRoot({}))).toEqual([]);
   });
 
   test("a missing config is reported", () => {
