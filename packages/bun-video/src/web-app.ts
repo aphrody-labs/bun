@@ -5,7 +5,9 @@ import { createCrunchyrollShortcutsHandler } from "./apps/crunchyroll-shortcuts"
 import { createCrunchyrollApi, type CrunchyrollApiOptions } from "./crunchyroll-api";
 import { createDashLab } from "./apps/dash-live";
 import { prepareHlsLab } from "./apps/hls-live";
-import { probeSource } from "./web-probe";
+import { discoverSources, probeSource } from "./web-probe";
+import { mapCrunchyrollHar } from "./crunchyroll-har-map";
+import { loadCrunchyrollCookies, storeCrunchyrollCookies } from "./crunchyroll-cookies";
 import { WEBGPU_PROBE_HTML } from "./webgpu";
 
 export interface VideoWebAppOptions {
@@ -183,6 +185,34 @@ export function createVideoWebApp(options: VideoWebAppOptions): VideoWebApp {
       return handler.fetch(mounted);
     }
 
+    if (path === "/api/crunchyroll/har-map" && request.method === "POST") {
+      const file = url.searchParams.get("file");
+      if (!file || !/^[A-Za-z]:[\/]/.test(file)) return json({ error: "absolute_file_required" }, 400);
+      try {
+        return json(await mapCrunchyrollHar(file));
+      } catch (error) {
+        return json({ error: "har_invalid", detail: error instanceof Error ? error.message : String(error) }, 422);
+      }
+    }
+
+    if (path === "/api/crunchyroll/cookies") {
+      if (request.method === "PUT") {
+        try {
+          return json(await storeCrunchyrollCookies(await request.text()));
+        } catch (error) {
+          return json(
+            { error: "cookies_invalid", detail: error instanceof Error ? error.message : String(error) },
+            400,
+          );
+        }
+      }
+      if (request.method === "GET") {
+        const cookies = await loadCrunchyrollCookies();
+        return json({ count: cookies?.length ?? 0, present: cookies !== null });
+      }
+      return json({ error: "method_not_allowed" }, 405);
+    }
+
     if (path.startsWith("/api/crunchyroll")) {
       const forwarded = new URL(request.url);
       forwarded.pathname = path.slice("/api/crunchyroll".length) || "/";
@@ -268,7 +298,11 @@ export function createVideoWebApp(options: VideoWebAppOptions): VideoWebApp {
       return json(report, report.ok ? 200 : 207);
     }
 
-    if (request.method !== "GET" && request.method !== "HEAD") return json({ error: "method_not_allowed" }, 405);
+    const mutatingRoute =
+      (path === "/api/crunchyroll/har-map" && request.method === "POST") ||
+      (path === "/api/crunchyroll/cookies" && request.method === "PUT");
+    if (request.method !== "GET" && request.method !== "HEAD" && !mutatingRoute)
+      return json({ error: "method_not_allowed" }, 405);
 
     if (path === "/api/health")
       return json({
@@ -350,6 +384,16 @@ export function createVideoWebApp(options: VideoWebAppOptions): VideoWebApp {
         return json(await probeChromiumWebGpu({ origin: url.origin, timeout: 15000 }));
       } catch {
         return json({ error: "webgpu_probe_failed" }, 503);
+      }
+    }
+
+    if (path === "/api/discover") {
+      const seeds = url.searchParams.getAll("seed");
+      if (!seeds.length) return json({ error: "missing_seed" }, 400);
+      try {
+        return json(await discoverSources(seeds, { maxPages: 25, maxDepth: 1 }));
+      } catch (error) {
+        return json({ error: "discovery_failed", detail: error instanceof Error ? error.message : String(error) }, 422);
       }
     }
 

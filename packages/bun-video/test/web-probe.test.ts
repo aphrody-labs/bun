@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import { probeSource, probeSources } from "../src/web-probe";
+import { parseCrawlReport, probeSource, probeSources } from "../src/web-probe";
 
 describe("web probe", () => {
   const server = Bun.serve({
@@ -49,5 +49,17 @@ describe("web probe", () => {
     expect(probes.map(probe => new URL(probe.url).pathname)).toEqual(["/a.mp4", "/b.mp4"]);
     expect(probes.every(probe => probe.ok)).toBe(true);
     server.stop(true);
+  });
+});
+
+describe("crawl report", () => {
+  test("accepts the aphrody-web crawl schema and rejects others", () => {
+    const report = parseCrawlReport(
+      JSON.stringify({ schema: "aphrody-web.crawl/1", pages: [{ url: "https://a.test/" }], errors: [], stats: {} }),
+    );
+    expect(report.pages[0]!.url).toBe("https://a.test/");
+    expect(() => parseCrawlReport(JSON.stringify({ schema: "other", pages: [], errors: [] }))).toThrow(
+      "unexpected crawl report schema",
+    );
   });
 });

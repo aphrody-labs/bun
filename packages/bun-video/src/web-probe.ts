@@ -125,3 +125,57 @@ export async function probeSources(urls: string[], concurrency = 4): Promise<Sou
   await Promise.all(workers);
   return results;
 }
+
+export interface CrawlReport {
+  schema: string;
+  pages: Array<{ url: string; [key: string]: unknown }>;
+  errors: Array<{ url: string; error: string }>;
+  stats: Record<string, number>;
+}
+
+/** Parses an `aphrody-web crawl --format json` document; rejects any other schema. */
+export function parseCrawlReport(text: string): CrawlReport {
+  const report = JSON.parse(text) as CrawlReport;
+  if (report.schema !== "aphrody-web.crawl/1" || !Array.isArray(report.pages) || !Array.isArray(report.errors))
+    throw new TypeError("unexpected crawl report schema");
+  return report;
+}
+
+const MEDIA_PATTERN = /\.(mp4|m4s|m3u8|mpd|webm|mkv|mov)(?:[?#]|$)/i;
+
+/** Bounded, robots-aware discovery of media candidates from seed pages, then preflight of each candidate. */
+export async function discoverSources(
+  seeds: string[],
+  options: { maxPages?: number; maxDepth?: number; timeoutSeconds?: number } = {},
+): Promise<{ report: CrawlReport; candidates: SourceProbe[] }> {
+  const args = [
+    "crawl",
+    "--format",
+    "json",
+    "--obey-robots",
+    "--max-pages",
+    String(options.maxPages ?? 25),
+    "--max-depth",
+    String(options.maxDepth ?? 1),
+    "--timeout",
+    String(options.timeoutSeconds ?? 120),
+    ...seeds,
+  ];
+  const child = Bun.spawn(["aphrody-web", ...args], { stdout: "pipe", stderr: "pipe" });
+  const [stdout, stderr, code] = await Promise.all([
+    new Response(child.stdout).text(),
+    new Response(child.stderr).text(),
+    child.exited,
+  ]);
+  if (code !== 0) throw new Error(`aphrody-web crawl failed (${code}): ${stderr.trim()}`);
+  const report = parseCrawlReport(stdout);
+  const urls = new Set<string>();
+  for (const page of report.pages) if (MEDIA_PATTERN.test(page.url)) urls.add(page.url);
+  for (const page of report.pages) {
+    const links = Array.isArray(page.links) ? (page.links as unknown[]) : [];
+    for (const link of links)
+      if (typeof link === "string" && MEDIA_PATTERN.test(link)) urls.add(new URL(link, page.url).href);
+  }
+  const candidates = await probeSources([...urls], 4);
+  return { report, candidates };
+}
