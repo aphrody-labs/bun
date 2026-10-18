@@ -30,8 +30,5 @@ serde_json = { version = "1.0.151" }
 [target.'cfg(unix)'.dependencies]
 libc = { version = "0.2.189" }
 
-[lints.rust]
-unsafe_op_in_unsafe_fn = "deny"
-unused_must_use = "deny"
-unexpected_cfgs = { level = "warn", check-cfg = ["cfg(feature, values(\"browser\", \"gpu\", \"cuda\"))"] }
-
+[lints]
+workspace = true

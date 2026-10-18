@@ -429,7 +429,7 @@ impl ResourceStorage {
 }
 
 /// Describes failure cases when preparing [`Resource`]s to be used for adblocking.
-#[derive(Debug, Error, PartialEq)]
+#[derive(Debug, Error, PartialEq, Eq)]
 pub enum AddResourceError {
     #[error("invalid base64 content")]
     InvalidBase64Content,
@@ -454,7 +454,7 @@ impl From<std::string::FromUtf8Error> for AddResourceError {
 }
 
 /// Describes failure cases when attempting to retrieve a resource for scriptlet injection.
-#[derive(Debug, Error, PartialEq)]
+#[derive(Debug, Error, PartialEq, Eq)]
 pub enum ScriptletResourceError {
     #[error("no scriptlet has the provided name")]
     NoMatchingScriptlet,

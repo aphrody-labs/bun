@@ -19,10 +19,17 @@ mod process;
 pub use process::*;
 mod buv;
 pub use buv::*;
+// The browser and GPU providers are extensions owned by the Bun OS workspace: it defines these
+// features and points YOLO_EXT_DIR at the directory holding browser.rs and gpu.rs, which share
+// this module's internals through `use super::*`.
 #[cfg(feature = "browser")]
-mod browser;
+mod browser {
+  include!(concat!(env!("YOLO_EXT_DIR"), "/browser.rs"));
+}
 #[cfg(feature = "gpu")]
-mod gpu;
+mod gpu {
+  include!(concat!(env!("YOLO_EXT_DIR"), "/gpu.rs"));
+}
 #[cfg(feature = "browser")]
 pub use browser::*;
 #[cfg(feature = "gpu")]
