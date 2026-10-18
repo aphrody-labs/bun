@@ -66,7 +66,7 @@ export async function sampleImages(root: string, limit: number): Promise<{ disco
 }
 
 /** Metadata, resize and webp/avif/jpeg encode of one image. Only sizes are retained. */
-export async function qualifyImage(path: string, formats = ["webp", "avif", "jpeg"] as const): Promise<ImageResult> {
+export async function qualifyImage(path: string, formats: readonly ("webp" | "avif" | "jpeg")[] = ["webp", "avif", "jpeg"]): Promise<ImageResult> {
   const file = Bun.file(path);
   const bytes = file.size;
   const t = performance.now();

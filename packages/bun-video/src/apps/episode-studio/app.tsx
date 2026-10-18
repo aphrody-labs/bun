@@ -410,7 +410,7 @@ function App() {
             <h2>L’épisode, image par image</h2>
             <p>{number.format(m.frameCount)} images originales</p>
           </div>
-          <TabsRoot value={tab} onValueChange={value => setTab(value as typeof tab)}>
+          <TabsRoot value={tab} onValueChange={(value: string) => setTab(value as typeof tab)}>
             <TabsList className="tabs" aria-label="Ressources de l’épisode">
               {(
                 [
@@ -489,7 +489,7 @@ function App() {
                       min={1}
                       max={m.frameCount}
                       value={[frame]}
-                      onValueChange={value => step(value[0]!)}
+                      onValueChange={(value: number[]) => step(value[0]!)}
                     />
                     <p className="extraction">
                       {number.format(m.frames?.count ?? 0)} / {number.format(m.frameCount)} images disponibles{" "}

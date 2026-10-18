@@ -85,7 +85,7 @@ export function applyVideoFrameTheme(
   if (!context) throw new Error("Video frame theme requires a 2D canvas");
   context.drawImage(video, 0, 0, width, height);
   const { data } = context.getImageData(0, 0, width, height);
-  if (!data.some((value, index) => index % 4 === 3 && value >= 128)) return null;
+  if (!data.some((value: number, index: number) => index % 4 === 3 && value >= 128)) return null;
   const result = frameThemeFromRGBA(data, width, height, options);
   applyDynamicColor(result.seed, options);
   return result;
