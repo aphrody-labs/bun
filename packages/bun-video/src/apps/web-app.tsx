@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { createRoot } from "react-dom/client";
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { VideoStudio, type StudioAsset } from "../studio";
 
 type Section = "library" | "episode" | "data" | "labs" | "shortcuts" | "compositions";
@@ -51,7 +51,7 @@ function Library() {
 }
 
 function Embedded({ src, title }: { readonly src: string; readonly title: string }) {
-  return <iframe className="embedded" src={src} title={title} />;
+  return <iframe className="embedded" src={src} title={title} loading="lazy" />;
 }
 
 function Compositions() {
@@ -80,6 +80,15 @@ const views: Record<Section, () => ReactNode> = {
 
 function App() {
   const [section, go] = useSection();
+  const main = useRef<HTMLElement>(null);
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    main.current?.focus();
+  }, [section]);
   const [health, setHealth] = useState<Health>();
   useEffect(() => {
     fetch("/api/health", { cache: "no-store" })
@@ -90,6 +99,7 @@ function App() {
   const current = sections.find(item => item.id === section)!;
   return (
     <div className="shell">
+      <a className="skip" href="#content">Aller au contenu</a>
       <nav aria-label="Sections">
         <div className="brand">Bun Video</div>
         <ul>
@@ -106,16 +116,16 @@ function App() {
             </li>
           ))}
         </ul>
-        <footer>
+        <footer role="status" aria-live="polite">
           {health ? (health.video.available ? "Fournisseur vidéo actif" : "Fournisseur vidéo indisponible") : "Hors ligne"}
         </footer>
       </nav>
-      <main>
+      <main id="content" tabIndex={-1} ref={main}>
         <header>
           <h1>{current.label}</h1>
           <p>{current.hint}</p>
         </header>
-        <section>{views[section]()}</section>
+        <section aria-labelledby="page-title">{views[section]()}</section>
       </main>
     </div>
   );

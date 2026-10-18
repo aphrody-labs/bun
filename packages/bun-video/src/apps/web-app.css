@@ -151,3 +151,33 @@ main > section {
     transition: none;
   }
 }
+
+.skip {
+  position: absolute;
+  left: 8px;
+  top: -48px;
+  padding: 8px 12px;
+  background: var(--card);
+  color: var(--foreground);
+  border-radius: 8px;
+  z-index: 10;
+}
+
+.skip:focus {
+  top: 8px;
+}
+
+main:focus {
+  outline: none;
+}
+
+main:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: -2px;
+}
+
+.notice {
+  padding: var(--space);
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+}
