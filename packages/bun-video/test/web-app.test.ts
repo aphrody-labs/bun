@@ -21,15 +21,18 @@ describe("resolveMediaPath", () => {
 });
 
 describe("createVideoWebApp", () => {
-  test("serves the hub page listing every section", async () => {
+  test("serves the unified app shell and its bundles", async () => {
     const response = await app.fetch(new Request("http://localhost/"));
     const html = await response.text();
     expect(response.status).toBe(200);
     expect(response.headers.get("content-type")).toContain("text/html");
-    expect(html).toContain("/api/health");
-    expect(html).toContain("/api/crunchyroll/health");
-    expect(html).toContain("/api/compositions");
-    expect(html).toContain("DASH lab");
+    expect(html).toContain("/app/app.js");
+    expect(html).toContain("/app/app.css");
+    const script = await app.fetch(new Request("http://localhost/app/app.js"));
+    expect(script.status).toBe(200);
+    expect((await script.text()).length).toBeGreaterThan(1000);
+    const css = await app.fetch(new Request("http://localhost/app/app.css"));
+    expect(css.headers.get("content-type")).toContain("text/css");
   });
 
   test("reports the native video provider state", async () => {

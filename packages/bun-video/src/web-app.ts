@@ -78,6 +78,8 @@ function clientScript(entry: string): Promise<string> {
   return bundle;
 }
 
+const shellDocument = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bun Video</title><link rel="stylesheet" href="/app/app.css"></head><body><div id="root"></div><script type="module" src="/app/app.js"></script></body></html>`;
+
 const DATA_API = /^\/api\/(overview|query|import|export|exports\/|publish|jobs)(\/|$)/;
 
 const page = (title: string, body: string) => `<!doctype html>
@@ -269,28 +271,22 @@ export function createVideoWebApp(options: VideoWebAppOptions): VideoWebApp {
         { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } },
       );
 
-    if (path === "/") {
-      const items = labs.map(l => `<li>${l.title} : <code>${l.command}</code></li>`).join("");
-      return new Response(
-        page(
-          "Bun Video",
-          `<h1>Bun Video</h1>
-<h2>Studio</h2><ul><li><a href="/studio/">/studio/</a> : lecteur et bibliothèque</li></ul>
-<h2>Serveur vidéo</h2>
-<ul>
-<li><a href="/api/health">/api/health</a> : état du fournisseur natif</li>
-<li><a href="/api/video/library">/api/video/library</a> ; <code>/api/video/metadata?src=</code> ; <code>/api/video/frame?src=&amp;t=</code></li>
-</ul>
-<h2>Crunchyroll</h2>
-<ul><li><a href="/api/crunchyroll/health">/api/crunchyroll/health</a> ; <code>/api/crunchyroll/v1/watch?url=</code></li>
-<li><a href="/pwa/">/pwa/</a> ; <code>/extension/</code></li></ul>
-<h2>Labs</h2><ul>${items}</ul>
-<h2>Remotion et HyperFrames</h2>
-<ul><li><a href="/api/compositions">/api/compositions</a> : chargement des runtimes de composition</li></ul>`,
-        ),
-        { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } },
-      );
+    if (path === "/app/app.js") {
+      try {
+        return new Response(await clientScript("web-app.tsx"), {
+          headers: { "content-type": "text/javascript; charset=utf-8" },
+        });
+      } catch {
+        return json({ error: "app_unavailable" }, 500);
+      }
     }
+
+    if (path === "/app/app.css")
+      return new Response(Bun.file(resolve(import.meta.dir, "apps/web-app.css")), {
+        headers: { "content-type": "text/css; charset=utf-8", "cache-control": "no-store" },
+      });
+
+    if (path === "/") return new Response(shellDocument, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
 
     return json({ error: "not_found" }, 404);
   };
