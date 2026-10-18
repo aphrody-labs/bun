@@ -257,3 +257,8 @@ src/runtime/hawk_root.rs
 # Native command receipts and explicitly bootstrapped Curl sources stay local.
 /var/
 /src/runtime/curl/upstream/
+
+# Rendered test outputs of the vendored bun-video packages are regenerated per run.
+/packages/bun-video/packages/*/packages/*/tests/**/output/
+# Native command receipts of nested checkouts.
+**/var/runs/

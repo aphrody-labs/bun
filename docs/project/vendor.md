@@ -47,6 +47,6 @@ exact revision into the destination and applies the local patch, if any.
 
 ## Submodules still present
 
-`vendor/brave-core` and the `vendor/brave-*` submodules are being absorbed into
+`vendor/brave-core` is being absorbed into
 workspace crates; they stay pinned submodules until that migration lands
 (`git submodule update --init --depth=1 vendor/brave-core`).

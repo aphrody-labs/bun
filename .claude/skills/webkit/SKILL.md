@@ -75,7 +75,7 @@ Two modes via `cfg.webkit`:
   the per-profile build dir, not shared vendor/WebKit/WebKitBuild/icu/
   like the old cmake — avoids debug/release mixing.
 
-- `WEBKIT_VERSION` = `"b1e30d08cb1428688c5f24109fe4f534096ee2ad"`: WebKit commit — determines prebuilt download URL + what to checkout for local mode. Override via `--webkit-version=<hash>` to test a branch. From https://github.com/oven-sh/WebKit releases.
+- `WEBKIT_VERSION` = `"87ee10da087b63e011bd1ada64d1814a850a4395"`: WebKit commit — determines prebuilt download URL + what to checkout for local mode. Override via `--webkit-version=<hash>` to test a branch. From https://github.com/oven-sh/WebKit releases.
 - `WEBKIT_UPSTREAM_REPO` = `"oven-sh/WebKit"`: Upstream prebuilt releases; the default source.
 - `WEBKIT_APHRODY_REPO` = `"aphrody-labs/WebKit"`: The Aphrody fork (same lanes, archive names and contents; built by its `aphrody-prebuilts.yml`).
 - `APHRODY_WEBKIT_PREBUILTS`: Archives published as the release `autobuild-<sha>` on aphrody-labs/WebKit, per WebKit sha. The default source for an archive is the Aphrody fork once it is listed here, oven-sh otherwise. Add the names after the `aphrody-prebuilts` run published them (PLAN-ALPINE-BUN.md, chantier P). `BUN_WEBKIT_REPO` overrides this (see `webkitPrebuiltRepo`).
