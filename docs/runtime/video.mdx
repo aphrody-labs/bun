@@ -20,9 +20,11 @@ Use the global `Bun.Video` class; there is no module to import. The separate
 and optional FFmpeg/mpv adapters on top of it.
 
 `Bun.Video.available` reports whether this build of Bun includes the native
-decoder; it does not guarantee support for every codec. Input must be an MP4
-file with H.264 video and, if present, AAC audio; other containers and codecs may be
-rejected. Use `Bun.Image` for still images.
+decoder; it does not guarantee support for every codec. MP4 and QuickTime input
+keeps the budgeted sample-table path. Other containers (WebM, Matroska, AVI, MPEG-TS and the
+rest that FilmCraft opens) decode frames, audio and GIFs through FilmCraft's container owners;
+`remux` still accepts MP4 only. The crate tests decode VP8 and VP9 WebM, H.264 Matroska and
+MJPEG AVI fixtures; codec profiles outside those are unqualified and may be rejected. Use `Bun.Image` for still images.
 
 ## Command line
 

@@ -189,18 +189,24 @@ fn open(
         return Err(VideoError::Invalid("invalid pixel budget"));
     }
     let reader = reader(input)?;
-    let mp4 = validated_mp4(reader.clone())?;
-    let frame_count = mp4
-        .tracks
-        .iter()
-        .find(|track| track.kind == TrackKind::Video && !track.samples.is_empty())
-        .ok_or(VideoError::Invalid("MP4 has no video samples"))?
-        .samples
-        .len() as u64;
+    // ISO base media keeps the budgeted sample-table path; other containers use FilmCraft owners.
+    let indexed_frames = if is_iso_base_media(&*reader) {
+        let mp4 = validated_mp4(Arc::clone(&reader))?;
+        Some(
+            mp4.tracks
+                .iter()
+                .find(|track| track.kind == TrackKind::Video && !track.samples.is_empty())
+                .ok_or(VideoError::Invalid("MP4 has no video samples"))?
+                .samples
+                .len() as u64,
+        )
+    } else {
+        None
+    };
     // A path is never read whole: only owners supporting random-access readers are admitted.
     let source = filmcraft_media::reader::open_reader_within(
-        "bun-video.mp4",
-        reader.clone(),
+        "bun-video.media",
+        Arc::clone(&reader),
         &filmcraft_codecs::reader_openers(),
         &[],
         0,
@@ -215,6 +221,15 @@ fn open(
     if video.frame_rate.num <= 0 || video.frame_rate.den <= 0 {
         return Err(VideoError::Invalid("invalid source frame rate"));
     }
+    let frame_count = indexed_frames.unwrap_or_else(|| {
+        let seconds = info.duration.seconds();
+        let rate = video.frame_rate.num as f64 / video.frame_rate.den as f64;
+        if seconds.is_finite() && seconds > 0.0 {
+            (seconds * rate).round().max(1.0) as u64
+        } else {
+            0
+        }
+    });
     let metadata = VideoMetadata {
         width: video.width,
         height: video.height,
@@ -244,6 +259,18 @@ pub fn probe_video(input: VideoInput<'_>, max_pixels: u64) -> Result<VideoMetada
 pub fn probe_video_path(path_utf8: &[u8], max_pixels: u64) -> Result<VideoMetadata, VideoError> {
     let path = input_path(path_utf8)?;
     probe_video(VideoInput::Path(&path), max_pixels)
+}
+
+/// True when bytes 4..8 name an ISO base media box (`ftyp`) or a QuickTime top-level atom.
+fn is_iso_base_media(reader: &dyn filmcraft_media::ByteReader) -> bool {
+    filmcraft_media::reader::read_range(reader, 4, 4)
+        .map(|tag| {
+            matches!(
+                tag.as_slice(),
+                b"ftyp" | b"moov" | b"mdat" | b"free" | b"skip" | b"wide" | b"pnot"
+            )
+        })
+        .unwrap_or(false)
 }
 
 fn validated_mp4(reader: SharedReader) -> Result<Mp4File, VideoError> {
@@ -388,7 +415,7 @@ fn check_container_budget(reader: &dyn filmcraft_media::ByteReader) -> Result<()
 
 /// One software decoder, its own bounded output cache, and lazy source audio.
 /// Codec reference-picture buffers remain governed by FilmCraft's codec owners.
-pub struct VideoSession {
+struct Mp4Session {
     reader: SharedReader,
     source: SharedSource,
     mp4: Mp4File,
@@ -405,14 +432,14 @@ pub struct VideoSession {
     cancel: Arc<AtomicBool>,
 }
 
-impl VideoSession {
-    pub fn open_path(path_utf8: &[u8], max_pixels: u64) -> Result<Self, VideoError> {
-        let path = input_path(path_utf8)?;
-        Self::open(VideoInput::Path(&path), max_pixels)
-    }
-    pub fn open(input: VideoInput<'_>, max_pixels: u64) -> Result<Self, VideoError> {
-        let (reader, source, metadata) = open(input, max_pixels)?;
-        let mp4 = validated_mp4(reader.clone())?;
+impl Mp4Session {
+    fn from_parts(
+        reader: SharedReader,
+        source: SharedSource,
+        metadata: VideoMetadata,
+        max_pixels: u64,
+    ) -> Result<Self, VideoError> {
+        let mp4 = validated_mp4(Arc::clone(&reader))?;
         let track = mp4
             .tracks
             .iter()
@@ -467,16 +494,16 @@ impl VideoSession {
         })
     }
 
-    pub fn metadata(&self) -> &VideoMetadata {
+    fn metadata(&self) -> &VideoMetadata {
         &self.metadata
     }
-    pub fn cancel(&self) {
+    fn cancel(&self) {
         self.cancel.store(true, Ordering::Relaxed);
     }
-    pub fn cached_frames(&self) -> usize {
+    fn cached_frames(&self) -> usize {
         self.cache.len()
     }
-    pub fn cached_bytes(&self) -> usize {
+    fn cached_bytes(&self) -> usize {
         self.cache_bytes
     }
 
@@ -497,7 +524,7 @@ impl VideoSession {
             let bytes = decoded.frame.byte_size();
             let frame = Arc::new(decoded.frame);
             if decoded.pts == target {
-                selected = Some(frame.clone());
+                selected = Some(Arc::clone(&frame));
             }
             if bytes <= MAX_CACHE_BYTES {
                 if let Some(previous) = self.cache.insert(decoded.pts, frame) {
@@ -558,7 +585,7 @@ impl VideoSession {
                     let bytes = self
                         .mp4
                         .read_sample(
-                            &IsoReader(self.reader.clone()),
+                            &IsoReader(Arc::clone(&self.reader)),
                             self.track,
                             self.decode_next,
                         )
@@ -595,7 +622,7 @@ impl VideoSession {
         })
     }
 
-    pub fn frame_rgba(&mut self, time_seconds: f64) -> Result<DecodedRGBAFrame, VideoError> {
+    fn frame_rgba(&mut self, time_seconds: f64) -> Result<DecodedRGBAFrame, VideoError> {
         if !time_seconds.is_finite()
             || time_seconds < 0.0
             || self
@@ -621,17 +648,7 @@ impl VideoSession {
         self.decode_index(index)
     }
 
-    pub fn frame(&mut self, time_seconds: f64) -> Result<DecodedVideoFrame, VideoError> {
-        let frame = self.frame_rgba(time_seconds)?;
-        Ok(DecodedVideoFrame {
-            width: frame.width,
-            height: frame.height,
-            timestamp_seconds: Some(frame.timestamp_seconds),
-            png: crate::encode_rgba_png(frame.width, frame.height, &frame.rgba)?,
-        })
-    }
-
-    pub fn next_frame(&mut self) -> Result<Option<DecodedRGBAFrame>, VideoError> {
+    fn next_frame(&mut self) -> Result<Option<DecodedRGBAFrame>, VideoError> {
         let Some(index) = self.presentation_order.get(self.presentation_next).copied() else {
             return Ok(None);
         };
@@ -639,7 +656,7 @@ impl VideoSession {
         self.decode_index(index).map(Some)
     }
 
-    pub fn audio_stream(
+    fn audio_stream(
         &self,
         stream: usize,
         start: i64,
@@ -651,23 +668,208 @@ impl VideoSession {
             .audio_streams
             .get(stream)
             .ok_or(VideoError::Invalid("audio stream index out of bounds"))?;
-        if start < 0
-            || sample_rate == 0
-            || sample_rate > 192_000
-            || frames as u64 > u64::from(sample_rate) * 30
-            || (frames as u64)
-                .saturating_mul(u64::from(audio.channels))
-                .saturating_mul(4)
-                > MAX_CACHE_BYTES as u64
-        {
-            return Err(VideoError::Invalid(
-                "audio request exceeds its window budget",
-            ));
-        }
+        audio_window(audio.channels, start, frames, sample_rate)?;
         filmcraft_media::cancel::with_cancel(&self.cancel, || {
             self.source.audio_stream(stream, start, frames, sample_rate)
         })
         .map_err(owner)
+    }
+}
+
+fn audio_window(
+    channels: u32,
+    start: i64,
+    frames: usize,
+    sample_rate: u32,
+) -> Result<(), VideoError> {
+    if start < 0
+        || sample_rate == 0
+        || sample_rate > 192_000
+        || frames as u64 > u64::from(sample_rate) * 30
+        || (frames as u64)
+            .saturating_mul(u64::from(channels))
+            .saturating_mul(4)
+            > MAX_CACHE_BYTES as u64
+    {
+        return Err(VideoError::Invalid(
+            "audio request exceeds its window budget",
+        ));
+    }
+    Ok(())
+}
+
+/// Decoder for containers other than ISO base media (WebM, Matroska, AVI, MPEG-TS, ...):
+/// FilmCraft's container owner seeks and decodes through `MediaSource::video_frame`.
+struct GenericSession {
+    source: SharedSource,
+    metadata: VideoMetadata,
+    max_pixels: u64,
+    next_index: u64,
+    cancel: Arc<AtomicBool>,
+}
+
+impl GenericSession {
+    fn rate(&self) -> f64 {
+        self.metadata.fps_numerator as f64 / self.metadata.fps_denominator as f64
+    }
+
+    fn decode_at(&mut self, index: u64) -> Result<DecodedRGBAFrame, VideoError> {
+        if self.cancel.load(Ordering::Relaxed) {
+            return Err(VideoError::Cancelled);
+        }
+        let timestamp = index as f64 / self.rate();
+        let request = filmcraft_media::FrameRequest::full(Tick::from_seconds_f64(timestamp));
+        let frame = filmcraft_media::cancel::with_cancel(&self.cancel, || {
+            filmcraft_media::cancel::with_background(true, || self.source.video_frame(request))
+        })
+        .map_err(owner)?;
+        dimensions(frame.width, frame.height, self.max_pixels)?;
+        let rgba = frame.to_rgba8();
+        if rgba.len() as u64 != u64::from(frame.width) * u64::from(frame.height) * 4 {
+            return Err(VideoError::Invalid("owner returned invalid RGBA length"));
+        }
+        Ok(DecodedRGBAFrame {
+            width: frame.width,
+            height: frame.height,
+            timestamp_seconds: timestamp,
+            rgba,
+        })
+    }
+
+    fn frame_rgba(&mut self, time_seconds: f64) -> Result<DecodedRGBAFrame, VideoError> {
+        if !time_seconds.is_finite()
+            || time_seconds < 0.0
+            || self
+                .metadata
+                .duration_seconds
+                .is_some_and(|duration| time_seconds >= duration)
+        {
+            return Err(VideoError::Invalid(
+                "frame time must lie within the source duration",
+            ));
+        }
+        let index = (time_seconds * self.rate()).floor() as u64;
+        self.next_index = index.saturating_add(1);
+        self.decode_at(index)
+    }
+
+    fn next_frame(&mut self) -> Result<Option<DecodedRGBAFrame>, VideoError> {
+        if self.next_index >= self.metadata.frame_count {
+            return Ok(None);
+        }
+        let index = self.next_index;
+        self.next_index += 1;
+        self.decode_at(index).map(Some)
+    }
+}
+
+enum Backend {
+    Iso(Box<Mp4Session>),
+    Generic(GenericSession),
+}
+
+/// A bounded decoded-frame session over any container FilmCraft opens.
+pub struct VideoSession {
+    backend: Backend,
+}
+
+impl VideoSession {
+    pub fn open_path(path_utf8: &[u8], max_pixels: u64) -> Result<Self, VideoError> {
+        let path = input_path(path_utf8)?;
+        Self::open(VideoInput::Path(&path), max_pixels)
+    }
+    pub fn open(input: VideoInput<'_>, max_pixels: u64) -> Result<Self, VideoError> {
+        let (reader, source, metadata) = open(input, max_pixels)?;
+        let backend = if is_iso_base_media(&*reader) {
+            Backend::Iso(Box::new(Mp4Session::from_parts(
+                reader, source, metadata, max_pixels,
+            )?))
+        } else {
+            Backend::Generic(GenericSession {
+                source,
+                metadata,
+                max_pixels,
+                next_index: 0,
+                cancel: Arc::new(AtomicBool::new(false)),
+            })
+        };
+        Ok(Self { backend })
+    }
+    pub fn metadata(&self) -> &VideoMetadata {
+        match &self.backend {
+            Backend::Iso(session) => session.metadata(),
+            Backend::Generic(session) => &session.metadata,
+        }
+    }
+    pub fn cancel(&self) {
+        match &self.backend {
+            Backend::Iso(session) => session.cancel(),
+            Backend::Generic(session) => session.cancel.store(true, Ordering::Relaxed),
+        }
+    }
+    fn set_cancel(&mut self, cancel: Arc<AtomicBool>) {
+        match &mut self.backend {
+            Backend::Iso(session) => session.cancel = cancel,
+            Backend::Generic(session) => session.cancel = cancel,
+        }
+    }
+    pub fn cached_frames(&self) -> usize {
+        match &self.backend {
+            Backend::Iso(session) => session.cached_frames(),
+            Backend::Generic(_) => 0,
+        }
+    }
+    pub fn cached_bytes(&self) -> usize {
+        match &self.backend {
+            Backend::Iso(session) => session.cached_bytes(),
+            Backend::Generic(_) => 0,
+        }
+    }
+    pub fn frame_rgba(&mut self, time_seconds: f64) -> Result<DecodedRGBAFrame, VideoError> {
+        match &mut self.backend {
+            Backend::Iso(session) => session.frame_rgba(time_seconds),
+            Backend::Generic(session) => session.frame_rgba(time_seconds),
+        }
+    }
+    pub fn frame(&mut self, time_seconds: f64) -> Result<DecodedVideoFrame, VideoError> {
+        let frame = self.frame_rgba(time_seconds)?;
+        Ok(DecodedVideoFrame {
+            width: frame.width,
+            height: frame.height,
+            timestamp_seconds: Some(frame.timestamp_seconds),
+            png: crate::encode_rgba_png(frame.width, frame.height, &frame.rgba)?,
+        })
+    }
+    pub fn next_frame(&mut self) -> Result<Option<DecodedRGBAFrame>, VideoError> {
+        match &mut self.backend {
+            Backend::Iso(session) => session.next_frame(),
+            Backend::Generic(session) => session.next_frame(),
+        }
+    }
+    pub fn audio_stream(
+        &self,
+        stream: usize,
+        start: i64,
+        frames: usize,
+        sample_rate: u32,
+    ) -> Result<filmcraft_frame::AudioBuffer, VideoError> {
+        match &self.backend {
+            Backend::Iso(session) => session.audio_stream(stream, start, frames, sample_rate),
+            Backend::Generic(session) => {
+                let audio = session
+                    .metadata
+                    .audio_streams
+                    .get(stream)
+                    .ok_or(VideoError::Invalid("audio stream index out of bounds"))?;
+                audio_window(audio.channels, start, frames, sample_rate)?;
+                filmcraft_media::cancel::with_cancel(&session.cancel, || {
+                    session
+                        .source
+                        .audio_stream(stream, start, frames, sample_rate)
+                })
+                .map_err(owner)
+            }
+        }
     }
 }
 
@@ -695,7 +897,7 @@ pub fn decode_video_frame_with_cancel(
 ) -> Result<DecodedVideoFrame, VideoError> {
     let mut session = VideoSession::open(input, max_pixels)?;
     if let Some(cancel) = cancel {
-        session.cancel = cancel;
+        session.set_cancel(cancel);
     }
     session.frame(time_seconds)
 }
@@ -717,7 +919,7 @@ pub fn remux_mp4(input: VideoInput<'_>, output: &Path) -> Result<u64, VideoError
         return Err(VideoError::Invalid("remux output path must be absolute"));
     }
     let reader = reader(input)?;
-    let source = validated_mp4(reader.clone())?;
+    let source = validated_mp4(Arc::clone(&reader))?;
     if source.timescale == 0 || source.tracks.is_empty() {
         return Err(VideoError::Invalid("invalid MP4 movie clock"));
     }
@@ -759,7 +961,7 @@ pub fn remux_mp4(input: VideoInput<'_>, output: &Path) -> Result<u64, VideoError
     let result = (|| {
         let mut options = filmcraft_isobmff::WriterOptions::new(filmcraft_isobmff::Brand::Mp4);
         options.movie_timescale = source.timescale;
-        options.metadata = source.metadata.entries.clone();
+        options.metadata.clone_from(&source.metadata.entries);
         let mut writer = Mp4Writer::new(file, options).map_err(owner)?;
         for track in &source.tracks {
             let entry = track
@@ -768,15 +970,15 @@ pub fn remux_mp4(input: VideoInput<'_>, output: &Path) -> Result<u64, VideoError
                 .ok_or(VideoError::Invalid("missing track description"))?
                 .clone();
             let mut config = filmcraft_isobmff::TrackConfig::new(entry, track.timescale);
-            config.language = track.language.clone();
-            config.edits = track.edits.clone();
+            config.language.clone_from(&track.language);
+            config.edits.clone_from(&track.edits);
             config.handler_name = Some(track.handler_name.clone());
             writer.add_track(config).map_err(owner)?;
         }
         for (track_index, track) in source.tracks.iter().enumerate() {
             for (index, sample) in track.samples.iter().enumerate() {
                 let data = source
-                    .read_sample(&IsoReader(reader.clone()), track_index, index)
+                    .read_sample(&IsoReader(Arc::clone(&reader)), track_index, index)
                     .map_err(owner)?;
                 writer
                     .write_sample(
@@ -971,13 +1173,13 @@ pub fn encode_gif(
         return Err(VideoError::Invalid("GIF exceeds 120 frames"));
     }
     let factor = session
-        .metadata
+        .metadata()
         .width
         .div_ceil(u32::from(width))
-        .max(session.metadata.height.div_ceil(360))
+        .max(session.metadata().height.div_ceil(360))
         .max(1);
-    let output_width = (session.metadata.width / factor).max(1) as u16;
-    let output_height = (session.metadata.height / factor).max(1) as u16;
+    let output_width = (session.metadata().width / factor).max(1) as u16;
+    let output_height = (session.metadata().height / factor).max(1) as u16;
     let mut output = GifOutput(Vec::new());
     {
         let mut encoder =
@@ -1053,21 +1255,21 @@ mod tests {
 
     #[test]
     fn declared_sample_explosion_is_rejected_before_owner_allocation() {
-        fn boxed(kind: &[u8; 4], body: &[u8]) -> Vec<u8> {
+        fn boxed(kind: [u8; 4], body: &[u8]) -> Vec<u8> {
             let mut output = ((body.len() + 8) as u32).to_be_bytes().to_vec();
-            output.extend_from_slice(kind);
+            output.extend_from_slice(&kind);
             output.extend_from_slice(body);
             output
         }
         let mut table = vec![0u8; 8];
         table.extend_from_slice(&((MAX_SAMPLES + 1) as u32).to_be_bytes());
         let header = boxed(
-            b"moov",
+            *b"moov",
             &boxed(
-                b"trak",
+                *b"trak",
                 &boxed(
-                    b"mdia",
-                    &boxed(b"minf", &boxed(b"stbl", &boxed(b"stsz", &table))),
+                    *b"mdia",
+                    &boxed(*b"minf", &boxed(*b"stbl", &boxed(*b"stsz", &table))),
                 ),
             ),
         );
@@ -1174,20 +1376,22 @@ mod tests {
         assert!(session.cached_frames() <= MAX_CACHE_FRAMES);
         assert!(session.cached_bytes() <= MAX_CACHE_BYTES);
         assert!(session.frame(-1.0).is_err());
-        let wav =
-            encode_audio_wav(VideoInput::Path(path), 0.0, 0.1, 0, 16_000, 3840 * 2160).unwrap();
-        assert_eq!(&wav[..4], b"RIFF");
-        assert_eq!(&wav[8..12], b"WAVE");
-        assert_eq!(&wav[36..40], b"data");
-        assert_eq!(u32::from_le_bytes(wav[24..28].try_into().unwrap()), 16_000);
-        assert_eq!(
-            u32::from_le_bytes(wav[40..44].try_into().unwrap()) as usize,
-            wav.len() - 44
-        );
-        assert_eq!(
-            wav.len() - 44,
-            1600 * metadata.audio_streams[0].channels as usize * 2
-        );
+        if !metadata.audio_streams.is_empty() {
+            let wav =
+                encode_audio_wav(VideoInput::Path(path), 0.0, 0.1, 0, 16_000, 3840 * 2160).unwrap();
+            assert_eq!(&wav[..4], b"RIFF");
+            assert_eq!(&wav[8..12], b"WAVE");
+            assert_eq!(&wav[36..40], b"data");
+            assert_eq!(u32::from_le_bytes(wav[24..28].try_into().unwrap()), 16_000);
+            assert_eq!(
+                u32::from_le_bytes(wav[40..44].try_into().unwrap()) as usize,
+                wav.len() - 44
+            );
+            assert_eq!(
+                wav.len() - 44,
+                1600 * metadata.audio_streams[0].channels as usize * 2
+            );
+        }
         let gif = encode_gif(VideoInput::Path(path), 0.0, 0.25, 12, 64, 3840 * 2160).unwrap();
         assert!(gif.starts_with(b"GIF89a"));
         let mut options = gif::DecodeOptions::new();

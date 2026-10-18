@@ -1,6 +1,6 @@
-use bun_video_native::{Backend, EncodeOptions, probe_backend, probe_media};
 #[cfg(not(feature = "libav"))]
 use bun_video_native::spawn_decode_rgba;
+use bun_video_native::{Backend, EncodeOptions, probe_backend, probe_media};
 use std::ffi::OsStr;
 use std::io;
 use std::path::PathBuf;
@@ -83,7 +83,9 @@ fn json_string(value: &str) -> String {
             '\n' => output.push_str("\\n"),
             '\r' => output.push_str("\\r"),
             '\t' => output.push_str("\\t"),
-            character if character.is_control() => output.push_str(&format!("\\u{:04x}", character as u32)),
+            character if character.is_control() => {
+                output.push_str(&format!("\\u{:04x}", character as u32))
+            }
             character => output.push(character),
         }
     }
@@ -92,5 +94,8 @@ fn json_string(value: &str) -> String {
 }
 
 fn main() {
-    if let Err(error) = run() { eprintln!("bun-video-native: {error}"); std::process::exit(1); }
+    if let Err(error) = run() {
+        eprintln!("bun-video-native: {error}");
+        std::process::exit(1);
+    }
 }
