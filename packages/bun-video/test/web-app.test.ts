@@ -97,3 +97,13 @@ describe("mounted data site and clients", () => {
     expect(studio.status).toBe(200);
   });
 });
+
+describe("mounted episode studio", () => {
+  test("episode studio redirects to its trailing-slash root and is absent when unconfigured", async () => {
+    const redirect = await app.fetch(new Request("http://localhost/episode"));
+    expect(redirect.status).toBe(301);
+    expect(redirect.headers.get("location")).toBe("http://localhost/episode/");
+    const missing = await app.fetch(new Request("http://localhost/episode/"));
+    expect(missing.status).toBe(404);
+  });
+});

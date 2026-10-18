@@ -96,11 +96,13 @@ export function byteRange(header: string, size: number): { start: number; end: n
     : undefined;
 }
 
-const document = `<!doctype html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content=""><title>Bun Video · Atelier épisode</title><link rel="stylesheet" href="/style.css"></head><body><div id="root"></div><script type="module" src="/app.js"></script></body></html>`;
+const document = `<!doctype html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content=""><title>Bun Video · Atelier épisode</title><link rel="stylesheet" href="style.css"></head><body><div id="root"></div><script type="module" src="app.js"></script></body></html>`;
 
 export async function createEpisodeServer(options: {
   episodeDir: string;
   port?: number;
+  /** false mounts the handler in another server; no listener is started. */
+  listen?: boolean;
   bundle?: boolean;
   chromiumExecutable?: string;
   analyzeFrame?: FrameAnalyzer;
@@ -160,12 +162,8 @@ export async function createEpisodeServer(options: {
     script = build.outputs.find(output => output.path.endsWith(".js"));
     stylesheet = build.outputs.find(output => output.path.endsWith(".css"));
   }
-  return Bun.serve({
-    hostname: "127.0.0.1",
-    port: options.port ?? 3217,
-    idleTimeout: 0,
-    maxRequestBodySize: 262144,
-    async fetch(request) {
+  const handle = async (request: Request): Promise<Response> => {
+    {
       const url = new URL(request.url);
       if (url.pathname === "/api/frame-analysis") {
         const reply = (value: unknown, status = 200) =>
@@ -332,7 +330,15 @@ export async function createEpisodeServer(options: {
         return response(file.slice(range.start, range.end + 1), 206);
       }
       return response(file);
-    },
+    }
+  };
+  if (options.listen === false) return { fetch: handle };
+  return Bun.serve({
+    hostname: "127.0.0.1",
+    port: options.port ?? 3217,
+    idleTimeout: 0,
+    maxRequestBodySize: 262144,
+    fetch: handle,
   });
 }
 

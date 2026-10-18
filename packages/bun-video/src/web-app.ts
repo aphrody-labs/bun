@@ -19,6 +19,8 @@ export interface VideoWebAppOptions {
   readonly hlsLab?: boolean;
   /** Mounts the video data site API under /api/ and its client under /site/. */
   readonly dataSite?: { readonly privateRoot?: string; readonly dbPath?: string };
+  /** Mounts the episode workbench under /episode/ for this episode directory. */
+  readonly episodeStudio?: { readonly episodeDir: string; readonly chromiumExecutable?: string };
 }
 
 export interface VideoWebApp {
@@ -92,6 +94,7 @@ export function createVideoWebApp(options: VideoWebAppOptions): VideoWebApp {
   let hlsLab: ReturnType<typeof prepareHlsLab> | undefined;
   let hls: Awaited<ReturnType<typeof prepareHlsLab>> | undefined;
   let dataSite: Promise<{ handle: (request: Request) => Promise<Response> }> | undefined;
+  let episode: Promise<{ fetch: (request: Request) => Promise<Response> }> | undefined;
 
   const routes = async (request: Request): Promise<Response> => {
     const url = new URL(request.url);
@@ -123,6 +126,19 @@ export function createVideoWebApp(options: VideoWebAppOptions): VideoWebApp {
       }
       const lab = await dashLab;
       return lab.fetch(request);
+    }
+
+    if (path === "/episode") return Response.redirect(new URL("/episode/", url.origin), 301);
+
+    if (path.startsWith("/episode/") && options.episodeStudio) {
+      episode ??= import("./apps/episode-studio/server")
+        .then(m => m.createEpisodeServer({ ...options.episodeStudio!, listen: false }))
+        .catch(error => {
+          episode = undefined;
+          throw error;
+        });
+      const mounted = new Request(new URL(path.slice("/episode".length) + url.search, url.origin), request);
+      return (await episode).fetch(mounted);
     }
 
     if (path.startsWith("/api/crunchyroll")) {
