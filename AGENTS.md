@@ -1,5 +1,17 @@
 # Bun agent guidance
 
+## Owner workflow update — 2026-10-18
+
+- Do not create Git worktrees. Consolidate existing branches and worktrees into
+  the canonical checkout, preserving their work in Git before retiring them.
+- Build and qualify on the VPS only. The Windows workstation edits and
+  synchronizes sources; it does not run builds or qualification hooks.
+- Commit source checkpoints before synchronization, fetch before normal pushes,
+  and synchronize the PC and VPS at each delivery boundary. Never force-push.
+- Share the VPS factory slots across Bun runtime, Bun OS and Web OS. Reserve at
+  most one four-job slot per concurrent lane; reuse each owner's outputs and
+  caches. Do not create separate source checkouts for build parallelism.
+
 ## Bun OS consolidation goal
 
 For work touching Bun OS distribution/workspace consolidation, read

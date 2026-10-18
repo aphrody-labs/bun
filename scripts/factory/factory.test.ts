@@ -1,6 +1,18 @@
 import { expect, test } from "bun:test";
 import factory from "../../tools/config/fusion-factory.json";
-import { JOBS, choose, cpuList, jobs, multi, plan, slotLocks, slotSets, slots, withJobs, wrap } from "./factory.ts";
+import { JOBS, choose, cpuList, jobs, lane, multi, plan, slotLocks, slotSets, slots, withJobs, wrap } from "./factory.ts";
+
+test("runtime, OS and web lanes use canonical sources and leave slots for parallel builds", () => {
+  for (const name of ["runtime", "os", "web"] as const) {
+    const step = lane(name, ["cargo", "check", "-j", JOBS]);
+    expect(step.cwd).toBe(factory.lanes[name].cwd);
+    expect(step.slots).toBe(1);
+    expect(step.maxSlots).toBe(1);
+    expect(withJobs(step.argv, 1)).toEqual(["cargo", "check", "-j", "4"]);
+  }
+  expect(() => lane("unknown", ["cargo"])).toThrow("Unknown build lane");
+  expect(() => lane("runtime", [])).toThrow("lane needs a command");
+});
 
 test("multi mode splits the host into slots of jobsPerSlot CPUs", () => {
   expect(multi("multi")).toBe(true);
