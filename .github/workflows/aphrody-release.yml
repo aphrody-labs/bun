@@ -199,6 +199,12 @@ jobs:
             ${{ runner.temp }}/native-full/products/*.platform-gates.json
             ${{ runner.temp }}/native-full/products/*.log
           if-no-files-found: error
+      - uses: actions/upload-artifact@v6
+        with:
+          name: plugins-${{ matrix.target }}-${{ github.sha }}
+          path: ${{ runner.temp }}/native-full/plugins/*
+          compression-level: 0
+          if-no-files-found: error
       - name: Preserve failed capacity or owner diagnostics
         if: failure()
         uses: actions/upload-artifact@v6
@@ -319,6 +325,30 @@ jobs:
             const child = Bun.spawn(["gh", "release", "upload", process.env.TAG, "-R", process.env.GITHUB_REPOSITORY, ...paths], {stdout:"inherit",stderr:"inherit"});
             if (await child.exited !== 0) throw new Error("Runtime candidate upload failed; inspect existing assets before retry");
           '
+      - uses: actions/download-artifact@v6
+        with:
+          pattern: plugins-*-${{ github.sha }}
+          path: ${{ runner.temp }}/plugins
+          merge-multiple: true
+      - name: Checksum and upload every plugin of every shipped target
+        env:
+          NATIVE_TARGETS: ${{ needs.plan.outputs.native-targets }}
+        run: |
+          cd "$RUNNER_TEMP/plugins"
+          read -r -a targets <<< "$NATIVE_TARGETS"
+          mapfile -t assets < <(cd "$GITHUB_WORKSPACE" && bun -e '
+            const { nativePluginAssets } = await import("./scripts/aphrody/release-native-worker.ts");
+            for (const target of process.argv.slice(1)) for (const { asset } of nativePluginAssets(target)) console.log(asset);
+          ' "${targets[@]}")
+          test "${#assets[@]}" -gt 0
+          for asset in "${assets[@]}"; do test -s "$asset"; done
+          if gh release download "$TAG" -R "$GITHUB_REPOSITORY" -p SHA256SUMS.txt -O SHA256SUMS.existing 2>/dev/null; then
+            grep -v -E '  bun-[a-z0-9]+-(linux|darwin|windows)-' SHA256SUMS.existing > SHA256SUMS.txt || true
+          else
+            : > SHA256SUMS.txt
+          fi
+          sha256sum "${assets[@]}" >> SHA256SUMS.txt
+          gh release upload "$TAG" -R "$GITHUB_REPOSITORY" --clobber "${assets[@]}" SHA256SUMS.txt
       - name: Publish qualified draft
         run: |
           if [ "$RELEASE_CHANNEL" = candidate ]; then

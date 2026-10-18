@@ -47,6 +47,7 @@ import { mediaBuildTarget } from "./media-sdk-build";
 import { strippedELFVerificationSpec } from "../build/verify-binary";
 import { buildGNUX64RuntimeSDK, runtimeSDKCargoArgs } from "./runtime-sdk-build";
 import { windowsProtocInstallation, windowsProtocPlan } from "./setup";
+import { plugins } from "../build/plugins";
 
 type WorkerInput = { target: string; source: string; version: string; output: string; root: string };
 const root = resolve(import.meta.dir, "../..");
@@ -655,6 +656,24 @@ async function packageNativeRuntime(
   await Bun.write(join(products, "runtime-full-qualification.json"), JSON.stringify(qualified, null, 2) + "\n");
 }
 
+/** Release asset of a plugin, as `plugin_command.rs` (`asset_name`) looks it up: `bun-<name>-<target>[.exe]`. */
+export function nativePluginAssets(targetName: string) {
+  const target = mediaReleaseTarget(targetName);
+  const exe = target.os === "windows" ? ".exe" : "";
+  return plugins.map(plugin => ({ built: `bun-${plugin.name}${exe}`, asset: `bun-${plugin.name}-${targetName}${exe}` }));
+}
+
+/** Copy every built plugin beside its release asset name; the publisher checksums them into SHA256SUMS.txt. */
+export async function stageNativePlugins(buildDir: string, targetName: string, output: string) {
+  await mkdir(output, { recursive: true });
+  for (const { built, asset } of nativePluginAssets(targetName)) {
+    const file = Bun.file(join(buildDir, built));
+    if (!file.size) throw new Error(`Plugin executable absent: ${built}`);
+    await Bun.write(join(output, asset), file);
+    await chmod(join(output, asset), 0o755);
+  }
+}
+
 /** Shared core build owner; SDK packaging runs only after this candidate exists. */
 export async function prepareNativeRuntimeCore(
   input: WorkerInput,
@@ -717,6 +736,16 @@ export async function prepareNativeRuntimeCore(
     ).stdout,
   );
   assertMediaRuntimeIdentity(identity, input.source, input.target, input.version);
+  await command(
+    [process.execPath, "--no-env-file", "bd", ...buildFlags, "--target=plugins"],
+    input.root,
+    join(diagnostics, "plugins-build.log"),
+    {
+      resources,
+      env: { GIT_SHA: input.source, CARGO_BUILD_JOBS: String(resources.jobs), OMP_NUM_THREADS: String(resources.jobs) },
+    },
+  );
+  await stageNativePlugins(buildDir, input.target, join(input.output, "plugins"));
   return { artifact, runtime, identity, buildDir };
 }
 
