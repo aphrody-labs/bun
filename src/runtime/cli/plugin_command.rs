@@ -15,7 +15,7 @@ use bun_http as HTTP;
 use super::upgrade_command::{CURRENT_RELEASE_PREFIX, UpgradeCommand, Version};
 
 /// Every plugin the core knows how to dispatch to.
-pub(crate) const PLUGINS: &[&str] = &["uv", "vpn", "ssh", "docker"];
+pub(crate) const PLUGINS: &[&str] = &["uv", "vpn", "ssh", "docker", "just"];
 
 const EXE_SUFFIX: &str = if cfg!(windows) { ".exe" } else { "" };
 const ABI_SUFFIX: &str = if Environment::IS_MUSL {
@@ -222,6 +222,13 @@ pub(crate) fn exec(name: &str, args: impl IntoIterator<Item = OsString>) -> ! {
     // job control reach the plugin directly.
     let mut command = std::process::Command::new(&path);
     command.args(args);
+    // Plugins that run Bun again (Bun Shell recipes of `bun just`) use this bun, not one from PATH.
+    if let Ok(host) = bun_core::self_exe_path() {
+        command.env(
+            "BUN_PLUGIN_HOST",
+            String::from_utf8_lossy(host.as_bytes()).as_ref(),
+        );
+    }
     #[cfg(unix)]
     {
         use std::os::unix::process::CommandExt;

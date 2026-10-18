@@ -5322,6 +5322,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "bun_plugin_just"
+version = "1.4.6"
+dependencies = [
+ "bun_just",
+]
+
+[[package]]
 name = "bun_plugin_ssh"
 version = "1.4.6"
 dependencies = [
@@ -5607,7 +5614,6 @@ dependencies = [
  "bun_js_parser_jsc",
  "bun_js_printer",
  "bun_jsc",
- "bun_just",
  "bun_libarchive",
  "bun_libuv_sys",
  "bun_lint_driver",

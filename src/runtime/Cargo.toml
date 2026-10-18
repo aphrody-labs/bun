@@ -26,7 +26,6 @@ bun_browser_index = { workspace = true, optional = true }
 bun_quality.workspace = true
 bun_ecma_api.workspace = true
 bun_migrate.workspace = true
-bun_just.workspace = true
 oxc_linter.workspace = true
 serde_json = "=1.0.151"
 serde = { version = "1.0.228", features = ["derive"] }

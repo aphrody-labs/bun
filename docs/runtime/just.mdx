@@ -1,9 +1,9 @@
 ---
 title: Recipes with bun just
-description: Run justfile recipes with the task runner built into Bun.
+description: Run justfile recipes with the just task runner shipped as a Bun plugin.
 ---
 
-`bun just` runs [just](https://github.com/casey/just) recipes with a task runner compiled into Bun. It searches the current directory and its parents for `justfile` or `.justfile`.
+`bun just` runs [just](https://github.com/casey/just) recipes with the `just` [plugin](/runtime/bun-plugin) (`bun-just`, downloaded on first use). It searches the current directory and its parents for `justfile` or `.justfile`.
 
 ```just
 test:

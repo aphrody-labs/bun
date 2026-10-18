@@ -23,7 +23,7 @@ Upstream commands (`run`, `test`, `build`, `install`, `add`, `remove`, `update`,
 | `bun parse <file...>` | Lines, bytes, hash, imports and exports of JS/TS files from the transpiler scan | `devtools_command.rs` |
 | `bun bench` | Benchmark helper of the devtools set | `devtools_command.rs` |
 | `bun video metadata \| frame` | Native video metadata, frames, audio, GIF and MP4 remux | `video_command.rs`, [Video](/runtime/video) |
-| `bun just [recipe]` | Run justfile recipes (embedded `just`) | `src/just`, [just](/runtime/just) |
+| `bun just [recipe]` | Run justfile recipes (`just`, the `just` plugin) | `src/just`, `src/plugins/just`, [just](/runtime/just) |
 | `bun mcp [install]` | Model Context Protocol server for coding agents (stdio and HTTP) | `src/mcp`, [mcp](/runtime/mcp), [agent tools](/project/agent-tools) |
 | `bun agent-plugin [install]` | Install the plugin into Claude Code, Codex, Antigravity, Gemini CLI and OpenCode | `packages/bun-agent-plugin`, [agent plugin](/project/agent-plugin) |
 | `bun lsp [query]` | One language server for TypeScript, JavaScript, Python, Rust, C, C++ and C# | `src/lsp`, [lsp](/runtime/lsp) |

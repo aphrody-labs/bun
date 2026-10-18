@@ -50,6 +50,7 @@ members = [
   "src/plugins/vpn",
   "src/plugins/ssh",
   "src/plugins/docker",
+  "src/plugins/just",
   "src/browser/crates/api",
   "src/browser/crates/browser",
   "src/browser/crates/cdp",

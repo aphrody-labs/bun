@@ -40,6 +40,7 @@ export const plugins: Plugin[] = [
   },
   { name: "ssh", package: "bun_plugin_ssh" },
   { name: "docker", package: "bun_plugin_docker" },
+  { name: "just", package: "bun_plugin_just" },
 ];
 
 /** Emit every plugin; returns the executables in the binary directory. */
