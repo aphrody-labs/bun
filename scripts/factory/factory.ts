@@ -52,6 +52,8 @@ const HELP = `Usage: bun scripts/factory/factory.ts <command> [target] [--config
   slots           Print which build slots are taken
   run [--slots <n>] [--max-slots <n>] -- <command...>
                   Run a heavy command (bun bd, cargo, ninja) in build slots; alone, it takes all CPUs
+  lane <runtime|os|web> -- <command...>
+                  Run in the canonical VPS checkout with one slot, leaving room for the other lanes
 Mode: ${builds.mode} (BUN_FACTORY_MODE=single|multi), ${builds.slots} slots of ${builds.jobsPerSlot} jobs
 Targets: ${Object.keys(targets).join(", ")}`;
 
@@ -164,6 +166,14 @@ export function plan(name: string, config = "release"): Step[] {
       ...(t.maxSlots === undefined ? {} : { maxSlots: t.maxSlots }),
     });
   return steps;
+}
+
+/** Concurrent product builds share slots without creating additional source checkouts. */
+export function lane(name: string, argv: string[]): Step {
+  if (!Object.hasOwn(factory.lanes, name)) throw new Error(`Unknown build lane ${name}`);
+  if (!argv.length) throw new Error("lane needs a command after --");
+  const owner = factory.lanes[name as keyof typeof factory.lanes];
+  return { cwd: owner.cwd, argv, slots: 1, maxSlots: 1 };
 }
 
 /** `argv` with `JOBS` replaced by the jobs of `held` slots. */
@@ -369,6 +379,10 @@ export async function main(argv = process.argv.slice(2)) {
       const n = clamp(Number(value("--slots") ?? 1));
       const max = value("--max-slots");
       return run({ cwd: process.cwd(), argv: command, slots: n, ...(max ? { maxSlots: Number(max) } : {}) }, dry);
+    }
+    case "lane": {
+      if (!dry && process.platform !== "linux") throw new Error("Product build lanes run on the VPS only");
+      return run(lane(name!, command), dry);
     }
     case "sync":
     case "gen":

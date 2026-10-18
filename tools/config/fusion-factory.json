@@ -19,6 +19,11 @@
     "sccacheGiB": 150,
     "ccacheGiB": 100
   },
+  "lanes": {
+    "runtime": { "cwd": "/home/ubuntu/src/bun" },
+    "os": { "cwd": "/home/ubuntu/src/bun-os" },
+    "web": { "cwd": "/home/ubuntu/src/bun-os" }
+  },
   "rust": {
     "maxJobs": 12,
     "serialized": false,
