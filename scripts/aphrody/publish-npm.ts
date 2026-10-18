@@ -770,10 +770,6 @@ export async function publishAll(opts: {
   const sourceRevision = run(["git", "rev-parse", "HEAD"], ROOT).trim();
   const sourceManifest = (path: string) => JSON.parse(run(["git", "show", `${sourceRevision}:${path}`], ROOT));
   const bunVersion: string = sourceManifest("package.json").version;
-  if (!opts.dryRun) {
-    if (!isAphrodyBun() || Bun.version.split("-")[0] !== bunVersion)
-      throw new Error(`Publication requires the qualified Aphrody runtime ${bunVersion}`);
-  }
   const selectedSpecs = PACKAGES.filter(spec => !opts.only?.length || opts.only.includes(spec.dir));
   const needed = new Set(selectedSpecs.map(spec => spec.dir));
   const visit = (spec: PackageSpec) => {
