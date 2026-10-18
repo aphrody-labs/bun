@@ -10105,6 +10105,11 @@ dependencies = [
 ]
 
 [[package]]
+name = "filmcraft-audio-dsp"
+version = "0.7.2"
+source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+
+[[package]]
 name = "filmcraft-av1"
 version = "0.7.2"
 source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
@@ -10123,6 +10128,19 @@ source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb408
 name = "filmcraft-bitstream"
 version = "0.7.2"
 source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+
+[[package]]
+name = "filmcraft-captions"
+version = "0.7.2"
+source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+dependencies = [
+ "filmcraft-color",
+ "filmcraft-project",
+ "filmcraft-text",
+ "filmcraft-time",
+ "roxmltree 0.21.1",
+ "thiserror 2.0.21",
+]
 
 [[package]]
 name = "filmcraft-codecs"
@@ -10189,6 +10207,45 @@ dependencies = [
 ]
 
 [[package]]
+name = "filmcraft-export"
+version = "0.7.2"
+source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+dependencies = [
+ "filmcraft-aac",
+ "filmcraft-apv",
+ "filmcraft-audio-dsp",
+ "filmcraft-color",
+ "filmcraft-dnx",
+ "filmcraft-flac",
+ "filmcraft-frame",
+ "filmcraft-geom",
+ "filmcraft-h264enc",
+ "filmcraft-isobmff",
+ "filmcraft-media",
+ "filmcraft-mxf",
+ "filmcraft-project",
+ "filmcraft-prores",
+ "filmcraft-render",
+ "filmcraft-text",
+ "filmcraft-time",
+ "image",
+ "rayon",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "web-time",
+]
+
+[[package]]
+name = "filmcraft-flac"
+version = "0.7.2"
+source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+dependencies = [
+ "filmcraft-bitstream",
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "filmcraft-frame"
 version = "0.7.2"
 source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
@@ -10200,7 +10257,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "filmcraft-geom"
+version = "0.7.2"
+source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "filmcraft-h264"
+version = "0.7.2"
+source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+dependencies = [
+ "filmcraft-bitstream",
+ "rayon",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "filmcraft-h264enc"
 version = "0.7.2"
 source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
 dependencies = [
@@ -10233,9 +10308,14 @@ name = "filmcraft-lib"
 version = "0.7.2"
 source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
 dependencies = [
+ "filmcraft-color",
+ "filmcraft-export",
+ "filmcraft-frame",
+ "filmcraft-h264enc",
  "filmcraft-isobmff",
  "filmcraft-matroska",
  "filmcraft-time",
+ "image",
  "web-time",
 ]
 
@@ -10301,6 +10381,20 @@ version = "0.7.2"
 source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
 
 [[package]]
+name = "filmcraft-project"
+version = "0.7.2"
+source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+dependencies = [
+ "filmcraft-color",
+ "filmcraft-geom",
+ "filmcraft-media",
+ "filmcraft-time",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "filmcraft-prores"
 version = "0.7.2"
 source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
@@ -10308,6 +10402,38 @@ dependencies = [
  "filmcraft-bitstream",
  "rayon",
  "thiserror 2.0.21",
+]
+
+[[package]]
+name = "filmcraft-render"
+version = "0.7.2"
+source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+dependencies = [
+ "filmcraft-audio-dsp",
+ "filmcraft-captions",
+ "filmcraft-color",
+ "filmcraft-frame",
+ "filmcraft-geom",
+ "filmcraft-media",
+ "filmcraft-project",
+ "filmcraft-text",
+ "filmcraft-time",
+ "rayon",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "filmcraft-text"
+version = "0.7.2"
+source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+dependencies = [
+ "filmcraft-color",
+ "harfrust 0.12.0",
+ "skrifa 0.44.0",
+ "unicode-bidi",
+ "unicode-linebreak",
+ "unicode-segmentation",
 ]
 
 [[package]]
