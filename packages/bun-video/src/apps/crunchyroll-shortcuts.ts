@@ -20,46 +20,57 @@ for (const locale of locales)
   );
 assets.set("/pwa/", resolve(root, "crunchyroll-pwa/index.html"));
 
+const LOOPBACK_HOSTS = ["127.0.0.1", "localhost", "[::1]"];
+
+/** Fetch handler for the PWA and extension assets; host policy is applied by the caller. */
+export function createCrunchyrollShortcutsHandler(): (request: Request) => Promise<Response> {
+  return async request => {
+    const url = new URL(request.url);
+    const headers = new Headers({
+      "Cache-Control": "no-cache",
+      "X-Content-Type-Options": "nosniff",
+      "Referrer-Policy": "no-referrer",
+      "Content-Security-Policy":
+        "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
+    });
+    if (!["GET", "HEAD"].includes(request.method))
+      return new Response(null, {
+        status: 405,
+        headers: { ...Object.fromEntries(headers), Allow: "GET, HEAD" },
+      });
+    if (url.pathname === "/")
+      return new Response(null, {
+        status: 302,
+        headers: { ...Object.fromEntries(headers), Location: "/pwa/" },
+      });
+    if (url.pathname === "/health")
+      return new Response(
+        request.method === "HEAD" ? null : JSON.stringify({ service: "bun-crunchyroll-shortcuts" }),
+        { headers: { ...Object.fromEntries(headers), "Content-Type": "application/json" } },
+      );
+    const path = assets.get(url.pathname);
+    if (!path) return new Response("Not found", { status: 404, headers });
+    const file = Bun.file(path);
+    if (!(await file.exists())) return new Response("Not found", { status: 404, headers });
+    headers.set("Content-Type", url.pathname.endsWith(".webmanifest") ? "application/manifest+json" : file.type);
+    if (url.pathname === "/pwa/sw.js") headers.set("Service-Worker-Allowed", "/pwa/");
+    return new Response(request.method === "HEAD" ? null : file, { headers });
+  };
+}
+
 export async function startCrunchyrollShortcuts(options: { port?: number; hostname?: string } = {}) {
   const hostname = options.hostname ?? "127.0.0.1";
   if (!["127.0.0.1", "localhost", "::1"].includes(hostname))
     throw new Error("The shortcut server requires a loopback address.");
+  const handler = createCrunchyrollShortcutsHandler();
   return Bun.serve({
     hostname,
     port: options.port ?? 0,
     async fetch(request) {
       const url = new URL(request.url);
-      const headers = new Headers({
-        "Cache-Control": "no-cache",
-        "X-Content-Type-Options": "nosniff",
-        "Referrer-Policy": "no-referrer",
-        "Content-Security-Policy":
-          "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self'; worker-src 'self'; manifest-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
-      });
-      if (!["127.0.0.1", "localhost", "[::1]"].includes(url.hostname))
-        return new Response("Invalid host", { status: 421, headers });
-      if (!["GET", "HEAD"].includes(request.method))
-        return new Response(null, {
-          status: 405,
-          headers: { ...Object.fromEntries(headers), Allow: "GET, HEAD" },
-        });
-      if (url.pathname === "/")
-        return new Response(null, {
-          status: 302,
-          headers: { ...Object.fromEntries(headers), Location: "/pwa/" },
-        });
-      if (url.pathname === "/health")
-        return new Response(
-          request.method === "HEAD" ? null : JSON.stringify({ service: "bun-crunchyroll-shortcuts" }),
-          { headers: { ...Object.fromEntries(headers), "Content-Type": "application/json" } },
-        );
-      const path = assets.get(url.pathname);
-      if (!path) return new Response("Not found", { status: 404, headers });
-      const file = Bun.file(path);
-      if (!(await file.exists())) return new Response("Not found", { status: 404, headers });
-      headers.set("Content-Type", url.pathname.endsWith(".webmanifest") ? "application/manifest+json" : file.type);
-      if (url.pathname === "/pwa/sw.js") headers.set("Service-Worker-Allowed", "/pwa/");
-      return new Response(request.method === "HEAD" ? null : file, { headers });
+      if (!LOOPBACK_HOSTS.includes(url.hostname))
+        return new Response("Invalid host", { status: 421, headers: { "Cache-Control": "no-cache" } });
+      return handler(request);
     },
   });
 }

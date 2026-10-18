@@ -65,3 +65,11 @@ describe("createVideoWebApp", () => {
     expect((await app.fetch(new Request("http://localhost/nope"))).status).toBe(404);
   });
 });
+
+describe("mounted labs", () => {
+  test("dash lab is refused when no capture is configured", async () => {
+    const response = await app.fetch(new Request("http://localhost/labs/dash/"));
+    expect(response.status).toBe(404);
+    expect(await response.json()).toEqual({ error: "lab_not_configured" });
+  });
+});
