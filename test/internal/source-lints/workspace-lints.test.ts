@@ -11,6 +11,7 @@ const PENDING = new Set([
   "packages/bun-runtime-sdk/crates/yolo-runtime",
   "packages/bun-winsvc",
   "src/google",
+  "src/zlib_rs",
   "src/browser/crates/api",
   "src/browser/crates/browser",
   "src/browser/crates/cdp",
