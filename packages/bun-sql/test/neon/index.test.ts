@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
-import { resolveNeonConnection } from "../src/connection";
-import { createNeonClient } from "../src/index";
-import { applyMigrations } from "../src/migrations";
+import { resolveNeonConnection } from "../../src/neon/connection";
+import { createNeonClient } from "../../src/neon/index";
+import { applyMigrations } from "../../src/neon/migrations";
 
 test("Neon connections require an explicit PostgreSQL URL and verified TLS", async () => {
   const previous = Bun.env.NEON_DATABASE_URL;

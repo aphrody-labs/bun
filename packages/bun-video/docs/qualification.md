@@ -1,4 +1,33 @@
-# Qualification, 2026-10-10
+# Qualification
+
+## Native ingestion, 2026-10-18
+
+On Windows x64, Bun `1.4.6-canary.1` at revision `169d8c5ea` runs the package
+TypeScript directly. The seven focused source, pipeline, root-import, FFmpeg contract, API
+registry, worker-task and pixel-verification suites pass 26 tests with 172
+assertions; five optional media/GPU SDK cases are skipped.
+
+The cold-process pipeline test first verifies that its module hook rejects the
+FFmpeg adapter. With optional FFmpeg/mpv/SDK imports still rejected, it ingests
+a local HTTP MP4 fixture through `createVideo` and checks native frame count,
+width and file size. This is a container/timing fixture, not a decoder vector.
+It also proves that an advertised input above 256 MiB is cancelled before
+reading. Source tests separately exercise actual streamed byte limits, false
+Content-Length, binary views, HTTP errors and cancellation during a pending read.
+
+The root-import process independently rejects framework, React and optional
+media SDK imports while reading the same native metadata. It then explicitly
+loads Remotion, checks interpolation output and verifies that the root loader
+and typed API registry return the same implementation. Root rendering helpers
+and optional services now use their explicit module subpaths.
+
+Native lint and formatting pass for the four changed source/test files. Native
+type checking with `tsconfig.check.json` and those four entrypoints passes its
+22-file dependency closure. The full project still reports 46 diagnostics in
+absorbed Remotion/HyperFrames sources. These scoped results do not qualify full
+rendering, video encoding, the optional SDKs or the package release artifact.
+
+## 2026-10-10
 
 Scoped TypeScript, Oxfmt 0.72.0 and Oxlint passed. The changed Bun binary ran
 100 tests across six files with 253 assertions and zero failures. This covers

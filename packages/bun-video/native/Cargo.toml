@@ -8,6 +8,7 @@ license = "MIT"
 [features]
 default = []
 filmcraft = ["dep:filmcraft-lib", "dep:filmcraft-codecs", "dep:filmcraft-frame", "dep:filmcraft-media", "dep:filmcraft-time", "dep:filmcraft-isobmff", "dep:gif"]
+filmcraft-encode = ["filmcraft", "filmcraft-lib/encode"]
 gpu = ["dep:gpu-video"]
 libav = ["dep:ffmpeg-sys-next", "dep:serde_json", "dep:sha2"]
 mpv = ["dep:libloading"]

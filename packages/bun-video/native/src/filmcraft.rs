@@ -90,6 +90,302 @@ pub struct DecodedRGBAFrame {
 }
 pub type VideoCancel = Option<Arc<AtomicBool>>;
 
+#[cfg(feature = "filmcraft-encode")]
+pub use encoding::VideoEncoderSession;
+
+#[cfg(feature = "filmcraft-encode")]
+mod encoding {
+    use super::*;
+    use std::io::{Cursor, Read, Seek, SeekFrom, Write};
+
+    const ENCODE_DEADLINE: Duration = Duration::from_secs(180);
+    const MAX_ENCODE_FRAMES: usize = 10_000;
+
+    struct Output {
+        bytes: Cursor<Vec<u8>>,
+        limit: usize,
+        cancel: Arc<AtomicBool>,
+        deadline: Instant,
+    }
+
+    impl Output {
+        fn check(&self) -> io::Result<()> {
+            if self.cancel.load(Ordering::Acquire) {
+                // write_all/read_exact retry Interrupted, so cancellation must be terminal I/O.
+                return Err(io::Error::other("video encoding cancelled"));
+            }
+            if Instant::now() >= self.deadline {
+                return Err(io::Error::new(
+                    io::ErrorKind::TimedOut,
+                    "video encoding exceeded its deadline",
+                ));
+            }
+            Ok(())
+        }
+    }
+    impl Read for Output {
+        fn read(&mut self, buffer: &mut [u8]) -> io::Result<usize> {
+            self.check()?;
+            self.bytes.read(buffer)
+        }
+    }
+    impl Write for Output {
+        fn write(&mut self, buffer: &[u8]) -> io::Result<usize> {
+            self.check()?;
+            let end = self
+                .bytes
+                .position()
+                .checked_add(buffer.len() as u64)
+                .ok_or_else(|| io::Error::other("encoded video size overflow"))?;
+            if end > self.limit as u64 {
+                return Err(io::Error::other("encoded video exceeds output budget"));
+            }
+            let bytes = self.bytes.get_mut();
+            if end as usize > bytes.capacity() {
+                bytes
+                    .try_reserve_exact(end as usize - bytes.len())
+                    .map_err(|_| io::Error::other("encoded video allocation failed"))?;
+            }
+            self.bytes.write(buffer)
+        }
+        fn flush(&mut self) -> io::Result<()> {
+            self.check()
+        }
+    }
+    impl Seek for Output {
+        fn seek(&mut self, position: SeekFrom) -> io::Result<u64> {
+            self.check()?;
+            let next = match position {
+                SeekFrom::Start(value) => i128::from(value),
+                SeekFrom::Current(value) => i128::from(self.bytes.position()) + i128::from(value),
+                SeekFrom::End(value) => self.bytes.get_ref().len() as i128 + i128::from(value),
+            };
+            if next < 0 || next > self.limit as i128 {
+                return Err(io::Error::other("encoded video seek exceeds output budget"));
+            }
+            self.bytes.seek(SeekFrom::Start(next as u64))
+        }
+    }
+
+    /// Owns the pure-Rust codec state; drop or any owner error discards the partial container.
+    /// Limits apply to cumulative RGBA/PCM input and the seekable output, each at most 256 MiB.
+    /// Cancellation is observed between codec calls and on every container read/write/seek.
+    pub struct VideoEncoderSession {
+        encoder: Option<filmcraft_lib::Encoder<Output>>,
+        cancel: Arc<AtomicBool>,
+        deadline: Instant,
+        input_limit: usize,
+        input_bytes: usize,
+        frame_bytes: Option<usize>,
+        audio_channels: Option<usize>,
+        frames: usize,
+    }
+
+    impl VideoEncoderSession {
+        pub fn new(
+            mut options: filmcraft_lib::EncoderOptions,
+            input_limit: usize,
+            output_limit: usize,
+            cancel: VideoCancel,
+        ) -> Result<Self, VideoError> {
+            if input_limit == 0
+                || input_limit > MAX_MEMORY_BYTES
+                || output_limit == 0
+                || output_limit > MAX_MEMORY_BYTES
+            {
+                return Err(VideoError::Invalid(
+                    "encoding budgets must be between 1 byte and 256 MiB",
+                ));
+            }
+            let frame_bytes = if let Some(video) = &options.video {
+                dimensions(video.width, video.height, (input_limit / 4) as u64)?;
+                Some(video.width as usize * video.height as usize * 4)
+            } else {
+                None
+            };
+            options.limits.max_frame_pixels = options
+                .limits
+                .max_frame_pixels
+                .min((input_limit / 4) as u64);
+            let audio_channels = options.audio.as_ref().map(|audio| audio.channels as usize);
+            let cancel = cancel.unwrap_or_else(|| Arc::new(AtomicBool::new(false)));
+            if cancel.load(Ordering::Acquire) {
+                return Err(VideoError::Cancelled);
+            }
+            let deadline = Instant::now() + ENCODE_DEADLINE;
+            let output = Output {
+                bytes: Cursor::new(Vec::new()),
+                limit: output_limit,
+                cancel: Arc::clone(&cancel),
+                deadline,
+            };
+            let encoder = filmcraft_lib::Encoder::new(output, options).map_err(owner)?;
+            Ok(Self {
+                encoder: Some(encoder),
+                cancel,
+                deadline,
+                input_limit,
+                input_bytes: 0,
+                frame_bytes,
+                audio_channels,
+                frames: 0,
+            })
+        }
+
+        fn check(&mut self) -> Result<(), VideoError> {
+            if self.cancel.load(Ordering::Acquire) {
+                self.encoder = None;
+                return Err(VideoError::Cancelled);
+            }
+            if Instant::now() >= self.deadline {
+                self.encoder = None;
+                return Err(VideoError::Invalid("video encoding exceeded its deadline"));
+            }
+            if self.encoder.is_none() {
+                return Err(VideoError::Invalid(
+                    "video encoder is closed after an error",
+                ));
+            }
+            Ok(())
+        }
+
+        fn reserve_input(&self, bytes: usize) -> Result<usize, VideoError> {
+            let total = self
+                .input_bytes
+                .checked_add(bytes)
+                .ok_or(VideoError::Invalid("encoding input budget overflow"))?;
+            if total > self.input_limit {
+                return Err(VideoError::Invalid(
+                    "encoding exceeds cumulative input budget",
+                ));
+            }
+            Ok(total)
+        }
+
+        fn push(
+            &mut self,
+            bytes: usize,
+            f: impl FnOnce(&mut filmcraft_lib::Encoder<Output>) -> filmcraft_lib::Result<()>,
+        ) -> Result<(), VideoError> {
+            self.check()?;
+            let total = self.reserve_input(bytes)?;
+            let mut encoder = self
+                .encoder
+                .take()
+                .ok_or(VideoError::Invalid("video encoder is closed"))?;
+            let result = f(&mut encoder);
+            // Check cancellation before restoring state so failed or interrupted sessions cannot finish.
+            if self.cancel.load(Ordering::Acquire) {
+                return Err(VideoError::Cancelled);
+            }
+            if Instant::now() >= self.deadline {
+                return Err(VideoError::Invalid("video encoding exceeded its deadline"));
+            }
+            result.map_err(owner)?;
+            self.input_bytes = total;
+            self.encoder = Some(encoder);
+            Ok(())
+        }
+
+        /// Straight-alpha RGBA8. Lossy profiles may discard alpha according to the selected codec.
+        pub fn push_rgba(&mut self, rgba: &[u8]) -> Result<(), VideoError> {
+            if self.frame_bytes != Some(rgba.len()) {
+                return Err(VideoError::Invalid(
+                    "encoding RGBA size must match the configured video track",
+                ));
+            }
+            if self.frames >= MAX_ENCODE_FRAMES {
+                return Err(VideoError::Invalid("encoding exceeds 10000 frames"));
+            }
+            self.push(rgba.len(), |encoder| encoder.push_rgba(rgba))?;
+            self.frames += 1;
+            Ok(())
+        }
+
+        /// Planar finite PCM samples in -1..1, with the configured channel count and equal lengths.
+        pub fn push_audio(&mut self, planar: &[Vec<f32>]) -> Result<(), VideoError> {
+            if self.audio_channels != Some(planar.len()) || planar.is_empty() {
+                return Err(VideoError::Invalid(
+                    "encoding PCM channel count must match the audio track",
+                ));
+            }
+            let samples = planar[0].len();
+            let bytes = samples
+                .checked_mul(planar.len())
+                .and_then(|n| n.checked_mul(4))
+                .ok_or(VideoError::Invalid("encoding PCM size overflow"))?;
+            self.check()?;
+            self.reserve_input(bytes)?;
+            if planar.iter().any(|channel| {
+                channel.len() != samples
+                    || channel
+                        .iter()
+                        .any(|sample| !sample.is_finite() || !(-1.0..=1.0).contains(sample))
+            }) {
+                return Err(VideoError::Invalid(
+                    "encoding PCM needs equal channel lengths and finite samples in -1..1",
+                ));
+            }
+            self.push(bytes, |encoder| encoder.push_audio(planar))
+        }
+
+        pub fn cancel(&mut self) {
+            self.cancel.store(true, Ordering::Release);
+            self.encoder = None;
+        }
+
+        pub fn finish(mut self) -> Result<(Vec<u8>, filmcraft_lib::EncodeReport), VideoError> {
+            self.check()?;
+            let encoder = self
+                .encoder
+                .take()
+                .ok_or(VideoError::Invalid("video encoder is closed"))?;
+            let control = filmcraft_lib::Control::new().with_deadline(self.deadline);
+            let result = encoder.finish(&control);
+            if self.cancel.load(Ordering::Acquire) {
+                return Err(VideoError::Cancelled);
+            }
+            if Instant::now() >= self.deadline {
+                return Err(VideoError::Invalid("video encoding exceeded its deadline"));
+            }
+            let (output, report) = result.map_err(owner)?;
+            Ok((output.bytes.into_inner(), report))
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn output_bounds_sparse_writes_and_uses_terminal_cancellation_errors() {
+            let cancel = Arc::new(AtomicBool::new(false));
+            let mut output = Output {
+                bytes: Cursor::new(Vec::new()),
+                limit: 8,
+                cancel: Arc::clone(&cancel),
+                deadline: Instant::now() + ENCODE_DEADLINE,
+            };
+            output.seek(SeekFrom::Start(7)).unwrap();
+            output.write_all(&[42]).unwrap();
+            assert_eq!(output.bytes.get_ref(), &[0, 0, 0, 0, 0, 0, 0, 42]);
+            assert!(output.write(&[1]).is_err());
+            assert!(output.seek(SeekFrom::End(1)).is_err());
+            assert!(output.seek(SeekFrom::Start(u64::MAX)).is_err());
+            cancel.store(true, Ordering::Release);
+            assert_eq!(output.write(&[1]).unwrap_err().kind(), io::ErrorKind::Other);
+            assert_eq!(
+                output.read(&mut [0]).unwrap_err().kind(),
+                io::ErrorKind::Other
+            );
+            assert_eq!(
+                output.seek(SeekFrom::Start(0)).unwrap_err().kind(),
+                io::ErrorKind::Other
+            );
+        }
+    }
+}
+
 /// Limits every owner's individual range request, including moov/moof header allocations.
 struct BoundedReader(SharedReader);
 impl filmcraft_media::ByteReader for BoundedReader {
@@ -1465,6 +1761,115 @@ mod tests {
     use super::*;
     use filmcraft_isobmff::{AvcConfig, Brand, SampleEntry, TrackConfig, WriterOptions};
     use std::io::Cursor;
+
+    #[cfg(feature = "filmcraft-encode")]
+    fn pcm_encoder(output_limit: usize) -> VideoEncoderSession {
+        let mut audio = filmcraft_lib::AudioOptions::aac(48_000, 1);
+        audio.codec = filmcraft_lib::AudioCodec::Pcm16;
+        let mut options = filmcraft_lib::EncoderOptions::new(None, Some(audio));
+        options.quicktime = true;
+        VideoEncoderSession::new(options, 4096, output_limit, None).unwrap()
+    }
+
+    #[test]
+    #[cfg(feature = "filmcraft-encode")]
+    fn native_encoder_writes_known_pcm_samples_and_exact_timing() {
+        let mut encoder = pcm_encoder(4096);
+        encoder
+            .push_audio(&[vec![-1.0, -0.5, 0.0, 0.5, 1.0]])
+            .unwrap();
+        let (bytes, report) = encoder.finish().unwrap();
+        assert_eq!(report.audio_samples, 5);
+        assert_eq!(report.video_frames, 0);
+        let movie = filmcraft_isobmff::open(bytes.as_slice()).unwrap();
+        assert_eq!(movie.tracks.len(), 1);
+        let track = &movie.tracks[0];
+        assert_eq!(track.timescale, 48_000);
+        assert_eq!(
+            track
+                .samples
+                .iter()
+                .map(|sample| u64::from(sample.duration))
+                .sum::<u64>(),
+            5
+        );
+        // Independent signed PCM16 little-endian values; no encoder/decoder roundtrip oracle.
+        let expected = [-32767i16, -16384, 0, 16384, 32767]
+            .into_iter()
+            .flat_map(i16::to_le_bytes)
+            .collect::<Vec<_>>();
+        assert_eq!(movie.read_sample(bytes.as_slice(), 0, 0).unwrap(), expected);
+    }
+
+    #[test]
+    #[cfg(feature = "filmcraft-encode")]
+    fn native_encoder_enforces_input_output_cancellation_and_error_state() {
+        let mut encoder = pcm_encoder(4096);
+        assert!(encoder.push_audio(&[vec![0.0; 1025]]).is_err());
+        assert!(encoder.push_audio(&[vec![f32::NAN]]).is_err());
+        assert!(encoder.push_audio(&[vec![2.0]]).is_err());
+        encoder.push_audio(&[vec![0.0; 1024]]).unwrap();
+        assert!(encoder.push_audio(&[vec![0.0]]).is_err());
+        assert_eq!(encoder.finish().unwrap().1.audio_samples, 1024);
+
+        let mut small = pcm_encoder(8);
+        assert!(small.push_audio(&[vec![0.0; 16]]).is_err());
+        assert!(matches!(
+            small.finish(),
+            Err(VideoError::Invalid(
+                "video encoder is closed after an error"
+            ))
+        ));
+
+        let mut cancelled = pcm_encoder(4096);
+        cancelled.cancel();
+        assert!(matches!(
+            cancelled.push_audio(&[vec![0.0]]),
+            Err(VideoError::Cancelled)
+        ));
+        assert!(matches!(cancelled.finish(), Err(VideoError::Cancelled)));
+    }
+
+    #[test]
+    #[cfg(feature = "filmcraft-encode")]
+    fn native_h264_encoding_preserves_rational_frame_timing_and_black_content() {
+        let video = filmcraft_lib::VideoOptions::new(
+            filmcraft_lib::VideoCodec::H264,
+            64,
+            48,
+            filmcraft_lib::FrameRate {
+                num: 30_000,
+                den: 1001,
+            },
+        );
+        let options = filmcraft_lib::EncoderOptions::new(Some(video), None);
+        let mut encoder =
+            VideoEncoderSession::new(options, 64 * 48 * 4 * 3, 1024 * 1024, None).unwrap();
+        let pixels = [0, 0, 0, 255].repeat(64 * 48);
+        for _ in 0..3 {
+            encoder.push_rgba(&pixels).unwrap();
+        }
+        let (bytes, report) = encoder.finish().unwrap();
+        assert_eq!(report.video_frames, 3);
+        let movie = filmcraft_isobmff::open(bytes.as_slice()).unwrap();
+        assert_eq!(movie.tracks[0].timescale, 30_000);
+        assert_eq!(movie.tracks[0].samples.len(), 3);
+        assert!(
+            movie.tracks[0]
+                .samples
+                .iter()
+                .all(|sample| sample.duration == 1001)
+        );
+        let mut decoded = VideoSession::open(VideoInput::Bytes(bytes.into()), 64 * 48).unwrap();
+        let frame = decoded.next_frame().unwrap().unwrap();
+        assert_eq!((frame.width, frame.height), (64, 48));
+        assert!(
+            frame
+                .rgba
+                .chunks_exact(4)
+                .all(|pixel| pixel[0] <= 3 && pixel[1] <= 3 && pixel[2] <= 3 && pixel[3] == 255)
+        );
+    }
 
     #[test]
     fn budgets_and_paths_are_rejected_before_decoding() {

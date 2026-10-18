@@ -2405,7 +2405,11 @@ pub unsafe fn inflate(stream: &mut InflateStream, flush: InflateFlush) -> Return
 
     stream.total_in += in_read as z_size;
     state.total = state.total.wrapping_add(out_written);
-    stream.total_out = state.total as _;
+    // C callers may reset the public counters between calls (libarchive does
+    // this to measure each ZIP block). Keep the internal checksum length separate.
+    let public_out_written =
+        stream.avail_out as usize - (state.writer.capacity() - state.writer.len());
+    stream.total_out = stream.total_out.wrapping_add(public_out_written as z_size);
 
     stream.avail_in = state.bit_reader.bytes_remaining() as u32;
     stream.next_in = state.bit_reader.as_ptr() as *mut u8;
@@ -2713,6 +2717,40 @@ pub unsafe fn get_dictionary(stream: &InflateStream<'_>, dictionary: *mut u8) ->
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn inflate_preserves_caller_reset_output_counter() {
+        // A final, uncompressed DEFLATE block containing ten bytes. Use a fixed
+        // stream so this regression does not depend on our compressor's output.
+        let input = [
+            1, 10, 0, 245, 255, b'a', b'b', b'c', b'd', b'e', b'f', b'g', b'h', b'i', b'j',
+        ];
+        let mut output = [0u8; 10];
+        let mut raw = z_stream::default();
+        assert_eq!(
+            init(&mut raw, InflateConfig { window_bits: -15 }),
+            ReturnCode::Ok
+        );
+        raw.next_in = input.as_ptr();
+        raw.avail_in = input.len() as u32;
+        // SAFETY: init succeeded; input/output buffers outlive every inflate call.
+        let stream = unsafe { InflateStream::from_stream_mut(&mut raw) }.unwrap();
+        let mut written = 0;
+        for expected in [4, 4, 2] {
+            stream.next_out = output[written..].as_mut_ptr();
+            stream.avail_out = expected;
+            stream.total_out = 0;
+            // SAFETY: next_in is the initialized input remainder and next_out
+            // points to at least avail_out writable bytes.
+            let status = unsafe { inflate(stream, InflateFlush::NoFlush) };
+            assert!(matches!(status, ReturnCode::Ok | ReturnCode::StreamEnd));
+            assert_eq!(stream.total_out, expected as z_size);
+            assert_eq!(stream.avail_out, 0);
+            written += expected as usize;
+        }
+        assert_eq!(&output, b"abcdefghij");
+        end(stream);
+    }
 
     #[test]
     fn uncompress_buffer_overflow() {

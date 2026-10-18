@@ -6,7 +6,7 @@ import { join } from "node:path";
 import { readPublicSiteSnapshot, publishPublicSiteSnapshot } from "./site-neon-import";
 import { publicSiteAPI } from "./site-api";
 import { searchPublicSiteDocs, type SiteQuery } from "./site-neon";
-import { createNeonHTTPClient } from "../../bun-plugin-neon/src/http";
+import { createNeonHTTPClient } from "../../bun-sql/src/neon/http";
 import { readPublicNativeGraph } from "./site-native-graph";
 
 const hash = (value: string | Uint8Array) => new Bun.CryptoHasher("sha256").update(value).digest("hex");

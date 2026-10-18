@@ -4,6 +4,7 @@ import { closeSync, existsSync, mkdirSync, openSync, readSync, realpathSync, sta
 import { hostname } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { parseArgs } from "node:util";
+import factory from "../../tools/config/fusion-factory.json";
 import { validateExecutionBudget, validateExecutionReceiptPath } from "./monorepo-delivery.ts";
 import type { FactoryHostProfile } from "./build-host.ts";
 import {
@@ -28,7 +29,7 @@ export type FusionStep = {
 export type FusionConfig = {
   schema: 1;
   vpsHostnames: string[];
-  factory: { resource: string; config: string; cargoWrapper: string };
+  factory: { resource: string; cargoWrapper: string };
   execution?: { maxCpu: number; cargoTargetDir: string };
   research: string[];
   pipeline: string;
@@ -70,7 +71,7 @@ type Journal = {
 };
 const sha256 = (value: string | Uint8Array) => createHash("sha256").update(value).digest("hex");
 const MAX_FACTORY_CPU = 6;
-const CARGO_FACTORY_TARGET = "/home/ubuntu/builds/bun-os-factory/cache/cargo";
+const CARGO_FACTORY_TARGET = `${factory.cacheRoot}/cargo`;
 export type GateResourceObservation = {
   filesystemType: bigint;
   availableDiskMiB: number;
@@ -224,7 +225,7 @@ export function assertVps(
       config.execution.maxCpu > MAX_FACTORY_CPU ||
       config.execution.cargoTargetDir !== CARGO_FACTORY_TARGET)
   )
-    throw new Error("Fusion execution requires at most six CPUs and the declared root-filesystem Cargo cache");
+    throw new Error("Fusion execution requires at most six CPUs and the declared factory Cargo cache");
   for (const path of Object.values(config.factory)) {
     if (!isAbsolute(path) || !existsSync(path)) throw new Error(`Missing declared factory owner: ${path}`);
   }
@@ -245,28 +246,18 @@ async function scopeHash(root: string, scope: string[]) {
 }
 export function factoryCommand(config: FusionConfig, step: FusionStep): string[] {
   const [program, ...args] = step.command;
-  if (program === "cargo")
-    return [
-      process.execPath,
-      config.factory.resource,
-      config.factory.config,
-      "env",
-      "-u",
-      "APHRODY_BUILD_HOST",
-      "-u",
-      "APHRODY_FACTORY_RESOURCE",
-      "APHRODY_LOCAL_CARGO=1",
-      "bash",
-      config.factory.cargoWrapper,
-      ...args,
-    ];
-  // All commands, including tools considered light, go through the existing
-  // resource owner. Its native lease/lock mechanism remains authoritative.
+  const command =
+    program === "cargo"
+      ? [process.execPath, config.factory.cargoWrapper, ...args]
+      : program === "bun"
+        ? [process.execPath, ...args]
+        : step.command;
   return [
     process.execPath,
     config.factory.resource,
-    config.factory.config,
-    ...(program === "bun" ? [process.execPath, ...args] : step.command),
+    "run",
+    "--",
+    ...command,
   ];
 }
 export async function research(urls: string[], fetcher: typeof fetch = fetch): Promise<ResearchReceipt[]> {
@@ -362,6 +353,8 @@ export async function main(argv = process.argv.slice(2)) {
   const configText = await Bun.file(resolve(values.config ?? join(import.meta.dir, "fusion-verification.json"))).text();
   const config = JSON.parse(configText) as FusionConfig;
   if (config.schema !== 1) throw new Error("Unsupported fusion config");
+  config.factory.resource = resolve(root, config.factory.resource);
+  config.factory.cargoWrapper = resolve(root, config.factory.cargoWrapper);
   for (const url of config.research) {
     const parsed = new URL(url);
     if (parsed.protocol !== "https:" || parsed.hostname !== "bun.sh")

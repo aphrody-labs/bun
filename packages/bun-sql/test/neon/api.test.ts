@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { fetchNeonConnectionUri, listNeonProjects } from "../src/api";
+import { fetchNeonConnectionUri, listNeonProjects } from "../../src/neon/api";
 
 test("reads the connection URI with the bearer key and explicit database and role", async () => {
   const seen: { auth: string | null; path: string; query: string }[] = [];

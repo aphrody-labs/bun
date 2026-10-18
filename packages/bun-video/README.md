@@ -22,17 +22,35 @@ bun add @aphrody/bun-video@next
 ```
 
 ```ts
-import {
-  interpolate,
-  loadRemotionCore,
-  loadHyperframesCore,
-} from "@aphrody/bun-video";
+import { loadRemotionCore, loadHyperframesCore } from "@aphrody/bun-video";
+const { interpolate } = await loadRemotionCore();
 import { attachVideoHlsPlayback } from "@aphrody/bun-video/hls";
 import { createCrunchyrollClient } from "@aphrody/bun-video/crunchyroll";
 ```
 
 Additional exports: `/dash` (also `/mpd`), `/har`, `/bitmovin`, `/oauth`, `/webgpu`,
 `/secrets`, `/mcp`, and `/capabilities`. See the corresponding guides in docs.
+For native media ingestion without loading the optional FFmpeg, mpv or GPU SDK
+adapters, import `createVideo` from `@aphrody/bun-video/pipeline`:
+
+```ts
+import { createVideo } from "@aphrody/bun-video/pipeline";
+
+const video = await createVideo(new Request("https://cdn.example/video.mp4"), {
+  signal: AbortSignal.timeout(10_000),
+});
+const metadata = await video.metadata();
+```
+
+HTTP sources are read with a 256 MiB memory limit; failed responses and oversized
+streams are cancelled. Local file paths remain handled by `Bun.Video` directly.
+`openVideoPipeline` explicitly opens the FFmpeg adapter and loads mpv only when
+playback is requested. The root entrypoint loads the native core. Browser
+playback, WebGPU, FFmpeg, mpv and React studios use `/hls`, `/playback`, `/webgpu`,
+`/ffmpeg`, `/mpv`, `/studio` and `/studio-remotion`, or `loadVideoAPI(family)`.
+Rendering helpers use `loadVideoAPI("remotion")` and
+`loadVideoAPI("render-runtime")`; `createVideoDataSite` uses `/data-site`.
+
 Loading a library is lazy; native browser capture requires a separately
 qualified provider and explicitly authorized URLs. Native encoding requires
 an explicit media executable. The MCP media tool additionally expects the

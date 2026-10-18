@@ -1,7 +1,9 @@
 import { describe, expect, test } from "bun:test";
-import { mkdtempSync, rmdirSync } from "node:fs";
+import { existsSync, mkdtempSync, rmdirSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
+import factory from "../../tools/config/fusion-factory.json";
+import verification from "./fusion-verification.json";
 import {
   assertVps,
   diagnosticPaths,
@@ -33,9 +35,8 @@ const config: FusionConfig = {
   schema: 1,
   vpsHostnames: ["vps-203bea89"],
   factory: {
-    resource: "/owner/resource.ts",
-    config: "/owner/factory.json",
-    cargoWrapper: "/owner/cargo-serial.sh",
+    resource: "/owner/factory.ts",
+    cargoWrapper: "/owner/cargo-serial.ts",
   },
   research: ["https://bun.sh/docs"],
   pipeline: ".buildkite/ci.ts",
@@ -43,6 +44,11 @@ const config: FusionConfig = {
 };
 
 describe("recursive fusion verification", () => {
+  test("declared build owners exist in this checkout and share the factory cache", () => {
+    const root = resolve(import.meta.dir, "../..");
+    for (const path of Object.values(verification.factory)) expect(existsSync(resolve(root, path))).toBe(true);
+    expect(verification.execution.cargoTargetDir).toBe(`${factory.cacheRoot}/cargo`);
+  });
   test("qualification flags enable fixtures without changing tool or resource authority", () => {
     expect(gateFlags({ ...step("apt-fixture"), env: { BUN_SYSTEM_DEB_TEST_ROOT: "1" } })).toEqual({
       BUN_SYSTEM_DEB_TEST_ROOT: "1",
@@ -121,14 +127,21 @@ describe("recursive fusion verification", () => {
       ...step("cargo"),
       command: ["cargo", "+nightly", "check", "--locked"],
     });
-    expect(command.slice(1, 3)).toEqual([config.factory.resource, config.factory.config]);
-    expect(command.slice(-5)).toEqual(["bash", config.factory.cargoWrapper, "+nightly", "check", "--locked"]);
-    expect(command).toContain("APHRODY_LOCAL_CARGO=1");
-    expect(command).toContain("APHRODY_FACTORY_RESOURCE");
+    expect(command).toEqual([
+      process.execPath,
+      config.factory.resource,
+      "run",
+      "--",
+      process.execPath,
+      config.factory.cargoWrapper,
+      "+nightly",
+      "check",
+      "--locked",
+    ]);
   });
   test("native runtime suites use factory owner's configured resource lease", () => {
     const command = factoryCommand(config, step("runtime"));
-    expect(command.slice(1, 3)).toEqual([config.factory.resource, config.factory.config]);
+    expect(command.slice(1, 4)).toEqual([config.factory.resource, "run", "--"]);
     expect(command.slice(-2)).toEqual(["bd", "--version"]);
   });
   test("official-source HTTP and network failures remain failed evidence", async () => {

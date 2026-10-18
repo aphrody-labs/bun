@@ -13,9 +13,9 @@ export type MigrationReport = {
   skipped: { version: string; name: string; checksum: string }[];
 };
 
-type SqlExecutor = {
-  unsafe<T = unknown>(query: string, parameters?: readonly unknown[]): PromiseLike<T>;
-  begin<T>(callback: (transaction: SqlExecutor) => T | Promise<T>): Promise<T>;
+export type SqlMigrationExecutor = {
+  unsafe(query: string, parameters?: readonly unknown[]): PromiseLike<unknown>;
+  begin<T>(callback: (transaction: SqlMigrationExecutor) => Promise<T>): Promise<T>;
 };
 type MigrationFile = { version: string; name: string; path: string; sql: string; checksum: string };
 type MigrationRow = { version: string; name: string; checksum: string };
@@ -61,26 +61,30 @@ async function discover(directory: string): Promise<MigrationFile[]> {
   return migrations;
 }
 
-export async function applyMigrations(sql: SqlExecutor, options: MigrationOptions): Promise<MigrationReport> {
+export async function applySqlMigrations(
+  sql: SqlMigrationExecutor,
+  options: MigrationOptions,
+  defaults: { table: string; lockPrefix: string; advisoryLockSql: string },
+): Promise<MigrationReport> {
   if (!options.directory.trim()) throw new TypeError("A migrations directory is required");
   const schemaName = options.schema ?? "public";
-  const table = options.table ?? "_bun_neon_migrations";
+  const table = options.table ?? defaults.table;
   const schema = quoteIdentifier(schemaName);
   const ledger = `${schema}.${quoteIdentifier(table)}`;
-  const lockKey = options.lockKey ?? `@aphrody/bun-plugin-neon:${schemaName}:${table}`;
+  const lockKey = options.lockKey ?? `${defaults.lockPrefix}:${schemaName}:${table}`;
   const migrations = await discover(options.directory);
   const report: MigrationReport = { applied: [], skipped: [] };
 
   for (const migration of migrations) {
     await sql.begin(async transaction => {
-      await transaction.unsafe("SELECT pg_advisory_xact_lock(hashtext($1))", [lockKey]);
+      await transaction.unsafe(defaults.advisoryLockSql, [lockKey]);
       await transaction.unsafe(
         `CREATE TABLE IF NOT EXISTS ${ledger} (version text PRIMARY KEY, name text NOT NULL, checksum text NOT NULL, applied_at timestamptz NOT NULL DEFAULT now())`,
       );
-      const rows = await transaction.unsafe<MigrationRow[]>(
+      const rows = (await transaction.unsafe(
         `SELECT version, name, checksum FROM ${ledger} WHERE version = $1`,
         [migration.version],
-      );
+      )) as MigrationRow[];
       const existing = rows[0];
       if (existing) {
         if (existing.name !== migration.name || existing.checksum !== migration.checksum) {

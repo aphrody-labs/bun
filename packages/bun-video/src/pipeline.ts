@@ -1,7 +1,7 @@
 import type { YtDlpOptions, YtDlpResult } from "./ytdlp";
 import type { GpuRuntime, GpuReport } from "@aphrody/bun-runtime-sdk/gpu";
-import { MpvClient, mpvLibraryPath } from "./mpv";
-import { FFmpeg, type FFmpegInput } from "./ffmpeg";
+import type { MpvClient } from "./mpv";
+import type { FFmpeg, FFmpegInput } from "./ffmpeg";
 import type { WebGpuOptions } from "./webgpu";
 import { materializeVideoSource, resolveVideoSource, type VideoSource } from "./source";
 
@@ -23,11 +23,7 @@ export async function createVideo(
       throw new TypeError("Bun.Video URL ingestion requires HTTP(S); other protocols use the explicit media pipeline");
     source = new Request(resolved.url);
   }
-  if (source instanceof Response && !source.ok) {
-    await source.body?.cancel().catch(() => {});
-    throw new Error(`Media response failed (${source.status})`);
-  }
-  const resolved = await materializeVideoSource(source, options.signal);
+  const resolved = await materializeVideoSource(source, options.signal, 256 * 1024 * 1024);
   options.signal?.throwIfAborted();
   if (resolved.kind !== "bytes") throw new TypeError("Bun.Video ingestion did not produce a bounded byte source");
   return new Bun.Video(resolved.data, constructorOptions);
@@ -71,6 +67,8 @@ export async function openVideoPipeline(options: VideoPipelineOptions): Promise<
     media = source.url;
   }
   options.signal?.throwIfAborted();
+  const { FFmpeg } = await import("./ffmpeg");
+  options.signal?.throwIfAborted();
   const ffmpeg = FFmpeg.open(options.mediaDirectory);
   let player: MpvClient | null = null;
   let gpuRuntime: GpuRuntime | null = null;
@@ -102,13 +100,14 @@ export async function openVideoPipeline(options: VideoPipelineOptions): Promise<
       gpu = await gpuRuntime.info(signals.length ? { signal: AbortSignal.any(signals) } : undefined);
     }
     options.signal?.throwIfAborted();
-    player =
-      options.playback || options.mpvLibraryPath
-        ? MpvClient.open({
-            libraryPath: options.mpvLibraryPath ?? mpvLibraryPath(options.mediaDirectory),
-            options: options.playerOptions,
-          })
-        : null;
+    if (options.playback || options.mpvLibraryPath) {
+      const { MpvClient, mpvLibraryPath } = await import("./mpv");
+      options.signal?.throwIfAborted();
+      player = MpvClient.open({
+        libraryPath: options.mpvLibraryPath ?? mpvLibraryPath(options.mediaDirectory),
+        options: options.playerOptions,
+      });
+    }
     if (player && options.playback) player.command("loadfile", media!);
     return { source, gpu, gpuRuntime, player, ffmpeg, input: nativeInput, close, [Symbol.dispose]: close };
   } catch (error) {

@@ -1,6 +1,6 @@
 import { parseArgs } from "node:util";
 import { TypeSafeClient } from "@aphrody/typesafe-sdk";
-import { createNeonHTTPClient } from "@aphrody/bun-plugin-neon/http";
+import { createNeonHTTPClient } from "@aphrody/bun-sql/neon/http";
 import { buildBunRag } from "./rag";
 import { protectedReference } from "./protected-reference";
 

@@ -16,6 +16,7 @@ test("registry loads the real source owner and exposes export kinds without valu
   const module = await loadVideoAPI("source");
   const { resolveVideoSource } = await import("../src/source");
   expect(module.resolveVideoSource).toBe(resolveVideoSource);
+  expect(module.resolveVideoSource("clips/example.mp4")).toEqual({ kind: "file", path: "clips/example.mp4" });
   const description = await inspectVideoAPI("source");
   expect(description.qualification).toBe("module-load-only");
   expect(description.exports).toContainEqual({ name: "resolveVideoSource", kind: "function" });

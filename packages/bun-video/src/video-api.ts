@@ -61,6 +61,7 @@ const owners = {
 } as const;
 
 export type VideoAPIFamily = keyof typeof owners;
+export type VideoAPIModule<Family extends VideoAPIFamily> = Awaited<ReturnType<(typeof owners)[Family]>>;
 export interface VideoAPIDescriptor {
   readonly id: VideoAPIFamily;
   readonly module: string;
@@ -155,9 +156,9 @@ export function describeVideoAPIs(): readonly VideoAPIDescriptor[] {
   return VIDEO_APIS;
 }
 
-export async function loadVideoAPI(family: VideoAPIFamily): Promise<Record<string, unknown>> {
+export async function loadVideoAPI<Family extends VideoAPIFamily>(family: Family): Promise<VideoAPIModule<Family>> {
   if (!Object.hasOwn(owners, family)) throw new TypeError(`Unknown Bun Video API family: ${family}`);
-  return await owners[family]();
+  return (await owners[family]()) as VideoAPIModule<Family>;
 }
 
 /** Export names and kinds only; no values, sessions or credentials are serialized. */
@@ -167,8 +168,8 @@ export async function inspectVideoAPI(family: VideoAPIFamily) {
     family,
     loaded: true,
     qualification: "module-load-only" as const,
-    exports: Object.keys(module)
-      .sort()
-      .map(name => ({ name, kind: typeof module[name] })),
+    exports: Object.entries(module)
+      .sort(([a], [b]) => (a === b ? 0 : a < b ? -1 : 1))
+      .map(([name, value]) => ({ name, kind: typeof value })),
   };
 }

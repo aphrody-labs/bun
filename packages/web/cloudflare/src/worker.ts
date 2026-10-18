@@ -1,6 +1,6 @@
 import { bucketFor } from "./buckets.ts";
 import type { IngestParams } from "./ingest.ts";
-import { createNeonHTTPClient } from "@aphrody/bun-plugin-neon/http";
+import { createNeonHTTPClient } from "@aphrody/bun-sql/neon/http";
 import { createAphrodyHandler, log, type AphrodyPlatform, type FileStore } from "./core.ts";
 import { siteRag } from "./site-rag.ts";
 

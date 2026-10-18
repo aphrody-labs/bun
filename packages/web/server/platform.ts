@@ -2,7 +2,7 @@
 import { Database } from "bun:sqlite";
 import { mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
-import { createNeonHTTPClient } from "@aphrody/bun-plugin-neon/http";
+import { createNeonHTTPClient } from "@aphrody/bun-sql/neon/http";
 import type { AphrodyPlatform, FileStore, Limiter } from "../cloudflare/src/core.ts";
 import { siteRag } from "../cloudflare/src/site-rag.ts";
 import manifest from "../package.json";
