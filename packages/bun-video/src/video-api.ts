@@ -19,6 +19,7 @@ const owners = {
   crunchyroll: () => import("./crunchyroll"),
   "crunchyroll-api": () => import("./crunchyroll-api"),
   "crunchyroll-cli": () => import("./crunchyroll-cli"),
+  "crunchyroll-service": () => import("./crunchyroll-service"),
   "crunchyroll-watchlist": () => import("./crunchyroll-watchlist"),
   "frame-theme": () => import("./frame-theme"),
   "frame-analysis": () => import("./frame-analysis"),
@@ -86,6 +87,7 @@ const definitions: readonly [VideoAPIFamily, string, VideoAPIDescriptor["scope"]
   ["bitmovin", "Licensed Bitmovin browser player integration", "protocol"],
   ["crunchyroll", "Isolated Crunchyroll acquisition client", "acquisition"],
   ["crunchyroll-api", "Crunchyroll HTTP API owner", "acquisition"],
+  ["crunchyroll-service", "Crunchyroll service composition owner", "service"],
   ["crunchyroll-cli", "Crunchyroll CLI owner", "service"],
   ["crunchyroll-watchlist", "Authorized Crunchyroll watchlist owner", "acquisition"],
   ["frame-theme", "Frame-derived semantic color roles", "render"],
@@ -141,7 +143,7 @@ export const VIDEO_APIS: readonly VideoAPIDescriptor[] = Object.freeze(
         "hyperframes-native",
       ].includes(id)
         ? `./src/${id}.ts`
-        : `@aphrody/bun-video/${id.replace("remotion-renderer", "remotion/renderer").replace("hyperframes-engine", "hyperframes/engine").replace("crunchyroll-api", "crunchyroll/api").replace("crunchyroll-cli", "crunchyroll/cli").replace("crunchyroll-watchlist", "crunchyroll/watchlist")}`,
+        : `@aphrody/bun-video/${id.replace("remotion-renderer", "remotion/renderer").replace("hyperframes-engine", "hyperframes/engine").replace("crunchyroll-api", "crunchyroll/api").replace("crunchyroll-service", "crunchyroll/service").replace("crunchyroll-cli", "crunchyroll/cli").replace("crunchyroll-watchlist", "crunchyroll/watchlist")}`,
       description,
       scope,
     }),

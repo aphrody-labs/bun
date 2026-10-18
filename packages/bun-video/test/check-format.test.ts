@@ -25,9 +25,7 @@ test("native format inputs retain JS and nested TSX without selecting unsupporte
     new Response(child.stderr).text(),
     child.exited,
   ]);
-  expect(output).toContain("view.tsx");
-  expect(output).toContain("runtime.js");
-  expect(output).toContain("formatting differs");
-  expect(errors).toBe("");
+  expect(errors).toContain("need formatting");
+  expect(output.replaceAll("\r\n", "\n")).toBe("src/nested/view.tsx\nsrc/runtime.js\n");
   expect(code).toBe(1);
 });

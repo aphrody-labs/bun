@@ -155,7 +155,8 @@ export async function planRemotionLibraryAssets(root: string, seeds: readonly st
   }
   const files: Array<{ source: string; destination: string; transpile: boolean }> = [];
   let bytes = 0;
-  function inventory(source: string, destination: string, transpile: boolean) {
+  // Physical owners may be realpaths in the package-manager store, so protected-path checks are owner-relative.
+  function inventory(source: string, destination: string, transpile: boolean, base: string) {
     for (const entry of readdirSync(source, { withFileTypes: true })) {
       if (
         entry.isSymbolicLink() ||
@@ -166,9 +167,9 @@ export async function planRemotionLibraryAssets(root: string, seeds: readonly st
         continue;
       const from = join(source, entry.name);
       const to = join(destination, entry.name).replaceAll("\\", "/");
-      if (entry.isDirectory()) inventory(from, to, transpile);
+      if (entry.isDirectory()) inventory(from, to, transpile, base);
       else if (entry.isFile() && !/\.d\.ts$|\.map$|\.(?:test|spec)\.[^.]+$/.test(entry.name)) {
-        const member = relative(resolve(root, "../.."), from);
+        const member = relative(base, from);
         if (
           isAbsolute(member) ||
           member.startsWith("..") ||
@@ -185,8 +186,8 @@ export async function planRemotionLibraryAssets(root: string, seeds: readonly st
     }
   }
   for (const owner of owners.values()) {
-    if (owner.workspace) inventory(join(owner.directory, "src"), owner.destination + "/src", true);
-    else inventory(owner.directory, owner.destination, false);
+    if (owner.workspace) inventory(join(owner.directory, "src"), owner.destination + "/src", true, resolve(root, "../.."));
+    else inventory(owner.directory, owner.destination, false, owner.directory);
   }
   return { owners: [...owners.values()], files, bytes, skipped };
 }

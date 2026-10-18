@@ -86,10 +86,12 @@ export class VideoCatalog {
   readonly db: Database;
 
   constructor(path: string = defaultVideoCatalogPath()) {
+    // The cutover marker protects the production catalog only; explicit fixture files stay usable.
+    const production = path === defaultVideoCatalogPath();
     if (
       path !== ":memory:" &&
       (Bun.env.BUN_VIDEO_CATALOG_BACKEND === "neon" ||
-        existsSync(join(dirname(dirname(dirname(defaultVideoCatalogPath()))), "config", "bun-video-neon.active")))
+        (production && existsSync(join(dirname(dirname(dirname(path))), "config", "bun-video-neon.active"))))
     )
       throw new Error("Bun Video Neon cutover forbids SQLite writers");
     if (path !== ":memory:") mkdirSync(dirname(path), { recursive: true });

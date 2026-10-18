@@ -287,6 +287,8 @@ test("metadata CLI persists observed movie references without authentication or 
           ...process.env,
           BUN_BE_BUN: "1",
           BUN_DEBUG_QUIET_LOGS: "1",
+          // Isolate the cutover marker of the operator's production catalog from this fixture.
+          APHRODY_HOME: directory,
           BUN_VIDEO_CRUNCHYROLL_ACCESS_TOKEN: undefined,
           BUN_VIDEO_CRUNCHYROLL_API_TOKEN: undefined,
         },
