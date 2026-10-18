@@ -5243,6 +5243,8 @@
     "@types/dom-mediacapture-transform": "0.1.11",
     "@types/dom-webcodecs": "0.1.13",
     "@types/node": "22.20.0",
+    "@types/ws": "8.18.2",
+    "@webgpu/types": "0.1.74",
     "acorn": "8.19.0",
     "acorn-walk": "8.3.5",
     "adm-zip": "0.6.1",

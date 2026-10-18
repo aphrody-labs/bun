@@ -1,4 +1,4 @@
-import { mkdir, realpath, symlink, lstat } from "node:fs/promises";
+import { mkdir, readdir, realpath, rm, symlink, lstat } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import type * as TypeScript from "../mediabunny/node_modules/typescript";
 import type * as ApiExtractor from "../mediabunny/node_modules/@microsoft/api-extractor";
@@ -98,9 +98,17 @@ export async function producerReactTypes(root = packageRoot) {
     ["@types/react", "react"],
     ["@types/react-dom", "react-dom"],
   ] as const) {
-    const file = Bun.resolveSync(name + "/package.json", join(root, "remotion/core"));
+    // Resolve the catalog-pinned version inside this package's own install store, not the workspace root's
+    // (which pins a different React major and lives outside the package).
+    const version = manifest.workspaces.catalog[name];
+    const storeName = `${name.replace("/", "+")}@${version}`;
+    const store = join(root, "node_modules/.bun");
+    const matches = (await readdir(store)).filter(entry => entry === storeName || entry.startsWith(storeName + "+"));
+    if (matches.length !== 1)
+      throw new Error("Producer React declarations are not installed at the captured catalog version");
+    const file = join(store, matches[0]!, "node_modules", name, "package.json");
     const metadata = await Bun.file(file).json();
-    if (metadata.name !== name || metadata.version !== manifest.workspaces.catalog[name])
+    if (metadata.name !== name || metadata.version !== version)
       throw new Error("Producer React declarations diverge from the captured catalog");
     const prefix = "./" + relative(root, dirname(file)).replaceAll("\\", "/");
     if (prefix.startsWith("./../")) throw new Error("Producer React types escape the captured package owners");
@@ -393,20 +401,18 @@ export async function emitDeclarationSurface(
   };
   trace("configure-rollup");
   const aggregate = join(stage, "public-aggregate.d.ts");
-  await Bun.write(
-    aggregate,
-    options.entries
-      .map(
-        (entry, index) =>
-          `export * as Public${index} from ${JSON.stringify(
-            "./" +
-              relative(stage, join(stage, declarationFor(emittedMember(entry))))
-                .replaceAll("\\", "/")
-                .replace(/\.d\.ts$/, ""),
-          )};`,
-      )
-      .join("\n") + "\n",
+  // Emitted declarations reference the ambient "bun" module; the analysis program must load its owner explicitly.
+  const bunReference = options.canonicalBunTypes ? '/// <reference types="@aphrody/bun-types" />\n' : "";
+  const exports = options.entries.map(
+    (entry, index) =>
+      `export * as Public${index} from ${JSON.stringify(
+        "./" +
+          relative(stage, join(stage, declarationFor(emittedMember(entry))))
+            .replaceAll("\\", "/")
+            .replace(/\.d\.ts$/, ""),
+      )};`,
   );
+  await Bun.write(aggregate, bunReference + exports.join("\n") + "\n");
   const prepare = () =>
     api.ExtractorConfig.prepare({
       configObject: {
@@ -587,6 +593,8 @@ export async function buildLibraryDeclarations(root = packageRoot, checkOnly = f
   const parsed = compiler.parseJsonConfigFileContent(config.config, compiler.sys, root);
   if (parsed.errors.length) throw new Error("Canonical source type configuration is invalid");
   Object.assign((parsed.options.paths ??= {}), await producerReactTypes(root));
+  // @babel/parser's typings are resolved from the global store, which has no @babel/types sibling; map the owned copy.
+  parsed.options.paths["@babel/types"] = ["./node_modules/@babel/types/lib/index.d.ts"];
   parsed.options.typeRoots = [...new Set([...(parsed.options.typeRoots ?? []), join(root, "node_modules/@types")])];
   parsed.options.types = [...new Set([...(parsed.options.types ?? []), "dom-mediacapture-transform"])];
   parsed.options.rootDir = resolve(root, "../..");
@@ -607,7 +615,13 @@ export async function buildLibraryDeclarations(root = packageRoot, checkOnly = f
     sdkPath !== (await realpath(join(sdkRoot, sdkEntry)))
   )
     throw new Error("Installed SDK HLS owner diverges from its package pin");
-  parsed.options.paths["@aphrody/bun-runtime-sdk/video/hls"] = [relative(root, sdkPath).replaceAll("\\", "/")];
+  // The installed SDK lives in the global store, outside the workspace source root. Its HLS module is
+  // self-contained (no imports), so the pinned bytes are copied into the owned build tree before analysis.
+  const sdkOwned = resolve(root, "../tmp/bun-video-build/owners/bun-runtime-sdk/video/hls.ts");
+  await rm(dirname(dirname(sdkOwned)), { recursive: true, force: true });
+  await mkdir(dirname(sdkOwned), { recursive: true });
+  await Bun.write(sdkOwned, await Bun.file(sdkPath).bytes());
+  parsed.options.paths["@aphrody/bun-runtime-sdk/video/hls"] = [relative(root, sdkOwned).replaceAll("\\", "/")];
   const manifests = await Promise.all(
     absorbedFamilies.map(async family =>
       Object.values(await familyManifests(join(root, family))).map(manifest => manifest.name),
@@ -620,7 +634,7 @@ export async function buildLibraryDeclarations(root = packageRoot, checkOnly = f
       stage: resolve(root, "../tmp/bun-video-build/declarations"),
       output: resolve(root, "../tmp/bun-video-build/declarations/public"),
       entries,
-      additionalSources: [sdkPath],
+      additionalSources: [sdkOwned],
       ambientDeclarations: [
         {
           source: join(captureRoot, "index.d.ts"),
