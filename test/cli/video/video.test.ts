@@ -24,7 +24,7 @@ test("bun video help lists native operations and the optional compiled extension
   for (const args of [[], ["--help"], ["frame", "--help"]]) {
     const result = await run(args, String(directory));
     expect(result.stderr).toBe("");
-    for (const name of ["info", "metadata", "frame", "frames", "audio", "gif", "remux"])
+    for (const name of ["info", "metadata", "frame", "frames", "audio", "gif", "remux", "hls"])
       expect(result.stdout).toContain(`  ${name} `);
     expect(result.stdout).toContain("Existing output files are refused");
     expect(result.stdout).toContain("qualified adjacent bun-video");
@@ -112,6 +112,7 @@ describe.skipIf(!available)("bun video native MP4 owner", () => {
       [["frames", "missing.mp4", "frames", "--end", "65"], "at most 64 frames", "frames"],
       [["audio", "missing.mp4", "audio.wav", "--duration", "31"], "Audio requires", "audio.wav"],
       [["gif", "missing.mp4", "output.gif", "--duration", "6"], "GIF requires", "output.gif"],
+      [["hls", "missing.mp4", "hls-out", "--segment-seconds", "61"], "--segment-seconds must be within", "hls-out"],
       [["frame", "missing.mp4", "output.png", "--time", "NaN"], "finite non-negative", "output.png"],
       [["frame", "missing.mp4", "output.png", "--format=png=extra"], "Unsupported frame output format", "output.png"],
     ] as const) {

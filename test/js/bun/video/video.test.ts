@@ -92,6 +92,11 @@ test("Video validates fluent Image operations and bounded native jobs before rea
   expect(() => video.gif({ duration: 6 })).toThrow("duration");
   expect(() => video.gif({ duration: 1, fps: 1.5 })).toThrow("fps");
   expect(() => video.remux("\0")).toThrow("without NUL");
+  expect(() => video.hls("\0")).toThrow("without NUL");
+  expect(() => video.hls(5 as any)).toThrow("directory path");
+  expect(() => video.hls("out", 5 as any)).toThrow("options must be an object");
+  for (const segmentSeconds of [0.4, 61, NaN, Infinity])
+    expect(() => video.hls("out", { segmentSeconds })).toThrow("segmentSeconds");
   expect(Bun.Video.decoder).toBe("filmcraft");
 });
 
