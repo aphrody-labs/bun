@@ -99,8 +99,17 @@ interface NativeVideoInstance {
     readonly step: number;
     readonly maxFrames: number;
   }): Promise<readonly { readonly time: number; readonly bytes: Uint8Array }[]>;
-  audio(options: { readonly start: number; readonly duration: number; readonly sampleRate: number }): Promise<Uint8Array>;
-  gif(options: { readonly start: number; readonly duration: number; readonly fps: number; readonly width: number }): Promise<Uint8Array>;
+  audio(options: {
+    readonly start: number;
+    readonly duration: number;
+    readonly sampleRate: number;
+  }): Promise<Uint8Array>;
+  gif(options: {
+    readonly start: number;
+    readonly duration: number;
+    readonly fps: number;
+    readonly width: number;
+  }): Promise<Uint8Array>;
   remux(output: string): Promise<void>;
 }
 
