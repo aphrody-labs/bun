@@ -11,6 +11,7 @@ import {
   type ShowcaseAsset,
   type ShowcaseEvidence,
   type ShowcaseManifest,
+  type ShowcaseWork,
 } from "../src/apps/showcase/collection";
 
 const output = Bun.env.BUN_VIDEO_SHOWCASE_OUTPUT;
@@ -159,7 +160,6 @@ if (source) {
           description: `Image extraite à ${time} secondes de l’épisode Shenron 876, transformée avec Bun.Video et Bun.Image.`,
           engine: id === "reference" ? "filmcraft" : "native",
           artwork: "terrain",
-          palette: ["#080f27", "#4268ff", "#a1f2ff"],
           features: ["Bun.Video", "Bun.Image", id],
           durationFrames: 1,
           fps: { num: metadata.fpsNumerator, den: metadata.fpsDenominator },
@@ -229,7 +229,6 @@ if (source) {
       description: "Deux secondes de l’épisode, décodées et exportées en GIF par Bun.Video.",
       engine: "filmcraft",
       artwork: "wave",
-      palette: ["#080f27", "#4268ff", "#a1f2ff"],
       features: ["GIF", "native-decoder", "bounded-export"],
       durationFrames: 24,
       fps: { num: 12, den: 1 },
@@ -383,6 +382,15 @@ try {
           code: "m3IconSVG(await prepareM3Video({ kind: 'logo', bytes }))",
         },
       ];
+      const sourceStill = Bun.file(join(directory, "native/reference.webp"));
+      if (await sourceStill.exists()) {
+        inputs.push({
+          id: "shenron-image",
+          title: "Beerus, de Bun.Video vers M3",
+          input: { kind: "image", bytes: await sourceStill.bytes(), format: "raster", label: "Beerus · Shenron" },
+          code: "new Bun.Video(source).frame(48).resize(960, 540)",
+        });
+      }
       const assets: ShowcaseAsset[] = [];
       for (const demo of inputs) {
         const plan = await prepareM3Video(demo.input, { seed: "#e76f9b", dark: true, ...dimensions });
@@ -416,6 +424,7 @@ try {
           nativeExecutable: Bun.env.BUN_VIDEO_NATIVE_EXECUTABLE!,
           output: join(directory, videoFile),
         });
+        files.delete(documentFile);
         const mp4 = await Bun.file(join(directory, videoFile)).bytes();
         assets.push(await write(videoFile, mp4, "video/mp4"));
         const work: ShowcaseWork = {
@@ -504,6 +513,11 @@ try {
   server.stop(true);
 }
 manifest.works = manifest.works.filter(work => Boolean(work.video));
+for (const file of files) {
+  if (/^(frames|native|proofs|m3|sources)\//.test(file)) files.delete(file);
+}
+manifest.works = manifest.works.map(work => ({ ...work, frames: undefined, preview: undefined, mediaType: undefined }));
+manifest.evidence = manifest.evidence.map(row => ({ ...row, assets: row.assets.filter(asset => files.has(asset.file)) }));
 await write("showcase.json", JSON.stringify(manifest, null, 2), "application/json");
 await Bun.write(
   join(privateDirectory, "upload-plan.json"),
