@@ -44,8 +44,8 @@ const MEDIA_EXTENSIONS = new Set([".mp4", ".mov", ".mkv", ".webm"]);
 
 function isYouTubeUrl(url: URL): boolean {
   const hostname = url.hostname.toLowerCase().replace(/\.$/, "");
-  return ["youtube.com", "youtu.be", "youtube-nocookie.com"].some(domain =>
-    hostname === domain || hostname.endsWith(`.${domain}`),
+  return ["youtube.com", "youtu.be", "youtube-nocookie.com"].some(
+    domain => hostname === domain || hostname.endsWith(`.${domain}`),
   );
 }
 
@@ -400,7 +400,8 @@ export function createVideoWebApp(options: VideoWebAppOptions): VideoWebApp {
       const recent = (youtubeSearchWindow.get(client) ?? []).filter(time => now - time < 60_000);
       if (recent.length >= 10) return json({ error: "rate_limited" }, 429);
       if (youtubeSearchWindow.size >= 4096 && !youtubeSearchWindow.has(client)) {
-        for (const [key, times] of youtubeSearchWindow) if (!times.some(time => now - time < 60_000)) youtubeSearchWindow.delete(key);
+        for (const [key, times] of youtubeSearchWindow)
+          if (!times.some(time => now - time < 60_000)) youtubeSearchWindow.delete(key);
         if (youtubeSearchWindow.size >= 4096) return json({ error: "rate_limited" }, 429);
       }
       recent.push(now);
@@ -421,22 +422,30 @@ export function createVideoWebApp(options: VideoWebAppOptions): VideoWebApp {
           const item = value as { id?: { videoId?: unknown }; snippet?: Record<string, unknown> };
           const id = item.id?.videoId;
           const snippet = item.snippet;
-          if (typeof id !== "string" || !/^[A-Za-z0-9_-]{11}$/.test(id) || !snippet || typeof snippet.title !== "string") return [];
+          if (
+            typeof id !== "string" ||
+            !/^[A-Za-z0-9_-]{11}$/.test(id) ||
+            !snippet ||
+            typeof snippet.title !== "string"
+          )
+            return [];
           const thumbnails = snippet.thumbnails as { medium?: { url?: unknown }; high?: { url?: unknown } } | undefined;
           const thumbnail = thumbnails?.high?.url ?? thumbnails?.medium?.url;
-          return [{
-            id,
-            title: snippet.title.slice(0, 300),
-            description: typeof snippet.description === "string" ? snippet.description.slice(0, 1200) : "",
-            channelTitle: typeof snippet.channelTitle === "string" ? snippet.channelTitle.slice(0, 160) : "",
-            publishedAt: typeof snippet.publishedAt === "string" ? snippet.publishedAt : "",
-            ...(typeof thumbnail === "string" && /^https:\/\/([a-z0-9-]+\.)?ytimg\.com\//.test(thumbnail)
-              ? { thumbnail }
-              : {}),
-            provider: "YouTube" as const,
-            player: `https://www.youtube-nocookie.com/embed/${id}`,
-            source: `https://www.youtube.com/watch?v=${id}`,
-          }];
+          return [
+            {
+              id,
+              title: snippet.title.slice(0, 300),
+              description: typeof snippet.description === "string" ? snippet.description.slice(0, 1200) : "",
+              channelTitle: typeof snippet.channelTitle === "string" ? snippet.channelTitle.slice(0, 160) : "",
+              publishedAt: typeof snippet.publishedAt === "string" ? snippet.publishedAt : "",
+              ...(typeof thumbnail === "string" && /^https:\/\/([a-z0-9-]+\.)?ytimg\.com\//.test(thumbnail)
+                ? { thumbnail }
+                : {}),
+              provider: "YouTube" as const,
+              player: `https://www.youtube-nocookie.com/embed/${id}`,
+              source: `https://www.youtube.com/watch?v=${id}`,
+            },
+          ];
         });
         return json({ provider: "YouTube", items });
       } catch {

@@ -146,11 +146,7 @@ describe("official YouTube discovery", () => {
       },
     });
     expect(
-      (
-        await youtubeApp.fetch(
-          new Request(`https://video.example/api/youtube/search?q=${"x".repeat(161)}`),
-        )
-      ).status,
+      (await youtubeApp.fetch(new Request(`https://video.example/api/youtube/search?q=${"x".repeat(161)}`))).status,
     ).toBe(400);
     for (let index = 0; index < 10; index++) {
       expect(
