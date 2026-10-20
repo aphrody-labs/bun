@@ -95,7 +95,7 @@ for (const entry of ["app", "preview"] as const) {
     );
   await write(
     entry === "app" ? "index.html" : "preview.html",
-    html(entry, entry === "app" ? "Bun Video — Showcase" : "Bun Video — Composition"),
+    html(entry, entry === "app" ? "Aphrody Video — Bun Video Studio" : "Aphrody Video — Composition"),
     "text/html",
   );
 }

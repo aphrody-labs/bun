@@ -176,6 +176,65 @@ function Film({
   );
 }
 
+function Discover({ manifest }: { manifest: ShowcaseManifest }) {
+  const [query, setQuery] = useState(new URLSearchParams(location.search).get("q") ?? "");
+  const [filter, setFilter] = useState("Tout voir");
+  const [selected, setSelected] = useState<Work | null>(() =>
+    location.pathname === "/watch" ? manifest.works.find(work => work.id === new URLSearchParams(location.search).get("v")) ?? null : null,
+  );
+  const [saved, setSaved] = useState<string[]>(() => {
+    try { const parsed: unknown = JSON.parse(localStorage.getItem("aphrody-video:saved:v1") ?? "[]"); return Array.isArray(parsed) ? parsed.filter((id): id is string => typeof id === "string") : []; }
+    catch { return []; }
+  });
+  useEffect(() => {
+    const restore = () => setSelected(location.pathname === "/watch" ? manifest.works.find(work => work.id === new URLSearchParams(location.search).get("v")) ?? null : null);
+    window.addEventListener("popstate", restore);
+    return () => window.removeEventListener("popstate", restore);
+  }, [manifest]);
+  const filters = ["Tout voir", "Remotion", "HyperFrames", "FilmCraft", "Bun.Image", "Material 3"];
+  const works = manifest.works.filter(work => {
+    const filterText = `${work.engine} ${work.features.join(" ")} ${work.chapter ?? ""}`.toLowerCase();
+    const selectedFilter = filter === "Tout voir" || filterText.includes(filter.toLowerCase());
+    const search = `${work.title} ${work.description} ${work.engine} ${work.features.join(" ")}`.toLowerCase();
+    return selectedFilter && (!query || search.includes(query.toLowerCase())) && (location.pathname !== "/playlist/saved" || saved.includes(work.id));
+  });
+  const open = (work: Work) => { setSelected(work); history.pushState({}, "", `/watch?v=${encodeURIComponent(work.id)}`); };
+  const close = () => { setSelected(null); history.pushState({}, "", query ? `/?q=${encodeURIComponent(query)}` : "/"); };
+  const toggleSaved = (id: string) => setSaved(old => {
+    const next = old.includes(id) ? old.filter(item => item !== id) : [...old, id];
+    localStorage.setItem("aphrody-video:saved:v1", JSON.stringify(next));
+    return next;
+  });
+  const seconds = (work: Work) => (work.durationFrames * work.fps.den) / work.fps.num;
+  const stamp = (value: number) => `${Math.floor(value / 60)}:${String(Math.floor(value % 60)).padStart(2, "0")}`;
+  const view = location.pathname === "/studio" ? "studio" : location.pathname === "/about" ? "about" : location.pathname === "/playlist/saved" ? "saved" : "discover";
+  return <div className="video-app">
+    <header className="video-header">
+      <a className="video-brand" href="/" aria-label="Aphrody Video, accueil"><span className="brand-icon">B</span><strong>aphrody<span>video</span></strong><small>{manifest.works.length} FILMS</small></a>
+      <form className="video-search" onSubmit={event => { event.preventDefault(); history.pushState({}, "", `/?q=${encodeURIComponent(query)}`); }}>
+        <label className="sr-only" htmlFor="video-search">Rechercher dans le catalogue</label><input id="video-search" type="search" value={query} onChange={event => setQuery(event.target.value)} placeholder="Rechercher une vidéo, un moteur…" /><button aria-label="Rechercher" type="submit">⌕</button>
+      </form>
+      <a className="create-link" href="/studio"><span>＋</span> Créer</a>
+    </header>
+    <aside className="video-sidebar" aria-label="Navigation"><nav>
+      <a href="/" className={view === "discover" ? "nav-active" : ""}><b>⌂</b> Découvrir</a><a href="/shorts"><b>▣</b> Shorts</a><a href="/playlist/saved" className={view === "saved" ? "nav-active" : ""}><b>♡</b> À regarder{saved.length ? ` · ${saved.length}` : ""}</a>
+      <div className="side-divider"/><label>STUDIO BUN</label><a href="/studio" className={view === "studio" ? "nav-active" : ""}><b>✳</b> Pipeline créative</a><a href="/about" className={view === "about" ? "nav-active" : ""}><b>◉</b> À propos</a>
+    </nav><div className="sidebar-foot"><span className="mini-mark">B</span><span><strong>Propulsé par Bun</strong><small>FilmCraft · Remotion · HyperFrames</small></span></div></aside>
+    <main className="video-main">
+      {selected ? <div className="watch-page">
+        <button className="watch-back" onClick={close}>← Retour au catalogue</button>
+        <div className="watch-columns"><section className="watch-primary"><div className="watch-player"><video key={selected.id} src={asset(selected.video!)} poster={selected.poster ? asset(selected.poster) : undefined} controls playsInline autoPlay preload="auto" aria-label={selected.title}>{selected.captions && <track kind="captions" src={asset(selected.captions)} srcLang="fr" label="Français" default />}</video></div><div className="watch-meta"><span>{selected.engine} · {selected.chapter ?? "Démonstration Bun Video"} · {stamp(seconds(selected))}</span><h1>{selected.title}</h1><p>{selected.description}</p><div className="watch-buttons"><b>Aphrody <small>Le média, côté Bun</small></b><button onClick={() => toggleSaved(selected.id)} aria-pressed={saved.includes(selected.id)}>{saved.includes(selected.id) ? "♥ Enregistré" : "♡ Enregistrer"}</button><button onClick={() => navigator.clipboard?.writeText(location.href)}>↗ Partager</button><a href={`/shorts?v=${encodeURIComponent(selected.id)}`}>Plein écran · Shorts ↗</a></div></div><details className="work-proof"><summary>Voir la source et les preuves</summary><p>{selected.width} × {selected.height} · {selected.fps.num}/{selected.fps.den} i/s · {selected.features.join(" · ")}</p><p>{selected.sourceRef ?? "packages/bun-video/src/apps/showcase"}</p><p>{selected.evidence.join(" · ") || "Aucune preuve associée."}</p>{selected.code && <pre>{selected.code}</pre>}</details></section><aside className="watch-related"><h2>À suivre</h2>{manifest.works.filter(work => work.id !== selected.id).slice(0, 7).map(work => <button key={work.id} onClick={() => open(work)} className="related-video"><span>{(work.poster ?? work.preview) && <img src={asset((work.poster ?? work.preview)!)} alt=""/>}<i>{stamp(seconds(work))}</i></span><b>{work.title}<small>Aphrody · {work.engine}</small><small>{work.chapter ?? work.features.slice(0, 2).join(" · ")}</small></b></button>)}</aside></div>
+      </div> : view === "studio" || view === "about" ? <section className="studio-page"><p className="kicker">{view === "studio" ? "BUN VIDEO / WORKSPACE" : "APHRODY × BUN"}</p><h1>{view === "studio" ? <>Une source.<br/><em>Tout un studio.</em></> : <>Le runtime<br/><em>devient studio.</em></>}</h1><p className="studio-intro">Un pipeline pour comprendre, éditer, composer et publier la vidéo — du décodage natif aux scènes Remotion et HyperFrames.</p><div className="pipeline-row">{[["01", "Source", "Fichier · URL · HLS · DASH"], ["02", "Lire", "Bun.Video · MediaBunny · lecteurs web"], ["03", "Transformer", "FilmCraft · Bun.Image · coupe · audio"], ["04", "Composer", "Remotion + HyperFrames · M3"], ["05", "Exporter", "MP4 · WebM · MOV · MKV · GIF · HLS"]].map(([number, title, body]) => <article key={number}><span>{number}</span><h2>{title}</h2><p>{body}</p></article>)}</div><div className="studio-proof"><strong>Une seule pipeline créative. Plusieurs moteurs.</strong><p>Formats et codecs disponibles selon la source, le navigateur et le backend qualifié. FilmCraft, Bun.Video et Bun.Image partagent le média natif; Remotion et HyperFrames apportent deux moteurs de composition.</p><a href="/showcase.json">Catalogue de {manifest.works.length} œuvres et preuves →</a></div></section> : <>
+        <section className="video-hero"><div><p className="kicker">LE LABORATOIRE VIDÉO DE BUN</p><h1>Chaque frame.<br/><em>Une nouvelle idée.</em></h1><p>Des films générés avec Remotion, HyperFrames, FilmCraft et les APIs natives de Bun.</p><a href="/studio">Entrer dans le studio <span>→</span></a></div><div className="hero-symbol" aria-hidden="true"><i/><i/><i/><b>B</b><small>BUN VIDEO</small></div></section>
+        <div className="category-strip" role="group" aria-label="Filtrer les vidéos">{filters.map(item => <button key={item} className={filter === item ? "category-current" : ""} onClick={() => setFilter(item)} aria-pressed={filter === item}>{item}</button>)}</div>
+        <section className="catalog-section"><div className="catalog-heading"><div><p className="kicker">{view === "saved" ? "VOTRE SÉLECTION" : query ? "RECHERCHE" : "LES FILMS DU LAB"}</p><h2>{view === "saved" ? "À regarder plus tard" : query ? `Résultats pour « ${query} »` : "Une idée. Plusieurs moteurs."}</h2></div><a href="/shorts">Parcourir en Shorts ↗</a></div>
+          {works.length ? <div className="catalog-grid">{works.map(work => <article className="catalog-card" key={work.id}><button className="catalog-poster" onClick={() => open(work)} aria-label={`Lire ${work.title}`}>{(work.poster ?? work.preview) && <img src={asset((work.poster ?? work.preview)!)} loading="lazy" alt=""/>}<span>{stamp(seconds(work))}</span><i>▶</i></button><div className="catalog-copy"><b><a href={`/watch?v=${encodeURIComponent(work.id)}`} onClick={event => { event.preventDefault(); open(work); }}>{work.title}</a></b><small>Aphrody · {work.engine}</small><small>{work.chapter ?? work.features.slice(0, 2).join(" · ")} · {work.width} × {work.height}</small><button className="catalog-save" aria-label={`${saved.includes(work.id) ? "Retirer" : "Enregistrer"} ${work.title}`} aria-pressed={saved.includes(work.id)} onClick={() => toggleSaved(work.id)}>{saved.includes(work.id) ? "♥" : "♡"}</button></div></article>)}</div> : <div className="catalog-empty"><b>◌</b><h3>Aucun film dans cette sélection</h3><p>Essayez un autre moteur ou une recherche différente.</p><button onClick={() => { setFilter("Tout voir"); setQuery(""); }}>Tout explorer</button></div>}
+        </section><footer className="video-footer"><b><span className="mini-mark">B</span> aphrodyvideo</b><span>Un site. Une pipeline. Des possibilités infinies.</span><a href="/showcase.json">Manifeste & preuves</a><small>Bun {manifest.runtime.version}</small></footer>
+      </>}
+    </main>
+  </div>;
+}
+
 function App() {
   const [manifest, setManifest] = useState<ShowcaseManifest>();
   const [error, setError] = useState("");
@@ -185,7 +244,7 @@ function App() {
   const feed = useRef<HTMLElement>(null);
   useEffect(() => {
     // Canonical Bun M3 token generator; no separate showcase palette.
-    applyDynamicColor("#65558f", { dark: true });
+    applyDynamicColor("#f4722b", { dark: true });
     const preference = matchMedia("(prefers-reduced-motion: reduce)");
     const update = () => setReduced(preference.matches);
     preference.addEventListener("change", update);
@@ -211,7 +270,10 @@ function App() {
     return () => controller.abort();
   }, []);
   useEffect(() => {
-    if (!manifest || !feed.current) return;
+    if (!manifest || !feed.current || !location.pathname.startsWith("/shorts")) return;
+    const workId = new URLSearchParams(location.search).get("v");
+    const initial = workId ? manifest.works.findIndex(work => work.id === workId) : 0;
+    if (initial >= 0) setActive(initial);
     const observer = new IntersectionObserver(
       entries => {
         for (const entry of entries)
@@ -254,6 +316,7 @@ function App() {
         block: "start",
       });
   };
+  if (manifest && !location.pathname.startsWith("/shorts")) return <Discover manifest={manifest} />;
   return (
     <main ref={feed} className="timeline" aria-label="Timeline des vidéos Aphrody" tabIndex={0} onKeyDown={page}>
       {!manifest && (

@@ -6,6 +6,7 @@ export async function serveShowcase(request, env) {
   try { key = decodeURIComponent(url.pathname).slice(1) || 'index.html'; }
   catch { return new Response('Bad path', { status: 400 }); }
   if (!/^[a-zA-Z0-9/_.,-]+$/.test(key) || key.split('/').some(part => part === '..' || part === '.' || part.startsWith('.'))) return new Response('Not found', { status: 404 });
+  if (['shorts', 'watch', 'studio', 'about', 'playlist/saved'].includes(key)) key = 'index.html';
   const headers = new Headers({
     'X-Content-Type-Options': 'nosniff',
     'Referrer-Policy': 'strict-origin-when-cross-origin',

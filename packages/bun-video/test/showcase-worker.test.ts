@@ -34,6 +34,26 @@ test("showcase maps the root into its versioned R2 namespace and streams bytes",
   expect(response.headers.get("Content-Range")).toBeNull();
 });
 
+test("video product routes serve the same app shell for client-side navigation", async () => {
+  const keys: string[] = [];
+  const env = {
+    SHOWCASE_PREFIX: "showcase/test-v1",
+    SHOWCASE: {
+      async head() { return null; },
+      async get(key: string) {
+        keys.push(key);
+        return { size: 4, httpEtag: '"app"', body: new Blob(["app!"]).stream(), writeHttpMetadata(headers: Headers) { headers.set("Content-Type", "text/html"); } };
+      },
+    },
+  };
+  for (const path of ["/shorts", "/watch?v=remotion-orbital", "/studio", "/about", "/playlist/saved"]) {
+    const response = await serveShowcase(new Request(`https://video.aphrody.com${path}`), env);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Content-Type")).toBe("text/html");
+  }
+  expect(keys).toEqual(Array(5).fill("showcase/test-v1/index.html"));
+});
+
 test("showcase serves HEAD and byte ranges without buffering the object", async () => {
   const object = {
     size: 100,
