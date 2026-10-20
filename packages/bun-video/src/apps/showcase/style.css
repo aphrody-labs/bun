@@ -1,6 +1,13 @@
+@font-face {
+  font-family: "Roboto Flex";
+  src: url("/fonts/RobotoFlex-latin.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 100 1000;
+  font-display: swap;
+}
 :root {
   color-scheme: dark;
-  font-family: var(--md-ref-typeface-plain);
+  font-family: var(--md-ref-typeface-plain), "Roboto Flex", sans-serif;
   color: var(--md-sys-color-on-surface);
   background: var(--md-sys-color-surface);
   font-synthesis: none;

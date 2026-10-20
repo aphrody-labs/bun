@@ -90,7 +90,7 @@ for (const entry of ["app", "preview"] as const) {
   if (!files.has(`${entry}.css`))
     await write(
       `${entry}.css`,
-      '@font-face{font-family:Showcase;src:url("/fonts/archivo.ttf") format("truetype");font-weight:100 900}html,body,#root{margin:0;width:100%;height:100%;overflow:hidden}',
+      '@font-face{font-family:"Roboto Flex";src:url("/fonts/RobotoFlex-latin.woff2") format("woff2");font-style:normal;font-weight:100 1000;font-display:swap}html,body,#root{margin:0;width:100%;height:100%;overflow:hidden}',
       "text/css",
     );
   await write(
@@ -105,9 +105,9 @@ for (const name of ["collection.ts", "artwork.tsx", "preview.tsx", "remotion.tsx
     await Bun.file(resolve(import.meta.dir, `../src/apps/showcase/${name}`)).bytes(),
     "text/plain",
   );
-const fonts = resolve(import.meta.dir, "../../aphrody-migrated/m3/aphrody-m3/forks/fonts/ofl/archivo");
-await write("fonts/archivo.ttf", await Bun.file(join(fonts, "Archivo[wdth,wght].ttf")).bytes(), "font/ttf");
-await write("fonts/OFL.txt", await Bun.file(join(fonts, "OFL.txt")).bytes(), "text/plain");
+const fonts = resolve(import.meta.dir, "../../aphrody-migrated/m3/aphrody-m3/packages/m3-fonts/fonts");
+await write("fonts/RobotoFlex-latin.woff2", await Bun.file(join(fonts, "web/RobotoFlex-latin.woff2")).bytes(), "font/woff2");
+await write("fonts/OFL.txt", await Bun.file(join(fonts, "RobotoFlex-OFL.txt")).bytes(), "text/plain");
 const source = Bun.env.BUN_VIDEO_SHOWCASE_SOURCE;
 if (source) {
   const expected = Bun.env.BUN_VIDEO_SHOWCASE_SOURCE_SHA256;
