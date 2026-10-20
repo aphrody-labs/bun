@@ -27,13 +27,36 @@ dependencies = [
 ]
 
 [[package]]
+name = "accesskit"
+version = "0.24.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d3b7f7f85a7e5f68090000ed7622545829afd484d210358702ae4cb97dd0c320"
+dependencies = [
+ "uuid",
+]
+
+[[package]]
 name = "accesskit_atspi_common"
 version = "0.15.0"
 source = "git+https://github.com/wash2/accesskit?rev=6c20249#6c20249d3b9fd45e7002efad9f6b6171a9257912"
 dependencies = [
- "accesskit",
- "accesskit_consumer",
+ "accesskit 0.22.0",
+ "accesskit_consumer 0.32.0",
  "atspi-common",
+ "serde",
+ "zvariant 5.15.0",
+]
+
+[[package]]
+name = "accesskit_atspi_common"
+version = "0.18.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1e8c61bee90b42a772d39d06a740207dc71a4e780004ace1db8d99fb1baaa954"
+dependencies = [
+ "accesskit 0.24.1",
+ "accesskit_consumer 0.36.0",
+ "atspi-common",
+ "phf 0.13.1",
  "serde",
  "zvariant 5.15.0",
 ]
@@ -43,7 +66,37 @@ name = "accesskit_consumer"
 version = "0.32.0"
 source = "git+https://github.com/wash2/accesskit?rev=6c20249#6c20249d3b9fd45e7002efad9f6b6171a9257912"
 dependencies = [
- "accesskit",
+ "accesskit 0.22.0",
+ "hashbrown 0.16.1",
+]
+
+[[package]]
+name = "accesskit_consumer"
+version = "0.35.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "53cf47daed85312e763fbf85ceca136e0d7abc68e0a7e12abe11f48172bc3b10"
+dependencies = [
+ "accesskit 0.24.1",
+ "hashbrown 0.16.1",
+]
+
+[[package]]
+name = "accesskit_consumer"
+version = "0.36.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "25e0d7e25d06f4dc21d1774d67146e9e80d6789216cbd4d1e88185b0095dba60"
+dependencies = [
+ "accesskit 0.24.1",
+ "hashbrown 0.16.1",
+]
+
+[[package]]
+name = "accesskit_consumer"
+version = "0.38.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5d10a236f96f87d70732e44520046785431ef01d5bcd6b041317bfadd2f88245"
+dependencies = [
+ "accesskit 0.24.1",
  "hashbrown 0.16.1",
 ]
 
@@ -52,8 +105,22 @@ name = "accesskit_macos"
 version = "0.23.0"
 source = "git+https://github.com/wash2/accesskit?rev=6c20249#6c20249d3b9fd45e7002efad9f6b6171a9257912"
 dependencies = [
- "accesskit",
- "accesskit_consumer",
+ "accesskit 0.22.0",
+ "accesskit_consumer 0.32.0",
+ "hashbrown 0.16.1",
+ "objc2 0.5.3",
+ "objc2-app-kit 0.2.2",
+ "objc2-foundation 0.2.2",
+]
+
+[[package]]
+name = "accesskit_macos"
+version = "0.26.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ce02dc63b43f0c9296af9ac946312a2dc8814427d7a64d2d600971dac55b6076"
+dependencies = [
+ "accesskit 0.24.1",
+ "accesskit_consumer 0.38.0",
  "hashbrown 0.16.1",
  "objc2 0.5.3",
  "objc2-app-kit 0.2.2",
@@ -65,8 +132,8 @@ name = "accesskit_unix"
 version = "0.18.0"
 source = "git+https://github.com/wash2/accesskit?rev=6c20249#6c20249d3b9fd45e7002efad9f6b6171a9257912"
 dependencies = [
- "accesskit",
- "accesskit_atspi_common",
+ "accesskit 0.22.0",
+ "accesskit_atspi_common 0.15.0",
  "atspi",
  "futures-lite",
  "serde",
@@ -76,12 +143,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "accesskit_unix"
+version = "0.21.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b016ca8db0ea0ea2ceff29a9d6240391492d960716aa471967c00e8cc8cb197c"
+dependencies = [
+ "accesskit 0.24.1",
+ "accesskit_atspi_common 0.18.1",
+ "async-channel",
+ "async-executor",
+ "async-task",
+ "atspi",
+ "futures-lite",
+ "futures-util",
+ "serde",
+ "zbus 5.19.0",
+]
+
+[[package]]
 name = "accesskit_windows"
 version = "0.30.0"
 source = "git+https://github.com/wash2/accesskit?rev=6c20249#6c20249d3b9fd45e7002efad9f6b6171a9257912"
 dependencies = [
- "accesskit",
- "accesskit_consumer",
+ "accesskit 0.22.0",
+ "accesskit_consumer 0.32.0",
  "hashbrown 0.16.1",
  "static_assertions",
  "windows 0.61.3",
@@ -89,16 +174,44 @@ dependencies = [
 ]
 
 [[package]]
+name = "accesskit_windows"
+version = "0.32.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "eff7009f1a532e917d66970a1e80c965140c6cfbbabbdde3d64e5431e6c78e21"
+dependencies = [
+ "accesskit 0.24.1",
+ "accesskit_consumer 0.35.0",
+ "hashbrown 0.16.1",
+ "static_assertions",
+ "windows 0.62.2",
+ "windows-core 0.62.2",
+]
+
+[[package]]
 name = "accesskit_winit"
 version = "0.30.0"
 source = "git+https://github.com/wash2/accesskit?rev=6c20249#6c20249d3b9fd45e7002efad9f6b6171a9257912"
 dependencies = [
- "accesskit",
- "accesskit_macos",
- "accesskit_unix",
- "accesskit_windows",
+ "accesskit 0.22.0",
+ "accesskit_macos 0.23.0",
+ "accesskit_unix 0.18.0",
+ "accesskit_windows 0.30.0",
  "raw-window-handle 0.6.2",
  "winit 0.31.0-beta.2",
+]
+
+[[package]]
+name = "accesskit_winit"
+version = "0.32.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1fe9a94394896352cc4660ca2288bd4ef883d83238853c038b44070c8f134313"
+dependencies = [
+ "accesskit 0.24.1",
+ "accesskit_macos 0.26.3",
+ "accesskit_unix 0.21.1",
+ "accesskit_windows 0.32.1",
+ "raw-window-handle 0.6.2",
+ "winit 0.30.13",
 ]
 
 [[package]]
@@ -179,6 +292,20 @@ dependencies = [
 
 [[package]]
 name = "aes-gcm"
+version = "0.10.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "831010a0f742e1209b3bcea8fab6a8e149051ba6099432c8cb2cc117dec3ead1"
+dependencies = [
+ "aead 0.5.2",
+ "aes 0.8.4",
+ "cipher 0.4.4",
+ "ctr 0.9.2",
+ "ghash 0.5.1",
+ "subtle",
+]
+
+[[package]]
+name = "aes-gcm"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7f2b8006a0c83f52b62ba44a97b58bf76fe2f70a329e588f67f89691d93d498f"
@@ -186,9 +313,9 @@ dependencies = [
  "aead 0.6.1",
  "aes 0.9.3",
  "cipher 0.5.2",
- "ctr",
+ "ctr 0.10.1",
  "ctutils",
- "ghash",
+ "ghash 0.6.0",
  "zeroize",
 ]
 
@@ -303,6 +430,18 @@ dependencies = [
  "bitflags 1.3.2",
  "libc",
  "nix 0.24.3",
+]
+
+[[package]]
+name = "alsa"
+version = "0.9.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ed7572b7ba83a31e20d1b48970ee402d2e3e0537dcfe0a3ff4d6eb7508617d43"
+dependencies = [
+ "alsa-sys",
+ "bitflags 2.13.2",
+ "cfg-if",
+ "libc",
 ]
 
 [[package]]
@@ -505,6 +644,26 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3bc62ac97cc33321f50863d514c3bc38a453947a8f9e781137e47c7401020aed"
 dependencies = [
  "derive_arbitrary",
+]
+
+[[package]]
+name = "arboard"
+version = "3.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aeb9553e62312c8756a5979254fc6d7da8bbeb5986a1e17037fab932f7037917"
+dependencies = [
+ "clipboard-win",
+ "image",
+ "log",
+ "objc2 0.6.5",
+ "objc2-app-kit 0.3.2",
+ "objc2-core-foundation",
+ "objc2-core-graphics",
+ "objc2-foundation 0.3.2",
+ "parking_lot",
+ "percent-encoding",
+ "windows-sys 0.60.2",
+ "x11rb",
 ]
 
 [[package]]
@@ -2394,14 +2553,14 @@ name = "bun_browser_js"
 version = "1.4.6"
 dependencies = [
  "aes 0.9.3",
- "aes-gcm",
+ "aes-gcm 0.11.1",
  "base64 0.23.1",
  "bun_browser_dom",
  "bun_browser_net",
  "bun_browser_render",
  "bun_core",
  "cbc 0.2.1",
- "ctr",
+ "ctr 0.10.1",
  "deno_core",
  "deno_error",
  "futures-util",
@@ -6627,6 +6786,45 @@ dependencies = [
 ]
 
 [[package]]
+name = "candle-core"
+version = "0.9.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c15b675b80d994b2eadb20a4bbe434eabeb454eac3ee5e2b4cf6f147ee9be091"
+dependencies = [
+ "byteorder",
+ "float8",
+ "gemm",
+ "half",
+ "libm",
+ "memmap2 0.9.11",
+ "num-traits",
+ "num_cpus",
+ "rand 0.9.5",
+ "rand_distr",
+ "rayon",
+ "safetensors 0.7.0",
+ "thiserror 2.0.21",
+ "yoke",
+ "zip",
+]
+
+[[package]]
+name = "candle-nn"
+version = "0.9.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3045fa9e7aef8567d209a27d56b692f60b96f4d0569f4c3011f8ca6715c65e03"
+dependencies = [
+ "candle-core",
+ "half",
+ "libc",
+ "num-traits",
+ "rayon",
+ "safetensors 0.7.0",
+ "serde",
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "cap-primitives"
 version = "4.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6897,6 +7095,15 @@ name = "cfg_aliases"
 version = "0.2.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f079e83a288787bcd14a6aea84cee5c87a67c5a3e660c30f557a3d24761b3527"
+
+[[package]]
+name = "cgl"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0ced0551234e87afee12411d535648dd89d2e7f34c78b753395567aff3d447ff"
+dependencies = [
+ "libc",
+]
 
 [[package]]
 name = "chacha20"
@@ -7309,6 +7516,15 @@ dependencies = [
  "codspeed 2.6.0",
  "colored 2.0.2",
  "criterion 0.5.1",
+]
+
+[[package]]
+name = "color"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2ec7c5eb7a16992b1904d76c517d170ab353b0e0b3d5a0c81a8a0cd1037893cf"
+dependencies = [
+ "bytemuck",
 ]
 
 [[package]]
@@ -7764,6 +7980,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "coreaudio-rs"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1aae284fbaf7d27aa0e292f7677dfbe26503b0d555026f702940805a630eac17"
+dependencies = [
+ "bitflags 1.3.2",
+ "libc",
+ "objc2-audio-toolbox",
+ "objc2-core-audio",
+ "objc2-core-audio-types",
+ "objc2-core-foundation",
+]
+
+[[package]]
 name = "coreaudio-sys"
 version = "0.2.18"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7905,9 +8135,9 @@ version = "0.15.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6d959d90e938c5493000514b446987c07aed46c668faaa7d34d6c7a67b1a578c"
 dependencies = [
- "alsa",
+ "alsa 0.7.1",
  "core-foundation-sys",
- "coreaudio-rs",
+ "coreaudio-rs 0.11.3",
  "dasp_sample",
  "jni 0.19.0",
  "js-sys",
@@ -7922,6 +8152,42 @@ dependencies = [
  "wasm-bindgen-futures",
  "web-sys",
  "windows 0.46.0",
+]
+
+[[package]]
+name = "cpal"
+version = "0.16.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cbd307f43cc2a697e2d1f8bc7a1d824b5269e052209e28883e5bc04d095aaa3f"
+dependencies = [
+ "alsa 0.9.1",
+ "coreaudio-rs 0.13.0",
+ "dasp_sample",
+ "jni 0.21.1",
+ "js-sys",
+ "libc",
+ "mach2",
+ "ndk 0.9.0",
+ "ndk-context",
+ "num-derive 0.4.2",
+ "num-traits",
+ "objc2-audio-toolbox",
+ "objc2-core-audio",
+ "objc2-core-audio-types",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+ "windows 0.54.0",
+]
+
+[[package]]
+name = "cpu-time"
+version = "1.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e9e393a7668fe1fad3075085b86c781883000b4ede868f43627b34a87c8b7ded"
+dependencies = [
+ "libc",
+ "winapi",
 ]
 
 [[package]]
@@ -7946,6 +8212,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5ca28b0ae3115b884660db4118d803791fd6756b6e88f39c0f3f7859060d7566"
 dependencies = [
  "libc",
+]
+
+[[package]]
+name = "craft-docpath"
+version = "0.1.0"
+source = "git+https://github.com/storytold/craft-libs?rev=82a24b006eefa036b43c09a67fb9a3fbd17ffe63#82a24b006eefa036b43c09a67fb9a3fbd17ffe63"
+
+[[package]]
+name = "craft-ui"
+version = "0.1.0"
+source = "git+https://github.com/storytold/craft-libs?rev=5c874d51eeb3de70e735c8ce87a59a7dedd47675#5c874d51eeb3de70e735c8ce87a59a7dedd47675"
+dependencies = [
+ "egui",
+ "serde",
 ]
 
 [[package]]
@@ -8289,6 +8569,15 @@ checksum = "914a755b7c2d4af2bdcff7ce1739e2db9a1b81a9b07123d8015786ae03c0980d"
 
 [[package]]
 name = "ctr"
+version = "0.9.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0369ee1ad671834580515889b80f2ea915f23b8be8d0daa4bbaf2ac5c7590835"
+dependencies = [
+ "cipher 0.4.4",
+]
+
+[[package]]
+name = "ctr"
 version = "0.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baaca1c4b237092596f64d571e9db6ce4109c4ef9742e27590f1709594461f21"
@@ -8430,6 +8719,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "darling"
+version = "0.24.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ed17f5901b6630b993ca003def43f2f8ef4014fc13b047b57aad617ff32bc2ec"
+dependencies = [
+ "darling_core 0.24.1",
+ "darling_macro 0.24.1",
+]
+
+[[package]]
 name = "darling_core"
 version = "0.20.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8458,6 +8757,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "darling_core"
+version = "0.24.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6837e2cf7485aaae18f86181d2f0e9a7ed297a025e220aeabf63fdebd3a2ddff"
+dependencies = [
+ "ident_case",
+ "proc-macro2",
+ "quote",
+ "strsim",
+ "syn 3.0.9",
+]
+
+[[package]]
 name = "darling_macro"
 version = "0.20.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -8477,6 +8789,17 @@ dependencies = [
  "darling_core 0.21.3",
  "quote",
  "syn 2.0.119",
+]
+
+[[package]]
+name = "darling_macro"
+version = "0.24.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2ac7135c3ef02b2f7833bbeb1be5ba7f966dcde8a87c6b87f65a778d71a02785"
+dependencies = [
+ "darling_core 0.24.1",
+ "quote",
+ "syn 3.0.9",
 ]
 
 [[package]]
@@ -9329,6 +9652,22 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d0881ea181b1df73ff77ffaaf9c7544ecc11e82fba9b5f27b262a3c73a332555"
 
 [[package]]
+name = "dyn-stack"
+version = "0.13.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1c4713e43e2886ba72b8271aa66c93d722116acf7a75555cce11dcde84388fe8"
+dependencies = [
+ "bytemuck",
+ "dyn-stack-macros",
+]
+
+[[package]]
+name = "dyn-stack-macros"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e1d926b4d407d372f141f93bb444696142c29d32962ccbd3531117cf3aa0bfa9"
+
+[[package]]
 name = "dynosaur"
 version = "0.3.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9350,6 +9689,20 @@ dependencies = [
 
 [[package]]
 name = "ecdsa"
+version = "0.16.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ee27f32b5c5292967d2d4a9d7f1e0b0aed2c15daded5a60300e4abb9d8020bca"
+dependencies = [
+ "der 0.7.10",
+ "digest 0.10.7",
+ "elliptic-curve 0.13.8",
+ "rfc6979 0.4.0",
+ "signature 2.2.0",
+ "spki 0.7.3",
+]
+
+[[package]]
+name = "ecdsa"
 version = "0.17.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c0681a4fc24c767085329728d8dfba959af91228aa4610cca4f8ce317ba46ae0"
@@ -9357,10 +9710,20 @@ dependencies = [
  "der 0.8.2",
  "digest 0.11.3",
  "elliptic-curve 0.14.1",
- "rfc6979",
+ "rfc6979 0.6.0",
  "signature 3.0.0",
  "spki 0.8.1",
  "zeroize",
+]
+
+[[package]]
+name = "ecolor"
+version = "0.36.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0656a7530b9e2841ee7a5f983965bdd9840c32f4012f759cfd44b912cced6b34"
+dependencies = [
+ "bytemuck",
+ "emath",
 ]
 
 [[package]]
@@ -9450,6 +9813,134 @@ dependencies = [
 ]
 
 [[package]]
+name = "eframe"
+version = "0.36.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "55ad41fac6e3149abb4866e93df37dbd33baa95db525c3368c944584e95a5dc2"
+dependencies = [
+ "ahash",
+ "bytemuck",
+ "document-features",
+ "egui",
+ "egui-wgpu",
+ "egui-winit",
+ "egui_glow",
+ "glutin",
+ "glutin-winit",
+ "image",
+ "js-sys",
+ "log",
+ "objc2 0.6.5",
+ "objc2-app-kit 0.3.2",
+ "objc2-foundation 0.3.2",
+ "parking_lot",
+ "percent-encoding",
+ "pollster 1.0.1",
+ "profiling",
+ "raw-window-handle 0.6.2",
+ "static_assertions",
+ "wasm-bindgen",
+ "web-sys",
+ "web-time",
+ "wgpu 30.0.1",
+ "windows-sys 0.61.2",
+ "winit 0.30.13",
+]
+
+[[package]]
+name = "egui"
+version = "0.36.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dc938cc27cd911415e1e4d151bc56ff9df063d8db081374e87aeb805ea74b2ba"
+dependencies = [
+ "accesskit 0.24.1",
+ "ahash",
+ "bitflags 2.13.2",
+ "emath",
+ "epaint",
+ "itertools 0.15.0",
+ "log",
+ "nohash-hasher",
+ "profiling",
+ "smallvec",
+ "unicode-segmentation",
+ "web-sys",
+]
+
+[[package]]
+name = "egui-wgpu"
+version = "0.36.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5cef1f6d1bba40b09a4d0d62cb822b81030922cfbf65c5373398c3a3caafc5bd"
+dependencies = [
+ "ahash",
+ "bytemuck",
+ "document-features",
+ "egui",
+ "epaint",
+ "log",
+ "profiling",
+ "thiserror 2.0.21",
+ "type-map",
+ "web-time",
+ "wgpu 30.0.1",
+ "winit 0.30.13",
+]
+
+[[package]]
+name = "egui-winit"
+version = "0.36.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "98466000559d66ba4db786a30448b01483946add4188e7f10f522a27b4fb89cc"
+dependencies = [
+ "accesskit_winit 0.32.2",
+ "arboard",
+ "bytemuck",
+ "egui",
+ "log",
+ "objc2 0.6.5",
+ "objc2-foundation 0.3.2",
+ "objc2-ui-kit 0.3.2",
+ "profiling",
+ "raw-window-handle 0.6.2",
+ "smithay-clipboard 0.7.2",
+ "web-time",
+ "winit 0.30.13",
+]
+
+[[package]]
+name = "egui_glow"
+version = "0.36.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "606ed4167daf341e5753d703285c4c1d562324b2c07aa8f405cd7d066fe58f3b"
+dependencies = [
+ "bytemuck",
+ "egui",
+ "glow 0.17.0",
+ "log",
+ "profiling",
+ "winit 0.30.13",
+]
+
+[[package]]
+name = "egui_kittest"
+version = "0.36.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5eb3f3effb2726fee23449293e67acbf6cc6ce35525b1722bd5743bb348114d5"
+dependencies = [
+ "eframe",
+ "egui",
+ "egui-wgpu",
+ "image",
+ "kittest",
+ "log",
+ "pollster 1.0.1",
+ "serde",
+ "toml 1.1.8+spec-1.1.0",
+ "wgpu 30.0.1",
+]
+
+[[package]]
 name = "either"
 version = "1.19.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -9470,6 +9961,9 @@ dependencies = [
  "ff 0.13.1",
  "generic-array 0.14.7",
  "group 0.13.0",
+ "hkdf 0.12.4",
+ "pem-rfc7468 0.7.0",
+ "pkcs8 0.10.2",
  "rand_core 0.6.4",
  "sec1 0.7.3",
  "subtle",
@@ -9505,6 +9999,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e079f19b08ca6239f47f8ba8509c11cf3ea30095831f7fed61441475edd8c449"
 dependencies = [
  "serde",
+]
+
+[[package]]
+name = "emath"
+version = "0.36.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "52c8d4141cf0f60fb2f7aefaf352d3ffa5171ef0ab09731c64391801e95e48f1"
+dependencies = [
+ "bytemuck",
 ]
 
 [[package]]
@@ -9560,6 +10063,18 @@ name = "endian-type"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "869b0adbda23651a9c5c0c3d270aac9fcb52e8622a8f2b17e57802d7791962f2"
+
+[[package]]
+name = "enum-as-inner"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a1e6a265c649f3f5979b601d26f1d05ada116434c87741c9493cb56218f76cbc"
+dependencies = [
+ "heck 0.5.0",
+ "proc-macro2",
+ "quote",
+ "syn 2.0.119",
+]
 
 [[package]]
 name = "enum-map"
@@ -9670,6 +10185,37 @@ dependencies = [
  "jiff",
  "log",
 ]
+
+[[package]]
+name = "epaint"
+version = "0.36.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a0ec0308dc23130fc1a7d4623a8534c2ed069c6dc84e258ee4f3de99615aa1a3"
+dependencies = [
+ "ahash",
+ "bytemuck",
+ "ecolor",
+ "emath",
+ "epaint_default_fonts",
+ "font-types 0.12.6",
+ "harfrust 0.12.0",
+ "log",
+ "nohash-hasher",
+ "parking_lot",
+ "profiling",
+ "self_cell",
+ "skrifa 0.44.0",
+ "smallvec",
+ "unicode-general-category",
+ "unicode-segmentation",
+ "vello_cpu",
+]
+
+[[package]]
+name = "epaint_default_fonts"
+version = "0.36.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "773fa9c96dd0dbef887e39d0ed6177f141cce4d68e6041df77570aa3702dfa13"
 
 [[package]]
 name = "equator"
@@ -9928,7 +10474,7 @@ dependencies = [
  "anyhow",
  "ndarray",
  "ort",
- "safetensors",
+ "safetensors 0.8.0",
  "serde",
  "serde_json",
  "tokenizers",
@@ -9966,6 +10512,12 @@ checksum = "1e6853b52649d4ac5c0bd02320cddc5ba956bdb407c4b75a2c6b75bf51500f8c"
 dependencies = [
  "simd-adler32",
 ]
+
+[[package]]
+name = "fearless_simd"
+version = "0.4.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b97b65636e5b9ef369943878ac74335ba1c55c1cb6adbf1e2c293c624248d693"
 
 [[package]]
 name = "fearless_simd"
@@ -10078,74 +10630,156 @@ dependencies = [
 ]
 
 [[package]]
+name = "filmcraft"
+version = "0.9.0"
+dependencies = [
+ "arboard",
+ "chrono",
+ "cpal 0.16.0",
+ "eframe",
+ "egui",
+ "filmcraft-engine",
+ "filmcraft-export",
+ "filmcraft-gpu",
+ "filmcraft-platform",
+ "filmcraft-project",
+ "filmcraft-render",
+ "filmcraft-time",
+ "filmcraft-ui-egui",
+ "glob",
+ "log",
+ "muda",
+ "objc2 0.6.5",
+ "objc2-app-kit 0.3.2",
+ "objc2-foundation 0.3.2",
+ "open",
+ "pollster 0.4.0",
+ "rfd 0.17.2",
+ "serde_json",
+ "sys-locale",
+ "winit 0.30.13",
+ "winresource",
+ "zbus 5.19.0",
+]
+
+[[package]]
 name = "filmcraft-aac"
-version = "0.7.2"
-source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+version = "0.9.0"
 dependencies = [
  "filmcraft-bitstream",
+ "filmcraft-testkit",
+ "rayon",
  "thiserror 2.0.21",
 ]
 
 [[package]]
 name = "filmcraft-ac3"
-version = "0.7.2"
-source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+version = "0.9.0"
 dependencies = [
+ "filmcraft-testkit",
  "thiserror 2.0.21",
 ]
 
 [[package]]
 name = "filmcraft-apv"
-version = "0.7.2"
-source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+version = "0.9.0"
 dependencies = [
  "filmcraft-bitstream",
+ "filmcraft-testkit",
  "rayon",
  "thiserror 2.0.21",
 ]
 
 [[package]]
 name = "filmcraft-audio-dsp"
-version = "0.7.2"
-source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+version = "0.9.0"
+dependencies = [
+ "filmcraft-testkit",
+]
+
+[[package]]
+name = "filmcraft-automation"
+version = "0.9.0"
+dependencies = [
+ "base64 0.22.1",
+ "filmcraft-engine",
+ "filmcraft-time",
+ "image",
+ "rmcp",
+ "schemars",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tokio",
+]
 
 [[package]]
 name = "filmcraft-av1"
-version = "0.7.2"
-source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+version = "0.9.0"
 dependencies = [
  "filmcraft-bitstream",
+ "filmcraft-testkit",
  "rayon",
+ "rustix 1.1.5",
  "thiserror 2.0.21",
 ]
 
 [[package]]
 name = "filmcraft-avi"
-version = "0.7.2"
-source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+version = "0.9.0"
+dependencies = [
+ "filmcraft-testkit",
+]
 
 [[package]]
 name = "filmcraft-bitstream"
-version = "0.7.2"
-source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+version = "0.9.0"
+dependencies = [
+ "proptest",
+]
 
 [[package]]
 name = "filmcraft-captions"
-version = "0.7.2"
-source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+version = "0.9.0"
 dependencies = [
  "filmcraft-color",
  "filmcraft-project",
  "filmcraft-text",
  "filmcraft-time",
+ "proptest",
  "roxmltree 0.21.1",
  "thiserror 2.0.21",
 ]
 
 [[package]]
+name = "filmcraft-cfb"
+version = "0.9.0"
+
+[[package]]
+name = "filmcraft-cli"
+version = "0.9.0"
+dependencies = [
+ "filmcraft-automation",
+ "filmcraft-codecs",
+ "filmcraft-engine",
+ "filmcraft-export",
+ "filmcraft-gpu",
+ "filmcraft-media",
+ "filmcraft-mpegts",
+ "filmcraft-mxf",
+ "filmcraft-ogg",
+ "filmcraft-platform",
+ "filmcraft-project",
+ "filmcraft-render",
+ "filmcraft-testkit",
+ "filmcraft-time",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
 name = "filmcraft-codecs"
-version = "0.7.2"
-source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+version = "0.9.0"
 dependencies = [
  "filmcraft-aac",
  "filmcraft-ac3",
@@ -10168,12 +10802,14 @@ dependencies = [
  "filmcraft-ogg",
  "filmcraft-opus",
  "filmcraft-prores",
+ "filmcraft-testkit",
  "filmcraft-time",
  "filmcraft-vp8",
  "filmcraft-vp9",
  "image",
  "log",
  "rayon",
+ "serde_json",
  "symphonia",
  "thiserror 2.0.21",
  "web-time",
@@ -10181,39 +10817,87 @@ dependencies = [
 
 [[package]]
 name = "filmcraft-color"
-version = "0.7.2"
-source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+version = "0.9.0"
 dependencies = [
+ "proptest",
  "serde",
 ]
 
 [[package]]
 name = "filmcraft-dng"
-version = "0.7.2"
-source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+version = "0.9.0"
 dependencies = [
+ "filmcraft-dng",
  "rayon",
  "thiserror 2.0.21",
 ]
 
 [[package]]
 name = "filmcraft-dnx"
-version = "0.7.2"
-source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+version = "0.9.0"
 dependencies = [
  "filmcraft-bitstream",
+ "filmcraft-testkit",
  "rayon",
  "thiserror 2.0.21",
 ]
 
 [[package]]
+name = "filmcraft-edit"
+version = "0.9.0"
+dependencies = [
+ "filmcraft-geom",
+ "filmcraft-media",
+ "filmcraft-project",
+ "filmcraft-time",
+ "proptest",
+ "serde_json",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "filmcraft-engine"
+version = "0.9.0"
+dependencies = [
+ "craft-docpath",
+ "filmcraft-audio-dsp",
+ "filmcraft-captions",
+ "filmcraft-codecs",
+ "filmcraft-color",
+ "filmcraft-dng",
+ "filmcraft-edit",
+ "filmcraft-export",
+ "filmcraft-format",
+ "filmcraft-frame",
+ "filmcraft-geom",
+ "filmcraft-interchange",
+ "filmcraft-isobmff",
+ "filmcraft-media",
+ "filmcraft-mxf",
+ "filmcraft-project",
+ "filmcraft-render",
+ "filmcraft-scopes",
+ "filmcraft-speech",
+ "filmcraft-testkit",
+ "filmcraft-text",
+ "filmcraft-time",
+ "filmcraft-tts",
+ "image",
+ "log",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "web-time",
+]
+
+[[package]]
 name = "filmcraft-export"
-version = "0.7.2"
-source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+version = "0.9.0"
 dependencies = [
  "filmcraft-aac",
  "filmcraft-apv",
  "filmcraft-audio-dsp",
+ "filmcraft-codecs",
  "filmcraft-color",
  "filmcraft-dnx",
  "filmcraft-flac",
@@ -10226,6 +10910,7 @@ dependencies = [
  "filmcraft-project",
  "filmcraft-prores",
  "filmcraft-render",
+ "filmcraft-testkit",
  "filmcraft-text",
  "filmcraft-time",
  "image",
@@ -10238,17 +10923,29 @@ dependencies = [
 
 [[package]]
 name = "filmcraft-flac"
-version = "0.7.2"
-source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+version = "0.9.0"
 dependencies = [
  "filmcraft-bitstream",
+ "filmcraft-testkit",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "filmcraft-format"
+version = "0.9.0"
+dependencies = [
+ "filmcraft-media",
+ "filmcraft-project",
+ "filmcraft-time",
+ "log",
+ "serde",
+ "serde_json",
  "thiserror 2.0.21",
 ]
 
 [[package]]
 name = "filmcraft-frame"
-version = "0.7.2"
-source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+version = "0.9.0"
 dependencies = [
  "filmcraft-color",
  "filmcraft-time",
@@ -10258,62 +10955,119 @@ dependencies = [
 
 [[package]]
 name = "filmcraft-geom"
-version = "0.7.2"
-source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+version = "0.9.0"
 dependencies = [
+ "proptest",
  "serde",
 ]
 
 [[package]]
+name = "filmcraft-golden"
+version = "0.9.0"
+dependencies = [
+ "filmcraft-color",
+ "filmcraft-frame",
+ "filmcraft-geom",
+ "filmcraft-gpu",
+ "filmcraft-media",
+ "filmcraft-project",
+ "filmcraft-render",
+ "filmcraft-testkit",
+ "filmcraft-time",
+ "pollster 0.4.0",
+ "wgpu 30.0.1",
+]
+
+[[package]]
+name = "filmcraft-gpu"
+version = "0.9.0"
+dependencies = [
+ "filmcraft-color",
+ "filmcraft-export",
+ "filmcraft-frame",
+ "filmcraft-geom",
+ "filmcraft-media",
+ "filmcraft-project",
+ "filmcraft-render",
+ "filmcraft-time",
+ "image",
+ "log",
+ "pollster 0.4.0",
+ "rayon",
+ "wgpu 30.0.1",
+]
+
+[[package]]
 name = "filmcraft-h264"
-version = "0.7.2"
-source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+version = "0.9.0"
 dependencies = [
  "filmcraft-bitstream",
+ "filmcraft-testkit",
  "rayon",
  "thiserror 2.0.21",
 ]
 
 [[package]]
 name = "filmcraft-h264enc"
-version = "0.7.2"
-source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+version = "0.9.0"
 dependencies = [
  "filmcraft-bitstream",
+ "filmcraft-testkit",
  "rayon",
  "thiserror 2.0.21",
 ]
 
 [[package]]
 name = "filmcraft-hevc"
-version = "0.7.2"
-source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+version = "0.9.0"
 dependencies = [
  "filmcraft-bitstream",
+ "filmcraft-testkit",
  "rayon",
  "thiserror 2.0.21",
 ]
 
 [[package]]
+name = "filmcraft-interchange"
+version = "0.9.0"
+dependencies = [
+ "filmcraft-cfb",
+ "filmcraft-color",
+ "filmcraft-geom",
+ "filmcraft-media",
+ "filmcraft-project",
+ "filmcraft-time",
+ "proptest",
+ "roxmltree 0.21.1",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+]
+
+[[package]]
 name = "filmcraft-isobmff"
-version = "0.7.2"
-source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+version = "0.9.0"
 dependencies = [
  "filmcraft-bitstream",
+ "filmcraft-testkit",
+ "proptest",
+ "serde_json",
  "thiserror 2.0.21",
 ]
 
 [[package]]
 name = "filmcraft-lib"
-version = "0.7.2"
-source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+version = "0.9.0"
 dependencies = [
+ "filmcraft-codecs",
  "filmcraft-color",
  "filmcraft-export",
  "filmcraft-frame",
  "filmcraft-h264enc",
  "filmcraft-isobmff",
  "filmcraft-matroska",
+ "filmcraft-media",
+ "filmcraft-testkit",
  "filmcraft-time",
  "image",
  "web-time",
@@ -10321,19 +11075,23 @@ dependencies = [
 
 [[package]]
 name = "filmcraft-matroska"
-version = "0.7.2"
-source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+version = "0.9.0"
+dependencies = [
+ "filmcraft-testkit",
+ "serde_json",
+]
 
 [[package]]
 name = "filmcraft-media"
-version = "0.7.2"
-source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+version = "0.9.0"
 dependencies = [
  "filmcraft-color",
  "filmcraft-dng",
  "filmcraft-frame",
+ "filmcraft-testkit",
  "filmcraft-time",
  "image",
+ "png 0.18.1",
  "rayon",
  "serde",
  "thiserror 2.0.21",
@@ -10341,54 +11099,86 @@ dependencies = [
 
 [[package]]
 name = "filmcraft-mpa"
-version = "0.7.2"
-source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+version = "0.9.0"
 dependencies = [
  "filmcraft-bitstream",
+ "filmcraft-testkit",
  "thiserror 2.0.21",
 ]
 
 [[package]]
 name = "filmcraft-mpeg2v"
-version = "0.7.2"
-source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+version = "0.9.0"
 dependencies = [
+ "filmcraft-testkit",
  "rayon",
  "thiserror 2.0.21",
 ]
 
 [[package]]
 name = "filmcraft-mpegts"
-version = "0.7.2"
-source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+version = "0.9.0"
 dependencies = [
+ "filmcraft-testkit",
  "thiserror 2.0.21",
 ]
 
 [[package]]
 name = "filmcraft-mxf"
-version = "0.7.2"
-source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+version = "0.9.0"
+dependencies = [
+ "filmcraft-testkit",
+]
 
 [[package]]
 name = "filmcraft-ogg"
-version = "0.7.2"
-source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+version = "0.9.0"
+dependencies = [
+ "filmcraft-testkit",
+]
 
 [[package]]
 name = "filmcraft-opus"
-version = "0.7.2"
-source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+version = "0.9.0"
+dependencies = [
+ "filmcraft-testkit",
+]
+
+[[package]]
+name = "filmcraft-platform"
+version = "0.9.0"
+dependencies = [
+ "filmcraft-bitstream",
+ "filmcraft-codecs",
+ "filmcraft-color",
+ "filmcraft-export",
+ "filmcraft-frame",
+ "filmcraft-h264",
+ "filmcraft-hevc",
+ "filmcraft-isobmff",
+ "filmcraft-media",
+ "filmcraft-project",
+ "filmcraft-render",
+ "filmcraft-testkit",
+ "filmcraft-time",
+ "libloading 0.8.9",
+ "log",
+ "objc2-core-foundation",
+ "objc2-core-media",
+ "objc2-core-video",
+ "objc2-video-toolbox",
+ "windows 0.62.2",
+]
 
 [[package]]
 name = "filmcraft-project"
-version = "0.7.2"
-source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+version = "0.9.0"
 dependencies = [
  "filmcraft-color",
  "filmcraft-geom",
  "filmcraft-media",
  "filmcraft-time",
+ "proptest",
  "serde",
  "serde_json",
  "thiserror 2.0.21",
@@ -10396,18 +11186,17 @@ dependencies = [
 
 [[package]]
 name = "filmcraft-prores"
-version = "0.7.2"
-source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+version = "0.9.0"
 dependencies = [
  "filmcraft-bitstream",
+ "filmcraft-testkit",
  "rayon",
  "thiserror 2.0.21",
 ]
 
 [[package]]
 name = "filmcraft-render"
-version = "0.7.2"
-source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+version = "0.9.0"
 dependencies = [
  "filmcraft-audio-dsp",
  "filmcraft-captions",
@@ -10418,15 +11207,50 @@ dependencies = [
  "filmcraft-project",
  "filmcraft-text",
  "filmcraft-time",
+ "image",
  "rayon",
+ "rustix 1.1.5",
  "serde",
  "serde_json",
 ]
 
 [[package]]
+name = "filmcraft-scopes"
+version = "0.9.0"
+dependencies = [
+ "filmcraft-color",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "filmcraft-speech"
+version = "0.9.0"
+dependencies = [
+ "candle-core",
+ "candle-nn",
+ "filmcraft-project",
+ "filmcraft-time",
+ "rayon",
+ "rustls",
+ "rustls-rustcrypto",
+ "serde",
+ "serde_json",
+ "sha2 0.10.9",
+ "thiserror 2.0.21",
+ "ureq",
+]
+
+[[package]]
+name = "filmcraft-testkit"
+version = "0.9.0"
+dependencies = [
+ "png 0.18.1",
+]
+
+[[package]]
 name = "filmcraft-text"
-version = "0.7.2"
-source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+version = "0.9.0"
 dependencies = [
  "filmcraft-color",
  "harfrust 0.12.0",
@@ -10438,28 +11262,111 @@ dependencies = [
 
 [[package]]
 name = "filmcraft-time"
-version = "0.7.2"
-source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+version = "0.9.0"
 dependencies = [
+ "proptest",
  "serde",
 ]
 
 [[package]]
+name = "filmcraft-tts"
+version = "0.9.0"
+dependencies = [
+ "candle-core",
+ "candle-nn",
+ "filmcraft-audio-dsp",
+ "filmcraft-tts-text",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "zip",
+]
+
+[[package]]
+name = "filmcraft-tts-text"
+version = "0.9.0"
+dependencies = [
+ "serde",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "filmcraft-ui-egui"
+version = "0.9.0"
+dependencies = [
+ "cpu-time",
+ "craft-ui",
+ "eframe",
+ "egui",
+ "egui_kittest",
+ "filmcraft-audio-dsp",
+ "filmcraft-codecs",
+ "filmcraft-color",
+ "filmcraft-edit",
+ "filmcraft-engine",
+ "filmcraft-export",
+ "filmcraft-frame",
+ "filmcraft-geom",
+ "filmcraft-gpu",
+ "filmcraft-interchange",
+ "filmcraft-media",
+ "filmcraft-platform",
+ "filmcraft-project",
+ "filmcraft-render",
+ "filmcraft-scopes",
+ "filmcraft-text",
+ "filmcraft-time",
+ "filmcraft-tts",
+ "image",
+ "log",
+ "pollster 0.4.0",
+ "rayon",
+ "rustix 1.1.5",
+ "serde",
+ "serde_json",
+ "toml 1.1.8+spec-1.1.0",
+ "unicode-bidi",
+ "web-time",
+]
+
+[[package]]
 name = "filmcraft-vp8"
-version = "0.7.2"
-source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+version = "0.9.0"
 dependencies = [
  "thiserror 2.0.21",
 ]
 
 [[package]]
 name = "filmcraft-vp9"
-version = "0.7.2"
-source = "git+https://github.com/aphrody-labs/filmcraft.git?rev=9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2#9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2"
+version = "0.9.0"
 dependencies = [
  "filmcraft-bitstream",
  "rayon",
  "thiserror 2.0.21",
+]
+
+[[package]]
+name = "filmcraft-web"
+version = "0.9.0"
+dependencies = [
+ "eframe",
+ "egui",
+ "filmcraft-codecs",
+ "filmcraft-color",
+ "filmcraft-engine",
+ "filmcraft-format",
+ "filmcraft-frame",
+ "filmcraft-isobmff",
+ "filmcraft-media",
+ "filmcraft-time",
+ "filmcraft-ui-egui",
+ "js-sys",
+ "log",
+ "serde_json",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "web-sys",
+ "web-time",
 ]
 
 [[package]]
@@ -10539,6 +11446,18 @@ name = "float-ord"
 version = "0.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8ce81f49ae8a0482e4c55ea62ebbd7e5a686af544c00b9d090bba3ff9be97b3d"
+
+[[package]]
+name = "float8"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "719a903cc23e4a89e87962c2a80fdb45cdaad0983a89bd150bb57b4c8571a7d5"
+dependencies = [
+ "half",
+ "num-traits",
+ "rand 0.9.5",
+ "rand_distr",
+]
 
 [[package]]
 name = "float_next_after"
@@ -11116,6 +12035,125 @@ dependencies = [
 ]
 
 [[package]]
+name = "gemm"
+version = "0.19.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aa0673db364b12263d103b68337a68fbecc541d6f6b61ba72fe438654709eacb"
+dependencies = [
+ "dyn-stack",
+ "gemm-c32",
+ "gemm-c64",
+ "gemm-common",
+ "gemm-f16",
+ "gemm-f32",
+ "gemm-f64",
+ "num-complex",
+ "num-traits",
+ "paste",
+ "raw-cpuid",
+ "seq-macro",
+]
+
+[[package]]
+name = "gemm-c32"
+version = "0.19.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "086936dbdcb99e37aad81d320f98f670e53c1e55a98bee70573e83f95beb128c"
+dependencies = [
+ "dyn-stack",
+ "gemm-common",
+ "num-complex",
+ "num-traits",
+ "paste",
+ "raw-cpuid",
+ "seq-macro",
+]
+
+[[package]]
+name = "gemm-c64"
+version = "0.19.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "20c8aeeeec425959bda4d9827664029ba1501a90a0d1e6228e48bef741db3a3f"
+dependencies = [
+ "dyn-stack",
+ "gemm-common",
+ "num-complex",
+ "num-traits",
+ "paste",
+ "raw-cpuid",
+ "seq-macro",
+]
+
+[[package]]
+name = "gemm-common"
+version = "0.19.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "88027625910cc9b1085aaaa1c4bc46bb3a36aad323452b33c25b5e4e7c8e2a3e"
+dependencies = [
+ "bytemuck",
+ "dyn-stack",
+ "half",
+ "libm",
+ "num-complex",
+ "num-traits",
+ "once_cell",
+ "paste",
+ "pulp",
+ "raw-cpuid",
+ "rayon",
+ "seq-macro",
+ "sysctl",
+]
+
+[[package]]
+name = "gemm-f16"
+version = "0.19.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e3df7a55202e6cd6739d82ae3399c8e0c7e1402859b30e4cb780e61525d9486e"
+dependencies = [
+ "dyn-stack",
+ "gemm-common",
+ "gemm-f32",
+ "half",
+ "num-complex",
+ "num-traits",
+ "paste",
+ "raw-cpuid",
+ "rayon",
+ "seq-macro",
+]
+
+[[package]]
+name = "gemm-f32"
+version = "0.19.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "02e0b8c9da1fbec6e3e3ab2ce6bc259ef18eb5f6f0d3e4edf54b75f9fd41a81c"
+dependencies = [
+ "dyn-stack",
+ "gemm-common",
+ "num-complex",
+ "num-traits",
+ "paste",
+ "raw-cpuid",
+ "seq-macro",
+]
+
+[[package]]
+name = "gemm-f64"
+version = "0.19.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "056131e8f2a521bfab322f804ccd652520c79700d81209e9d9275bbdecaadc6a"
+dependencies = [
+ "dyn-stack",
+ "gemm-common",
+ "num-complex",
+ "num-traits",
+ "paste",
+ "raw-cpuid",
+ "seq-macro",
+]
+
+[[package]]
 name = "gen-lsp-types"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -11216,11 +12254,21 @@ dependencies = [
 
 [[package]]
 name = "ghash"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f0d8a4362ccb29cb0b265253fb0a2728f592895ee6854fd9bc13f2ffda266ff1"
+dependencies = [
+ "opaque-debug",
+ "polyval 0.6.2",
+]
+
+[[package]]
+name = "ghash"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2eecf2d5dc9b66b732b97707a0210906b1d30523eb773193ab777c0c84b3e8d5"
 dependencies = [
- "polyval",
+ "polyval 0.7.3",
  "zeroize",
 ]
 
@@ -12502,6 +13550,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "glifo"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ed4a1bb24121291d27230c1b1b44e07d6a9b28cefdb32fe1581dfb84e14f940a"
+dependencies = [
+ "bytemuck",
+ "foldhash 0.2.0",
+ "hashbrown 0.17.1",
+ "log",
+ "peniko",
+ "skrifa 0.44.0",
+ "smallvec",
+ "vello_common",
+]
+
+[[package]]
 name = "glob"
 version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -12605,6 +13669,63 @@ checksum = "ec80baca8831e8414db40c562fd76ca6a32a792c1db990451d4e7d3cb246e1ed"
 dependencies = [
  "cc",
  "glob",
+]
+
+[[package]]
+name = "glutin"
+version = "0.32.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "12124de845cacfebedff80e877bb37b5b75c34c5a4c89e47e1cdd67fb6041325"
+dependencies = [
+ "bitflags 2.13.2",
+ "cfg_aliases",
+ "cgl",
+ "dispatch2",
+ "glutin_egl_sys",
+ "glutin_glx_sys",
+ "glutin_wgl_sys",
+ "libloading 0.8.9",
+ "objc2 0.6.5",
+ "objc2-app-kit 0.3.2",
+ "objc2-core-foundation",
+ "objc2-foundation 0.3.2",
+ "once_cell",
+ "raw-window-handle 0.6.2",
+ "wayland-sys",
+ "windows-sys 0.52.0",
+ "x11-dl",
+]
+
+[[package]]
+name = "glutin-winit"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "85edca7075f8fc728f28cb8fbb111a96c3b89e930574369e3e9c27eb75d3788f"
+dependencies = [
+ "cfg_aliases",
+ "glutin",
+ "raw-window-handle 0.6.2",
+ "winit 0.30.13",
+]
+
+[[package]]
+name = "glutin_egl_sys"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4c4680ba6195f424febdc3ba46e7a42a0e58743f2edb115297b86d7f8ecc02d2"
+dependencies = [
+ "gl_generator",
+ "windows-sys 0.52.0",
+]
+
+[[package]]
+name = "glutin_glx_sys"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8a7bb2938045a88b612499fbcba375a77198e01306f52272e692f8c1f3751185"
+dependencies = [
+ "gl_generator",
+ "x11-dl",
 ]
 
 [[package]]
@@ -12947,6 +14068,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "guillotiere"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6b17e70c989c36bad147b27a58d148c0741c51448aa5653436547323e524d0ab"
+dependencies = [
+ "euclid",
+]
+
+[[package]]
 name = "gzip-header"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -13033,9 +14163,12 @@ version = "2.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6ea2d84b969582b4b1864a92dc5d27cd2b77b622a8d79306834f1be5ba20d84b"
 dependencies = [
+ "bytemuck",
  "cfg-if",
  "crunchy",
  "num-traits",
+ "rand 0.9.5",
+ "rand_distr",
  "serde",
  "zerocopy",
 ]
@@ -13818,8 +14951,8 @@ name = "iced_accessibility"
 version = "0.1.0"
 source = "git+https://github.com/pop-os/libcosmic?rev=7f715bc5d2d383a070fd8c760aa52c5627df96b6#7f715bc5d2d383a070fd8c760aa52c5627df96b6"
 dependencies = [
- "accesskit",
- "accesskit_winit",
+ "accesskit 0.22.0",
+ "accesskit_winit 0.30.0",
 ]
 
 [[package]]
@@ -13960,7 +15093,7 @@ dependencies = [
  "cryoglyph",
  "futures",
  "glam",
- "guillotiere",
+ "guillotiere 0.6.2",
  "iced_debug",
  "iced_graphics",
  "log",
@@ -14712,6 +15845,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "is-docker"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "928bae27f42bc99b60d9ac7334e3a21d10ad8f1835a4e12ec3ec0464765ed1b3"
+dependencies = [
+ "once_cell",
+]
+
+[[package]]
 name = "is-macro"
 version = "0.3.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -14732,6 +15874,16 @@ dependencies = [
  "hermit-abi",
  "libc",
  "windows-sys 0.60.2",
+]
+
+[[package]]
+name = "is-wsl"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "173609498df190136aa7dea1a91db051746d339e18476eed5ca40521f02d7aa5"
+dependencies = [
+ "is-docker",
+ "once_cell",
 ]
 
 [[package]]
@@ -15282,6 +16434,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e2db585e1d738fc771bf08a151420d3ed193d9d895a36df7f6f8a9456b911ddc"
 
 [[package]]
+name = "kittest"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "90ceaa75eb0036a32b6b9833962eb18137449e9817e2e586006471925b727fd5"
+dependencies = [
+ "accesskit 0.24.1",
+ "accesskit_consumer 0.35.0",
+]
+
+[[package]]
 name = "known-folders"
 version = "1.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -15449,7 +16611,7 @@ dependencies = [
  "log",
  "palette",
  "phf 0.13.1",
- "rfd",
+ "rfd 0.16.0",
  "roxmltree 0.20.0",
  "rust-embed",
  "serde",
@@ -16235,6 +17397,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d1219ed1b7f229ee7104d281dd01d6802fe28bb6e95d292942c4daacdeb798c0"
 dependencies = [
  "libc",
+ "stable_deref_trait",
 ]
 
 [[package]]
@@ -16532,6 +17695,26 @@ name = "mpeg4-audio-const"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "96a1fe2275b68991faded2c80aa4a33dba398b77d276038b8f50701a22e55918"
+
+[[package]]
+name = "muda"
+version = "0.21.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4340e89c178916e62879c5c36b7f699019369be413e496178a6983ce91b8bc03"
+dependencies = [
+ "crossbeam-channel",
+ "dpi 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
+ "gtk",
+ "keyboard-types 0.8.3",
+ "libc",
+ "objc2 0.6.5",
+ "objc2-app-kit 0.3.2",
+ "objc2-core-foundation",
+ "objc2-foundation 0.3.2",
+ "png 0.18.1",
+ "thiserror 2.0.21",
+ "windows-sys 0.60.2",
+]
 
 [[package]]
 name = "mullvad-api"
@@ -17535,6 +18718,7 @@ version = "0.4.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "73f88a1307638156682bada9d7604135552957b7818057dcef22705b4d509495"
 dependencies = [
+ "bytemuck",
  "num-traits",
 ]
 
@@ -17785,6 +18969,22 @@ dependencies = [
  "block2 0.6.2",
  "objc2 0.6.5",
  "objc2-core-foundation",
+ "objc2-core-graphics",
+ "objc2-foundation 0.3.2",
+]
+
+[[package]]
+name = "objc2-audio-toolbox"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6948501a91121d6399b79abaa33a8aa4ea7857fe019f341b8c23ad6e81b79b08"
+dependencies = [
+ "bitflags 2.13.2",
+ "libc",
+ "objc2 0.6.5",
+ "objc2-core-audio",
+ "objc2-core-audio-types",
+ "objc2-core-foundation",
  "objc2-foundation 0.3.2",
 ]
 
@@ -17855,6 +19055,7 @@ dependencies = [
  "bitflags 2.13.2",
  "block2 0.6.2",
  "dispatch2",
+ "libc",
  "objc2 0.6.5",
 ]
 
@@ -17903,6 +19104,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "05ec576860167a15dd9fce7fbee7512beb4e31f532159d3482d1f9c6caedf31d"
 dependencies = [
  "bitflags 2.13.2",
+ "block2 0.6.2",
  "dispatch2",
  "objc2 0.6.5",
  "objc2-core-audio",
@@ -17918,6 +19120,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d425caf1df73233f29fd8a5c3e5edbc30d2d4307870f802d18f00d83dc5141a6"
 dependencies = [
  "bitflags 2.13.2",
+ "block2 0.6.2",
  "objc2 0.6.5",
  "objc2-core-foundation",
  "objc2-core-graphics",
@@ -18149,6 +19352,8 @@ dependencies = [
  "objc2-core-graphics",
  "objc2-core-media",
  "objc2-core-video",
+ "objc2-foundation 0.3.2",
+ "objc2-metal 0.3.2",
 ]
 
 [[package]]
@@ -18327,6 +19532,16 @@ dependencies = [
  "subtle",
  "voprf",
  "zeroize",
+]
+
+[[package]]
+name = "open"
+version = "5.4.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "aa576c76302b7b808eecc68061e67336c47833ef9d22caa74dda10fa9675eebc"
+dependencies = [
+ "is-wsl",
+ "libc",
 ]
 
 [[package]]
@@ -18510,15 +19725,39 @@ checksum = "13c45bb4a6ae1280ec0803b1ef9d3455eb50f01efbbe1447ab020f1d54fba9d8"
 
 [[package]]
 name = "p256"
+version = "0.13.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c9863ad85fa8f4460f9c48cb909d38a0d689dba1f6f6988a5e3e0d31071bcd4b"
+dependencies = [
+ "ecdsa 0.16.9",
+ "elliptic-curve 0.13.8",
+ "primeorder 0.13.6",
+ "sha2 0.10.9",
+]
+
+[[package]]
+name = "p256"
 version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d2c9239b2dbc807adbbe147e8cf72ea7450c3a0aabe62cb8e75ff4ec22e1f72a"
 dependencies = [
- "ecdsa",
+ "ecdsa 0.17.0",
  "elliptic-curve 0.14.1",
  "primefield",
- "primeorder",
+ "primeorder 0.14.0",
  "sha2 0.11.0",
+]
+
+[[package]]
+name = "p384"
+version = "0.13.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "fe42f1670a52a47d448f14b6a5c61dd78fce51856e68edaa38f7ae3a46b8d6b6"
+dependencies = [
+ "ecdsa 0.16.9",
+ "elliptic-curve 0.13.8",
+ "primeorder 0.13.6",
+ "sha2 0.10.9",
 ]
 
 [[package]]
@@ -18527,11 +19766,11 @@ version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d17b851e6b3e378ab4ecb07fa2ed23f4d15f075735f8fec9fa1e7bdce5f8301f"
 dependencies = [
- "ecdsa",
+ "ecdsa 0.17.0",
  "elliptic-curve 0.14.1",
  "fiat-crypto 0.3.0",
  "primefield",
- "primeorder",
+ "primeorder 0.14.0",
  "sha2 0.11.0",
 ]
 
@@ -18542,10 +19781,10 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4ad64cc32c2dc466317c12ee5853e61f159f9eab1fe7efade0395dc2e7b43449"
 dependencies = [
  "base16ct 1.0.0",
- "ecdsa",
+ "ecdsa 0.17.0",
  "elliptic-curve 0.14.1",
  "primefield",
- "primeorder",
+ "primeorder 0.14.0",
  "sha2 0.11.0",
 ]
 
@@ -18882,6 +20121,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "a6305423e0e7738146434843d1694d621cce767262b2a86910beab705e4493d9"
 dependencies = [
  "base64ct",
+]
+
+[[package]]
+name = "peniko"
+version = "0.6.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "839c8299360d2e998bdb106dc0a6cd71dcc5f4df51df1b620361bf50e283cca6"
+dependencies = [
+ "bytemuck",
+ "color",
+ "kurbo 0.13.1",
+ "linebender_resource_handle",
+ "smallvec",
 ]
 
 [[package]]
@@ -19249,7 +20501,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "63d440a804ec8d6fafbb6b84471e013286658d373248927692ab3366686220ca"
 dependencies = [
  "aes 0.9.3",
- "aes-gcm",
+ "aes-gcm 0.11.1",
  "cbc 0.2.1",
  "der 0.8.2",
  "pbkdf2 0.13.0",
@@ -19471,6 +20723,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2f3a9f18d041e6d0e102a0a46750538147e5e8992d3b4873aaafee2520b00ce3"
 
 [[package]]
+name = "pollster"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bc6355899e1c9462875b6757c79f3caa011a1fdae12bbb1a2e72dd1f234f8336"
+
+[[package]]
 name = "poly1305"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -19499,6 +20757,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "50596ddc09eb5ad5f75cacd40209568e66df71baf86e1499a0e99c4cff12a5a6"
 dependencies = [
  "arrayvec",
+]
+
+[[package]]
+name = "polyval"
+version = "0.6.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9d1fe60d06143b2430aa532c94cfe9e29783047f06c0d7fd359a9a51b729fa25"
+dependencies = [
+ "cfg-if",
+ "cpufeatures 0.2.17",
+ "opaque-debug",
+ "universal-hash 0.5.1",
 ]
 
 [[package]]
@@ -19689,6 +20959,15 @@ dependencies = [
  "rand_core 0.10.1",
  "subtle",
  "zeroize",
+]
+
+[[package]]
+name = "primeorder"
+version = "0.13.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "353e1ca18966c16d9deb1c69278edbc5f194139612772bd9537af60ac231e1e6"
+dependencies = [
+ "elliptic-curve 0.13.8",
 ]
 
 [[package]]
@@ -20015,6 +21294,29 @@ checksum = "84bbb29c624230c4bd1047bbdb2aa47e41c860e9665ce62ba9504eebe91bf867"
 dependencies = [
  "pulldown-cmark",
 ]
+
+[[package]]
+name = "pulp"
+version = "0.22.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "046aa45b989642ec2e4717c8e72d677b13edd831a4d3b6cf37d9a3e54912496a"
+dependencies = [
+ "bytemuck",
+ "cfg-if",
+ "libm",
+ "num-complex",
+ "paste",
+ "pulp-wasm-simd-flag",
+ "raw-cpuid",
+ "reborrow",
+ "version_check",
+]
+
+[[package]]
+name = "pulp-wasm-simd-flag"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1d8f70e07b9c3962945a74e59ca1c511bba65b6419468acc217c457d93f3c740"
 
 [[package]]
 name = "purl"
@@ -20450,6 +21752,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "raw-cpuid"
+version = "11.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "498cd0dc59d73224351ee52a95fee0f1a617a2eae0e7d9d720cc622c73a54186"
+dependencies = [
+ "bitflags 2.13.2",
+]
+
+[[package]]
 name = "raw-window-handle"
 version = "0.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -20557,6 +21868,12 @@ dependencies = [
  "font-types 0.12.6",
  "once_cell",
 ]
+
+[[package]]
+name = "reborrow"
+version = "0.5.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "03251193000f4bd3b042892be858ee50e8b3719f2b08e5833ac4353724632430"
 
 [[package]]
 name = "redox_event"
@@ -21053,6 +22370,16 @@ dependencies = [
 
 [[package]]
 name = "rfc6979"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f8dd2a808d456c4a54e300a23e9f5a67e122c3024119acbfd73e3bf664491cb2"
+dependencies = [
+ "hmac 0.12.1",
+ "subtle",
+]
+
+[[package]]
+name = "rfc6979"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b4a459cddafb3fe76b31fd8f1108007566c40301feb64dc7b54656eb7388172b"
@@ -21083,6 +22410,33 @@ dependencies = [
  "wasm-bindgen-futures",
  "web-sys",
  "windows-sys 0.60.2",
+]
+
+[[package]]
+name = "rfd"
+version = "0.17.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "20dafead71c16a34e1ff357ddefc8afc11e7d51d6d2b9fbd07eaa48e3e540220"
+dependencies = [
+ "block2 0.6.2",
+ "dispatch2",
+ "js-sys",
+ "libc",
+ "log",
+ "objc2 0.6.5",
+ "objc2-app-kit 0.3.2",
+ "objc2-core-foundation",
+ "objc2-foundation 0.3.2",
+ "percent-encoding",
+ "pollster 0.4.0",
+ "raw-window-handle 0.6.2",
+ "wasm-bindgen",
+ "wasm-bindgen-futures",
+ "wayland-backend",
+ "wayland-client",
+ "wayland-protocols",
+ "web-sys",
+ "windows-sys 0.61.2",
 ]
 
 [[package]]
@@ -21282,7 +22636,7 @@ dependencies = [
  "cfg_aliases",
  "clap",
  "corcovado",
- "cpal",
+ "cpal 0.15.2",
  "criterion 0.6.0",
  "dirs 6.0.0",
  "dunce",
@@ -21357,6 +22711,42 @@ name = "rle-decode-fast"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3582f63211428f83597b51b2ddb88e2a91a9d52d12831f9d08f5e624e8977422"
+
+[[package]]
+name = "rmcp"
+version = "3.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ceb42e9e47443cd83a834dea57b5816d35481417bae72ade5dc5615c59122e26"
+dependencies = [
+ "chrono",
+ "futures",
+ "indexmap 2.14.2",
+ "libc",
+ "pastey 0.2.3",
+ "pin-project-lite",
+ "rmcp-macros",
+ "schemars",
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "tokio",
+ "tokio-util 0.7.19",
+ "tracing",
+ "uuid",
+]
+
+[[package]]
+name = "rmcp-macros"
+version = "3.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2f55ef2d84752d676d735604548fcb65811504e23330d85670b0eff5f8735144"
+dependencies = [
+ "darling 0.24.1",
+ "proc-macro2",
+ "quote",
+ "serde_json",
+ "syn 3.0.9",
+]
 
 [[package]]
 name = "rmp"
@@ -21545,13 +22935,13 @@ dependencies = [
  "cbc 0.2.1",
  "cipher 0.5.2",
  "crypto-bigint 0.7.5",
- "ctr",
+ "ctr 0.10.1",
  "curve25519-dalek 5.0.0",
  "data-encoding",
  "delegate",
  "der 0.8.2",
  "digest 0.11.3",
- "ecdsa",
+ "ecdsa 0.17.0",
  "ed25519-dalek 3.0.0",
  "elliptic-curve 0.14.1",
  "enum_dispatch",
@@ -21559,7 +22949,7 @@ dependencies = [
  "futures",
  "generic-array 1.4.5",
  "getrandom 0.4.3",
- "ghash",
+ "ghash 0.6.0",
  "hex-literal",
  "hmac 0.13.0",
  "inout 0.2.2",
@@ -21569,15 +22959,15 @@ dependencies = [
  "ml-kem",
  "module-lattice",
  "num-bigint 0.5.1",
- "p256",
- "p384",
+ "p256 0.14.0",
+ "p384 0.14.0",
  "p521",
  "pageant",
  "pbkdf2 0.13.0",
  "pkcs1 0.8.0-rc.4",
  "pkcs5 0.8.1",
  "pkcs8 0.11.0",
- "polyval",
+ "polyval 0.7.3",
  "rand 0.10.3",
  "rand_core 0.10.1",
  "rsa 0.10.0-rc.18",
@@ -21786,7 +23176,7 @@ dependencies = [
  "once_cell",
  "ring",
  "rustls-pki-types",
- "rustls-webpki",
+ "rustls-webpki 0.103.15",
  "subtle",
  "zeroize",
 ]
@@ -21827,7 +23217,7 @@ dependencies = [
  "rustls",
  "rustls-native-certs",
  "rustls-platform-verifier-android",
- "rustls-webpki",
+ "rustls-webpki 0.103.15",
  "security-framework",
  "security-framework-sys",
  "webpki-root-certs",
@@ -21839,6 +23229,47 @@ name = "rustls-platform-verifier-android"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eec689c0bc40ff2458a5977b6619cb718087084a18e02a131c599b62d05e1a5f"
+
+[[package]]
+name = "rustls-rustcrypto"
+version = "0.0.2-alpha"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f12052947763ab8515f753315357599e9b0b4dab3b8ba15f30f725fe6d025557"
+dependencies = [
+ "aead 0.5.2",
+ "aes-gcm 0.10.3",
+ "chacha20poly1305 0.10.1",
+ "crypto-common 0.1.7",
+ "der 0.7.10",
+ "digest 0.10.7",
+ "ecdsa 0.16.9",
+ "ed25519-dalek 2.2.0",
+ "hmac 0.12.1",
+ "p256 0.13.2",
+ "p384 0.13.1",
+ "paste",
+ "pkcs8 0.10.2",
+ "rand_core 0.6.4",
+ "rsa 0.9.10",
+ "rustls",
+ "rustls-pki-types",
+ "rustls-webpki 0.102.8",
+ "sec1 0.7.3",
+ "sha2 0.10.9",
+ "signature 2.2.0",
+ "x25519-dalek",
+]
+
+[[package]]
+name = "rustls-webpki"
+version = "0.102.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "64ca1bc8749bd4cf37b5ce386cc146580777b4e8572c7b97baf22c83f444bee9"
+dependencies = [
+ "ring",
+ "rustls-pki-types",
+ "untrusted 0.9.0",
+]
 
 [[package]]
 name = "rustls-webpki"
@@ -21937,6 +23368,17 @@ checksum = "ef703b7cb59335eae2eb93ceb664c0eb7ea6bf567079d843e09420219668e072"
 
 [[package]]
 name = "safetensors"
+version = "0.7.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "675656c1eabb620b921efea4f9199f97fc86e36dd6ffd1fbbe48d0f59a4987f5"
+dependencies = [
+ "hashbrown 0.16.1",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "safetensors"
 version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "79b079b829cb27a1c3c374341345ed2e8b2c0c839034522cee576c140bd7f846"
@@ -22014,6 +23456,7 @@ version = "1.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ab508826f74a77ca9d5aba6ff19b522583ee3eaf28a19384ff3d0e5835fadf6e"
 dependencies = [
+ "chrono",
  "dyn-clone",
  "ref-cast",
  "schemars_derive",
@@ -22141,6 +23584,7 @@ dependencies = [
  "base16ct 0.2.0",
  "der 0.7.10",
  "generic-array 0.14.7",
+ "pkcs8 0.10.2",
  "subtle",
  "zeroize",
 ]
@@ -22655,13 +24099,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b404a62ebea5003f44b9a2748dee7555c5f9ae39896508e466a2a91ee6fa5df5"
 dependencies = [
  "aes 0.9.3",
- "aes-gcm",
+ "aes-gcm 0.11.1",
  "aws-lc-rs",
  "camellia",
  "cfg-if",
  "chacha20 0.10.2",
  "chacha20poly1305 0.11.0",
- "ctr",
+ "ctr 0.10.1",
  "hkdf 0.13.0",
  "md-5",
  "rand 0.10.3",
@@ -23429,7 +24873,7 @@ checksum = "d801accda99469cde6d73da741422610fdf6508a72d9a69d1b55cb241c720597"
 dependencies = [
  "aead 0.6.1",
  "aes 0.9.3",
- "aes-gcm",
+ "aes-gcm 0.11.1",
  "chacha20 0.10.2",
  "cipher 0.5.2",
  "ctutils",
@@ -23466,8 +24910,8 @@ dependencies = [
  "ed25519-dalek 3.0.0",
  "hex",
  "hmac 0.13.0",
- "p256",
- "p384",
+ "p256 0.14.0",
+ "p384 0.14.0",
  "p521",
  "rand_core 0.10.1",
  "rsa 0.10.0-rc.18",
@@ -23724,7 +25168,7 @@ dependencies = [
  "font-kit",
  "fontconfig-parser",
  "futures",
- "guillotiere",
+ "guillotiere 0.6.2",
  "half",
  "halfbrown 0.3.0",
  "image",
@@ -24401,6 +25845,20 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn 2.0.119",
+]
+
+[[package]]
+name = "sysctl"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "01198a2debb237c62b6826ec7081082d951f46dbb64b0e8c7649a452230d1dfc"
+dependencies = [
+ "bitflags 2.13.2",
+ "byteorder",
+ "enum-as-inner",
+ "libc",
+ "thiserror 1.0.69",
+ "walkdir",
 ]
 
 [[package]]
@@ -26041,7 +27499,7 @@ dependencies = [
  "async-trait",
  "blake2 0.10.6",
  "bytes",
- "fearless_simd",
+ "fearless_simd 1.0.0",
  "fearless_simd_macros",
  "futures",
  "gotatun",
@@ -26117,6 +27575,12 @@ dependencies = [
  "quote",
  "syn 2.0.119",
 ]
+
+[[package]]
+name = "typed-path"
+version = "0.12.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "54ec2755506471f54baf5e4bb5499d8e510cc1caf271270e778a736bd2d7336c"
 
 [[package]]
 name = "typeid"
@@ -26435,6 +27899,7 @@ dependencies = [
  "percent-encoding",
  "rustls",
  "rustls-pki-types",
+ "rustls-platform-verifier",
  "serde",
  "serde_json",
  "socks",
@@ -27960,7 +29425,7 @@ dependencies = [
  "rustls",
  "rustls-native-certs",
  "rustls-pki-types",
- "rustls-webpki",
+ "rustls-webpki 0.103.15",
  "serde",
  "serde_json",
  "thiserror 2.0.21",
@@ -29870,6 +31335,33 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "40c9cb5fb67c2692310b6eb3fce7dd4b6e4c9a75be4f2f46b27f0b2b7799759c"
 
 [[package]]
+name = "vello_common"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b2e9aed918117e8152c9eddfd8362d73c465c23f26c44786aa331707b8a64fa2"
+dependencies = [
+ "bytemuck",
+ "fearless_simd 0.4.1",
+ "guillotiere 0.7.0",
+ "log",
+ "peniko",
+ "smallvec",
+ "thiserror 2.0.21",
+]
+
+[[package]]
+name = "vello_cpu"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ac7349e1f55f6b801c7c277958df4ea53e7f20f21e8014910ad888b2ecda93ea"
+dependencies = [
+ "bytemuck",
+ "glifo",
+ "hashbrown 0.17.1",
+ "vello_common",
+]
+
+[[package]]
 name = "vergen"
 version = "9.0.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -30609,6 +32101,7 @@ dependencies = [
  "thiserror 2.0.21",
  "wgpu-core-deps-apple 30.0.1",
  "wgpu-core-deps-emscripten 30.0.1",
+ "wgpu-core-deps-wasm",
  "wgpu-core-deps-windows-linux-android 30.0.1",
  "wgpu-hal 30.0.1",
  "wgpu-naga-bridge",
@@ -30647,6 +32140,15 @@ name = "wgpu-core-deps-emscripten"
 version = "30.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d98b86cf4abf524a902dd35f18ca6a3f08fc2ae9847c8f10b48e30491b1f0b86"
+dependencies = [
+ "wgpu-hal 30.0.1",
+]
+
+[[package]]
+name = "wgpu-core-deps-wasm"
+version = "30.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d260ca2ca8adc654f513a869bf3cac0b47f5b8d3f87803d6942015f8de597aae"
 dependencies = [
  "wgpu-hal 30.0.1",
 ]
@@ -30915,6 +32417,16 @@ dependencies = [
 
 [[package]]
 name = "windows"
+version = "0.54.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9252e5725dbed82865af151df558e754e4a3c2c30818359eb17465f1346a1b49"
+dependencies = [
+ "windows-core 0.54.0",
+ "windows-targets 0.52.6",
+]
+
+[[package]]
+name = "windows"
 version = "0.61.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9babd3a767a4c1aef6900409f85f5d53ce2544ccdfaa86dad48c91782c6d6893"
@@ -30963,6 +32475,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "23b2d95af1a8a14a3c7367e1ed4fc9c20e0a26e79551b1454d72583c97cc6610"
 dependencies = [
  "windows-core 0.62.2",
+]
+
+[[package]]
+name = "windows-core"
+version = "0.54.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "12661b9c89351d684a50a8a643ce5f608e20243b9fb84687800163429f161d65"
+dependencies = [
+ "windows-result 0.1.2",
+ "windows-targets 0.52.6",
 ]
 
 [[package]]
@@ -31097,6 +32619,15 @@ dependencies = [
  "windows-link 0.2.1",
  "windows-result 0.4.1",
  "windows-strings 0.5.1",
+]
+
+[[package]]
+name = "windows-result"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5e383302e8ec8515204254685643de10811af0ed97ea37210dc26fb0032647f8"
+dependencies = [
+ "windows-targets 0.52.6",
 ]
 
 [[package]]
@@ -32416,6 +33947,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ec7a2a501ed189703dba8b08142f057e887dfc4b2cc4db2d343ac6376ba3e0b9"
 
 [[package]]
+name = "xtask"
+version = "0.9.0"
+dependencies = [
+ "filmcraft-testkit",
+ "serde_json",
+]
+
+[[package]]
 name = "xxhash-rust"
 version = "0.8.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -32837,6 +34376,18 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "70b40401a28d86ce16a330b863b86fd7dbee4d7c940587ab09ab8c019f9e3fdf"
 dependencies = [
  "num-traits",
+]
+
+[[package]]
+name = "zip"
+version = "7.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "268bf6f9ceb991e07155234071501490bb41fd1e39c6a588106dad10ae2a5804"
+dependencies = [
+ "crc32fast",
+ "indexmap 2.14.2",
+ "memchr",
+ "typed-path",
 ]
 
 [[package]]

@@ -16,7 +16,7 @@ for (const pattern of nested.workspace.members as string[]) {
 }
 const crates = await Promise.all(members.sort().map(async path => {
   const manifest = Bun.TOML.parse(await Bun.file(join(source, path, "Cargo.toml")).text()) as Record<string, any>;
-  return { component: manifest.package.name, path: `src/media/filmcraft/${path}`, type: path.startsWith("crates/") ? "library" : "application", sourceRepository: "https://github.com/aphrody-labs/filmcraft", revision: "9cfaa22b408a73b2b374dda0c81a6a1d06284f8b", cargoOwner: "C:/bun/Cargo.toml", bunOwner: "packages/bun-video", buildOwner: "vps factory", qualification: "pending", optional: true };
+  return { component: manifest.package.name, path: `src/media/filmcraft/${path}`, type: path.startsWith("crates/") ? "library" : "application", sourceRepository: "https://github.com/aphrody-labs/filmcraft", revision: "9cfaa22b408a73b2b374dda0c81a6a1d06284f8b", cargoOwner: "Cargo.toml", bunOwner: "packages/bun-video", buildOwner: "vps factory", qualification: "pending", optional: true };
 }));
 const plan = { schema: "bun-filmcraft-absorption/v1", canonicalSource: "src/media/filmcraft", previousIntegrationRevision: "9b7893a2f67cb40832a4cd709f3ccfa7c96ce8e2", sourceRevision: crates[0]?.revision, members: crates };
 console.log(JSON.stringify(plan, null, 2));
