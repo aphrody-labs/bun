@@ -50,6 +50,7 @@ export interface CatalogOptions {
 export interface EpisodePageOptions {
   siteOrigin: string;
   mediaOrigins?: string[];
+  series?: string;
   limit?: number;
   offset?: number;
 }
@@ -434,9 +435,13 @@ export async function readShenronEpisodePage(options: EpisodePageOptions) {
     pageSize = limit(options.limit, 20, 200),
     offset = options.offset ?? 0;
   if (!Number.isSafeInteger(offset) || offset < 0 || offset > 1000000) throw new Failure("invalid-episode-offset");
+  const series = options.series;
+  if (series !== undefined && !/^[A-Z][A-Z0-9_]{0,31}$/.test(series))
+    throw new Failure("invalid-episode-series");
   const url = new URL("/api/episodes", site);
   url.searchParams.set("limit", String(pageSize));
   url.searchParams.set("offset", String(offset));
+  if (series !== undefined) url.searchParams.set("series", series);
   const head = await fetch(url, {
     method: "HEAD",
     redirect: "error",
@@ -473,14 +478,15 @@ export async function readShenronEpisodePage(options: EpisodePageOptions) {
     throw new Failure("invalid-episode-page");
   const assets: CorpusAsset[] = [];
   const ids = new Set<string>();
-  let unavailableSources = 0;
+  const unavailableEpisodeIds: string[] = [];
   for (const episode of value.episodes) {
     const id = String(episode.id);
     if (!/^\d+$/.test(id) || ids.has(id)) throw new Failure("invalid-public-episode-id");
+    if (series !== undefined && episode.series !== series) throw new Failure("episode-series-mismatch");
     ids.add(id);
     const source = episode.nativeSource;
     if (source === null || source === undefined) {
-      unavailableSources++;
+      unavailableEpisodeIds.push(id);
       continue;
     }
     if (typeof source.src !== "string" || typeof source.type !== "string")
@@ -500,7 +506,9 @@ export async function readShenronEpisodePage(options: EpisodePageOptions) {
     assets,
     declaredTotalEpisodes: value.total as number,
     episodesVisited: value.count as number,
-    unavailableSources,
+    unavailableSources: unavailableEpisodeIds.length,
+    unavailableEpisodeIds,
+    ...(series !== undefined ? { series } : {}),
     metadataBytes: budget.bytes,
     endpoint: url.pathname,
     headQualified: true,
@@ -1187,6 +1195,7 @@ if (import.meta.main) {
         "media-origin": { type: "string", multiple: true },
         "episode-limit": { type: "string" },
         "episode-offset": { type: "string" },
+        "episode-series": { type: "string" },
         "source-origin": { type: "string" },
         "source-env": { type: "string" },
         "sha256-env": { type: "string" },
@@ -1209,7 +1218,7 @@ if (import.meta.main) {
     });
     if (values.help)
       console.log(
-        "shenron-video-corpus --manifest PRIVATE_JSON --report PRIVATE_NEW_JSON | --episodes SITE_ORIGIN [--media-origin ORIGIN] [--episode-limit N] [--episode-offset N] --report PRIVATE_NEW_JSON | --catalog CDN_ORIGIN [--source-origin ORIGIN] [--catalog-max-pages N] [--catalog-max-assets N] [--catalog-max-metadata-bytes N] [--catalog-deadline-ms N] [--catalog-inventory-only] [--catalog-revision SHA --catalog-page N --catalog-entry N] --report PRIVATE_NEW_JSON | --source-env ENV_NAME [--sha256-env ENV_NAME] [--max-remux-bytes N] [--ffmpeg-remux-formats mp4,mkv,mov] [--worker-timeout-ms N] [--timeout-ms N] --report PRIVATE_NEW_JSON\n--deadline-ms N bounds asset checks (default 60000; maximum 600000). CLI catalogs select video and playlists; inventory-only reads hashed metadata pages and sends no media requests. Reports cover selected assets; catalog cursors and source publication qualification remain separate. No cookies, corpus scans or media files fetched for display.",
+        "shenron-video-corpus --manifest PRIVATE_JSON --report PRIVATE_NEW_JSON | --episodes SITE_ORIGIN [--media-origin ORIGIN] [--episode-series SERIES] [--episode-limit N] [--episode-offset N] --report PRIVATE_NEW_JSON | --catalog CDN_ORIGIN [--source-origin ORIGIN] [--catalog-max-pages N] [--catalog-max-assets N] [--catalog-max-metadata-bytes N] [--catalog-deadline-ms N] [--catalog-inventory-only] [--catalog-revision SHA --catalog-page N --catalog-entry N] --report PRIVATE_NEW_JSON | --source-env ENV_NAME [--sha256-env ENV_NAME] [--max-remux-bytes N] [--ffmpeg-remux-formats mp4,mkv,mov] [--worker-timeout-ms N] [--timeout-ms N] --report PRIVATE_NEW_JSON\n--deadline-ms N bounds asset checks (default 60000; maximum 600000). Episode series uses the catalogue's uppercase code (for example DBS_BEERUS); missing native sources remain unavailable. CLI catalogs select video and playlists; inventory-only reads hashed metadata pages and sends no media requests. Reports cover selected assets; catalog cursors and source publication qualification remain separate. No cookies, corpus scans or media files fetched for display.",
       );
     else if (values.worker) {
       try {
@@ -1219,6 +1228,8 @@ if (import.meta.main) {
         console.log(JSON.stringify(failed(error)));
       }
     } else {
+      if (values["episode-series"] !== undefined && !values.episodes)
+        throw new Failure("episode-series-requires-episodes");
       let inventory:
         | Awaited<ReturnType<typeof readShenronCdnInventory>>
         | Awaited<ReturnType<typeof readShenronEpisodePage>>
@@ -1232,6 +1243,7 @@ if (import.meta.main) {
         inventory = await readShenronEpisodePage({
           siteOrigin: values.episodes,
           mediaOrigins: values["media-origin"],
+          series: values["episode-series"],
           ...(values["episode-limit"] ? { limit: Number(values["episode-limit"]) } : {}),
           ...(values["episode-offset"] ? { offset: Number(values["episode-offset"]) } : {}),
         });

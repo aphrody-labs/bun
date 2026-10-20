@@ -375,6 +375,7 @@ test("episode metadata uses canonical native transports and omits stored provide
     },
   ]);
   expect(page.unavailableSources).toBe(1);
+  expect(page.unavailableEpisodeIds).toEqual(["2"]);
   expect(page.nextOffset).toBe(2);
   expect(page.consistency).toBe("mutable-offset-page");
   expect(page.completeCorpusQualified).toBe(false);
@@ -382,6 +383,81 @@ test("episode metadata uses canonical native transports and omits stored provide
   expect({ heads, gets }).toEqual({ heads: 1, gets: 1 });
   signed = true;
   await expect(readShenronEpisodePage({ siteOrigin: server.url.origin, limit: 2 })).rejects.toThrow("non-public-url");
+});
+
+test("episode series selection binds the requested catalogue page and retains missing native sources", async () => {
+  const requests: string[] = [];
+  let wrongSeries = false;
+  using server = Bun.serve({
+    port: 0,
+    hostname: "127.0.0.1",
+    fetch(request) {
+      const url = new URL(request.url);
+      requests.push(`${request.method} ${url.pathname}${url.search}`);
+      if (request.method === "HEAD")
+        return new Response(null, { headers: { "content-type": "application/json" } });
+      return Response.json({
+        total: 2,
+        count: 2,
+        limit: 2,
+        offset: 0,
+        episodes: [
+          {
+            id: 875,
+            series: wrongSeries ? "DBS" : "DBS_BEERUS",
+            nativeSource: { src: "/api/episodes/875/video", type: "video/mp4" },
+          },
+          {
+            id: 876,
+            series: "DBS_BEERUS",
+            nativeSource: null,
+            players: [{ embedUrl: "https://provider.invalid/?token=fixture-secret" }],
+          },
+        ],
+      });
+    },
+  });
+  const options = { siteOrigin: server.url.origin, series: "DBS_BEERUS", limit: 2 };
+  const page = await readShenronEpisodePage(options);
+  expect(requests).toEqual([
+    "HEAD /api/episodes?limit=2&offset=0&series=DBS_BEERUS",
+    "GET /api/episodes?limit=2&offset=0&series=DBS_BEERUS",
+  ]);
+  expect(page).toMatchObject({
+    series: "DBS_BEERUS",
+    declaredTotalEpisodes: 2,
+    episodesVisited: 2,
+    unavailableSources: 1,
+    unavailableEpisodeIds: ["876"],
+    nextOffset: null,
+    completeCorpusQualified: false,
+  });
+  expect(page.assets).toEqual([
+    {
+      id: "episode-875",
+      urls: [{ role: "http", url: new URL("/api/episodes/875/video", server.url).href, mime: "video/mp4" }],
+    },
+  ]);
+  expect(JSON.stringify(page)).not.toContain("fixture-secret");
+  wrongSeries = true;
+  await expect(readShenronEpisodePage(options)).rejects.toThrow("episode-series-mismatch");
+});
+
+test("invalid episode series are rejected before requesting catalogue metadata", async () => {
+  let requests = 0;
+  using server = Bun.serve({
+    port: 0,
+    hostname: "127.0.0.1",
+    fetch() {
+      requests++;
+      return Response.json({});
+    },
+  });
+  for (const series of ["", "dbs_beerus", "DBS&limit=200", "DBS/BEERUS", "A".repeat(33)])
+    await expect(readShenronEpisodePage({ siteOrigin: server.url.origin, series })).rejects.toThrow(
+      "invalid-episode-series",
+    );
+  expect(requests).toBe(0);
 });
 
 test("private reports refuse an existing file and an escaping directory link before creating descendants", async () => {

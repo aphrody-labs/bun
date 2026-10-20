@@ -17,6 +17,13 @@ passed during this audit.
 | VPS reachability | Native Aphrody `infra ssh status --host vps --json` failed: SSH connection to `10.200.77.1:22` timed out |
 | Infra source | Expected `C:\src\aphrody\docs\operations\cloud\CLOUD-READY.md` is absent; GitHub file retrieval returned 404 |
 
+The configured Windows `WireGuardTunnel$aphrody` service is stopped. Starting
+that existing service was denied by Windows service permissions. The native
+Infra WireGuard plan lists the VPS public endpoint; its SSH port is reachable.
+An Infra SSH execution through that public endpoint, retaining the configured
+identity and strict host-key verification, failed with `Permission denied
+(publickey)`. The temporary alias change was restored. No remote command ran.
+
 The archived native Windows CLI was found under
 `~/.aphrody/releases/aphrody-native-21ff48ba62/native/aphrody.exe`.
 It exposes `infra ssh exec`, but service catalogue inspection requires the absent
@@ -45,9 +52,14 @@ requested public domain.
 
 1. Restore the canonical Infra source/catalogue and VPS reachability; read
    `CLOUD-READY.md`, inspect the native host catalogue, then plan before apply.
-2. Resolve the current Shenron catalogue's episode ID for the supplied **02**
-   fixture. The historical Beerus **01** mapping in
-   [Shenron episode assets](shenron-episode-assets.md) is not its identity.
+2. Use catalogue episode **876**, series `DBS_BEERUS`, number **2**, for the
+   supplied fixture. The current
+   [episode catalogue](https://dragonballfr.com/api/episodes?series=DBS_BEERUS&limit=20)
+   lists its public CDN source under SHA-256
+   `d4d484227c84427b0a1dcfd7e1070ae4c0f4f33f5f3c53073be6bfbe7df24e70`;
+   the supplied local file has that exact SHA-256. Its `nativeSource` is null,
+   so its canonical native transport is unavailable in this response. This
+   metadata and file-integrity observation does not qualify decoding or playback.
 3. Consolidate the existing library build and consumer qualification for the
    VPS's target. Reuse one shared factory lane and existing outputs.
 4. Qualify source checks, protocols, native decoding and transformations,
@@ -63,3 +75,23 @@ requested public domain.
    actual results, and synchronize PC/VPS at the delivery boundary.
 
 Earlier results and their limits remain in [Qualification](qualification.md).
+
+## Catalogue qualification preparation
+
+`scripts/aphrody/shenron-video-corpus.ts` now accepts `--episode-series` with
+`--episodes`. The series is included in both metadata requests and checked
+against each returned episode. The report retains the selected series and
+the IDs of episodes missing a canonical native source. Stored provider players
+are still excluded rather than substituted for a missing native transport.
+
+Two new hermetic cases cover the `DBS_BEERUS` page, omitted sources, response
+series mismatches and invalid series before network requests. They have not
+run: the workstation does not run qualification hooks, and VPS access remains
+blocked. The pending focused VPS gate is:
+
+```sh
+bun factory run -- bun bd test scripts/aphrody/shenron-video-corpus.test.ts
+```
+
+Native type, lint and formatting gates for the changed scripts also remain
+pending on the VPS. This source checkpoint is not qualification or publication.
