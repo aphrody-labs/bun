@@ -63,6 +63,35 @@ const commands: Record<string, Command> = {
       process.exitCode = result.exitCode;
     },
   },
+  media: {
+    usage: "media <inspect|download|cut|compress|serve> [args]",
+    run: args => guarded(
+      import("../src/media-cli"),
+      args,
+      "Media command failed; check local files and options. Private URLs and paths are omitted.",
+    ),
+  },
+  x: {
+    usage: "x <inspect|download> <X status URL> [output]",
+    run: async args => {
+      try {
+        const [action, url, output, ...extra] = args;
+        if (extra.length || !url || !["inspect", "download"].includes(action ?? ""))
+          throw new Error("invalid-arguments");
+        const { normalizeXVideoUrl } = await import("../src/x-source");
+        const status = normalizeXVideoUrl(url);
+        const { executeMediaJob } = await import("../src/media-workflow");
+        const job = action === "inspect"
+          ? { action, source: status.url } as const
+          : output ? { action: "download", url: status.url, output } as const : undefined;
+        if (!job) throw new Error("missing-output");
+        console.log(JSON.stringify(await executeMediaJob(job), null, 2));
+      } catch {
+        console.error("X video command failed; check the public status URL and output path. Private values are omitted.");
+        process.exitCode = 1;
+      }
+    },
+  },
   remotion: {
     usage: "remotion <command> [args]",
     run: async args => {

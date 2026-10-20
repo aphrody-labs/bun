@@ -7,6 +7,10 @@
  */
 import { loadVideoAPI } from "./video-api";
 export { createUnifiedVideoPipeline, UnifiedVideoPipeline } from "./video-workflow";
+export { executeMediaJob } from "./media-workflow";
+export type { MediaJob } from "./media-workflow";
+export { normalizeXVideoUrl, XVideoSource } from "./x-source";
+export type { XVideoReference, XVideoSourceOptions } from "./x-source";
 export { VideoCatalog, defaultVideoCatalogPath } from "./video-catalog";
 export { VideoWorkerPool, runVideoTaskProcess } from "./video-workers";
 export { validateVideoTask, videoTaskFrameRate, executeVideoTask } from "./video-worker-task";

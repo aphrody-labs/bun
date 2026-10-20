@@ -72,6 +72,7 @@
     "docs/har.md",
     "docs/integration.md",
     "docs/m3-video.md",
+    "docs/media-pipeline.md",
     "docs/live-dash-lab.md",
     "docs/native-ffmpeg.md",
     "docs/native-media-packaging.md",
@@ -3732,6 +3733,9 @@
     "src/image.ts",
     "src/index.ts",
     "src/mcp.ts",
+    "src/media-cli.ts",
+    "src/media-timeline.ts",
+    "src/media-workflow.ts",
     "src/media-runtime.d.ts",
     "src/mpv.ts",
     "src/oauth.ts",
@@ -3766,6 +3770,7 @@
     "src/video-worker-task.ts",
     "src/video-workers.ts",
     "src/video-workflow.ts",
+    "src/x-source.ts",
     "src/webgpu.ts",
     "src/ytdlp.ts",
     "tsconfig.json",
@@ -4971,6 +4976,16 @@
       "bun": "./dist/src/ytdlp.ts",
       "default": "./dist/src/ytdlp.ts"
     },
+    "./media": {
+      "types": "./dist/types/src/media-workflow.d.ts",
+      "bun": "./dist/src/media-workflow.ts",
+      "default": "./dist/src/media-workflow.ts"
+    },
+    "./x-source": {
+      "types": "./dist/types/src/x-source.d.ts",
+      "bun": "./dist/src/x-source.ts",
+      "default": "./dist/src/x-source.ts"
+    },
     "./pipeline": {
       "types": "./dist/types/src/pipeline.d.ts",
       "bun": "./dist/src/pipeline.ts",
@@ -5332,6 +5347,8 @@
       "./webgpu": "./src/webgpu.ts",
       "./mediabunny": "./mediabunny/src/index.ts",
       "./ytdlp": "./src/ytdlp.ts",
+      "./media": "./src/media-workflow.ts",
+      "./x-source": "./src/x-source.ts",
       "./pipeline": "./src/pipeline.ts",
       "./image": "./src/image.ts",
       "./photocraft": "./src/photocraft.ts",

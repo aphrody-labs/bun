@@ -1,5 +1,6 @@
 /// <reference path="./media-runtime.d.ts" />
-import { basename, dirname, join, resolve } from "node:path";
+import { realpath } from "node:fs/promises";
+import { basename, dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 
 export interface YtDlpOptions {
   readonly download?: boolean;
@@ -275,7 +276,26 @@ export interface YtDlpRequest {
   readonly url: string;
   readonly options?: YtDlpOptions;
   readonly vendorRoot?: string;
+  /** Root of the caller's protected credential store; cookie files must live beneath it. */
+  readonly privateDirectory?: string;
   readonly signal?: AbortSignal;
+  /** Maximum bytes accepted by the progress hook. Defaults to 2 GiB. */
+  readonly maxBytes?: number;
+  /** Maximum download wall time, including live capture. Defaults to 30 minutes. */
+  readonly maxDurationSeconds?: number;
+  readonly onProgress?: (progress: YtDlpProgress) => void;
+}
+
+export interface YtDlpProgress {
+  readonly status: "downloading" | "finished";
+  readonly downloadedBytes: number;
+  readonly totalBytes: number | null;
+  readonly percentage: number | null;
+  readonly speedBytesPerSecond: number | null;
+  readonly etaSeconds: number | null;
+  readonly elapsedSeconds: number | null;
+  readonly filename: string | null;
+  readonly formatId: string | null;
 }
 
 export interface YtDlpResult {
@@ -296,31 +316,191 @@ function validate(request: YtDlpRequest): void {
   }
   if (!["http:", "https:"].includes(url.protocol) || url.username || url.password)
     throw new TypeError("yt-dlp accepts only HTTP(S) URLs without credentials");
+  if (request.maxBytes !== undefined && (!Number.isSafeInteger(request.maxBytes) || request.maxBytes <= 0))
+    throw new RangeError("maxBytes must be a positive safe integer");
+  if (
+    request.maxDurationSeconds !== undefined &&
+    (!Number.isFinite(request.maxDurationSeconds) || request.maxDurationSeconds <= 0 || request.maxDurationSeconds > 86_400)
+  )
+    throw new RangeError("maxDurationSeconds must be between 0 and 86400");
 }
 
-/** Run the vendored yt-dlp Python package through Bun's in-process CPython host. */
+function safeProgress(value: Record<string, unknown>): YtDlpProgress {
+  const downloadedBytes = typeof value.downloaded_bytes === "number" ? value.downloaded_bytes : 0;
+  const totalBytes = typeof value.total_bytes === "number"
+    ? value.total_bytes
+    : typeof value.total_bytes_estimate === "number" ? value.total_bytes_estimate : null;
+  const numberOrNull = (key: string) => typeof value[key] === "number" ? value[key] as number : null;
+  const filename = typeof value.filename === "string" ? basename(value.filename) : null;
+  return {
+    status: value.status === "finished" ? "finished" : "downloading",
+    downloadedBytes,
+    totalBytes,
+    percentage: totalBytes && totalBytes > 0 ? Math.min(100, downloadedBytes / totalBytes * 100) : null,
+    speedBytesPerSecond: numberOrNull("speed"),
+    etaSeconds: numberOrNull("eta"),
+    elapsedSeconds: numberOrNull("elapsed"),
+    filename,
+    formatId: typeof value.format_id === "string" ? value.format_id : null,
+  };
+}
+
+/** Execute yt-dlp on its Python worker thread and poll cooperative progress/cancellation. */
+async function runYtDlpJob(request: YtDlpRequest, options: Record<string, unknown>): Promise<YtDlpResult> {
+  request.signal?.throwIfAborted();
+  const root = await vendorRoot(request);
+  if (!(await Bun.file(join(root, "yt_dlp", "__init__.py")).exists()))
+    throw new Error("Vendored yt-dlp package is missing");
+  const { Python } = await import("bun:python");
+  retainPythonOwner(Python);
+  await using py = await Python.async();
+  const name = `__bun_ytdlp_job_${crypto.randomUUID().replaceAll("-", "")}`;
+  const maxBytes = request.maxBytes ?? 2 * 1024 * 1024 * 1024;
+  const maxDuration = request.maxDurationSeconds ?? 1800;
+  const socketTimeout = typeof options.socket_timeout === "number" ? options.socket_timeout : 20;
+  const boundedOptions = {
+    ...options,
+    max_filesize: Math.min(typeof options.max_filesize === "number" ? options.max_filesize : maxBytes, maxBytes),
+    socket_timeout: Math.min(Math.max(socketTimeout, 1), 120),
+    concurrent_fragment_downloads: Math.min(
+      Math.max(typeof options.concurrent_fragment_downloads === "number" ? options.concurrent_fragment_downloads : 1, 1),
+      4,
+    ),
+  };
+  const shouldDownload = (boundedOptions as Record<string, unknown>).download === true;
+  const script = [
+    "import json, sys, os, threading, time",
+    "sys.dont_write_bytecode = True",
+    `__vendor_root = ${JSON.stringify(root)}`,
+    "if __vendor_root not in sys.path: sys.path.insert(0, __vendor_root)",
+    "import yt_dlp",
+    "if os.path.commonpath([os.path.realpath(yt_dlp.__file__), os.path.realpath(__vendor_root)]) != os.path.realpath(__vendor_root):",
+    "    raise RuntimeError('Loaded yt-dlp package does not match the selected vendor root')",
+    `__options = json.loads(${JSON.stringify(JSON.stringify(boundedOptions))})`,
+    `__url = json.loads(${JSON.stringify(JSON.stringify(request.url))})`,
+    `__max_bytes = ${maxBytes}`,
+    `__max_duration = ${maxDuration}`,
+    "__state = {'done': False, 'cancel': False, 'progress': None, 'result': None, 'error': None, 'cancelReason': None}",
+    "def __work():",
+    "    try:",
+    "        from yt_dlp import YoutubeDL",
+    "        from yt_dlp.utils import DownloadError",
+    "        class __PrivateLogger:",
+    "            def debug(self, message): pass",
+    "            def warning(self, message): pass",
+    "            def error(self, message): pass",
+    "        __options['logger'] = __PrivateLogger()",
+    "        __started = time.monotonic()",
+    "        def __progress(hook):",
+    "            if __state['cancel']:",
+    "                raise DownloadError('Download cancelled')",
+    "            if time.monotonic() - __started > __max_duration:",
+    "                __state['cancelReason'] = 'duration-limit'",
+    "                raise DownloadError('Download duration limit reached')",
+    "            __downloaded = hook.get('downloaded_bytes', 0) or 0",
+    "            if __downloaded > __max_bytes:",
+    "                __state['cancelReason'] = 'size-limit'",
+    "                raise DownloadError('Download size limit reached')",
+    "            __state['progress'] = {k: hook.get(k) for k in ('status', 'downloaded_bytes', 'total_bytes', 'total_bytes_estimate', 'speed', 'eta', 'elapsed', 'filename', 'format_id')}",
+    "        __options['progress_hooks'] = [__progress]",
+    "        with YoutubeDL(__options) as __ydl:",
+    `            __info = __ydl.extract_info(__url, download=${shouldDownload ? "True" : "False"})`,
+    "            __raw = __ydl.sanitize_info(__info)",
+    "            def __public(value, key=''):",
+    "                if isinstance(value, dict): return {str(k): __public(v, str(k).lower()) for k,v in value.items() if str(k).lower() not in {'url', 'manifest_url', 'fragment_base_url', 'http_headers', 'cookies', 'cookiefile', 'requested_downloads', 'filepath', '_filename'}}",
+    "                if isinstance(value, (list, tuple)): return [__public(v, key) for v in value]",
+    "                if key.endswith('_url') and isinstance(value, str):",
+    "                    from urllib.parse import urlsplit, urlunsplit",
+    "                    __parts = urlsplit(value)",
+    "                    if __parts.scheme in ('http', 'https'): return urlunsplit((__parts.scheme, __parts.hostname or '', __parts.path, '', ''))",
+    "                return value",
+    "            __state['result'] = __public(__raw)",
+    "    except BaseException as __error:",
+    "        __state['error'] = type(__error).__name__",
+    "    finally:",
+    "        __state['done'] = True",
+    "__thread = threading.Thread(target=__work, name='bun-ytdlp-download', daemon=True)",
+    "__thread.start()",
+  ].join("\n");
+  const encodedScript = JSON.stringify(script);
+  let cancelRequested = false;
+  let callbackError: unknown;
+  let lastProgress = "";
+  const startedAt = Date.now();
+  try {
+    await py.run(`${name} = {}\nexec(${encodedScript}, ${name})`);
+    while (true) {
+      if (!cancelRequested && (request.signal?.aborted || Date.now() - startedAt > maxDuration * 1000)) {
+        cancelRequested = true;
+        await py.run(`${name}['__state']['cancel'] = True`);
+      }
+      const state = await py.evalJSON<{
+        done: boolean;
+        cancelReason: string | null;
+        error: string | null;
+        progress: Record<string, unknown> | null;
+        result: YtDlpResult | null;
+      }>(`${name}['__state']`);
+      if (state.progress && request.onProgress) {
+        const key = JSON.stringify(state.progress);
+        if (key !== lastProgress) {
+          lastProgress = key;
+          try {
+            request.onProgress(safeProgress(state.progress));
+          } catch (cause) {
+            callbackError = cause;
+            cancelRequested = true;
+            await py.run(`${name}['__state']['cancel'] = True`);
+          }
+        }
+      }
+      if (state.done) {
+        if (callbackError !== undefined) throw callbackError;
+        if (request.signal?.aborted) request.signal.throwIfAborted();
+        if (Date.now() - startedAt > maxDuration * 1000 || state.cancelReason === "duration-limit")
+          throw new Error("yt-dlp download exceeded its configured duration limit");
+        if (state.cancelReason === "size-limit") throw new Error("yt-dlp download exceeded its configured size limit");
+        if (state.error) throw new Error(`yt-dlp failed (${state.error})`);
+        return state.result ?? {};
+      }
+      await Bun.sleep(100);
+    }
+  } finally {
+    await py.run(`globals().pop(${JSON.stringify(name)}, None)`);
+  }
+}
+
+/** Run vendored yt-dlp through Bun's embedded CPython host with bounded cooperative cancellation. */
 export async function runYtDlp(request: YtDlpRequest): Promise<YtDlpResult> {
   validate(request);
+  const normalizedOptions = normalizeYtDlpOptions(request.options);
+  const cookieFile = normalizedOptions.cookiefile;
+  if (cookieFile !== undefined) {
+    if (typeof cookieFile !== "string" || !request.privateDirectory)
+      throw new TypeError("yt-dlp cookie files require a protected privateDirectory");
+    const [privateRoot, cookiePath] = await Promise.all([
+      realpath(resolve(request.privateDirectory)),
+      realpath(resolve(cookieFile)).catch(() => ""),
+    ]);
+    const relativeCookiePath = relative(privateRoot, cookiePath);
+    if (
+      !cookiePath ||
+      relativeCookiePath === ".." ||
+      relativeCookiePath.startsWith(`..${sep}`) ||
+      isAbsolute(relativeCookiePath) ||
+      !(await Bun.file(cookiePath).exists())
+    )
+      throw new TypeError("yt-dlp cookie files must exist inside the protected privateDirectory");
+  }
+  if (normalizedOptions.cookiesfrombrowser !== undefined)
+    throw new TypeError("yt-dlp browser cookies are disabled; use a protected cookie file path");
   const options: Record<string, unknown> = {
     quiet: true,
     no_warnings: true,
-    ...normalizeYtDlpOptions(request.options),
+    ...normalizedOptions,
     js_runtimes: { bun: { path: bunExecutable() } },
   };
-  const code = [
-    "from yt_dlp import YoutubeDL",
-    "class __PrivateLogger:",
-    "    def debug(self, message): pass",
-    "    def warning(self, message): pass",
-    "    def error(self, message): pass",
-    `__bun_ytdlp_options = json.loads(${JSON.stringify(JSON.stringify(options))})`,
-    "__bun_ytdlp_options['logger'] = __PrivateLogger()",
-    `__bun_ytdlp_url = json.loads(${JSON.stringify(JSON.stringify(request.url))})`,
-    "with YoutubeDL(__bun_ytdlp_options) as __bun_ytdlp:",
-    `    __info = __bun_ytdlp.extract_info(__bun_ytdlp_url, download=${options.download === true ? "True" : "False"})`,
-    "    __result = __bun_ytdlp.sanitize_info(__info)",
-  ].join("\n");
-  return runBridge<YtDlpResult>(request, code);
+  return runYtDlpJob(request, options);
 }
 
 export async function extractYtDlp(url: string, options: YtDlpOptions = {}): Promise<YtDlpResult> {
@@ -335,8 +515,40 @@ export async function listYtDlpFormats(
   return result.formats ?? [];
 }
 
-export async function downloadYtDlp(url: string, output: string, options: YtDlpOptions = {}): Promise<YtDlpResult> {
-  return await runYtDlp({ url, options: { outtmpl: output, download: true, ...options } });
+const activeYtDlpOutputs = new Set<string>();
+
+export async function downloadYtDlp(
+  url: string,
+  output: string,
+  options: YtDlpOptions = {},
+  controls: Pick<YtDlpRequest, "signal" | "maxBytes" | "maxDurationSeconds" | "onProgress" | "vendorRoot" | "privateDirectory"> = {},
+): Promise<YtDlpResult & { readonly localPath: string }> {
+  const destination = resolve(output);
+  if (await Bun.file(destination).exists()) throw new Error("yt-dlp output already exists");
+  if (await Bun.file(`${destination}.part`).exists()) throw new Error("yt-dlp partial output already exists");
+  if (activeYtDlpOutputs.has(destination)) throw new Error("yt-dlp output is already being written");
+  activeYtDlpOutputs.add(destination);
+  let ownsOutput = false;
+  try {
+    const result = await runYtDlp({
+      url,
+      options: { ...options, download: true, nooverwrites: true, outtmpl: destination },
+      ...controls,
+    });
+    const file = Bun.file(destination);
+    if (!(await file.exists())) throw new Error("yt-dlp completed without producing the requested output");
+    ownsOutput = true;
+    if (file.size > (controls.maxBytes ?? 2 * 1024 * 1024 * 1024))
+      throw new Error("yt-dlp output exceeded its configured size limit");
+    return { ...result, localPath: destination };
+  } catch (error) {
+    const partial = Bun.file(`${destination}.part`);
+    if (await partial.exists()) await partial.delete();
+    if (ownsOutput && await Bun.file(destination).exists()) await Bun.file(destination).delete();
+    throw error;
+  } finally {
+    activeYtDlpOutputs.delete(destination);
+  }
 }
 
 export async function extractYtDlpPlaylist(

@@ -81,6 +81,9 @@ export class UnifiedVideoPipeline {
     const { openVideoPipeline } = await import("./pipeline");
     return openVideoPipeline(options);
   }
+  media(job: import("./media-workflow").MediaJob) {
+    return import("./media-workflow").then(({ executeMediaJob }) => executeMediaJob(job));
+  }
   async capture(url = "https://www.crunchyroll.com/", options: { check?: boolean; endpoint?: string } = {}) {
     const { runNetworkWindow } = await import("../src/apps/network-window");
     return runNetworkWindow(url, options);
