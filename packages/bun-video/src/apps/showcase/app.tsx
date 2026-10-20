@@ -135,7 +135,11 @@ function Film({
           <output>
             {position.toFixed(1)} / {duration.toFixed(1)} s
           </output>
-          <button onClick={toggleFullscreen} aria-pressed={fullscreen} aria-label={fullscreen ? "Quitter le plein écran" : "Plein écran"}>
+          <button
+            onClick={toggleFullscreen}
+            aria-pressed={fullscreen}
+            aria-label={fullscreen ? "Quitter le plein écran" : "Plein écran"}
+          >
             {fullscreen ? "Quitter" : "Plein écran"}
           </button>
           <details>
@@ -150,7 +154,11 @@ function Film({
                   ? work.evidence.join(" · ")
                   : "Aucune qualification associée à cette composition."}
               </p>
-              {work.code && <pre><code>{work.code}</code></pre>}
+              {work.code && (
+                <pre>
+                  <code>{work.code}</code>
+                </pre>
+              )}
               <a href="/showcase.json">Manifeste des résultats</a>
             </div>
           </details>

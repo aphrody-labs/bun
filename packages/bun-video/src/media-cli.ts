@@ -110,7 +110,14 @@ export async function run(args: string[]) {
     const width = numberOption(rest, "--width");
     const height = numberOption(rest, "--height");
     if (rest.length !== 2) throw new Error(usage);
-    job = { action, input: rest[0]!, output: rest[1]!, timeSeconds, ...(width !== undefined ? { width } : {}), ...(height !== undefined ? { height } : {}) };
+    job = {
+      action,
+      input: rest[0]!,
+      output: rest[1]!,
+      timeSeconds,
+      ...(width !== undefined ? { width } : {}),
+      ...(height !== undefined ? { height } : {}),
+    };
   } else if (action === "extract-frames") {
     const startSeconds = numberOption(rest, "--start", true)!;
     const endSeconds = numberOption(rest, "--end", true)!;
