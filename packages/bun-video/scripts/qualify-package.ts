@@ -286,7 +286,8 @@ for(const name of ${JSON.stringify(snapshot.exports)}) {
 const checks={};
 try {
   const main=await import('@aphrody/bun-video');
-  checks.interpolation=main.interpolate(5,[0,10],[0,100])===50;
+  const remotionCore=await main.loadRemotionCore();
+  checks.interpolation=remotionCore.interpolate(5,[0,10],[0,100])===50;
   const React=await import('react');const dom=await import('react-dom/server');
   const remotion=await import('@aphrody/bun-video/remotion');
   const html=dom.renderToStaticMarkup(React.createElement(remotion.AbsoluteFill,null,'consumer-render-fixture'));
@@ -386,7 +387,7 @@ console.log(JSON.stringify({runtime:Bun.version,revision:Bun.revision,exports:re
   if (types) {
     await Bun.write(
       join(root, "type-probe.ts"),
-      `import {interpolate, VideoCatalog} from "@aphrody/bun-video";
+      `import {loadRemotionCore, VideoCatalog} from "@aphrody/bun-video";
 import {VideoWorkerPool,UnifiedVideoPipeline,VideoCookieVault} from "@aphrody/bun-video";
 import {VideoWorkerPool as Workers} from "@aphrody/bun-video/workers";
 import {UnifiedVideoPipeline as Workflow} from "@aphrody/bun-video/workflow";
@@ -398,7 +399,8 @@ const sharedWorker:VideoWorkerPool=worker;
 const sharedWorkflow:UnifiedVideoPipeline=workflow;
 const sharedVault:VideoCookieVault=vault;
 import {inspectDashManifest} from "@aphrody/bun-video/dash";
-const value:number=interpolate(5,[0,10],[0,100]);
+const remotion=await loadRemotionCore();
+const value:number=remotion.interpolate(5,[0,10],[0,100]);
 async function nativeFrame(video:Bun.Video){const metadata=await video.metadata();const rgba=await video.frame(0).resize(64).rgba();return {metadata,rgba};}
 const available:boolean=Bun.Video.available;
 export {value, VideoCatalog, inspectDashManifest, nativeFrame, available};\n`,
