@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { buildBitmovinBrowser, createBitmovinPlayer, loadBitmovinPlayer } from "../src/bitmovin";
 import type { PlayerConfig, SourceConfig } from "../src/bitmovin";
+import { isDebug } from "../../../test/harness";
 
 test("server imports remain safe and browser evaluation is deferred", async () => {
   expect(typeof createBitmovinPlayer).toBe("function");
@@ -26,7 +27,7 @@ test("Bun bundles the installed player and provides unchanged local UI and servi
   const source: SourceConfig = { hls: "http://localhost/fixture.m3u8" };
   expect(config.playback?.autoplay).toBe(false);
   expect(source.hls).toBe("http://localhost/fixture.m3u8");
-}, 30_000);
+}, isDebug ? 90_000 : 30_000);
 
 test("browser asset URLs reject unsupported schemes", async () => {
   await expect(buildBitmovinBrowser({ assetBaseURL: "file:///assets/" })).rejects.toThrow("HTTP or HTTPS");
