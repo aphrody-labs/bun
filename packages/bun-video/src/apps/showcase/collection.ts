@@ -26,12 +26,54 @@ const palettes = {
 } as const;
 type Brief = readonly [string, string, string, Artwork, keyof typeof palettes, readonly string[]];
 const briefs: readonly Brief[] = [
-  ["orbital", "Orbital", "Une chorégraphie de trajectoires et de lumière.", "orbit", "blue", ["interpolation", "easing", "SVG", "rational-fps"]],
-  ["mot-mouvement", "Le mot devient mouvement", "Une affiche typographique qui se déploie dans le temps.", "type", "coral", ["typography", "spring", "layering"]],
-  ["relief", "Relief", "Des lignes de niveau dessinent un paysage en évolution.", "terrain", "green", ["paths", "stagger", "deterministic-seek"]],
-  ["frequences", "Fréquences", "Un paysage de signaux, composé sans hasard.", "wave", "ice", ["waveform", "procedural", "frame-timing"]],
-  ["architecture", "Architecture du rythme", "Des modules géométriques composent une partition visuelle.", "grid", "gold", ["sequences", "transforms", "repetition"]],
-  ["floraison", "Floraison", "Une étude de symétrie, de rotation et de profondeur.", "bloom", "violet", ["opacity", "rotation", "compositing"]],
+  [
+    "orbital",
+    "Orbital",
+    "Une chorégraphie de trajectoires et de lumière.",
+    "orbit",
+    "blue",
+    ["interpolation", "easing", "SVG", "rational-fps"],
+  ],
+  [
+    "mot-mouvement",
+    "Le mot devient mouvement",
+    "Une affiche typographique qui se déploie dans le temps.",
+    "type",
+    "coral",
+    ["typography", "spring", "layering"],
+  ],
+  [
+    "relief",
+    "Relief",
+    "Des lignes de niveau dessinent un paysage en évolution.",
+    "terrain",
+    "green",
+    ["paths", "stagger", "deterministic-seek"],
+  ],
+  [
+    "frequences",
+    "Fréquences",
+    "Un paysage de signaux, composé sans hasard.",
+    "wave",
+    "ice",
+    ["waveform", "procedural", "frame-timing"],
+  ],
+  [
+    "architecture",
+    "Architecture du rythme",
+    "Des modules géométriques composent une partition visuelle.",
+    "grid",
+    "gold",
+    ["sequences", "transforms", "repetition"],
+  ],
+  [
+    "floraison",
+    "Floraison",
+    "Une étude de symétrie, de rotation et de profondeur.",
+    "bloom",
+    "violet",
+    ["opacity", "rotation", "compositing"],
+  ],
 ];
 
 /** Each engine gets the same authored scene and cadence for measured comparisons. */
