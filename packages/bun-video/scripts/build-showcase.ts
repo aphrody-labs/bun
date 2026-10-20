@@ -32,7 +32,7 @@ const manifest: ShowcaseManifest = {
   runtime: { version: Bun.version, revision: Bun.revision, platform: process.platform },
   works: collection.map(work => ({ ...work, evidence: [] })),
   evidence: [],
-  apis: pipeline.apis(),
+  apis: [...pipeline.apis()],
 };
 const files = new Set<string>();
 async function write(file: string, bytes: string | Uint8Array, mime: string): Promise<ShowcaseAsset> {
@@ -78,7 +78,7 @@ for (const entry of ["app", "preview"] as const) {
     entrypoints: [resolve(import.meta.dir, `../src/apps/showcase/${entry}.tsx`)],
     target: "browser",
     minify: true,
-    naming: { entry: `${entry}.js`, asset: "[name].[ext]", chunk: "[name]-[hash].[ext]" },
+    naming: { entry: "[name].[ext]", asset: "[name].[ext]", chunk: "[name]-[hash].[ext]" },
   });
   if (!result.success) throw new AggregateError(result.logs, `Showcase ${entry} build failed`);
   for (const asset of result.outputs) await write(asset.path.split(/[\\/]/).at(-1)!, await asset.bytes(), asset.type);
@@ -133,7 +133,7 @@ if (source) {
     ["flop", "Miroir horizontal", video => video.flop()],
     ["vivid", "La couleur en scène", video => video.modulate({ saturation: 1.6, brightness: 1.08 })],
     ["mono", "En noir et lumière", video => video.modulate({ saturation: 0 })],
-    ["thumbnail", "Une image, plusieurs usages", video => video.resize(320, 180, { fit: "cover" })],
+    ["thumbnail", "Une image, plusieurs usages", video => video.resize(320, 180, { fit: "inside" })],
   ];
   for (const [index, [id, title, transform]] of transforms.entries()) {
     const time = 48 + index * 12;
@@ -141,7 +141,7 @@ if (source) {
       `native-${id}`,
       "one selected episode frame and native image transformation",
       async () => {
-        const frame = transform(new Bun.Video(source).frame(time)).resize(800, 450, { fit: "contain" });
+      const frame = transform(new Bun.Video(source).frame(time)).resize(800, 450, { fit: "inside" });
         const encoded = await frame.webp({ quality: 90 }).bytes();
         const image = await new Bun.Image(encoded).metadata();
         const file = `native/${id}.webp`;

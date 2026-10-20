@@ -5,12 +5,20 @@ import { gsap } from "gsap";
 import { resolveAuthoredTimingWindow } from "../../../hyperframes/core/src/runtime/authoredTiming";
 import { collection } from "./collection";
 import { Artwork } from "./artwork";
+import { Player, type PlayerRef } from "../../../remotion/player/src/index";
+import { useCurrentFrame } from "../../../remotion/core/src/index";
 
 const params = new URL(location.href).searchParams;
 const work = collection.find(item => item.id === params.get("work")) ?? collection[0]!;
 const root = createRoot(document.getElementById("root")!);
 const state = { frame: 0 };
-const render = () => flushSync(() => root.render(<Artwork work={work} frame={Math.round(state.frame)} />));
+const player = React.createRef<PlayerRef>();
+function RemotionScene() { return <Artwork work={work} frame={useCurrentFrame()}/>; }
+const render = () => flushSync(() => {
+  if (work.engine === "hyperframes") root.render(<Artwork work={work} frame={Math.round(state.frame)}/>);
+  else if (player.current) player.current.seekTo(Math.round(state.frame));
+  else root.render(<Player ref={player} component={RemotionScene} durationInFrames={work.durationFrames} fps={work.fps.num / work.fps.den} compositionWidth={work.width} compositionHeight={work.height} controls={false} style={{ width: "100%", height: "100%" }}/>);
+});
 const globals = window as unknown as Record<string, any>;
 document.title = `${work.title} — ${work.engine} — Bun Video`;
 document.body.style.cssText = "margin:0;width:100vw;height:100vh;overflow:hidden;background:#080f27";
