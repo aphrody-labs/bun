@@ -141,7 +141,8 @@ async function selfCheck() {
   playback.destroy();
   playback.destroy();
   assert(calls.join(",") === "listeners,attach,load,destroy", "Fork HLS lifecycle failed.");
-  const { interpolate } = await import("../index");
+  const { loadRemotionCore } = await import("../index");
+  const { interpolate } = await loadRemotionCore();
   assert(interpolate(5, [0, 10], [0, 100]) === 50, "Bun video interpolation failed.");
   console.log(
     JSON.stringify({
