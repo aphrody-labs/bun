@@ -116,6 +116,20 @@ describe("official YouTube discovery", () => {
     expect(body.items).toHaveLength(1);
   });
 
+  test("does not offer YouTube media extraction outside the official player", async () => {
+    for (const source of [
+      "https://youtube.com/watch?v=abcdefghijk",
+      "https://youtu.be/abcdefghijk",
+      "https://m.youtube-nocookie.com/embed/abcdefghijk",
+    ]) {
+      const response = await app.fetch(
+        new Request(`http://localhost/api/video/extract?src=${encodeURIComponent(source)}`),
+      );
+      expect(response.status).toBe(403);
+      expect(await response.json()).toEqual({ error: "youtube_official_player_required" });
+    }
+  });
+
   test("bounds queries, fails closed without a key, and rate limits the trusted edge identity", async () => {
     const noKey = await app.fetch(new Request("https://video.example/api/youtube/search?q=test"));
     expect(noKey.status).toBe(503);

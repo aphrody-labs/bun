@@ -42,6 +42,13 @@ export interface VideoWebApp {
 
 const MEDIA_EXTENSIONS = new Set([".mp4", ".mov", ".mkv", ".webm"]);
 
+function isYouTubeUrl(url: URL): boolean {
+  const hostname = url.hostname.toLowerCase().replace(/\.$/, "");
+  return ["youtube.com", "youtu.be", "youtube-nocookie.com"].some(domain =>
+    hostname === domain || hostname.endsWith(`.${domain}`),
+  );
+}
+
 const labs = [
   { id: "dash", title: "DASH lab", command: "bun bd run ./packages/bun-video/src/apps/dash-live.ts" },
   { id: "hls", title: "HLS lab", command: "bun bd run ./packages/bun-video/src/apps/hls-live.ts" },
@@ -373,6 +380,7 @@ export function createVideoWebApp(options: VideoWebAppOptions): VideoWebApp {
       if (!source || source.length > 2048) return json({ error: "invalid_source" }, 400);
       const parsed = URL.canParse(source) ? new URL(source) : undefined;
       if (!parsed || !["http:", "https:"].includes(parsed.protocol)) return json({ error: "invalid_source" }, 400);
+      if (isYouTubeUrl(parsed)) return json({ error: "youtube_official_player_required" }, 403);
       try {
         const { extractYtDlp } = await import("./ytdlp");
         return json(await extractYtDlp(parsed.href));
