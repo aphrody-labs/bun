@@ -20,10 +20,11 @@ export async function transformImage(
     maxPixels: options.maxPixels,
     autoOrient: options.autoOrient ?? true,
   });
-  if (options.width !== undefined) image.resize(options.width, options.height, {
-    fit: options.fit ?? "fill",
-    withoutEnlargement: options.withoutEnlargement,
-  });
+  if (options.width !== undefined)
+    image.resize(options.width, options.height, {
+      fit: options.fit ?? "fill",
+      withoutEnlargement: options.withoutEnlargement,
+    });
   switch (options.format) {
     case "jpeg":
       image.jpeg(options.quality === undefined ? undefined : { quality: options.quality });

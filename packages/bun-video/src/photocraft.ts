@@ -25,11 +25,19 @@ async function diagnostic(stream: ReadableStream<Uint8Array>): Promise<string> {
         remaining -= chunk.length;
       }
     }
-  } finally { reader.releaseLock(); }
+  } finally {
+    reader.releaseLock();
+  }
   const bytes = new Uint8Array(8192 - remaining);
   let offset = 0;
-  for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.length; }
-  return new TextDecoder().decode(bytes).replace(/[\x00-\x08\x0b-\x1f\x7f]/g, "").trim();
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.length;
+  }
+  return new TextDecoder()
+    .decode(bytes)
+    .replace(/[\x00-\x08\x0b-\x1f\x7f]/g, "")
+    .trim();
 }
 
 /** Adapt PhotoCraft's real `convert` command to the unified M3 pipeline hook.
@@ -61,22 +69,28 @@ export function createPhotoCraftImageTransform(options: PhotoCraftImageTransform
       await Bun.write(input, bytes);
       signal?.throwIfAborted();
       const child = Bun.spawn([options.executable, "convert", input, output, "--format", "png"], {
-        stdin: "ignore", stdout: "ignore", stderr: "pipe",
+        stdin: "ignore",
+        stdout: "ignore",
+        stderr: "pipe",
       });
       const stderr = diagnostic(child.stderr).catch(() => "");
       let timedOut = false;
       const abort = () => child.kill();
       signal?.addEventListener("abort", abort, { once: true });
       if (signal?.aborted) child.kill();
-      const timer = setTimeout(() => { timedOut = true; child.kill(); }, timeoutMs);
+      const timer = setTimeout(() => {
+        timedOut = true;
+        child.kill();
+      }, timeoutMs);
       try {
         const exitCode = await child.exited;
         const detail = await stderr;
         signal?.throwIfAborted();
         if (timedOut) throw new Error("PhotoCraft conversion timed out");
-        if (exitCode !== 0) throw new Error(`PhotoCraft conversion failed with exit code ${exitCode}${detail ? `: ${detail}` : ""}`);
+        if (exitCode !== 0)
+          throw new Error(`PhotoCraft conversion failed with exit code ${exitCode}${detail ? `: ${detail}` : ""}`);
         const file = Bun.file(output);
-        if (!await file.exists() || file.size < 1 || file.size > MAX_BYTES) {
+        if (!(await file.exists()) || file.size < 1 || file.size > MAX_BYTES) {
           throw new RangeError("PhotoCraft PNG output is missing or exceeds 32 MiB");
         }
         const result = new Uint8Array(await file.arrayBuffer());
@@ -98,8 +112,11 @@ export function createPhotoCraftImageTransform(options: PhotoCraftImageTransform
       if (dirname(resolve(directory)) !== root) {
         throw new Error("PhotoCraft scratch path escaped its owner");
       }
-      try { await rm(directory, { recursive: true, force: true }); }
-      catch (error) { if (!failed) throw error; }
+      try {
+        await rm(directory, { recursive: true, force: true });
+      } catch (error) {
+        if (!failed) throw error;
+      }
     }
   };
 }
@@ -115,7 +132,9 @@ export function createPhotoCraftSVGRasterizer(options: PhotoCraftImageTransformO
     }
     const png = await convert(bytes, target.signal);
     const result = await new Bun.Image(png, { maxPixels: 4096 * 4096 })
-      .resize(target.width, target.height, { fit: "inside" }).png().bytes();
+      .resize(target.width, target.height, { fit: "inside" })
+      .png()
+      .bytes();
     target.signal?.throwIfAborted();
     return result;
   };

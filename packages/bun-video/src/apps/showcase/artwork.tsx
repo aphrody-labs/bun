@@ -5,7 +5,10 @@ import type { ShowcaseWork } from "./collection";
 /** A pure frame function shared by previews and the registered Remotion composition. */
 export function Artwork({ work, frame }: { work: ShowcaseWork; frame: number }) {
   const t = frame / (work.fps.num / work.fps.den);
-  const [background, accent, light] = work.palette;
+  const background = "var(--md-sys-color-surface)";
+  const accent = "var(--md-sys-color-primary)";
+  const light = "var(--md-sys-color-on-surface)";
+  const secondary = "var(--md-sys-color-secondary)";
   const reveal = interpolate(frame, [0, 28], [0, 1], { extrapolateRight: "clamp", easing: Easing.out(Easing.cubic) });
   const bounce = spring({ frame, fps: work.fps.num / work.fps.den, config: { damping: 18, stiffness: 90 } });
   return (
@@ -22,7 +25,7 @@ export function Artwork({ work, frame }: { work: ShowcaseWork; frame: number }) 
           <stop stopColor={light} />
           <stop offset="0.18" stopColor={accent} />
           <stop offset="0.7" stopColor={background} />
-          <stop offset="1" stopColor="#020407" />
+          <stop offset="1" stopColor="var(--md-sys-color-surface-container-lowest)" />
         </radialGradient>
         <linearGradient id="line">
           <stop stopColor={accent} stopOpacity="0" />
@@ -55,7 +58,7 @@ export function Artwork({ work, frame }: { work: ShowcaseWork; frame: number }) 
                 cx={Math.cos(angle) * radius}
                 cy={Math.sin(angle) * radius * 0.55}
                 r={i % 4 === 0 ? 2 : 1}
-                fill={light}
+              fill={i % 3 ? light : secondary}
                 opacity={0.25 + (i % 5) * 0.14}
               />
             );
@@ -156,10 +159,24 @@ export function Artwork({ work, frame }: { work: ShowcaseWork; frame: number }) 
       )}
       {work.code && (
         <g opacity={reveal}>
-          <rect x="48" y="48" width="850" height="154" rx="16" fill={background} fillOpacity="0.94" stroke={accent} strokeOpacity="0.5" />
-          <text x="72" y="78" fill={light} fontSize="14" fontFamily="monospace">BUN OS · {work.engine.toUpperCase()} · CODE DE COMPOSITION</text>
+          <rect
+            x="48"
+            y="48"
+            width="850"
+            height="154"
+            rx="16"
+            fill={background}
+            fillOpacity="0.94"
+            stroke={accent}
+            strokeOpacity="0.5"
+          />
+          <text x="72" y="78" fill={light} fontSize="14" fontFamily="monospace">
+            BUN OS · {work.engine.toUpperCase()} · CODE DE COMPOSITION
+          </text>
           {work.code.split("\n").map((line, index) => (
-            <text key={index} x="72" y={112 + index * 28} fill={light} fontSize="20" fontFamily="monospace">{line}</text>
+            <text key={index} x="72" y={112 + index * 28} fill={light} fontSize="20" fontFamily="monospace">
+              {line}
+            </text>
           ))}
         </g>
       )}

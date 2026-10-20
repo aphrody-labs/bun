@@ -269,7 +269,7 @@ try {
         });
         const assets: ShowcaseAsset[] = [];
         const frames = sampleOnly
-          ? Array.from({ length: 7 }, (_, index) => Math.round(index * (work.durationFrames - 1) / 6))
+          ? Array.from({ length: 7 }, (_, index) => Math.round((index * (work.durationFrames - 1)) / 6))
           : Array.from({ length: work.durationFrames }, (_, index) => index);
         for (const frame of frames) {
           for await (const captured of captureCompositionFrames(browser.context, {
@@ -312,7 +312,14 @@ try {
           }
           const videoFile = `videos/${work.id}.mp4`;
           await mkdir(join(directory, "videos"), { recursive: true });
-          await encodeFilmCraftFrames(rgba(), { nativeExecutable, output: join(directory, videoFile), width: work.width, height: work.height, fps: work.fps, frames: work.durationFrames });
+          await encodeFilmCraftFrames(rgba(), {
+            nativeExecutable,
+            output: join(directory, videoFile),
+            width: work.width,
+            height: work.height,
+            fps: work.fps,
+            frames: work.durationFrames,
+          });
           assets.push(await write(videoFile, await Bun.file(join(directory, videoFile)).bytes(), "video/mp4"));
           work.video = videoFile;
         }

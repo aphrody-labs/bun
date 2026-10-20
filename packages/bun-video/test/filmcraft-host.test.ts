@@ -8,12 +8,19 @@ test("FilmCraft Bun host serves WASM and rejects paths and writes outside its ar
   await Bun.write(join(root, "index.html"), "<!doctype html><title>Aphrody Video</title>");
   await Bun.write(join(root, "editor.wasm"), new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0]));
   const child = Bun.spawn([process.execPath, join(import.meta.dir, "../src/apps/filmcraft/server.ts")], {
-    env: { ...Bun.env, FILMCRAFT_DIST: root, PORT: "0" }, stdout: "pipe", stderr: "pipe",
+    env: { ...Bun.env, FILMCRAFT_DIST: root, PORT: "0" },
+    stdout: "pipe",
+    stderr: "pipe",
   });
   let startupTimer: ReturnType<typeof setTimeout> | undefined;
   try {
     const reader = child.stdout.getReader();
-    const first = await Promise.race([reader.read(), new Promise<never>((_, reject) => { startupTimer = setTimeout(() => reject(new Error("host startup deadline")), 5000); })]);
+    const first = await Promise.race([
+      reader.read(),
+      new Promise<never>((_, reject) => {
+        startupTimer = setTimeout(() => reject(new Error("host startup deadline")), 5000);
+      }),
+    ]);
     clearTimeout(startupTimer);
     const { port } = JSON.parse(new TextDecoder().decode(first.value));
     const base = `http://127.0.0.1:${port}`;

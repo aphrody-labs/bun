@@ -20,7 +20,9 @@ test.skipIf(!executable)("PhotoCraft SVG importer produces a bounded native Bun.
     executable: executable!,
     temporaryDirectory: Bun.env.TMPDIR ?? "/tmp",
   });
-  const bytes = new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="16"><rect width="32" height="16" fill="#ff0000"/></svg>');
+  const bytes = new TextEncoder().encode(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="16"><rect width="32" height="16" fill="#ff0000"/></svg>',
+  );
   const result = await rasterize(bytes, { width: 64, height: 64 });
   const image = await new Bun.Image(result).rgba();
   expect([image.width, image.height]).toEqual([64, 32]);

@@ -6,7 +6,6 @@ export interface ShowcaseWork {
   description: string;
   engine: ShowcaseEngine;
   artwork: Artwork;
-  palette: readonly [string, string, string];
   features: readonly string[];
   durationFrames: number;
   fps: { num: number; den: number };
@@ -22,22 +21,13 @@ export interface ShowcaseWork {
   chapter?: string;
 }
 
-const palettes = {
-  blue: ["#141218", "#cfbdfe", "#e9ddff"],
-  coral: ["#141218", "#efb8c8", "#ffd9e3"],
-  green: ["#0f0d13", "#cbc2db", "#e8def8"],
-  violet: ["#1d1b20", "#cfbdfe", "#e9ddff"],
-  gold: ["#211f24", "#efb8c8", "#ffd9e3"],
-  ice: ["#0f0d13", "#cbc2db", "#e6e0e9"],
-} as const;
-type Brief = readonly [string, string, string, Artwork, keyof typeof palettes, readonly string[]];
+type Brief = readonly [string, string, string, Artwork, readonly string[]];
 const briefs: readonly Brief[] = [
   [
     "orbital",
     "Orbital",
     "Une chorégraphie de trajectoires et de lumière.",
     "orbit",
-    "blue",
     ["interpolation", "easing", "SVG", "rational-fps"],
   ],
   [
@@ -45,7 +35,6 @@ const briefs: readonly Brief[] = [
     "Le mot devient mouvement",
     "Une affiche typographique qui se déploie dans le temps.",
     "type",
-    "coral",
     ["typography", "spring", "layering"],
   ],
   [
@@ -53,7 +42,6 @@ const briefs: readonly Brief[] = [
     "Relief",
     "Des lignes de niveau dessinent un paysage en évolution.",
     "terrain",
-    "green",
     ["paths", "stagger", "deterministic-seek"],
   ],
   [
@@ -61,7 +49,6 @@ const briefs: readonly Brief[] = [
     "Fréquences",
     "Un paysage de signaux, composé sans hasard.",
     "wave",
-    "ice",
     ["waveform", "procedural", "frame-timing"],
   ],
   [
@@ -69,7 +56,6 @@ const briefs: readonly Brief[] = [
     "Architecture du rythme",
     "Des modules géométriques composent une partition visuelle.",
     "grid",
-    "gold",
     ["sequences", "transforms", "repetition"],
   ],
   [
@@ -77,28 +63,32 @@ const briefs: readonly Brief[] = [
     "Floraison",
     "Une étude de symétrie, de rotation et de profondeur.",
     "bloom",
-    "violet",
     ["opacity", "rotation", "compositing"],
   ],
 ];
 
 /** Each engine gets the same authored scene and cadence for measured comparisons. */
 export const collection: readonly ShowcaseWork[] = (["remotion", "hyperframes"] as const).flatMap(engine =>
-  briefs.map(([id, title, description, artwork, palette, features]) => ({
+  briefs.map(([id, title, description, artwork, features]) => ({
     id: `${engine}-${id}`,
     title,
     description,
     engine,
     artwork,
-    palette: palettes[palette],
     features,
     durationFrames: 96,
     fps: { num: 24, den: 1 },
     width: 960,
     height: 540,
     chapter: "Composition déterministe",
-    sourceRef: engine === "remotion" ? "packages/bun-video/remotion/core/src/index.ts" : "packages/bun-video/hyperframes/core/src/runtime/authoredTiming.ts",
-    code: engine === "remotion" ? "const frame = useCurrentFrame();\nconst phase = spring({ frame, fps: 24 });\nreturn <Artwork frame={frame} />;" : "const timeline = gsap.timeline({ paused: true });\ntimeline.to(clock, { frame: 95, duration: 4 });\nwindow.__hf.seek(seconds);",
+    sourceRef:
+      engine === "remotion"
+        ? "packages/bun-video/remotion/core/src/index.ts"
+        : "packages/bun-video/hyperframes/core/src/runtime/authoredTiming.ts",
+    code:
+      engine === "remotion"
+        ? "const frame = useCurrentFrame();\nconst phase = spring({ frame, fps: 24 });\nreturn <Artwork frame={frame} />;"
+        : "const timeline = gsap.timeline({ paused: true });\ntimeline.to(clock, { frame: 95, duration: 4 });\nwindow.__hf.seek(seconds);",
   })),
 );
 
