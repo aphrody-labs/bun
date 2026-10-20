@@ -219,7 +219,7 @@ export async function reserveLinuxSlots(locks: readonly string[], min: number, m
   const waiter = (lock: string, tryOnly = false) => {
     // --no-fork keeps the handle at one PID, both while flock waits and after exec.
     const child = Bun.spawn(["flock", "--no-fork", ...(tryOnly ? ["-n", "-E", String(BUSY)] : []), "--", lock, "/bin/sh", "-c",
-      'printf "reserved\\n"; cat >/dev/null'],
+      'printf "reserved\\n"; exec sleep infinity'],
     { stdin: "pipe", stdout: "pipe", stderr: "inherit" });
     children.add(child);
     const ready = (async () => {
@@ -230,6 +230,7 @@ export async function reserveLinuxSlots(locks: readonly string[], min: number, m
           const chunk = await reader.read();
           if (chunk.done) {
             if (tryOnly && await child.exited === BUSY) return false;
+            signal?.throwIfAborted();
             throw new Error("Factory reservation waiter exited before acquiring its lock");
           }
           marker += new TextDecoder().decode(chunk.value);
