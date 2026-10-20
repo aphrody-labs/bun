@@ -106,7 +106,11 @@ for (const name of ["collection.ts", "artwork.tsx", "preview.tsx", "remotion.tsx
     "text/plain",
   );
 const fonts = resolve(import.meta.dir, "../../aphrody-migrated/m3/aphrody-m3/packages/m3-fonts/fonts");
-await write("fonts/RobotoFlex-latin.woff2", await Bun.file(join(fonts, "web/RobotoFlex-latin.woff2")).bytes(), "font/woff2");
+await write(
+  "fonts/RobotoFlex-latin.woff2",
+  await Bun.file(join(fonts, "web/RobotoFlex-latin.woff2")).bytes(),
+  "font/woff2",
+);
 await write("fonts/OFL.txt", await Bun.file(join(fonts, "RobotoFlex-OFL.txt")).bytes(), "text/plain");
 const source = Bun.env.BUN_VIDEO_SHOWCASE_SOURCE;
 if (source) {
@@ -519,7 +523,10 @@ for (const file of files) {
   if (/^(frames|native|proofs|m3|sources)\//.test(file)) files.delete(file);
 }
 manifest.works = manifest.works.map(work => ({ ...work, frames: undefined, preview: undefined, mediaType: undefined }));
-manifest.evidence = manifest.evidence.map(row => ({ ...row, assets: row.assets.filter(asset => files.has(asset.file)) }));
+manifest.evidence = manifest.evidence.map(row => ({
+  ...row,
+  assets: row.assets.filter(asset => files.has(asset.file)),
+}));
 await write("showcase.json", JSON.stringify(manifest, null, 2), "application/json");
 await Bun.write(
   join(privateDirectory, "upload-plan.json"),

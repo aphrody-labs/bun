@@ -320,23 +320,28 @@ function validate(request: YtDlpRequest): void {
     throw new RangeError("maxBytes must be a positive safe integer");
   if (
     request.maxDurationSeconds !== undefined &&
-    (!Number.isFinite(request.maxDurationSeconds) || request.maxDurationSeconds <= 0 || request.maxDurationSeconds > 86_400)
+    (!Number.isFinite(request.maxDurationSeconds) ||
+      request.maxDurationSeconds <= 0 ||
+      request.maxDurationSeconds > 86_400)
   )
     throw new RangeError("maxDurationSeconds must be between 0 and 86400");
 }
 
 function safeProgress(value: Record<string, unknown>): YtDlpProgress {
   const downloadedBytes = typeof value.downloaded_bytes === "number" ? value.downloaded_bytes : 0;
-  const totalBytes = typeof value.total_bytes === "number"
-    ? value.total_bytes
-    : typeof value.total_bytes_estimate === "number" ? value.total_bytes_estimate : null;
-  const numberOrNull = (key: string) => typeof value[key] === "number" ? value[key] as number : null;
+  const totalBytes =
+    typeof value.total_bytes === "number"
+      ? value.total_bytes
+      : typeof value.total_bytes_estimate === "number"
+        ? value.total_bytes_estimate
+        : null;
+  const numberOrNull = (key: string) => (typeof value[key] === "number" ? (value[key] as number) : null);
   const filename = typeof value.filename === "string" ? basename(value.filename) : null;
   return {
     status: value.status === "finished" ? "finished" : "downloading",
     downloadedBytes,
     totalBytes,
-    percentage: totalBytes && totalBytes > 0 ? Math.min(100, downloadedBytes / totalBytes * 100) : null,
+    percentage: totalBytes && totalBytes > 0 ? Math.min(100, (downloadedBytes / totalBytes) * 100) : null,
     speedBytesPerSecond: numberOrNull("speed"),
     etaSeconds: numberOrNull("eta"),
     elapsedSeconds: numberOrNull("elapsed"),
@@ -363,7 +368,10 @@ async function runYtDlpJob(request: YtDlpRequest, options: Record<string, unknow
     max_filesize: Math.min(typeof options.max_filesize === "number" ? options.max_filesize : maxBytes, maxBytes),
     socket_timeout: Math.min(Math.max(socketTimeout, 1), 120),
     concurrent_fragment_downloads: Math.min(
-      Math.max(typeof options.concurrent_fragment_downloads === "number" ? options.concurrent_fragment_downloads : 1, 1),
+      Math.max(
+        typeof options.concurrent_fragment_downloads === "number" ? options.concurrent_fragment_downloads : 1,
+        1,
+      ),
       4,
     ),
   };
@@ -521,7 +529,10 @@ export async function downloadYtDlp(
   url: string,
   output: string,
   options: YtDlpOptions = {},
-  controls: Pick<YtDlpRequest, "signal" | "maxBytes" | "maxDurationSeconds" | "onProgress" | "vendorRoot" | "privateDirectory"> = {},
+  controls: Pick<
+    YtDlpRequest,
+    "signal" | "maxBytes" | "maxDurationSeconds" | "onProgress" | "vendorRoot" | "privateDirectory"
+  > = {},
 ): Promise<YtDlpResult & { readonly localPath: string }> {
   const destination = resolve(output);
   if (await Bun.file(destination).exists()) throw new Error("yt-dlp output already exists");
@@ -544,7 +555,7 @@ export async function downloadYtDlp(
   } catch (error) {
     const partial = Bun.file(`${destination}.part`);
     if (await partial.exists()) await partial.delete();
-    if (ownsOutput && await Bun.file(destination).exists()) await Bun.file(destination).delete();
+    if (ownsOutput && (await Bun.file(destination).exists())) await Bun.file(destination).delete();
     throw error;
   } finally {
     activeYtDlpOutputs.delete(destination);

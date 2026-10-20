@@ -17,7 +17,8 @@ describe("X video source adapter", () => {
       "https://user:secret@x.com/user/status/123",
       "https://t.co/abc",
       "file:///x.com/user/status/123",
-    ]) expect(() => normalizeXVideoUrl(url)).toThrow();
+    ])
+      expect(() => normalizeXVideoUrl(url)).toThrow();
   });
 
   test("delegates metadata extraction and download with the sanitized canonical URL", async () => {

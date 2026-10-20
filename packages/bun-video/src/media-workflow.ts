@@ -105,7 +105,12 @@ export async function executeMediaJob(job: MediaJob) {
         controls,
       );
     }
-    return { action: job.action, output: result.localPath, bytes: Bun.file(result.localPath).size, metadata: result } as const;
+    return {
+      action: job.action,
+      output: result.localPath,
+      bytes: Bun.file(result.localPath).size,
+      metadata: result,
+    } as const;
   }
 
   if (job.action === "inspect") {
@@ -121,9 +126,11 @@ export async function executeMediaJob(job: MediaJob) {
     }
     const input = localInput(job.source);
     if (!(await Bun.file(input).exists())) throw new Error("Input media file does not exist");
-    const nativeVideo = (Bun as unknown as {
-      Video?: { available: boolean; new (source: string): { metadata(): Promise<unknown> } };
-    }).Video;
+    const nativeVideo = (
+      Bun as unknown as {
+        Video?: { available: boolean; new (source: string): { metadata(): Promise<unknown> } };
+      }
+    ).Video;
     if (!nativeVideo?.available) throw new Error("Native Bun.Video metadata provider is unavailable");
     const video = new nativeVideo(input);
     return { action: job.action, input, metadata: await video.metadata() } as const;
@@ -132,7 +139,8 @@ export async function executeMediaJob(job: MediaJob) {
   const input = localInput(job.input);
   const output = outputPath(job.output, "Output");
   if (input === output) throw new TypeError("Input and output paths must differ");
-  if (!(await Bun.file(input).exists()) || Bun.file(input).size === 0) throw new Error("Input media is missing or empty");
+  if (!(await Bun.file(input).exists()) || Bun.file(input).size === 0)
+    throw new Error("Input media is missing or empty");
   if (await Bun.file(output).exists()) throw new Error("Output already exists; choose a new path");
 
   if (job.action === "cut") {
@@ -143,7 +151,21 @@ export async function executeMediaJob(job: MediaJob) {
     return {
       action: job.action,
       ...(await editWithFFmpeg(
-        ["-ss", String(job.startSeconds), "-i", input, "-t", String(job.durationSeconds), "-map", "0:v?", "-map", "0:a?", "-c", "copy", output],
+        [
+          "-ss",
+          String(job.startSeconds),
+          "-i",
+          input,
+          "-t",
+          String(job.durationSeconds),
+          "-map",
+          "0:v?",
+          "-map",
+          "0:a?",
+          "-c",
+          "copy",
+          output,
+        ],
         job.signal,
       )),
     } as const;

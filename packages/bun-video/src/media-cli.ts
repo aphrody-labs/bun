@@ -29,7 +29,10 @@ function numberOption(args: string[], name: string, required = false): number | 
 }
 
 function progress(progress: YtDlpProgress) {
-  const amount = progress.percentage === null ? `${(progress.downloadedBytes / 1048576).toFixed(1)} MiB` : `${progress.percentage.toFixed(1)}%`;
+  const amount =
+    progress.percentage === null
+      ? `${(progress.downloadedBytes / 1048576).toFixed(1)} MiB`
+      : `${progress.percentage.toFixed(1)}%`;
   process.stderr.write(`\r${progress.status}: ${amount}`);
   if (progress.status === "finished") process.stderr.write("\n");
 }
@@ -90,6 +93,7 @@ export async function run(args: string[]) {
   } else {
     throw new Error(`Unknown media action: ${action}\n${usage}`);
   }
-  if (rest.some(value => value.startsWith("--"))) throw new Error(`Unknown option: ${rest.find(value => value.startsWith("--"))}`);
+  if (rest.some(value => value.startsWith("--")))
+    throw new Error(`Unknown option: ${rest.find(value => value.startsWith("--"))}`);
   console.log(JSON.stringify(await executeMediaJob(job), null, 2));
 }

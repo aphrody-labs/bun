@@ -68,13 +68,18 @@ describe("yt-dlp Bun Python bridge", () => {
     const events: Array<{ downloadedBytes: number; filename: string | null }> = [];
     const output = join(dir, "fixture.mp4");
     try {
-      const result = await downloadYtDlp(`${server.url}fixture.mp4?token=fixture-secret`, output, { format: "best" }, {
-        maxBytes: 8 * 1024 * 1024,
-        maxDurationSeconds: 30,
-        onProgress(progress) {
-          events.push({ downloadedBytes: progress.downloadedBytes, filename: progress.filename });
+      const result = await downloadYtDlp(
+        `${server.url}fixture.mp4?token=fixture-secret`,
+        output,
+        { format: "best" },
+        {
+          maxBytes: 8 * 1024 * 1024,
+          maxDurationSeconds: 30,
+          onProgress(progress) {
+            events.push({ downloadedBytes: progress.downloadedBytes, filename: progress.filename });
+          },
         },
-      });
+      );
       expect(result.localPath).toBe(output);
       expect((await Bun.file(output).bytes()).byteLength).toBeGreaterThan(0);
       expect(events.length).toBeGreaterThan(0);

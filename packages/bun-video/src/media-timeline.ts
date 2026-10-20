@@ -26,7 +26,8 @@ function parseRange(value: string | null, size: number): { start: number; end: n
   if (!match || (!match[1] && !match[2])) return undefined;
   let start = match[1] ? Number(match[1]) : Math.max(0, size - Number(match[2]));
   let end = match[2] && match[1] ? Number(match[2]) : size - 1;
-  if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || end < start || start >= size) return undefined;
+  if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || end < start || start >= size)
+    return undefined;
   end = Math.min(end, size - 1);
   return { start, end };
 }
@@ -40,7 +41,10 @@ export function createMediaTimelineServer(rootDirectory: string, port = 8787) {
     async fetch(request) {
       const url = new URL(request.url);
       if (request.method !== "GET" && request.method !== "HEAD") return new Response(null, { status: 405 });
-      if (url.pathname === "/") return new Response(html, { headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" } });
+      if (url.pathname === "/")
+        return new Response(html, {
+          headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
+        });
       if (url.pathname === "/api/videos") {
         const entries = await readdir(root, { withFileTypes: true });
         const files = entries
@@ -63,18 +67,32 @@ export function createMediaTimelineServer(rootDirectory: string, port = 8787) {
         if (!(await lstat(path).catch(() => null))?.isFile()) return new Response(null, { status: 404 });
         const file = Bun.file(path);
         if (!(await file.exists())) return new Response(null, { status: 404 });
-        const baseHeaders = { "content-type": type, "accept-ranges": "bytes", "x-content-type-options": "nosniff", "cache-control": "private, max-age=60" };
+        const baseHeaders = {
+          "content-type": type,
+          "accept-ranges": "bytes",
+          "x-content-type-options": "nosniff",
+          "cache-control": "private, max-age=60",
+        };
         const range = parseRange(request.headers.get("range"), file.size);
         if (request.headers.has("range") && !range)
-          return new Response(null, { status: 416, headers: { ...baseHeaders, "content-range": `bytes */${file.size}` } });
+          return new Response(null, {
+            status: 416,
+            headers: { ...baseHeaders, "content-range": `bytes */${file.size}` },
+          });
         if (range) {
           const body = request.method === "HEAD" ? null : file.slice(range.start, range.end + 1);
           return new Response(body, {
             status: 206,
-            headers: { ...baseHeaders, "content-length": String(range.end - range.start + 1), "content-range": `bytes ${range.start}-${range.end}/${file.size}` },
+            headers: {
+              ...baseHeaders,
+              "content-length": String(range.end - range.start + 1),
+              "content-range": `bytes ${range.start}-${range.end}/${file.size}`,
+            },
           });
         }
-        return new Response(request.method === "HEAD" ? null : file, { headers: { ...baseHeaders, "content-length": String(file.size) } });
+        return new Response(request.method === "HEAD" ? null : file, {
+          headers: { ...baseHeaders, "content-length": String(file.size) },
+        });
       }
       return new Response(null, { status: 404 });
     },
