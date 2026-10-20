@@ -4,9 +4,29 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { openChromiumFrameContext } from "../src/chromium-frame";
 import { prepareM3Video, m3VideoDocument, rasterizeM3SVG, renderM3Video } from "../src/m3-video";
+import { encodeFilmCraftFrames } from "../src/encode";
 
 const executable = Bun.env.BUN_VIDEO_NATIVE_EXECUTABLE;
 const chromium = Bun.env.BUN_VIDEO_CHROMIUM_EXECUTABLE;
+
+test.skipIf(!executable)("native export cancellation releases a stalled frame producer", async () => {
+  const directory = await mkdtemp(join(tmpdir(), "bun-m3-abort-"));
+  const controller = new AbortController();
+  const reason = new Error("caller cancelled the stalled producer");
+  const frames = {
+    [Symbol.asyncIterator]() {
+      return {
+        next() { queueMicrotask(() => controller.abort(reason)); return new Promise<IteratorResult<{ data: Uint8Array; width: number; height: number }>>(() => {}); },
+        return() { return new Promise<IteratorResult<{ data: Uint8Array; width: number; height: number }>>(() => {}); },
+      };
+    },
+  };
+  try {
+    const output = join(directory, "cancelled.mp4");
+    await expect(encodeFilmCraftFrames(frames, { nativeExecutable: executable!, output, width: 2, height: 2, frames: 1, fps: { num: 24, den: 1 }, signal: controller.signal })).rejects.toThrow(reason.message);
+    expect(await Bun.file(output).exists()).toBe(false);
+  } finally { await rm(directory, { recursive: true, force: true }); }
+}, 5000);
 
 test.skipIf(!executable || !chromium)("SVG → native M3 PNG → frame capture → FilmCraft MP4 → Bun.Video", async () => {
   expect(Bun.Video.available).toBe(true);

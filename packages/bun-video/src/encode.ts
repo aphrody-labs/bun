@@ -24,20 +24,31 @@ export async function encodeFilmCraftFrames(
   signal.throwIfAborted();
   const child = Bun.spawn([options.nativeExecutable, "filmcraft-encode", String(width), String(height), `${fps.num}/${fps.den}`, String(options.frames), options.output], { stdin: "pipe", stdout: "pipe", stderr: "pipe" });
   const stdout = child.stdout.text(), stderr = child.stderr.text();
-  const stop = () => child.kill();
+  let rejectAbort!: (reason: unknown) => void;
+  const interrupted = new Promise<never>((_, reject) => { rejectAbort = reject; });
+  // Observe an abort even if obtaining the caller's iterator throws synchronously.
+  void interrupted.catch(() => {});
+  const stop = () => { child.kill(); rejectAbort(signal.reason); };
   signal.addEventListener("abort", stop, { once: true });
+  if (signal.aborted) stop();
   let count = 0;
+  let completed = false;
+  let iterator: AsyncIterator<{ data: Uint8Array; width: number; height: number }> | undefined;
   try {
-    for await (const frame of frames) {
+    iterator = frames[Symbol.asyncIterator]();
+    for (;;) {
+      const next = await Promise.race([iterator.next(), interrupted]);
+      if (next.done) { completed = true; break; }
+      const frame = next.value;
       signal.throwIfAborted();
       if (++count > options.frames || frame.width !== width || frame.height !== height || frame.data.byteLength !== width * height * 4) throw new Error("FilmCraft input does not match the declared frame sequence");
       if (child.exitCode !== null) throw new Error(`FilmCraft exited before consuming the frames: ${await stderr}`);
       child.stdin.write(frame.data);
-      await child.stdin.flush();
+      await Promise.race([child.stdin.flush(), interrupted]);
     }
     if (count !== options.frames) throw new Error("FilmCraft input ended before the declared frame count");
-    await child.stdin.end();
-    const code = await child.exited;
+    await Promise.race([Promise.resolve(child.stdin.end()), interrupted]);
+    const code = await Promise.race([child.exited, interrupted]);
     const [result, diagnostics] = await Promise.all([stdout, stderr]);
     signal.throwIfAborted();
     if (code !== 0 || child.signalCode) throw new Error(`FilmCraft export failed: ${diagnostics}`);
@@ -45,6 +56,8 @@ export async function encodeFilmCraftFrames(
     if (receipt.provider !== "filmcraft" || receipt.codec !== "h264" || receipt.frames !== count || !Number.isSafeInteger(receipt.bytes) || receipt.bytes < 1) throw new Error("FilmCraft returned an invalid export receipt");
     return { ...receipt, output: options.output, lossless: false as const };
   } finally {
+    // An arbitrary producer may also stall in return(); it cannot delay cancellation.
+    if (!completed && iterator?.return) void Promise.resolve().then(() => iterator!.return!()).catch(() => {});
     signal.removeEventListener("abort", stop);
     if (child.exitCode === null) child.kill();
     await child.exited;

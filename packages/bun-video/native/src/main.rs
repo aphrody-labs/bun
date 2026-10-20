@@ -5,6 +5,78 @@ use std::ffi::OsStr;
 use std::io;
 use std::path::PathBuf;
 
+#[cfg(feature = "filmcraft-encode")]
+struct TimedInput {
+    receiver: std::sync::mpsc::Receiver<io::Result<Vec<u8>>>,
+    pending: io::Cursor<Vec<u8>>,
+    deadline: std::time::Instant,
+}
+
+#[cfg(feature = "filmcraft-encode")]
+impl io::Read for TimedInput {
+    fn read(&mut self, output: &mut [u8]) -> io::Result<usize> {
+        if output.is_empty() { return Ok(0); }
+        let remaining = self.deadline.checked_duration_since(std::time::Instant::now())
+            .ok_or_else(|| io::Error::new(io::ErrorKind::TimedOut, "RGBA input deadline expired"))?;
+        if self.pending.position() < self.pending.get_ref().len() as u64 {
+            return io::Read::read(&mut self.pending, output);
+        }
+        match self.receiver.recv_timeout(remaining) {
+            Ok(bytes) => { self.pending = io::Cursor::new(bytes?); io::Read::read(&mut self.pending, output) }
+            Err(std::sync::mpsc::RecvTimeoutError::Disconnected) => Ok(0),
+            Err(std::sync::mpsc::RecvTimeoutError::Timeout) => Err(io::Error::new(io::ErrorKind::TimedOut, "RGBA input deadline expired")),
+        }
+    }
+}
+
+#[cfg(feature = "filmcraft-encode")]
+fn timed_stdin() -> io::Result<TimedInput> {
+    let (sender, receiver) = std::sync::mpsc::sync_channel(1);
+    // A CLI-only reader thread bounds pipe buffering. On timeout main exits and the OS closes stdin.
+    let _reader = std::thread::Builder::new().name("rgba-stdin".into()).spawn(move || {
+        let mut input = io::stdin().lock();
+        loop {
+            let mut bytes = vec![0; 64 * 1024];
+            let result = match io::Read::read(&mut input, &mut bytes) {
+                Ok(0) => break,
+                Ok(size) => { bytes.truncate(size); Ok(bytes) }
+                Err(error) => Err(error),
+            };
+            let failed = result.is_err();
+            if sender.send(result).is_err() || failed { break; }
+        }
+    })?;
+    Ok(TimedInput { receiver, pending: io::Cursor::new(Vec::new()), deadline: std::time::Instant::now() + std::time::Duration::from_secs(180) })
+}
+
+#[cfg(all(test, feature = "filmcraft-encode"))]
+mod timed_input_tests {
+    use super::TimedInput;
+    use std::io::{self, Read};
+    use std::sync::mpsc::sync_channel;
+    use std::time::{Duration, Instant};
+
+    #[test]
+    fn bounded_chunks_preserve_bytes_and_eof() {
+        let (sender, receiver) = sync_channel(2);
+        sender.send(Ok(vec![1, 2, 3])).expect("fixture receiver");
+        sender.send(Ok(vec![4, 5])).expect("fixture receiver");
+        drop(sender);
+        let mut input = TimedInput { receiver, pending: io::Cursor::new(Vec::new()), deadline: Instant::now() + Duration::from_secs(5) };
+        let mut bytes = [0; 5];
+        input.read_exact(&mut bytes).expect("bounded input");
+        assert_eq!(bytes, [1, 2, 3, 4, 5]);
+        assert_eq!(input.read(&mut bytes).expect("EOF"), 0);
+    }
+
+    #[test]
+    fn stalled_input_expires_without_waiting_for_eof() {
+        let (_sender, receiver) = sync_channel(1);
+        let mut input = TimedInput { receiver, pending: io::Cursor::new(Vec::new()), deadline: Instant::now() - Duration::from_secs(1) };
+        assert_eq!(input.read(&mut [0]).expect_err("expired input").kind(), io::ErrorKind::TimedOut);
+    }
+}
+
 fn run() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let ffmpeg = std::env::var_os("BUN_VIDEO_FFMPEG").unwrap_or_else(|| "ffmpeg".into());
@@ -18,7 +90,7 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
             let frames: usize = args[4].parse()?;
             let output = PathBuf::from(&args[5]);
             let bytes = bun_video_native::filmcraft::encode_rgba_stream(
-                &mut io::stdin().lock(), &output, width, height, fps, frames,
+                &mut timed_stdin()?, &output, width, height, fps, frames,
             )?;
             println!("{{\"provider\":\"filmcraft\",\"codec\":\"h264\",\"frames\":{frames},\"bytes\":{bytes}}}");
         }
