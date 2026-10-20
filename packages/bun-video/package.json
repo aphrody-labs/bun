@@ -70,6 +70,7 @@
     "docs/frame-analysis.md",
     "docs/har.md",
     "docs/integration.md",
+    "docs/m3-video.md",
     "docs/live-dash-lab.md",
     "docs/native-ffmpeg.md",
     "docs/native-media-packaging.md",
@@ -5054,6 +5055,11 @@
       "bun": "./dist/src/encode.ts",
       "default": "./dist/src/encode.ts"
     },
+    "./m3-video": {
+      "types": "./dist/types/src/m3-video.d.ts",
+      "bun": "./dist/src/m3-video.ts",
+      "default": "./dist/src/m3-video.ts"
+    },
     "./computer": {
       "types": "./dist/types/src/computer.d.ts",
       "bun": "./dist/src/computer.ts",
@@ -5337,6 +5343,7 @@
       "./studio-remotion": "./src/studio-remotion.tsx",
       "./engine": "./src/index.ts",
       "./encode": "./src/encode.ts",
+      "./m3-video": "./src/m3-video.ts",
       "./computer": "./src/computer.ts",
       "./ffmpeg": "./src/ffmpeg.ts",
       "./mpv": "./src/mpv.ts",

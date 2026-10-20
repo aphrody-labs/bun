@@ -154,13 +154,22 @@ export function Artwork({ work, frame }: { work: ShowcaseWork; frame: number }) 
           ))}
         </g>
       )}
+      {work.code && (
+        <g opacity={reveal}>
+          <rect x="48" y="48" width="850" height="154" rx="16" fill={background} fillOpacity="0.94" stroke={accent} strokeOpacity="0.5" />
+          <text x="72" y="78" fill={light} fontSize="14" fontFamily="monospace">BUN OS · {work.engine.toUpperCase()} · CODE DE COMPOSITION</text>
+          {work.code.split("\n").map((line, index) => (
+            <text key={index} x="72" y={112 + index * 28} fill={light} fontSize="20" fontFamily="monospace">{line}</text>
+          ))}
+        </g>
+      )}
       <path d="M48 660H1232" stroke={light} strokeOpacity="0.3" />
       <g fill={light} fontFamily="Showcase, Arial, sans-serif" fontSize="15" letterSpacing="3">
         <text x="48" y="694">
           BUN VIDEO / {work.artwork.toUpperCase()}
         </text>
         <text x="1060" y="694">
-          {String(frame).padStart(4, "0")} / 0144
+          {String(frame).padStart(4, "0")} / {String(work.durationFrames).padStart(4, "0")}
         </text>
       </g>
     </svg>

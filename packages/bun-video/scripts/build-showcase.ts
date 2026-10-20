@@ -4,6 +4,7 @@ import { createUnifiedVideoPipeline } from "../src/video-workflow";
 import { captureCompositionFrames } from "../src/render-frame";
 import { openChromiumFrameContext } from "../src/chromium-frame";
 import { compareRGBAFrames } from "../src/pixel-verify";
+import { encodeFilmCraftFrames } from "../src/encode";
 import {
   collection,
   type ShowcaseAsset,
@@ -268,7 +269,7 @@ try {
         });
         const assets: ShowcaseAsset[] = [];
         const frames = sampleOnly
-          ? [0, 24, 48, 72, 96, 120, 143]
+          ? Array.from({ length: 7 }, (_, index) => Math.round(index * (work.durationFrames - 1) / 6))
           : Array.from({ length: work.durationFrames }, (_, index) => index);
         for (const frame of frames) {
           for await (const captured of captureCompositionFrames(browser.context, {
@@ -300,6 +301,21 @@ try {
           ),
         );
         work.frames = assets.filter(asset => asset.mime === "image/png").map(asset => asset.file);
+        const nativeExecutable = Bun.env.BUN_VIDEO_NATIVE_EXECUTABLE;
+        if (!sampleOnly && nativeExecutable) {
+          const frameFiles = work.frames;
+          async function* rgba() {
+            for (const file of frameFiles) {
+              const pixels = await new Bun.Image(join(directory, file)).rgba();
+              yield { data: pixels.data, width: pixels.width, height: pixels.height };
+            }
+          }
+          const videoFile = `videos/${work.id}.mp4`;
+          await mkdir(join(directory, "videos"), { recursive: true });
+          await encodeFilmCraftFrames(rgba(), { nativeExecutable, output: join(directory, videoFile), width: work.width, height: work.height, fps: work.fps, frames: work.durationFrames });
+          assets.push(await write(videoFile, await Bun.file(join(directory, videoFile)).bytes(), "video/mp4"));
+          work.video = videoFile;
+        }
         return {
           detail: `${frames.length} images capturées à ${work.fps.num}/${work.fps.den} i/s. Aucun encodage vidéo implicite.`,
           assets,

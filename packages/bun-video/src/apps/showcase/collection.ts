@@ -23,12 +23,12 @@ export interface ShowcaseWork {
 }
 
 const palettes = {
-  blue: ["#080f27", "#4268ff", "#a1f2ff"],
-  coral: ["#2b1018", "#ff675e", "#ffdfb5"],
-  green: ["#091e1a", "#48dca0", "#e7ffc3"],
-  violet: ["#1d1236", "#b898ff", "#ffcfeb"],
-  gold: ["#211a0b", "#e9b74d", "#fff1bb"],
-  ice: ["#071c25", "#3dd3dc", "#daf9fa"],
+  blue: ["#141218", "#cfbdfe", "#e9ddff"],
+  coral: ["#141218", "#efb8c8", "#ffd9e3"],
+  green: ["#0f0d13", "#cbc2db", "#e8def8"],
+  violet: ["#1d1b20", "#cfbdfe", "#e9ddff"],
+  gold: ["#211f24", "#efb8c8", "#ffd9e3"],
+  ice: ["#0f0d13", "#cbc2db", "#e6e0e9"],
 } as const;
 type Brief = readonly [string, string, string, Artwork, keyof typeof palettes, readonly string[]];
 const briefs: readonly Brief[] = [
@@ -92,10 +92,13 @@ export const collection: readonly ShowcaseWork[] = (["remotion", "hyperframes"] 
     artwork,
     palette: palettes[palette],
     features,
-    durationFrames: 144,
+    durationFrames: 96,
     fps: { num: 24, den: 1 },
-    width: 1280,
-    height: 720,
+    width: 960,
+    height: 540,
+    chapter: "Composition déterministe",
+    sourceRef: engine === "remotion" ? "packages/bun-video/remotion/core/src/index.ts" : "packages/bun-video/hyperframes/core/src/runtime/authoredTiming.ts",
+    code: engine === "remotion" ? "const frame = useCurrentFrame();\nconst phase = spring({ frame, fps: 24 });\nreturn <Artwork frame={frame} />;" : "const timeline = gsap.timeline({ paused: true });\ntimeline.to(clock, { frame: 95, duration: 4 });\nwindow.__hf.seek(seconds);",
   })),
 );
 

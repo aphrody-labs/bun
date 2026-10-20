@@ -6,7 +6,7 @@ if (!Bun.env.FILMCRAFT_DIST || !(await Bun.file(`${root}/index.html`).exists()))
   throw new Error("FILMCRAFT_DIST must name a qualified FilmCraft web distribution");
 }
 const port = Number(Bun.env.PORT ?? 8765);
-if (!Number.isInteger(port) || port < 1 || port > 65535) throw new Error("PORT must be between 1 and 65535");
+if (!Number.isInteger(port) || port < 0 || port > 65535) throw new Error("PORT must be between 0 and 65535");
 const mime: Record<string, string> = {
   html: "text/html; charset=utf-8", js: "text/javascript; charset=utf-8", wasm: "application/wasm",
   png: "image/png", svg: "image/svg+xml", css: "text/css; charset=utf-8", json: "application/json",
@@ -18,7 +18,7 @@ const headers = {
   "X-Content-Type-Options": "nosniff",
   "Referrer-Policy": "same-origin",
 };
-Bun.serve({
+const server = Bun.serve({
   hostname: "127.0.0.1", port,
   async fetch(request) {
     const url = new URL(request.url);
@@ -37,3 +37,4 @@ Bun.serve({
     return new Response(request.method === "HEAD" ? null : file, { headers: { ...headers, "Content-Type": mime[extension]!, "Content-Length": String(file.size), "Cache-Control": cache } });
   },
 });
+console.log(JSON.stringify({ service: "aphrody-video-editor", port: server.port }));
