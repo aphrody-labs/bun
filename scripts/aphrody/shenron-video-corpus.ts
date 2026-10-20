@@ -543,6 +543,7 @@ async function command(executable: string, args: string[], timeoutMs: number, ma
   const environment: Record<string, string> = {};
   for (const key of ["SystemRoot", "WINDIR", "TEMP", "TMP", "PATH"])
     if (process.env[key]) environment[key] = process.env[key]!;
+  environment.BUN_DEBUG_QUIET_LOGS = "1";
   environment.LD_LIBRARY_PATH = join(dirname(executable), "../lib");
   if (process.env.BUN_CORPUS_WORKER_JOB || args.includes("--worker")) environment.BUN_CORPUS_WORKER_JOB = "1";
   using job =
@@ -1021,7 +1022,7 @@ async function localWorker(asset: CorpusAsset, options: CorpusOptions, store: st
     );
     const bytes = await command(
       process.execPath,
-      [import.meta.path, "--worker", request],
+      ["--no-env-file", import.meta.path, "--worker", request],
       limit(options.workerTimeoutMs, 30000, 120000),
       1024 * 1024,
     );
