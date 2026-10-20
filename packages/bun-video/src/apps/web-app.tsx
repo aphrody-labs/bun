@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { VideoStudio, type StudioAsset } from "../studio";
 
-type Section = "pipeline" | "library" | "episode" | "data" | "labs" | "shortcuts" | "compositions";
+type Section = "discover" | "pipeline" | "library" | "episode" | "data" | "labs" | "shortcuts" | "compositions";
 
 interface Health {
   readonly status: string;
@@ -11,6 +11,7 @@ interface Health {
 }
 
 const sections: ReadonlyArray<{ id: Section; label: string; hint: string }> = [
+  { id: "discover", label: "Découvrir", hint: "Recherche YouTube officielle" },
   { id: "pipeline", label: "Pipeline", hint: "Capture réseau, analyse, rendu" },
   { id: "library", label: "Bibliothèque", hint: "Lecture et métadonnées" },
   { id: "episode", label: "Atelier épisode", hint: "Analyse d’images" },
@@ -54,6 +55,99 @@ function Library() {
     );
   if (assets.length === 0) return <p className="notice">Aucun média dans la racine configurée.</p>;
   return <VideoStudio assets={assets} storageKey="bun-video-web-app" />;
+}
+
+interface YouTubeResult {
+  readonly id: string;
+  readonly title: string;
+  readonly description: string;
+  readonly channelTitle: string;
+  readonly publishedAt: string;
+  readonly thumbnail?: string;
+  readonly player: string;
+  readonly source: string;
+}
+
+function Discover() {
+  const [query, setQuery] = useState("");
+  const [items, setItems] = useState<YouTubeResult[]>([]);
+  const [selected, setSelected] = useState<YouTubeResult>();
+  const [state, setState] = useState("");
+  const [busy, setBusy] = useState(false);
+  const submit = async (event: { preventDefault(): void }) => {
+    event.preventDefault();
+    setBusy(true);
+    setState("Recherche YouTube…");
+    setSelected(undefined);
+    try {
+      const response = await fetch(`/api/youtube/search?q=${encodeURIComponent(query)}`, { cache: "no-store" });
+      const body = (await response.json()) as { items?: YouTubeResult[]; error?: string };
+      if (!response.ok) throw new Error(body.error ?? `HTTP ${response.status}`);
+      setItems(body.items ?? []);
+      setState(body.items?.length ? `${body.items.length} résultats · source YouTube officielle` : "Aucun résultat.");
+    } catch (error) {
+      setItems([]);
+      setState(
+        error instanceof Error && error.message === "youtube_search_unavailable"
+          ? "Recherche YouTube non configurée sur ce serveur."
+          : "Recherche indisponible. Réessayez plus tard.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <div className="discover">
+      <form className="form" onSubmit={submit}>
+        <label>
+          Rechercher dans YouTube
+          <input
+            type="search"
+            value={query}
+            onChange={event => setQuery(event.currentTarget.value)}
+            maxLength={160}
+            required
+          />
+        </label>
+        <button type="submit" className="action" disabled={busy || !query.trim()}>
+          {busy ? "Recherche…" : "Rechercher"}
+        </button>
+      </form>
+      <p className="notice" role="status" aria-live="polite">
+        {state || "Les vidéos sont lues dans le lecteur officiel YouTube."}
+      </p>
+      {selected && (
+        <div className="video-player">
+          <iframe
+            src={selected.player}
+            title={selected.title}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+            referrerPolicy="strict-origin-when-cross-origin"
+          />
+          <h2>{selected.title}</h2>
+          <p>{selected.channelTitle}</p>
+          <a href={selected.source} target="_blank" rel="noreferrer">
+            Ouvrir sur YouTube
+          </a>
+        </div>
+      )}
+      <div className="video-results">
+        {items.map(item => (
+          <button className="video-result" type="button" key={item.id} onClick={() => setSelected(item)}>
+            {item.thumbnail && <img src={item.thumbnail} alt="" loading="lazy" />}
+            <span>
+              <strong>{item.title}</strong>
+              <small>
+                {item.channelTitle}
+                {item.publishedAt ? ` · ${new Date(item.publishedAt).toLocaleDateString()}` : ""}
+              </small>
+            </span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function Embedded({ src, title }: { readonly src: string; readonly title: string }) {
@@ -143,6 +237,7 @@ function Pipeline() {
 }
 
 const views: Record<Section, () => ReactNode> = {
+  discover: () => <Discover />,
   pipeline: () => <Pipeline />,
   library: () => <Library />,
   episode: () => <Embedded src="/episode/" title="Atelier épisode" />,

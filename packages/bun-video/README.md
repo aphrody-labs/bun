@@ -65,6 +65,23 @@ Run `bun-video --help` or `bun-video <command> --help` for configuration. Sessio
 HAR recordings, signed media URLs and OAuth client secrets are local inputs;
 they are not shipped in the npm artifact.
 
+## Bun Video web application
+
+The repository web application is served by `src/serve.ts` and composes the native
+media library, studio, source pipeline, HLS/DASH labs and composition integrations.
+Its optional YouTube discovery endpoint uses the official YouTube Data API and
+Google's privacy-enhanced IFrame player; it never extracts YouTube media bytes.
+Set `BUN_VIDEO_YOUTUBE_API_KEY` on the server to enable search. Requests are
+limited to ten per minute per client. The limiter uses one shared bucket unless
+`BUN_VIDEO_TRUST_CF_IP=1` is set; enable that option only when the origin firewall
+accepts traffic exclusively from Cloudflare, since it trusts the `CF-Connecting-IP`
+header. The server binds to loopback by default.
+
+The web application includes local media and privileged source/pipeline tools.
+Before exposing it publicly, deploy it behind the product's authenticated access
+layer and restrict the origin; a successful server start or YouTube search does
+not qualify a public production deployment.
+
 This prerelease qualifies packaged utilities separately from live content
 playback. An OAuth provider configuration, authorized Crunchyroll session,
 valid Bitmovin license and supported browser/DRM environment remain caller

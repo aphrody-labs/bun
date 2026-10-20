@@ -27,6 +27,13 @@ export interface VideoWebAppOptions {
   readonly dataSite?: { readonly privateRoot?: string; readonly dbPath?: string };
   /** Mounts the episode workbench under /episode/ for this episode directory. */
   readonly episodeStudio?: { readonly episodeDir: string; readonly chromiumExecutable?: string };
+  /** Server-owned YouTube Data API key. Search results always play through Google's IFrame player. */
+  readonly youtube?: {
+    readonly apiKey: string;
+    readonly fetch?: (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
+    /** Trust cf-connecting-ip only when the origin accepts traffic exclusively from Cloudflare. */
+    readonly trustCloudflareIdentity?: boolean;
+  };
 }
 
 export interface VideoWebApp {
@@ -104,6 +111,7 @@ export function createVideoWebApp(options: VideoWebAppOptions): VideoWebApp {
   let dataSite: Promise<{ handle: (request: Request) => Promise<Response> }> | undefined;
   let pipelineInstance: ReturnType<typeof import("./video-workflow").openConfiguredUnifiedVideoPipeline> | undefined;
   let episode: Promise<{ fetch: (request: Request) => Promise<Response> }> | undefined;
+  const youtubeSearchWindow = new Map<string, number[]>();
 
   const unifiedPipeline = () => {
     pipelineInstance ??= import("./video-workflow")
@@ -370,6 +378,61 @@ export function createVideoWebApp(options: VideoWebAppOptions): VideoWebApp {
         return json(await extractYtDlp(parsed.href));
       } catch {
         return json({ error: "extraction_failed" }, 422);
+      }
+    }
+
+    if (path === "/api/youtube/search") {
+      if (!options.youtube?.apiKey) return json({ error: "youtube_search_unavailable" }, 503);
+      const query = url.searchParams.get("q")?.trim();
+      if (!query || query.length > 160) return json({ error: "invalid_query" }, 400);
+      const now = Date.now();
+      const client = options.youtube.trustCloudflareIdentity
+        ? (request.headers.get("cf-connecting-ip") ?? "unknown")
+        : "global";
+      const recent = (youtubeSearchWindow.get(client) ?? []).filter(time => now - time < 60_000);
+      if (recent.length >= 10) return json({ error: "rate_limited" }, 429);
+      if (youtubeSearchWindow.size >= 4096 && !youtubeSearchWindow.has(client)) {
+        for (const [key, times] of youtubeSearchWindow) if (!times.some(time => now - time < 60_000)) youtubeSearchWindow.delete(key);
+        if (youtubeSearchWindow.size >= 4096) return json({ error: "rate_limited" }, 429);
+      }
+      recent.push(now);
+      youtubeSearchWindow.set(client, recent);
+      const endpoint = new URL("https://www.googleapis.com/youtube/v3/search");
+      endpoint.searchParams.set("part", "snippet");
+      endpoint.searchParams.set("type", "video");
+      endpoint.searchParams.set("maxResults", "12");
+      endpoint.searchParams.set("q", query);
+      endpoint.searchParams.set("key", options.youtube.apiKey);
+      try {
+        const response = await (options.youtube.fetch ?? fetch)(endpoint, { signal: AbortSignal.timeout(8000) });
+        if (!response.ok) return json({ error: "youtube_search_failed" }, response.status === 429 ? 503 : 502);
+        const body = (await response.json()) as { items?: unknown };
+        if (!Array.isArray(body.items)) return json({ error: "youtube_response_invalid" }, 502);
+        const items = body.items.slice(0, 12).flatMap(value => {
+          if (!value || typeof value !== "object") return [];
+          const item = value as { id?: { videoId?: unknown }; snippet?: Record<string, unknown> };
+          const id = item.id?.videoId;
+          const snippet = item.snippet;
+          if (typeof id !== "string" || !/^[A-Za-z0-9_-]{11}$/.test(id) || !snippet || typeof snippet.title !== "string") return [];
+          const thumbnails = snippet.thumbnails as { medium?: { url?: unknown }; high?: { url?: unknown } } | undefined;
+          const thumbnail = thumbnails?.high?.url ?? thumbnails?.medium?.url;
+          return [{
+            id,
+            title: snippet.title.slice(0, 300),
+            description: typeof snippet.description === "string" ? snippet.description.slice(0, 1200) : "",
+            channelTitle: typeof snippet.channelTitle === "string" ? snippet.channelTitle.slice(0, 160) : "",
+            publishedAt: typeof snippet.publishedAt === "string" ? snippet.publishedAt : "",
+            ...(typeof thumbnail === "string" && /^https:\/\/([a-z0-9-]+\.)?ytimg\.com\//.test(thumbnail)
+              ? { thumbnail }
+              : {}),
+            provider: "YouTube" as const,
+            player: `https://www.youtube-nocookie.com/embed/${id}`,
+            source: `https://www.youtube.com/watch?v=${id}`,
+          }];
+        });
+        return json({ provider: "YouTube", items });
+      } catch {
+        return json({ error: "youtube_search_unavailable" }, 503);
       }
     }
 

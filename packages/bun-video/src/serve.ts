@@ -13,6 +13,12 @@ const app = createVideoWebApp({
   publicOrigin: Bun.env.BUN_VIDEO_PUBLIC_ORIGIN,
   hlsLab,
   hlsCookieSecret: Bun.env.BUN_VIDEO_COOKIE_SECRET,
+  youtube: Bun.env.BUN_VIDEO_YOUTUBE_API_KEY
+    ? {
+        apiKey: Bun.env.BUN_VIDEO_YOUTUBE_API_KEY,
+        trustCloudflareIdentity: Bun.env.BUN_VIDEO_TRUST_CF_IP === "1",
+      }
+    : undefined,
 });
 const server = Bun.serve({ hostname, port, fetch: app.fetch });
 console.log(JSON.stringify({ service: "bun-video", url: server.url.href, mediaRoot }));

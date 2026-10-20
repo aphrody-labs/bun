@@ -69,6 +69,96 @@ describe("createVideoWebApp", () => {
   });
 });
 
+describe("official YouTube discovery", () => {
+  test("uses the configured server key and returns validated official-player results", async () => {
+    let requested: URL | undefined;
+    const youtubeApp = createVideoWebApp({
+      mediaRoot: root,
+      youtube: {
+        apiKey: "server-only-test-key",
+        fetch: async input => {
+          requested = new URL(String(input));
+          return Response.json({
+            items: [
+              {
+                id: { videoId: "abcdefghijk" },
+                snippet: {
+                  title: "Official result",
+                  description: "description",
+                  channelTitle: "Channel",
+                  publishedAt: "2026-10-01T00:00:00Z",
+                  thumbnails: { high: { url: "https://i.ytimg.com/vi/abcdefghijk/hqdefault.jpg" } },
+                },
+              },
+              { id: { videoId: "bad id" }, snippet: { title: "Invalid" } },
+            ],
+          });
+        },
+      },
+    });
+    const response = await youtubeApp.fetch(new Request("https://video.example/api/youtube/search?q=remotion"));
+    expect(response.status).toBe(200);
+    expect(requested?.origin).toBe("https://www.googleapis.com");
+    expect(requested?.searchParams.get("key")).toBe("server-only-test-key");
+    expect(requested?.searchParams.get("maxResults")).toBe("12");
+    const body = await response.json();
+    expect(body).toMatchObject({
+      provider: "YouTube",
+      items: [
+        {
+          id: "abcdefghijk",
+          title: "Official result",
+          player: "https://www.youtube-nocookie.com/embed/abcdefghijk",
+        },
+      ],
+    });
+    expect(JSON.stringify(body)).not.toContain("server-only-test-key");
+    expect(body.items).toHaveLength(1);
+  });
+
+  test("bounds queries, fails closed without a key, and rate limits the trusted edge identity", async () => {
+    const noKey = await app.fetch(new Request("https://video.example/api/youtube/search?q=test"));
+    expect(noKey.status).toBe(503);
+    let calls = 0;
+    const youtubeApp = createVideoWebApp({
+      mediaRoot: root,
+      youtube: {
+        apiKey: "test-key",
+        trustCloudflareIdentity: true,
+        fetch: async () => {
+          calls++;
+          return Response.json({ items: [] });
+        },
+      },
+    });
+    expect(
+      (
+        await youtubeApp.fetch(
+          new Request(`https://video.example/api/youtube/search?q=${"x".repeat(161)}`),
+        )
+      ).status,
+    ).toBe(400);
+    for (let index = 0; index < 10; index++) {
+      expect(
+        (
+          await youtubeApp.fetch(
+            new Request("https://video.example/api/youtube/search?q=test", {
+              headers: { "cf-connecting-ip": "192.0.2.10" },
+            }),
+          )
+        ).status,
+      ).toBe(200);
+    }
+    const limited = await youtubeApp.fetch(
+      new Request("https://video.example/api/youtube/search?q=test", {
+        headers: { "cf-connecting-ip": "192.0.2.10" },
+      }),
+    );
+    expect(limited.status).toBe(429);
+    expect(calls).toBe(10);
+  });
+});
+
 describe("mounted labs", () => {
   test("dash lab is refused when no capture is configured", async () => {
     const response = await app.fetch(new Request("http://localhost/labs/dash/"));
