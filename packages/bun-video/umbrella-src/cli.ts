@@ -64,12 +64,14 @@ const commands: Record<string, Command> = {
     },
   },
   media: {
-    usage: "media <doctor|inspect|download|extract-frame|extract-frames|extract-audio|gif|remux|cut|compress|serve> [args]",
-    run: args => guarded(
-      import("../src/media-cli"),
-      args,
-      "Media command failed; check local files and options. Private URLs and paths are omitted.",
-    ),
+    usage:
+      "media <doctor|inspect|download|extract-frame|extract-frames|extract-audio|gif|remux|cut|compress|serve> [args]",
+    run: args =>
+      guarded(
+        import("../src/media-cli"),
+        args,
+        "Media command failed; check local files and options. Private URLs and paths are omitted.",
+      ),
   },
   x: {
     usage: "x <inspect|download> <X status URL> [output]",
@@ -81,13 +83,18 @@ const commands: Record<string, Command> = {
         const { normalizeXVideoUrl } = await import("../src/x-source");
         const status = normalizeXVideoUrl(url);
         const { executeMediaJob } = await import("../src/media-workflow");
-        const job = action === "inspect"
-          ? { action, source: status.url } as const
-          : output ? { action: "download", url: status.url, output } as const : undefined;
+        const job =
+          action === "inspect"
+            ? ({ action, source: status.url } as const)
+            : output
+              ? ({ action: "download", url: status.url, output } as const)
+              : undefined;
         if (!job) throw new Error("missing-output");
         console.log(JSON.stringify(await executeMediaJob(job), null, 2));
       } catch {
-        console.error("X video command failed; check the public status URL and output path. Private values are omitted.");
+        console.error(
+          "X video command failed; check the public status URL and output path. Private values are omitted.",
+        );
         process.exitCode = 1;
       }
     },

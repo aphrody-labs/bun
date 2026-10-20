@@ -45,10 +45,7 @@ export async function capabilities() {
 
 /** One public-safe capability contract shared by the web API, CLI and MCP. */
 export async function productCapabilities(options: { youtubeSearchEnabled?: boolean } = {}) {
-  const [runtime, { describeVideoAPIs }] = await Promise.all([
-    capabilities(),
-    import("./video-api"),
-  ]);
+  const [runtime, { describeVideoAPIs }] = await Promise.all([capabilities(), import("./video-api")]);
   const { name, runtime: runtimeInfo, upstream, nativeBrowser, webgpu, backends } = runtime;
   return {
     schema: "bun-video/product-capabilities/v1",
@@ -74,7 +71,11 @@ export async function productCapabilities(options: { youtubeSearchEnabled?: bool
         decoder: Bun.Video.decoder,
         backend: Bun.Video.backend,
       },
-      remotion: { version: runtime.upstream.remotion.version, apiFamily: "remotion", rendererFamily: "remotion-renderer" },
+      remotion: {
+        version: runtime.upstream.remotion.version,
+        apiFamily: "remotion",
+        rendererFamily: "remotion-renderer",
+      },
       hyperframes: {
         version: runtime.upstream.hyperframes.version,
         apiFamily: "hyperframes",
