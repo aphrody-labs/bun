@@ -26,7 +26,7 @@ export async function serveShowcase(request, env) {
     object.writeHttpMetadata(headers); headers.set('ETag', object.httpEtag); headers.set('Accept-Ranges', 'bytes');
     if (!('body' in object)) return new Response(null, { status: request.headers.has('If-Match') ? 412 : 304, headers });
     let status = 200;
-    if (object.range && 'offset' in object.range && 'length' in object.range) {
+    if (request.headers.has('Range') && object.range && 'offset' in object.range && 'length' in object.range) {
       status = 206;
       headers.set('Content-Range', `bytes ${object.range.offset}-${object.range.offset + object.range.length - 1}/${object.size}`);
       headers.set('Content-Length', String(object.range.length));

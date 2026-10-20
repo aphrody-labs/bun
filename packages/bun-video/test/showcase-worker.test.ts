@@ -15,6 +15,7 @@ test("showcase maps the root into its versioned R2 namespace and streams bytes",
         options.push(requestOptions);
         return {
           size: 3,
+          range: { offset: 0, length: 3 },
           httpEtag: '"abc"',
           body: new Blob([new Uint8Array([0, 255, 42])]).stream(),
           writeHttpMetadata(headers: Headers) {
@@ -30,6 +31,7 @@ test("showcase maps the root into its versioned R2 namespace and streams bytes",
   expect([...(await response.bytes())]).toEqual([0, 255, 42]);
   expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");
   expect(response.headers.get("Content-Length")).toBe("3");
+  expect(response.headers.get("Content-Range")).toBeNull();
 });
 
 test("showcase serves HEAD and byte ranges without buffering the object", async () => {
