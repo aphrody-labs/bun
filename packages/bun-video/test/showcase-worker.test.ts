@@ -3,14 +3,16 @@ import { serveShowcase } from "../showcase/worker.js";
 
 test("showcase maps the root into its versioned R2 namespace and streams bytes", async () => {
   const keys: string[] = [];
+  const options: unknown[] = [];
   const response = await serveShowcase(new Request("https://video.aphrody.com/"), {
     SHOWCASE_PREFIX: "showcase/test-v1",
     SHOWCASE: {
       async head() {
         return null;
       },
-      async get(key: string) {
+      async get(key: string, requestOptions: unknown) {
         keys.push(key);
+        options.push(requestOptions);
         return {
           size: 3,
           httpEtag: '"abc"',
@@ -23,6 +25,7 @@ test("showcase maps the root into its versioned R2 namespace and streams bytes",
     },
   });
   expect(keys).toEqual(["showcase/test-v1/index.html"]);
+  expect(options).toEqual([{ onlyIf: new Headers() }]);
   expect(response.status).toBe(200);
   expect([...(await response.bytes())]).toEqual([0, 255, 42]);
   expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");
@@ -43,7 +46,8 @@ test("showcase serves HEAD and byte ranges without buffering the object", async 
       async head() {
         return object;
       },
-      async get() {
+      async get(_key: string, options: { range?: Headers }) {
+        expect(options.range).toBeInstanceOf(Headers);
         return { ...object, range: { offset: 10, length: 3 }, body: new Blob(["abc"]).stream() };
       },
     },

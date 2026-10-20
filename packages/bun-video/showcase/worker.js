@@ -20,7 +20,8 @@ export async function serveShowcase(request, env) {
       object.writeHttpMetadata(headers); headers.set('ETag', object.httpEtag); headers.set('Content-Length', String(object.size));
       return new Response(null, { headers });
     }
-    const object = await env.SHOWCASE.get(objectKey, { onlyIf: request.headers, range: request.headers });
+    const range = request.headers.has('Range') ? request.headers : undefined;
+    const object = await env.SHOWCASE.get(objectKey, { onlyIf: request.headers, ...(range ? { range } : {}) });
     if (!object) return new Response('Not found', { status: 404, headers });
     object.writeHttpMetadata(headers); headers.set('ETag', object.httpEtag); headers.set('Accept-Ranges', 'bytes');
     if (!('body' in object)) return new Response(null, { status: request.headers.has('If-Match') ? 412 : 304, headers });
