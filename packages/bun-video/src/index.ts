@@ -66,7 +66,7 @@ export * from "./bitmovin";
 export * from "./crunchyroll";
 export * from "./oauth";
 export * from "./secrets";
-export { capabilities } from "./capabilities";
+export { capabilities, productCapabilities } from "./capabilities";
 export * from "./ytdlp";
 export * from "./pipeline";
 export * from "./image";

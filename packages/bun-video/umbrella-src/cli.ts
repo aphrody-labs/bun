@@ -114,7 +114,7 @@ const commands: Record<string, Command> = {
   capabilities: {
     usage: "capabilities",
     run: async () =>
-      console.log(JSON.stringify(await import("../src/capabilities").then(mod => mod.capabilities()), null, 2)),
+      console.log(JSON.stringify(await import("../src/capabilities").then(mod => mod.productCapabilities()), null, 2)),
   },
   "media-probe": {
     usage: "media-probe",

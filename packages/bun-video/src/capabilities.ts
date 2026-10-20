@@ -42,3 +42,36 @@ export async function capabilities() {
     },
   };
 }
+
+/** One public-safe capability contract shared by the web API, CLI and MCP. */
+export async function productCapabilities(options: { youtubeSearchEnabled?: boolean } = {}) {
+  const [runtime, { describeVideoAPIs }] = await Promise.all([
+    capabilities(),
+    import("./video-api"),
+  ]);
+  return {
+    schema: "bun-video/product-capabilities/v1",
+    runtime,
+    apiFamilies: describeVideoAPIs(),
+    surfaces: { http: true, cli: true, mcp: true },
+    integrations: {
+      filmcraft: {
+        providerAvailable: Bun.Video.available,
+        decoder: Bun.Video.decoder,
+        backend: Bun.Video.backend,
+      },
+      remotion: { version: runtime.upstream.remotion.version, apiFamily: "remotion", rendererFamily: "remotion-renderer" },
+      hyperframes: {
+        version: runtime.upstream.hyperframes.version,
+        apiFamily: "hyperframes",
+        rendererFamily: "hyperframes-engine",
+      },
+      youtube: {
+        searchEnabled: options.youtubeSearchEnabled ?? !!Bun.env.BUN_VIDEO_YOUTUBE_API_KEY,
+        playback: "official-iframe",
+        mediaExtraction: "unsupported",
+      },
+      ytDlp: { apiFamily: "ytdlp", mediaWorkflow: "authorized-non-YouTube-sources" },
+    },
+  } as const;
+}

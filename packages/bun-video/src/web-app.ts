@@ -34,6 +34,8 @@ export interface VideoWebAppOptions {
     /** Trust cf-connecting-ip only when the origin accepts traffic exclusively from Cloudflare. */
     readonly trustCloudflareIdentity?: boolean;
   };
+  /** Override the capability probe for tests or restricted deployments. */
+  readonly productCapabilities?: () => Promise<unknown>;
 }
 
 export interface VideoWebApp {
@@ -325,6 +327,13 @@ export function createVideoWebApp(options: VideoWebAppOptions): VideoWebApp {
         video: { available: Bun.Video.available, decoder: Bun.Video.decoder, backend: Bun.Video.backend },
         labs: labs.map(({ id, title }) => ({ id, title })),
       });
+
+    if (path === "/api/capabilities") {
+      const getCapabilities = options.productCapabilities ?? (() =>
+        import("./capabilities").then(mod => mod.productCapabilities({ youtubeSearchEnabled: Boolean(options.youtube?.apiKey) })),
+      );
+      return json(await getCapabilities());
+    }
 
     if (path === "/api/video/library") {
       const entries = await readdir(resolve(options.mediaRoot), { withFileTypes: true }).catch(() => []);

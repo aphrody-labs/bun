@@ -147,7 +147,7 @@ export async function callVideoTool(name: string, args: Record<string, unknown> 
       signal,
     );
   } else if (name === "video_capabilities") {
-    result = await import("./capabilities").then(mod => mod.capabilities());
+    result = await import("./capabilities").then(mod => mod.productCapabilities());
   } else if (name === "video_browser_task") {
     if (typeof args.url !== "string" || (args.screenshot !== undefined && typeof args.screenshot !== "boolean"))
       throw new TypeError("URL string and screenshot boolean required");

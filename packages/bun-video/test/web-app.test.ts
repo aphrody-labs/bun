@@ -21,6 +21,19 @@ describe("resolveMediaPath", () => {
 });
 
 describe("createVideoWebApp", () => {
+  test("serves the shared capability manifest over HTTP", async () => {
+    const app = createVideoWebApp({
+      mediaRoot: ".",
+      productCapabilities: async () => ({ schema: "bun-video/product-capabilities/v1", surfaces: { http: true, cli: true, mcp: true } }),
+    });
+    const response = await app.fetch(new Request("http://localhost/api/capabilities"));
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({
+      schema: "bun-video/product-capabilities/v1",
+      surfaces: { http: true, cli: true, mcp: true },
+    });
+  });
+
   test("serves the unified app shell and its bundles", async () => {
     const response = await app.fetch(new Request("http://localhost/"));
     const html = await response.text();
