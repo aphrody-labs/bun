@@ -63,7 +63,7 @@ export function createPhotoCraftImageTransform(options: PhotoCraftImageTransform
       const child = Bun.spawn([options.executable, "convert", input, output, "--format", "png"], {
         stdin: "ignore", stdout: "ignore", stderr: "pipe",
       });
-      const stderr = diagnostic(child.stderr);
+      const stderr = diagnostic(child.stderr).catch(() => "");
       let timedOut = false;
       const abort = () => child.kill();
       signal?.addEventListener("abort", abort, { once: true });
