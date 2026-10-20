@@ -10,7 +10,9 @@ test.skipIf(!Bun.Video.available)("native media workflow extracts, batches, remu
   const directory = await mkdtemp(join(tmpdir(), "bun-video-media-workflow-"));
   try {
     const metadata = await new Bun.Video(source).metadata();
-    expect(metadata.duration).toBeGreaterThan(0);
+    const duration = metadata.duration;
+    if (duration === null) throw new Error("Fixture video has no duration metadata");
+    expect(duration).toBeGreaterThan(0);
 
     const framePath = join(directory, "frame.webp");
     const frame = await executeMediaJob({
@@ -31,8 +33,8 @@ test.skipIf(!Bun.Video.available)("native media workflow extracts, batches, remu
       input: source,
       outputDirectory: batchPath,
       startSeconds: 0,
-      endSeconds: metadata.duration,
-      stepSeconds: metadata.duration / 4,
+      endSeconds: duration,
+      stepSeconds: duration / 4,
       maxFrames: 4,
     });
     expect(batch.frames).toHaveLength(4);
@@ -42,7 +44,9 @@ test.skipIf(!Bun.Video.available)("native media workflow extracts, batches, remu
     const remuxPath = join(directory, "copy.mp4");
     const remux = await executeMediaJob({ action: "remux", input: source, output: remuxPath });
     expect(remux.bytes).toBeGreaterThan(0);
-    expect((await new Bun.Video(remuxPath).metadata()).duration).toBeCloseTo(metadata.duration, 1);
+    const remuxDuration = (await new Bun.Video(remuxPath).metadata()).duration;
+    if (remuxDuration === null) throw new Error("Remuxed fixture has no duration metadata");
+    expect(remuxDuration).toBeCloseTo(duration, 1);
 
     const gifPath = join(directory, "preview.gif");
     const gif = await executeMediaJob({
@@ -50,7 +54,7 @@ test.skipIf(!Bun.Video.available)("native media workflow extracts, batches, remu
       input: source,
       output: gifPath,
       startSeconds: 0,
-      durationSeconds: Math.min(1, metadata.duration),
+      durationSeconds: Math.min(1, duration),
       fps: 4,
       width: 64,
     });
