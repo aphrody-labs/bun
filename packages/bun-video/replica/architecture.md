@@ -9,6 +9,7 @@
 - Server/media pipeline: existing Bun Video package APIs and worker pool; Cloudflare Worker remains a read-only static CDN at first.
 - Persistence: browser local storage for saved IDs/playlists in the MVP. No cloud user data or server mutations until auth and access rules are designed.
 - Hosting: Cloudflare Worker route `video.aphrody.com/*` with the `aphrody-video` R2 bucket. Deployment and asset publication are distinct operations and each needs an integrity/HTTP check.
+- YouTube: public search uses the official YouTube Data API v3 from the Worker with a server-only `YOUTUBE_API_KEY`; playback stays in YouTube's official privacy-enhanced IFrame Player. Search responses are not cached or persisted.
 
 ## Data model
 
@@ -30,9 +31,10 @@ If server accounts are added later, use Postgres with `users`, `collections`, `c
 | `GET /playlist/<id>`    | local user | local collection ID       | saved collection view           | S04     |
 | `GET /studio`           | public     | none                      | capabilities and workflow entry | S05     |
 | `GET /showcase.json`    | public     | conditional/range request | generated catalog JSON          | all     |
+| `GET /api/youtube/search?q=<query>` | public | 2–180 character query | attributed, uncached official API metadata | S01 |
 | `GET /<catalog asset>`  | public     | conditional/range request | typed R2 object                 | S01-S03 |
 
-The Worker allows only GET/HEAD and denies path traversal. No original YouTube endpoints, cookies, user accounts, uploads or third-party downloads are proxied by the site shell.
+Static Worker paths allow only GET/HEAD and deny path traversal. The only dynamic route is the read-only official YouTube search endpoint above. No original YouTube endpoints, cookies, raw media streams, user accounts, uploads or third-party YouTube downloads are proxied by the site shell. Community extractors remain available only for separately authorized sources and never bypass YouTube's official player/API restrictions.
 
 ## Pipeline integration
 
