@@ -34,50 +34,6 @@ test("showcase maps the root into its versioned R2 namespace and streams bytes",
   expect(response.headers.get("Content-Range")).toBeNull();
 });
 
-test("YouTube search uses the official API, safe search, attribution and no-store", async () => {
-  let requested: URL | undefined;
-  const response = await serveShowcase(new Request("https://video.aphrody.com/api/youtube/search?q=  bun+video%20"), {
-    SHOWCASE_PREFIX: "showcase/test-v1",
-    YOUTUBE_API_KEY: "test-secret",
-    SHOWCASE: { async head() { return null; }, async get() { throw new Error("R2 must not be read"); } },
-  }, async input => {
-    requested = new URL(String(input));
-    return Response.json({ items: [{ id: { videoId: "abcdefghijk" }, snippet: {
-      title: "Bun Video", description: "Demo", channelTitle: "Aphrody", publishedAt: "2026-10-20T00:00:00Z",
-      thumbnails: { medium: { url: "https://i.ytimg.com/vi/abcdefghijk/mqdefault.jpg" } },
-    } }] });
-  } as never);
-  expect(requested?.origin + requested?.pathname).toBe("https://www.googleapis.com/youtube/v3/search");
-  expect(requested?.searchParams.get("safeSearch")).toBe("strict");
-  expect(requested?.searchParams.get("type")).toBe("video");
-  expect(requested?.searchParams.get("maxResults")).toBe("12");
-  expect(requested?.searchParams.get("q")).toBe("bun video");
-  expect(response.status).toBe(200);
-  expect(response.headers.get("Cache-Control")).toBe("no-store");
-  expect(await response.json()).toMatchObject({ source: "YouTube", videos: [{ id: "abcdefghijk", title: "Bun Video" }] });
-});
-
-test("YouTube search validates query, hides missing credentials and rejects unsafe IDs", async () => {
-  const env = { SHOWCASE_PREFIX: "showcase/test-v1", YOUTUBE_API_KEY: "test", SHOWCASE: { async head() { return null; }, async get() { return null; } } };
-  expect((await serveShowcase(new Request("https://video.aphrody.com/api/youtube/search?q=x"), env)).status).toBe(400);
-  expect((await serveShowcase(new Request("https://video.aphrody.com/api/youtube/search?q=valid"), { ...env, YOUTUBE_API_KEY: undefined })).status).toBe(503);
-  const bad = await serveShowcase(new Request("https://video.aphrody.com/api/youtube/search?q=valid"), env, async () => Response.json({ items: [{ id: { videoId: "not-valid" }, snippet: { title: "bad" } }] }) as never);
-  expect((await bad.json()).videos).toEqual([]);
-});
-
-test("YouTube search respects its per-IP upstream quota guard", async () => {
-  const response = await serveShowcase(new Request("https://video.aphrody.com/api/youtube/search?q=valid", {
-    headers: { "CF-Connecting-IP": "203.0.113.8" },
-  }), {
-    SHOWCASE_PREFIX: "showcase/test-v1",
-    YOUTUBE_API_KEY: "test",
-    YOUTUBE_SEARCH_LIMITER: { async limit({ key }) { expect(key).toBe("203.0.113.8"); return { success: false }; } },
-    SHOWCASE: { async head() { return null; }, async get() { throw new Error("R2 must not be read"); } },
-  }, async () => { throw new Error("Google must not be called when rate limited"); });
-  expect(response.status).toBe(429);
-  expect(response.headers.get("Retry-After")).toBe("60");
-});
-
 test("video product routes serve the same app shell for client-side navigation", async () => {
   const keys: string[] = [];
   const env = {

@@ -7,8 +7,6 @@ Scope: responsive web application for Bun Video and Aphrody users. Rebuild famil
 | Source                 | URL                                                                               | Evidence used                                                                                    |
 | ---------------------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
 | Public home            | https://www.youtube.com/                                                          | Video-first discovery, search, channel-oriented navigation                                       |
-| Official Data API      | https://developers.google.com/youtube/data/reference/rest/v3/search/list          | Public search metadata through the documented API, with quota and attribution                  |
-| Official embedded player | https://developers.google.com/youtube/iframe_api_reference                      | Playback and seek controls remain inside YouTube's official player                              |
 | Upload help            | https://support.google.com/youtube/answer/57407?co=GENIE.Platform%3DDesktop&hl=en | Upload and publish flow, visibility choices                                                      |
 | Playlist help          | https://support.google.com/youtube/answer/57792?hl=en-GB                          | Save and organize videos into playlists                                                          |
 | YouTube Help topics    | https://support.google.com/youtube/answer/16517743                                | Shorts, live, comments, captions, creator analytics and channel controls                         |

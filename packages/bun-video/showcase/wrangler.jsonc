@@ -3,13 +3,6 @@
   "main": "worker.js",
   "compatibility_date": "2026-10-20",
   "compatibility_flags": ["nodejs_compat"],
-  "ratelimits": [
-    {
-      "name": "YOUTUBE_SEARCH_LIMITER",
-      "namespace_id": "2026102101",
-      "simple": { "limit": 4, "period": 60 }
-    }
-  ],
   "observability": { "enabled": true, "head_sampling_rate": 1 },
   "r2_buckets": [{ "binding": "SHOWCASE", "bucket_name": "aphrody-video" }],
   "vars": { "SHOWCASE_PREFIX": "showcase/20261020-v2" },

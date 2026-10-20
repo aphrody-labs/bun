@@ -6,14 +6,6 @@ import type { ShowcaseManifest } from "./collection";
 import "./style.css";
 
 type Work = ShowcaseManifest["works"][number];
-type YouTubeVideo = {
-  id: string;
-  title: string;
-  description: string;
-  channelTitle: string;
-  publishedAt: string | null;
-  thumbnail?: string;
-};
 const asset = (path: string) => {
   if (!path || path.startsWith("/") || path.split(/[\\/]/).includes(".."))
     throw new TypeError("Showcase assets must stay inside the published timeline");
@@ -186,11 +178,6 @@ function Film({
 
 function Discover({ manifest }: { manifest: ShowcaseManifest }) {
   const [query, setQuery] = useState(new URLSearchParams(location.search).get("q") ?? "");
-  const [searchSource, setSearchSource] = useState<"Aphrody" | "YouTube">("Aphrody");
-  const [youtubeResults, setYoutubeResults] = useState<YouTubeVideo[]>([]);
-  const [youtubeError, setYoutubeError] = useState("");
-  const [youtubeBusy, setYoutubeBusy] = useState(false);
-  const [youtubeSelected, setYoutubeSelected] = useState<YouTubeVideo | null>(null);
   const [filter, setFilter] = useState("Tout voir");
   const [selected, setSelected] = useState<Work | null>(() =>
     location.pathname === "/watch"
@@ -265,21 +252,6 @@ function Discover({ manifest }: { manifest: ShowcaseManifest }) {
           onSubmit={event => {
             event.preventDefault();
             history.pushState({}, "", `/?q=${encodeURIComponent(query)}`);
-            setYoutubeSelected(null);
-            setYoutubeError("");
-            if (searchSource === "YouTube" && query.trim().length >= 2) {
-              setYoutubeBusy(true);
-              fetch(`/api/youtube/search?q=${encodeURIComponent(query.trim())}`, { cache: "no-store" })
-                .then(async response => {
-                  const result = await response.json();
-                  if (!response.ok) throw new Error(result.error === "youtube_search_unavailable"
-                    ? "Recherche YouTube non configurée sur ce déploiement."
-                    : "La recherche YouTube est momentanément indisponible.");
-                  setYoutubeResults(result.videos);
-                })
-                .catch(error => setYoutubeError(String(error instanceof Error ? error.message : error)))
-                .finally(() => setYoutubeBusy(false));
-            }
           }}
         >
           <label className="sr-only" htmlFor="video-search">
@@ -294,15 +266,6 @@ function Discover({ manifest }: { manifest: ShowcaseManifest }) {
           />
           <button aria-label="Rechercher" type="submit">
             ⌕
-          </button>
-          <button
-            className="search-source"
-            type="button"
-            aria-label={`Source de recherche : ${searchSource}`}
-            aria-pressed={searchSource === "YouTube"}
-            onClick={() => setSearchSource(value => value === "Aphrody" ? "YouTube" : "Aphrody")}
-          >
-            {searchSource === "Aphrody" ? "Bun" : "▶ YouTube"}
           </button>
         </form>
         <a className="create-link" href="/studio">
@@ -338,30 +301,7 @@ function Discover({ manifest }: { manifest: ShowcaseManifest }) {
         </div>
       </aside>
       <main className="video-main">
-        {youtubeSelected ? (
-          <div className="watch-page youtube-watch">
-            <button className="watch-back" onClick={() => setYoutubeSelected(null)}>← Retour aux résultats YouTube</button>
-            <div className="watch-columns">
-              <section className="watch-primary">
-                <div className="watch-player">
-                  <iframe
-                    title={youtubeSelected.title}
-                    src={`https://www.youtube-nocookie.com/embed/${youtubeSelected.id}?playsinline=1&rel=0`}
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                    referrerPolicy="strict-origin-when-cross-origin"
-                    allowFullScreen
-                  />
-                </div>
-                <div className="watch-meta">
-                  <span>YouTube · {youtubeSelected.channelTitle}</span>
-                  <h1>{youtubeSelected.title}</h1>
-                  <p>{youtubeSelected.description}</p>
-                  <a href={`https://www.youtube.com/watch?v=${youtubeSelected.id}`} target="_blank" rel="noreferrer">Voir sur YouTube ↗</a>
-                </div>
-              </section>
-            </div>
-          </div>
-        ) : selected ? (
+        {selected ? (
           <div className="watch-page">
             <button className="watch-back" onClick={close}>
               ← Retour au catalogue
@@ -515,27 +455,6 @@ function Discover({ manifest }: { manifest: ShowcaseManifest }) {
                 </button>
               ))}
             </div>
-            {searchSource === "YouTube" && query.trim().length >= 2 && (
-              <section className="catalog-section youtube-results" aria-live="polite">
-                <div className="catalog-heading"><div><p className="kicker">SOURCE EXTERNE ATTRIBUÉE</p><h2>Résultats YouTube</h2></div></div>
-                {youtubeBusy ? <p>Recherche des vidéos publiques…</p> : youtubeError ? <p role="status">{youtubeError}</p> : (
-                  <>
-                    <p className="youtube-attribution">Résultats et miniatures fournis par YouTube. Lecture via le lecteur officiel YouTube.</p>
-                    <div className="catalog-grid">
-                      {youtubeResults.map(video => (
-                        <article className="catalog-card" key={video.id}>
-                          <button className="catalog-poster" onClick={() => setYoutubeSelected(video)} aria-label={`Lire ${video.title} avec YouTube`}>
-                            {video.thumbnail && <img src={video.thumbnail} loading="lazy" alt="" />}
-                            <i>▶</i>
-                          </button>
-                          <div className="catalog-copy"><b><button className="youtube-title" onClick={() => setYoutubeSelected(video)}>{video.title}</button></b><small>YouTube · {video.channelTitle}</small><small>{video.publishedAt ? new Date(video.publishedAt).toLocaleDateString() : ""}</small></div>
-                        </article>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </section>
-            )}
             <section className="catalog-section">
               <div className="catalog-heading">
                 <div>
