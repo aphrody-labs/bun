@@ -84,7 +84,11 @@ for (const entry of ["app", "preview"] as const) {
   if (!result.success) throw new AggregateError(result.logs, `Showcase ${entry} build failed`);
   for (const asset of result.outputs) await write(asset.path.split(/[\\/]/).at(-1)!, await asset.bytes(), asset.type);
   if (!files.has(`${entry}.css`))
-    await write(`${entry}.css`, '@font-face{font-family:Showcase;src:url("/fonts/archivo.ttf") format("truetype");font-weight:100 900}html,body,#root{margin:0;width:100%;height:100%;overflow:hidden}', "text/css");
+    await write(
+      `${entry}.css`,
+      '@font-face{font-family:Showcase;src:url("/fonts/archivo.ttf") format("truetype");font-weight:100 900}html,body,#root{margin:0;width:100%;height:100%;overflow:hidden}',
+      "text/css",
+    );
   await write(
     entry === "app" ? "index.html" : "preview.html",
     html(entry, entry === "app" ? "Bun Video — Showcase" : "Bun Video — Composition"),
@@ -142,7 +146,7 @@ if (source) {
       `native-${id}`,
       "one selected episode frame and native image transformation",
       async () => {
-      const frame = transform(new Bun.Video(source).frame(time)).resize(800, 450, { fit: "inside" });
+        const frame = transform(new Bun.Video(source).frame(time)).resize(800, 450, { fit: "inside" });
         const encoded = await frame.webp({ quality: 90 }).bytes();
         const image = await new Bun.Image(encoded).metadata();
         const file = `native/${id}.webp`;
