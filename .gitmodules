@@ -5,9 +5,6 @@
 	path = vendor/brave-core
 	url = https://github.com/aphrody-labs/brave-core.git
 	shallow = true
-[submodule "vendor/filmcraft"]
-	path = vendor/filmcraft
-	url = https://github.com/aphrody-labs/filmcraft.git
 [submodule "vendor/photocraft"]
 	path = vendor/photocraft
 	url = https://github.com/aphrody-labs/photocraft.git
