@@ -40,7 +40,7 @@ test("showcase rejects writes and hidden paths before touching R2", async () => 
 test("showcase handles absent and unchanged objects and forces source downloads", async () => {
   const absent = { SHOWCASE_PREFIX: "showcase/test-v1", SHOWCASE: { async head() { return null; }, async get() { return null; } } };
   expect((await serveShowcase(new Request("https://video.aphrody.com/absent"), absent)).status).toBe(404);
-  const unchanged = { SHOWCASE_PREFIX: "showcase/test-v1", SHOWCASE: { async head() { return null; }, async get() { return { httpEtag: '"abc"', writeHttpMetadata() {} }; } } };
+  const unchanged = { SHOWCASE_PREFIX: "showcase/test-v1", SHOWCASE: { async head() { return null; }, async get() { return { size: 0, httpEtag: '"abc"', writeHttpMetadata() {} }; } } };
   expect((await serveShowcase(new Request("https://video.aphrody.com/app.js", { headers: { "If-None-Match": '"abc"' } }), unchanged)).status).toBe(304);
   const source = { SHOWCASE_PREFIX: "showcase/test-v1", SHOWCASE: { async head() { return null; }, async get() { return { size: 4, httpEtag: '"abc"', body: new Blob(["code"]).stream(), writeHttpMetadata() {} }; } } };
   const response = await serveShowcase(new Request("https://video.aphrody.com/sources/artwork.tsx"), source);

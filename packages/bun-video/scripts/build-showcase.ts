@@ -428,7 +428,7 @@ try {
         files.delete(documentFile);
         const mp4 = await Bun.file(join(directory, videoFile)).bytes();
         assets.push(await write(videoFile, mp4, "video/mp4"));
-        const work: ShowcaseWork = {
+        const work: ShowcaseWork & { poster?: string; evidence: string[] } = {
           id: `m3-${demo.id}`,
           title: demo.title,
           description: `Entrée ${demo.input.kind} normalisée avec Bun et composée selon les rôles Material 3 canoniques.`,
@@ -444,6 +444,7 @@ try {
           chapter: "Entrées M3 · pipeline Bun",
           sourceRef: "packages/bun-video/src/m3-video.ts",
           code: demo.code,
+          evidence: [],
         };
         const row = await evidence(
           `m3-${demo.id}`,

@@ -55,14 +55,8 @@ const phases = (
           {
             name: "source-types",
             cwd: root,
-            args: ["check", "--threads=1", "--project", "tsconfig.check.json", "--noEmit"],
-            deadline: 25_000,
-          },
-          {
-            name: "script-types",
-            cwd: root,
-            args: ["check", "--threads=1", "--project", "tsconfig.scripts.check.json", "--noEmit"],
-            deadline: 10_000,
+            args: ["scripts/check-types.ts"],
+            deadline: 60_000,
           },
           { name: "source-engines", cwd: root, args: ["scripts/check-engines.ts", "--trace"], deadline: 50_000 },
           { name: "source-lint", cwd: root, args: ["lint", "src", "test"], deadline: 15_000 },
