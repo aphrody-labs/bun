@@ -1,6 +1,76 @@
 import { expect, test } from "bun:test";
 import factory from "../../tools/config/fusion-factory.json";
-import { JOBS, choose, cpuList, jobs, lane, multi, plan, slotLocks, slotSets, slots, withJobs, wrap } from "./factory.ts";
+import { JOBS, choose, cpuList, jobs, lane, multi, plan, reserveLinuxSlots, run, slotLocks, slotSets, slots, withJobs, wrap } from "./factory.ts";
+import { mkdtemp, rm, readFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+
+test.skipIf(process.platform !== "linux")("reservation takes the first released slot and cancels losing kernel waiters", async () => {
+  const root = await mkdtemp(join(tmpdir(), "factory-first-free-"));
+  const locks = [join(root, "one.lock"), join(root, "two.lock")];
+  const first = await reserveLinuxSlots([locks[0]!], 1, 1);
+  const second = await reserveLinuxSlots([locks[1]!], 1, 1);
+  let winner: Awaited<ReturnType<typeof reserveLinuxSlots>> | undefined;
+  try {
+    const waiting = Promise.withResolvers<void>();
+    const pending = reserveLinuxSlots(locks, 1, 1, undefined, () => waiting.resolve());
+    await waiting.promise;
+    await second.release();
+    winner = await pending;
+    expect(winner.held).toEqual([1]);
+    await first.release();
+    // The losing slot-zero waiter must be gone, otherwise it consumes this lease.
+    const probe = await reserveLinuxSlots([locks[0]!], 1, 1);
+    await probe.release();
+  } finally {
+    await winner?.release();
+    await first.release();
+    await second.release();
+    await rm(root, { recursive: true, force: true });
+  }
+}, 10000);
+
+test.skipIf(process.platform !== "linux")("aborted reservation releases partial leases and its admission mutex", async () => {
+  const root = await mkdtemp(join(tmpdir(), "factory-cancel-"));
+  const locks = [join(root, "one.lock"), join(root, "two.lock")];
+  const occupied = await reserveLinuxSlots([locks[1]!], 1, 1);
+  const controller = new AbortController();
+  try {
+    const waiting = Promise.withResolvers<void>();
+    const pending = reserveLinuxSlots(locks, 2, 2, controller.signal, () => waiting.resolve());
+    const rejected = expect(pending).rejects.toThrow("cancel fixture");
+    await waiting.promise;
+    controller.abort(new Error("cancel fixture"));
+    await rejected;
+    await occupied.release();
+    const probe = await reserveLinuxSlots(locks, 2, 2);
+    expect(probe.held).toEqual([0, 1]);
+    await probe.release();
+  } finally {
+    controller.abort();
+    await occupied.release();
+    await rm(root, { recursive: true, force: true });
+  }
+}, 10000);
+
+test.skipIf(process.platform !== "linux")("a command returning the flock busy code still executes exactly once", async () => {
+  const root = await mkdtemp(join(tmpdir(), "factory-once-"));
+  const oldRoot = process.env.BUN_FACTORY_LOCK_ROOT;
+  const oldMode = process.env.BUN_FACTORY_MODE;
+  process.env.BUN_FACTORY_LOCK_ROOT = root;
+  process.env.BUN_FACTORY_MODE = "single";
+  const counter = join(root, "counter");
+  try {
+    await expect(run({ cwd: root, slots: 1, maxSlots: 1, argv: [process.execPath, "-e",
+      'await Bun.write(process.argv[1], (await Bun.file(process.argv[1]).exists() ? await Bun.file(process.argv[1]).text() : "") + "once\\n"); process.exit(222);', counter] }, false)).rejects.toThrow("exit 222");
+    expect(await readFile(counter, "utf8")).toBe("once\n");
+    expect(slots()[0]!.taken).toBe(false);
+  } finally {
+    if (oldRoot === undefined) delete process.env.BUN_FACTORY_LOCK_ROOT; else process.env.BUN_FACTORY_LOCK_ROOT = oldRoot;
+    if (oldMode === undefined) delete process.env.BUN_FACTORY_MODE; else process.env.BUN_FACTORY_MODE = oldMode;
+    await rm(root, { recursive: true, force: true });
+  }
+}, 10000);
 
 test("runtime, OS and web lanes use canonical sources and leave slots for parallel builds", () => {
   for (const name of ["runtime", "os", "web"] as const) {

@@ -58,7 +58,7 @@ Mode: ${builds.mode} (BUN_FACTORY_MODE=single|multi), ${builds.slots} slots of $
 Targets: ${Object.keys(targets).join(", ")}`;
 
 export function slotLocks(): string[] {
-  if (process.platform === "win32") {
+  if (process.platform === "win32" || process.env.BUN_FACTORY_LOCK_ROOT) {
     const root = resolve(process.env.BUN_FACTORY_LOCK_ROOT ?? resolve(import.meta.dir, "../../build/factory/locks"));
     return Array.from({ length: slotCount() }, (_, i) => resolve(root, i ? `heavy.${i}.lock` : "heavy.lock"));
   }
@@ -200,15 +200,97 @@ function spawn(cwd: string, argv: string[], held: number) {
   }).exitCode;
 }
 
+/** Kernel waiters own one lock each; the admission mutex prevents partial-set deadlocks. */
+export async function reserveLinuxSlots(locks: readonly string[], min: number, max: number, signal?: AbortSignal, onWaiting?: () => void) {
+  if (process.platform !== "linux") throw new Error("Linux reservations require Linux");
+  if (!Number.isInteger(min) || !Number.isInteger(max) || min < 1 || max < min || max > locks.length)
+    throw new Error("Invalid slot reservation bounds");
+  if (new Set(locks).size !== locks.length || locks.some(lock => !lock.startsWith("/") || resolve(lock) !== lock || lock.includes("\0")))
+    throw new Error("Factory reservation locks must be distinct normalized absolute paths");
+  const children = new Set<ReturnType<typeof Bun.spawn>>();
+  const release = async () => {
+    for (const child of children) child.kill();
+    await Promise.all([...children].map(child => child.exited));
+    children.clear();
+  };
+  const abort = () => { for (const child of children) child.kill(); };
+  signal?.throwIfAborted();
+  signal?.addEventListener("abort", abort, { once: true });
+  const waiter = (lock: string, tryOnly = false) => {
+    // --no-fork keeps the handle at one PID, both while flock waits and after exec.
+    const child = Bun.spawn(["flock", "--no-fork", ...(tryOnly ? ["-n", "-E", String(BUSY)] : []), "--", lock, process.execPath, "--no-env-file", "-e",
+      'process.stdout.write("reserved\\n"); await Bun.stdin.text();'],
+    { stdin: "pipe", stdout: "pipe", stderr: "inherit" });
+    children.add(child);
+    const ready = (async () => {
+      const reader = child.stdout.getReader();
+      let marker = "";
+      try {
+        while (!marker.includes("\n")) {
+          const chunk = await reader.read();
+          if (chunk.done) {
+            if (tryOnly && await child.exited === BUSY) return false;
+            throw new Error("Factory reservation waiter exited before acquiring its lock");
+          }
+          marker += new TextDecoder().decode(chunk.value);
+        }
+        if (marker !== "reserved\n") throw new Error("Invalid factory reservation acknowledgement");
+        signal?.throwIfAborted();
+        return true;
+      } finally { reader.releaseLock(); }
+    })();
+    return { child, ready };
+  };
+  try {
+    const admission = waiter(`${locks[0]}.reservation`);
+    await admission.ready;
+    const held: number[] = [];
+    const candidates = locks.map(lock => waiter(lock, true));
+    const available = await Promise.all(candidates.map(candidate => candidate.ready));
+    for (const [index, ready] of available.entries()) {
+      if (ready) held.push(index);
+      else children.delete(candidates[index]!.child);
+    }
+    if (held.length < min) {
+      await new Promise<void>((resolve, reject) => {
+        for (const [index, ready] of available.entries()) {
+          if (ready) continue;
+          const candidate = candidates[index] = waiter(locks[index]!);
+          candidate.ready.then(() => {
+            held.push(index);
+            if (held.length === min) resolve();
+          }, reject);
+        }
+        onWaiting?.();
+      });
+    }
+    signal?.throwIfAborted();
+    const selected = held.slice(0, max).sort((a, b) => a - b);
+    const losers = candidates.filter((value, i) => !selected.includes(i) && children.has(value.child)).map(value => value.child);
+    losers.push(admission.child);
+    for (const child of losers) child.kill();
+    await Promise.all(losers.map(child => child.exited));
+    for (const child of losers) children.delete(child);
+    signal?.removeEventListener("abort", abort);
+    signal?.throwIfAborted();
+    return { held: selected, release: async () => { signal?.removeEventListener("abort", abort); await release(); } };
+  } catch (error) {
+    signal?.removeEventListener("abort", abort);
+    await release();
+    signal?.throwIfAborted();
+    throw error;
+  }
+}
+
 /** Runs `step` in every free slot it may take, or waits for its fewest slots when too few are free. */
-export function run(step: Step, dry: boolean) {
+export async function run(step: Step, dry: boolean) {
   console.log(`$ (cd ${step.cwd} && ${step.argv.join(" ")})`);
   if (dry) return;
   mkdirSync(step.cwd, { recursive: true });
   let code: number | null = BUSY;
   if (!step.slots) code = spawn(step.cwd, step.argv, 0);
   else {
-    for (let attempt = 0; attempt < 3 && code === BUSY; attempt++) {
+    for (let attempt = 0; process.platform !== "linux" && attempt < 3 && code === BUSY; attempt++) {
       const held = choose(
         slots().flatMap((s, i) => (s.taken ? [] : [i])),
         step.slots,
@@ -221,10 +303,35 @@ export function run(step: Step, dry: boolean) {
       code = spawn(step.cwd, wrap(withJobs(step.argv, held.length), held, false), held.length);
     }
     if (code === BUSY) {
+      if (process.platform === "linux") {
+        console.log("factory: waiting for the first available slot set");
+        const controller = new AbortController();
+        const cancel = () => controller.abort(new Error("Factory reservation interrupted"));
+        process.once("SIGINT", cancel);
+        process.once("SIGTERM", cancel);
+        try {
+          const reservation = await reserveLinuxSlots(slotLocks(), clamp(step.slots), Math.max(clamp(step.slots), clamp(step.maxSlots ?? slotCount())), controller.signal);
+          try {
+            controller.signal.throwIfAborted();
+            const held = reservation.held;
+            // The waiter processes already hold these locks; never flock them a second time.
+            const argv = [...(multi() ? ["taskset", "-c", cpuList(held)] : []), "nice", "-n", "10", ...withJobs(step.argv, held.length)];
+            const n = String(jobs(held.length));
+            const child = Bun.spawn(argv, { cwd: step.cwd, env: { ...env(), BUN_FACTORY_JOBS: n, CARGO_BUILD_JOBS: n, CMAKE_BUILD_PARALLEL_LEVEL: n }, stdio: ["inherit", "inherit", "inherit"] });
+            const stop = () => child.kill();
+            controller.signal.addEventListener("abort", stop, { once: true });
+            try { code = await child.exited; } finally { controller.signal.removeEventListener("abort", stop); }
+          } finally { await reservation.release(); }
+        } finally {
+          process.removeListener("SIGINT", cancel);
+          process.removeListener("SIGTERM", cancel);
+        }
+      } else {
       const sets = slotSets(clamp(step.slots));
       const held = sets[process.pid % sets.length]!;
       console.log(`factory: too few free slots, waiting for ${held.map(i => slotLocks()[i]).join(", ")}`);
       code = spawn(step.cwd, wrap(withJobs(step.argv, held.length), held, true), held.length);
+      }
     }
   }
   if (code !== 0) throw new Error(`exit ${code}: ${step.argv.join(" ")}`);
@@ -282,10 +389,10 @@ export function windowsSlotLock(slot: number, wait: boolean): (() => void) | und
   };
 }
 
-function depot(dry: boolean) {
+async function depot(dry: boolean) {
   const d = google.depotTools;
   if (!existsSync(join(d, ".git")))
-    run(
+    await run(
       {
         cwd: google.home,
         argv: ["git", "clone", "https://chromium.googlesource.com/chromium/tools/depot_tools.git", d],
@@ -293,10 +400,10 @@ function depot(dry: boolean) {
       },
       dry,
     );
-  run({ cwd: d, argv: ["./update_depot_tools"], slots: 0 }, dry);
+  await run({ cwd: d, argv: ["./update_depot_tools"], slots: 0 }, dry);
 }
 
-function timer(dry: boolean) {
+async function timer(dry: boolean) {
   const dir = join(google.home, ".config/systemd/user");
   const service = `[Unit]\nDescription=Update depot_tools\n\n[Service]\nType=oneshot\nWorkingDirectory=${google.depotTools}\nExecStart=${google.depotTools}/update_depot_tools\nNice=10\n`;
   const unit = `[Unit]\nDescription=Daily depot_tools update\n\n[Timer]\nOnCalendar=daily\nRandomizedDelaySec=1h\nPersistent=true\n\n[Install]\nWantedBy=timers.target\n`;
@@ -305,8 +412,8 @@ function timer(dry: boolean) {
   mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, "depot-tools-update.service"), service);
   writeFileSync(join(dir, "depot-tools-update.timer"), unit);
-  run({ cwd: google.home, argv: ["systemctl", "--user", "daemon-reload"], slots: 0 }, false);
-  run(
+  await run({ cwd: google.home, argv: ["systemctl", "--user", "daemon-reload"], slots: 0 }, false);
+  await run(
     { cwd: google.home, argv: ["systemctl", "--user", "enable", "--now", "depot-tools-update.timer"], slots: 0 },
     false,
   );
@@ -394,7 +501,7 @@ export async function main(argv = process.argv.slice(2)) {
         if (cmd === "sync") return tool === "gclient" || tool === "repo";
         return cmd === "gen" ? tool === "gn" : tool === "autoninja";
       };
-      for (const s of plan(name!, config).filter(pick)) run(s, dry);
+      for (const s of plan(name!, config).filter(pick)) await run(s, dry);
       return;
     }
     default:
