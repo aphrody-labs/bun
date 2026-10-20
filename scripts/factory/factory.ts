@@ -304,13 +304,18 @@ export async function run(step: Step, dry: boolean) {
     }
     if (code === BUSY) {
       if (process.platform === "linux") {
-        console.log("factory: waiting for the first available slot set");
         const controller = new AbortController();
         const cancel = () => controller.abort(new Error("Factory reservation interrupted"));
         process.once("SIGINT", cancel);
         process.once("SIGTERM", cancel);
         try {
-          const reservation = await reserveLinuxSlots(slotLocks(), clamp(step.slots), Math.max(clamp(step.slots), clamp(step.maxSlots ?? slotCount())), controller.signal);
+          const reservation = await reserveLinuxSlots(
+            slotLocks(),
+            clamp(step.slots),
+            Math.max(clamp(step.slots), clamp(step.maxSlots ?? slotCount())),
+            controller.signal,
+            () => console.log("factory: waiting for the first available slot set"),
+          );
           try {
             controller.signal.throwIfAborted();
             const held = reservation.held;
@@ -327,10 +332,10 @@ export async function run(step: Step, dry: boolean) {
           process.removeListener("SIGTERM", cancel);
         }
       } else {
-      const sets = slotSets(clamp(step.slots));
-      const held = sets[process.pid % sets.length]!;
-      console.log(`factory: too few free slots, waiting for ${held.map(i => slotLocks()[i]).join(", ")}`);
-      code = spawn(step.cwd, wrap(withJobs(step.argv, held.length), held, true), held.length);
+        const sets = slotSets(clamp(step.slots));
+        const held = sets[process.pid % sets.length]!;
+        console.log(`factory: too few free slots, waiting for ${held.map(i => slotLocks()[i]).join(", ")}`);
+        code = spawn(step.cwd, wrap(withJobs(step.argv, held.length), held, true), held.length);
       }
     }
   }
