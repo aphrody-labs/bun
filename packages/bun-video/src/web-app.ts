@@ -329,9 +329,12 @@ export function createVideoWebApp(options: VideoWebAppOptions): VideoWebApp {
       });
 
     if (path === "/api/capabilities") {
-      const getCapabilities = options.productCapabilities ?? (() =>
-        import("./capabilities").then(mod => mod.productCapabilities({ youtubeSearchEnabled: Boolean(options.youtube?.apiKey) })),
-      );
+      const getCapabilities =
+        options.productCapabilities ??
+        (() =>
+          import("./capabilities").then(mod =>
+            mod.productCapabilities({ youtubeSearchEnabled: Boolean(options.youtube?.apiKey) }),
+          ));
       return json(await getCapabilities());
     }
 
