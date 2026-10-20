@@ -13,7 +13,7 @@ export interface ImageTransformOptions {
 
 /** Use Bun.Image for bounded video thumbnails and frame assets. */
 export async function transformImage(
-  input: string | ArrayBuffer | Blob,
+  input: string | ArrayBuffer | Uint8Array | Blob,
   options: ImageTransformOptions = {},
 ): Promise<Uint8Array> {
   const image = new Bun.Image(input, {
