@@ -85,7 +85,8 @@ for (const entry of ["app", "preview"] as const) {
     naming: { entry: "[name].[ext]", asset: "[name].[ext]", chunk: "[name]-[hash].[ext]" },
   });
   if (!result.success) throw new AggregateError(result.logs, `Showcase ${entry} build failed`);
-  for (const asset of result.outputs) await write(asset.path.split(/[\\/]/).at(-1)!, await asset.bytes(), asset.type);
+  for (const asset of result.outputs)
+    await write(asset.path.split(/[\\/]/).at(-1)!, new Uint8Array(await asset.arrayBuffer()), asset.type);
   if (!files.has(`${entry}.css`))
     await write(
       `${entry}.css`,
