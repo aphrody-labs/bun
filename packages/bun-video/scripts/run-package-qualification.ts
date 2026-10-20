@@ -1,13 +1,14 @@
 import { availableParallelism } from "node:os";
 import { mkdir } from "node:fs/promises";
-import { delimiter, dirname, join, resolve } from "node:path";
-import { Job, processes } from "bun:windows";
+import { delimiter, dirname, isAbsolute, join, resolve } from "node:path";
+import { runQualificationProcess } from "./qualification-process";
 
 const root = resolve(import.meta.dir, "..");
 const enginesOnly = Bun.argv.includes("--engines-only");
 const declarationsOnly = Bun.argv.includes("--declarations-only");
 const packOnly = Bun.argv.includes("--pack-only");
-if ((enginesOnly && declarationsOnly) || ((enginesOnly || declarationsOnly) && packOnly))
+const buildOnly = Bun.argv.includes("--build-only");
+if ([enginesOnly, declarationsOnly, packOnly, buildOnly].filter(Boolean).length > 1)
   throw new Error("Select one diagnostic or archive qualification scope");
 const typesArgument = Bun.argv.indexOf("--types-version");
 const typesVersion = typesArgument >= 0 ? Bun.argv[typesArgument + 1] : Bun.env.BUN_VIDEO_TYPES_VERSION;
@@ -15,18 +16,35 @@ if (typesArgument >= 0 && (!typesVersion || !/^\d+\.\d+\.\d+(?:-[A-Za-z0-9.-]+)?
   throw new Error("Package qualification requires an explicit published types version");
 const directory = resolve(root, "../../build/media/video-package-qualification");
 await mkdir(directory, { recursive: true });
-if (process.platform !== "win32" || process.arch !== "x64")
-  throw new Error("The current library native assets require the Windows x64 qualification host");
+if (
+  !(process.platform === "win32" && process.arch === "x64") &&
+  !(process.platform === "linux" && ["x64", "arm64"].includes(process.arch))
+)
+  throw new Error("Package qualification requires a Windows x64 or Linux x64/arm64 native asset host");
+if (process.platform === "linux" && (!Bun.env.TMPDIR || !isAbsolute(Bun.env.TMPDIR)))
+  throw new Error("Linux qualification requires an explicit absolute TMPDIR on the build filesystem");
 const env: Record<string, string> = {
   SystemRoot: Bun.env.SystemRoot ?? "",
   PATH: dirname(process.execPath) + delimiter + (Bun.env.PATH ?? ""),
   TEMP: Bun.env.TEMP ?? "",
   TMP: Bun.env.TMP ?? "",
+  ...(Bun.env.TMPDIR ? { TMPDIR: Bun.env.TMPDIR } : {}),
   APHRODY_HOME: resolve(root, "../../build/media/neon-fixture-home"),
   BUN_VIDEO_CATALOG_BACKEND: "sqlite",
   BUN_VIDEO_DECLARATION_TRACE: "1",
+  BUN_DEBUG_QUIET_LOGS: "1",
   ...(typesVersion ? { BUN_VIDEO_TYPES_VERSION: typesVersion } : {}),
 };
+for (const name of [
+  "BUN_FACTORY_JOBS",
+  "CARGO_BUILD_JOBS",
+  "CMAKE_BUILD_PARALLEL_LEVEL",
+  "BUN_MEDIA_JOBS",
+  "BUN_VIDEO_NATIVE_EXECUTABLE",
+  "BUN_VIDEO_FFMPEG",
+  "BUN_VIDEO_FFPROBE",
+])
+  if (Bun.env[name]) env[name] = Bun.env[name]!;
 const types = await Bun.file(resolve(root, "../bun-types/package.json")).json();
 const phases = (
   enginesOnly
@@ -67,7 +85,7 @@ const phases = (
           },
           { name: "archive-consumer", cwd: root, args: ["scripts/pack.ts"], deadline: 225_000 },
         ]
-).filter(phase => !packOnly || phase.name === "archive-consumer");
+).filter(phase => (!packOnly || phase.name === "archive-consumer") && (!buildOnly || phase.name === "library-build"));
 const started = Date.now();
 const results: Array<{
   name: string;
@@ -77,69 +95,46 @@ const results: Array<{
   expired: boolean;
   signal: string | number | null;
 }> = [];
-const cpuRate = Math.min(100, 200 / availableParallelism());
+const cpuRate = process.platform === "win32" ? Math.min(100, 200 / availableParallelism()) : null;
 let passed = false;
 try {
   for (const phase of phases) {
     console.log(JSON.stringify({ phase: phase.name, state: "starting" }));
     await Bun.write(join(directory, `${phase.name}.stdout.log`), "");
     await Bun.write(join(directory, `${phase.name}.stderr.log`), "");
-    using job = new Job({ killOnClose: true, cpuRate });
-    const child = job.spawn([process.execPath, "--no-env-file", ...phase.args], {
-      cwd: phase.cwd,
-      env,
-      stdin: "ignore",
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-    processes.setAffinity(child, 3);
     const phaseStart = Date.now();
-    let expired = false;
     const remaining = Math.min(phase.deadline, 420_000 - (Date.now() - started));
-    const deadline = setTimeout(
-      () => {
-        expired = true;
-        job.terminate();
-      },
-      Math.max(1, remaining),
-    );
-    const capture = async (stream: ReadableStream<Uint8Array>, suffix: string) => {
-      const writer = Bun.file(join(directory, `${phase.name}.${suffix}.log`)).writer();
-      let bytes = 0;
-      try {
-        for await (const part of stream) {
-          bytes += part.length;
-          if (bytes > 4 * 1024 * 1024) {
-            job.terminate();
-            throw new Error("Qualification phase output exceeded its bound");
-          }
-          writer.write(part);
-          await writer.flush();
-        }
-      } finally {
-        await writer.end();
-      }
-    };
+    let output;
     try {
-      const [, , code] = await Promise.all([
-        capture(child.stdout, "stdout"),
-        capture(child.stderr, "stderr"),
-        child.exited,
-      ]);
-      const success = code === 0 && !expired && !child.signalCode;
+      output = await runQualificationProcess(phase.args, {
+        cwd: phase.cwd,
+        env,
+        timeoutMs: Math.max(1, remaining),
+      });
+    } catch (error) {
       results.push({
         name: phase.name,
-        code,
-        passed: success,
+        code: null,
+        passed: false,
         elapsedMs: Date.now() - phaseStart,
-        expired,
-        signal: child.signalCode ?? null,
+        expired: error instanceof Error && error.name === "TimeoutError",
+        signal: null,
       });
-      console.log(JSON.stringify(results.at(-1)));
-      if (!success) throw new Error(`Package qualification failed at ${phase.name}`);
-    } finally {
-      clearTimeout(deadline);
+      throw error;
     }
+    await Bun.write(join(directory, `${phase.name}.stdout.log`), output.stdout);
+    await Bun.write(join(directory, `${phase.name}.stderr.log`), output.stderr);
+    const success = output.code === 0 && !output.signal;
+    results.push({
+      name: phase.name,
+      code: output.code,
+      passed: success,
+      elapsedMs: Date.now() - phaseStart,
+      expired: false,
+      signal: output.signal,
+    });
+    console.log(JSON.stringify(results.at(-1)));
+    if (!success) throw new Error(`Package qualification failed at ${phase.name}`);
   }
   passed = true;
 } finally {
@@ -150,7 +145,9 @@ try {
         ? "engine-diagnostic-qualification.json"
         : declarationsOnly
           ? "declarations-diagnostic-qualification.json"
-          : "package-sequence-qualification.json",
+          : buildOnly
+            ? "library-build-qualification.json"
+            : "package-sequence-qualification.json",
     ),
     JSON.stringify(
       {
@@ -158,6 +155,8 @@ try {
         passed,
         runtime: Bun.version,
         revision: Bun.revision,
+        platform: process.platform,
+        arch: process.arch,
         cpuRate,
         elapsedMs: Date.now() - started,
         scope: enginesOnly
@@ -166,8 +165,10 @@ try {
             ? "declarations-diagnostic"
             : packOnly
               ? "archive-consumer"
-              : "complete",
-        ...(enginesOnly || declarationsOnly
+              : buildOnly
+                ? "library-build"
+                : "complete",
+        ...(enginesOnly || declarationsOnly || buildOnly
           ? {}
           : {
               typesSource: env.BUN_VIDEO_TYPES_VERSION ? "registry" : "archive",
