@@ -394,8 +394,7 @@ test("episode series selection binds the requested catalogue page and retains mi
     fetch(request) {
       const url = new URL(request.url);
       requests.push(`${request.method} ${url.pathname}${url.search}`);
-      if (request.method === "HEAD")
-        return new Response(null, { headers: { "content-type": "application/json" } });
+      if (request.method === "HEAD") return new Response(null, { headers: { "content-type": "application/json" } });
       return Response.json({
         total: 2,
         count: 2,

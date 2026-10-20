@@ -436,8 +436,7 @@ export async function readShenronEpisodePage(options: EpisodePageOptions) {
     offset = options.offset ?? 0;
   if (!Number.isSafeInteger(offset) || offset < 0 || offset > 1000000) throw new Failure("invalid-episode-offset");
   const series = options.series;
-  if (series !== undefined && !/^[A-Z][A-Z0-9_]{0,31}$/.test(series))
-    throw new Failure("invalid-episode-series");
+  if (series !== undefined && !/^[A-Z][A-Z0-9_]{0,31}$/.test(series)) throw new Failure("invalid-episode-series");
   const url = new URL("/api/episodes", site);
   url.searchParams.set("limit", String(pageSize));
   url.searchParams.set("offset", String(offset));
