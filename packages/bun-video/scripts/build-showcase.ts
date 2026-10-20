@@ -5,6 +5,7 @@ import { captureCompositionFrames } from "../src/render-frame";
 import { openChromiumFrameContext } from "../src/chromium-frame";
 import { compareRGBAFrames } from "../src/pixel-verify";
 import { encodeFilmCraftFrames } from "../src/encode";
+import { m3IconSVG, m3VideoDocument, prepareM3Video, rasterizeM3SVG, renderM3Video } from "../src/m3-video";
 import {
   collection,
   type ShowcaseAsset,
@@ -339,6 +340,87 @@ try {
     );
     work.evidence.push(row.id);
   }
+  const m3Demos = await evidence("m3-input-pipeline", "SVG logo, PNG, text and prompt composed into native Bun M3 videos", async () => {
+    const dimensions = { width: 960, height: 540, frames: 96, fps: { num: 24, den: 1 } } as const;
+    await using browser = await openChromiumFrameContext({
+      url: `http://127.0.0.1:${server.port}/index.html`,
+      width: dimensions.width,
+      height: dimensions.height,
+      executable: Bun.env.BUN_VIDEO_CHROMIUM ?? "/usr/bin/google-chrome",
+      signal: AbortSignal.timeout(300000),
+    });
+    const svg = new TextEncoder().encode(
+      '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128"><circle cx="64" cy="64" r="58" fill="#f472b6"/><path d="M34 92V36h22q20 0 20 16 0 9-8 13 12 3 12 14 0 13-21 13z" fill="#17131a"/><path d="M48 48v12h9q7 0 7-6t-7-6zm0 23v9h11q7 0 7-5t-7-4z" fill="#fff"/></svg>',
+    );
+    const vectorPNG = await rasterizeM3SVG(svg, browser.context, { width: 512, height: 512 });
+    const rasterLogo = vectorPNG;
+    const inputs = [
+      { id: "text", title: "Le code devient mouvement", input: { kind: "text" as const, text: "BUN VIDEO\nMATERIAL 3" }, code: "prepareM3Video({ kind: 'text', text })" },
+      { id: "prompt", title: "Une intention, une composition", input: { kind: "prompt" as const, text: "Une timeline plein écran, lumineuse et précise." }, code: "prepareM3Video({ kind: 'prompt', text })" },
+      { id: "png", title: "PNG, prêt pour la timeline", input: { kind: "image" as const, bytes: rasterLogo, format: "raster" as const, label: "Bun Video" }, code: "new Bun.Image(bytes).resize(960, 540)" },
+      { id: "logo", title: "Le logo devient une icône M3", input: { kind: "logo" as const, bytes: rasterLogo, format: "raster" as const, label: "Aphrody Video" }, code: "m3IconSVG(await prepareM3Video({ kind: 'logo', bytes }))" },
+    ];
+    const assets: ShowcaseAsset[] = [];
+    for (const demo of inputs) {
+      const plan = await prepareM3Video(demo.input, { seed: "#e76f9b", dark: true, ...dimensions });
+      const documentFile = `m3/${demo.id}.html`;
+      await write(documentFile, m3VideoDocument(plan), "text/html; charset=utf-8");
+      if (demo.id === "logo") assets.push(await write("m3/aphrody-video-icon.svg", m3IconSVG(plan), "image/svg+xml"));
+      const compositionURL = `http://127.0.0.1:${server.port}/${documentFile}`;
+      const videoFile = `videos/m3-${demo.id}.mp4`;
+      await mkdir(join(directory, "videos"), { recursive: true });
+      const posterFile = `posters/m3-${demo.id}.webp`;
+      for await (const captured of captureCompositionFrames(browser.context, {
+        kind: "hyperframes",
+        compositionUrl: compositionURL,
+        composition: `m3-${demo.id}`,
+        fps: plan.fps,
+        startFrame: 72,
+        endFrame: 73,
+        width: plan.width,
+        height: plan.height,
+        workers: 1,
+      })) {
+        assets.push(await write(posterFile, await new Bun.Image(captured.png).webp({ quality: 88 }).bytes(), "image/webp"));
+      }
+      await renderM3Video(plan, {
+        context: browser.context,
+        compositionURL,
+        engine: "hyperframes",
+        composition: `m3-${demo.id}`,
+        nativeExecutable: Bun.env.BUN_VIDEO_NATIVE_EXECUTABLE!,
+        output: join(directory, videoFile),
+      });
+      const mp4 = await Bun.file(join(directory, videoFile)).bytes();
+      assets.push(await write(videoFile, mp4, "video/mp4"));
+      const work: ShowcaseWork = {
+        id: `m3-${demo.id}`,
+        title: demo.title,
+        description: `Entrée ${demo.input.kind} normalisée avec Bun et composée selon les rôles Material 3 canoniques.`,
+        engine: "filmcraft",
+        artwork: "type",
+        features: ["Bun.Video", "Bun.Image", "@aphrody/m3-tokens", "HyperFrames", "FilmCraft", demo.input.kind],
+        durationFrames: plan.frames,
+        fps: plan.fps,
+        width: plan.width,
+        height: plan.height,
+        video: videoFile,
+        poster: posterFile,
+        chapter: "Entrées M3 · pipeline Bun",
+        sourceRef: "packages/bun-video/src/m3-video.ts",
+        code: demo.code,
+      };
+      const row = await evidence(`m3-${demo.id}`, "M3 video rendered through HyperFrames and the native FilmCraft encoder", async () => ({
+        detail: `${plan.frames} images M3 rendues en H.264 par l’encodeur natif Bun Video.`,
+        assets: assets.filter(asset => asset.file === videoFile || asset.file === "m3/aphrody-video-icon.svg"),
+        measurements: { frames: plan.frames, fps: plan.fps, width: plan.width, height: plan.height, bytes: mp4.length },
+      }));
+      work.evidence = [row.id];
+      manifest.works.push(work);
+    }
+    return { detail: "Quatre entrées concrètes livrées comme vidéos MP4 : texte, prompt, PNG et icône M3.", assets };
+  });
+  if (m3Demos.status !== "passed") console.error("M3 input pipeline video generation failed");
   for (const remotion of manifest.works.filter(work => work.engine === "remotion" && work.frames?.length)) {
     const hyperframes = manifest.works.find(work => work.id === remotion.id.replace("remotion-", "hyperframes-"));
     if (!hyperframes?.frames?.length) continue;
@@ -385,6 +467,7 @@ try {
 } finally {
   server.stop(true);
 }
+manifest.works = manifest.works.filter(work => Boolean(work.video));
 await write("showcase.json", JSON.stringify(manifest, null, 2), "application/json");
 await Bun.write(
   join(privateDirectory, "upload-plan.json"),
