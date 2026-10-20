@@ -67,6 +67,7 @@
     "docs/episode-workbench.md",
     "docs/fact-check.md",
     "docs/filmcraft.md",
+    "docs/photocraft.md",
     "docs/frame-analysis.md",
     "docs/har.md",
     "docs/integration.md",
@@ -4980,6 +4981,11 @@
       "bun": "./dist/src/image.ts",
       "default": "./dist/src/image.ts"
     },
+    "./photocraft": {
+      "types": "./dist/types/src/photocraft.d.ts",
+      "bun": "./dist/src/photocraft.ts",
+      "default": "./dist/src/photocraft.ts"
+    },
     "./frame-theme": {
       "types": "./dist/types/src/frame-theme.d.ts",
       "bun": "./dist/src/frame-theme.ts",
@@ -5328,6 +5334,7 @@
       "./ytdlp": "./src/ytdlp.ts",
       "./pipeline": "./src/pipeline.ts",
       "./image": "./src/image.ts",
+      "./photocraft": "./src/photocraft.ts",
       "./frame-theme": "./src/frame-theme.ts",
       "./frame-analysis": "./src/frame-analysis.ts",
       "./episode-assets": "./src/episode-assets.ts",

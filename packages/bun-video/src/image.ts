@@ -5,6 +5,10 @@ export interface ImageTransformOptions {
   readonly height?: number;
   readonly format?: BunImageFormat;
   readonly quality?: number;
+  readonly maxPixels?: number;
+  readonly fit?: "fill" | "inside";
+  readonly withoutEnlargement?: boolean;
+  readonly autoOrient?: boolean;
 }
 
 /** Use Bun.Image for bounded video thumbnails and frame assets. */
@@ -12,8 +16,14 @@ export async function transformImage(
   input: string | ArrayBuffer | Blob,
   options: ImageTransformOptions = {},
 ): Promise<Uint8Array> {
-  const image = new Bun.Image(input);
-  if (options.width !== undefined) image.resize(options.width, options.height);
+  const image = new Bun.Image(input, {
+    maxPixels: options.maxPixels,
+    autoOrient: options.autoOrient ?? true,
+  });
+  if (options.width !== undefined) image.resize(options.width, options.height, {
+    fit: options.fit ?? "fill",
+    withoutEnlargement: options.withoutEnlargement,
+  });
   switch (options.format) {
     case "jpeg":
       image.jpeg(options.quality === undefined ? undefined : { quality: options.quality });
