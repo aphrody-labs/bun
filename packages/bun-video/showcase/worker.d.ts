@@ -10,10 +10,7 @@ export interface ShowcaseEnvironment {
   SHOWCASE_PREFIX: string;
   SHOWCASE: {
     head(key: string): Promise<ShowcaseBucketObject | null>;
-    get(
-      key: string,
-      options?: { onlyIf?: Headers; range?: Headers },
-    ): Promise<ShowcaseBucketObject | null>;
+    get(key: string, options?: { onlyIf?: Headers; range?: Headers }): Promise<ShowcaseBucketObject | null>;
   };
 }
 
