@@ -39,6 +39,15 @@ export async function remotionSourcePlugin(): Promise<BunPlugin> {
     name: "remotion-vendored-source",
     setup(build) {
       build.onResolve({ filter: /^(?:@remotion\/|remotion(?:\/|$))/ }, ({ path }) => {
+        // These Remotion Studio integrations are installed by users on demand.
+        // Keep their lazy imports external so a base Bun Video install needs no model package.
+        if (
+          path === "@remotion/whisper-webgpu" ||
+          path.startsWith("@remotion/whisper-webgpu/") ||
+          path === "@remotion/video-matting" ||
+          path.startsWith("@remotion/video-matting/")
+        )
+          return { path, external: true };
         if (path === compositorName && compositorRoot) {
           return { path, namespace: "remotion-native-compositor" };
         }

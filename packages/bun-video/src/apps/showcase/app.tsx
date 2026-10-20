@@ -6,7 +6,13 @@ import type { ShowcaseManifest } from "./collection";
 import "./style.css";
 
 type Work = ShowcaseManifest["works"][number];
-const asset = (path: string) => new URL(path, `${location.origin}/`).href;
+const asset = (path: string) => {
+  if (!path || path.startsWith("/") || path.split(/[\\/]/).includes(".."))
+    throw new TypeError("Showcase assets must stay inside the published timeline");
+  const url = new URL(path, `${location.origin}/`);
+  if (url.origin !== location.origin) throw new TypeError("Showcase assets must be same-origin");
+  return url.href;
+};
 
 function Film({
   work,
@@ -15,6 +21,8 @@ function Film({
   active,
   nearby,
   reduced,
+  fullscreen,
+  toggleFullscreen,
 }: {
   work: Work;
   index: number;
@@ -22,19 +30,16 @@ function Film({
   active: boolean;
   nearby: boolean;
   reduced: boolean;
+  fullscreen: boolean;
+  toggleFullscreen: () => void;
 }) {
   const video = useRef<HTMLVideoElement>(null);
-  const preview = useRef<HTMLIFrameElement>(null);
-  const audio = useRef<HTMLAudioElement>(null);
   const [wantsPlay, setWantsPlay] = useState(!reduced);
   const [running, setRunning] = useState(false);
-  const [muted, setMuted] = useState(true);
   const [position, setPosition] = useState(0);
   const [message, setMessage] = useState("");
   const [visible, setVisible] = useState(!document.hidden);
-  const cursor = useRef(0);
   const duration = (work.durationFrames * work.fps.den) / work.fps.num;
-  const canAnimate = !work.video && !work.preview;
   const playing = active && visible && wantsPlay;
   useEffect(() => {
     const change = () => setVisible(!document.hidden);
@@ -44,9 +49,6 @@ function Film({
   useEffect(() => {
     if (reduced) setWantsPlay(false);
   }, [reduced]);
-  useEffect(() => {
-    if (!active || !visible) audio.current?.pause();
-  }, [active, visible]);
   useEffect(() => {
     const element = video.current;
     if (!element) return;
@@ -60,30 +62,9 @@ function Film({
     });
     return () => element.pause();
   }, [playing, nearby]);
-  const seekPreview = (seconds: number) => {
-    const frame = Math.min(work.durationFrames - 1, Math.max(0, Math.floor((seconds * work.fps.num) / work.fps.den)));
-    preview.current?.contentWindow?.postMessage({ type: "showcase-seek", frame }, location.origin);
-  };
-  useEffect(() => {
-    if (!canAnimate || !playing) return;
-    let request = 0;
-    const start = performance.now();
-    const from = cursor.current;
-    const tick = (now: number) => {
-      const seconds = (from + (now - start) / 1000) % duration;
-      cursor.current = seconds;
-      setPosition(seconds);
-      seekPreview(seconds);
-      request = requestAnimationFrame(tick);
-    };
-    request = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(request);
-  }, [canAnimate, playing, duration]);
   const seek = (seconds: number) => {
-    cursor.current = seconds;
     setPosition(seconds);
     if (video.current) video.current.currentTime = seconds;
-    else seekPreview(seconds);
   };
   const toggle = () => {
     setMessage("");
@@ -97,66 +78,32 @@ function Film({
       aria-current={active ? "true" : undefined}
     >
       <div className="screen">
-        {work.video ? (
-          <video
-            ref={video}
-            src={nearby ? asset(work.video) : undefined}
-            poster={work.poster ? asset(work.poster) : undefined}
-            preload={active ? "auto" : nearby ? "metadata" : "none"}
-            playsInline
-            loop
-            muted={muted}
-            aria-label={work.title}
-            onPlay={() => setRunning(true)}
-            onPause={() => setRunning(false)}
-            onTimeUpdate={event => {
-              cursor.current = event.currentTarget.currentTime;
-              setPosition(event.currentTarget.currentTime);
-            }}
-            onError={() => {
-              setMessage("Cette vidéo n’a pas pu être chargée.");
-              setWantsPlay(false);
-            }}
-          >
-            {work.captions && (
-              <track kind="captions" src={asset(work.captions)} srcLang="fr" label="Français" default />
-            )}
-          </video>
-        ) : work.preview ? (
-          work.mediaType === "audio" ? (
-            <div className="audio-preview">
-              <p>Aperçu audio natif</p>
-              <audio
-                controls
-                preload={nearby ? "metadata" : "none"}
-                src={nearby ? asset(work.preview) : undefined}
-                aria-label={work.title}
-                ref={audio}
-              />
-            </div>
-          ) : (
-            <img src={asset(work.preview)} alt={work.description} loading={nearby ? "eager" : "lazy"} />
-          )
-        ) : nearby ? (
-          <iframe
-            ref={preview}
-            src={`/preview.html?work=${encodeURIComponent(work.id)}`}
-            title={`Aperçu de composition : ${work.title}`}
-            tabIndex={active ? 0 : -1}
-            onLoad={() => seekPreview(cursor.current)}
-          />
-        ) : work.poster ? (
-          <img src={asset(work.poster)} alt="" loading="lazy" />
-        ) : null}
+        <video
+          ref={video}
+          src={nearby ? asset(work.video!) : undefined}
+          poster={work.poster ? asset(work.poster) : undefined}
+          preload={active ? "auto" : nearby ? "metadata" : "none"}
+          playsInline
+          loop
+          muted
+          aria-label={work.title}
+          onPlay={() => setRunning(true)}
+          onPause={() => setRunning(false)}
+          onTimeUpdate={event => setPosition(event.currentTarget.currentTime)}
+          onError={() => {
+            setMessage("Cette vidéo n’a pas pu être chargée.");
+            setWantsPlay(false);
+          }}
+        >
+          {work.captions && <track kind="captions" src={asset(work.captions)} srcLang="fr" label="Français" default />}
+        </video>
       </div>
       <div className="film-top">
         <span>Aphrody Video</span>
         <span className="chapter">
           {work.chapter ?? work.engine} · {String(index + 1).padStart(2, "0")} / {String(count).padStart(2, "0")}
         </span>
-        <a href="https://craft.aphrody.app/film/">
-          Ouvrir le montage <span aria-hidden="true">↗</span>
-        </a>
+        <span className="chapter">Bun · vidéo native</span>
       </div>
       <div className="film-bottom">
         <div className="caption">
@@ -165,49 +112,32 @@ function Film({
           </p>
           <h1>{work.title}</h1>
           <p>{work.description}</p>
-          {!work.video && (
-            <p className="render-state">
-              {canAnimate
-                ? "Aperçu interactif de la composition · vidéo en attente de rendu"
-                : "Aperçu natif · aucun rendu vidéo associé"}
-            </p>
-          )}
         </div>
         <div className="transport">
-          {(work.video || canAnimate) && (
-            <>
-              <button onClick={toggle} aria-label={playing && (canAnimate || running) ? "Mettre en pause" : "Lire"}>
-                {playing && (canAnimate || running) ? "Pause" : "Lire"}
-              </button>
-              <label className="seek">
-                <span className="sr-only">Position dans {work.title}</span>
-                <input
-                  type="range"
-                  min="0"
-                  max={Math.max(0, duration - work.fps.den / work.fps.num)}
-                  step={work.fps.den / work.fps.num}
-                  value={position}
-                  onChange={event => {
-                    if (canAnimate) setWantsPlay(false);
-                    seek(Number(event.target.value));
-                  }}
-                  aria-valuetext={`${position.toFixed(1)} sur ${duration.toFixed(1)} secondes`}
-                />
-              </label>
-              <output>
-                {position.toFixed(1)} / {duration.toFixed(1)} s
-              </output>
-            </>
-          )}
-          {work.video && (
-            <button
-              onClick={() => setMuted(value => !value)}
-              aria-pressed={!muted}
-              aria-label={muted ? "Activer le son" : "Couper le son"}
-            >
-              {muted ? "Son coupé" : "Son actif"}
-            </button>
-          )}
+          <button onClick={toggle} aria-label={playing && running ? "Mettre en pause" : "Lire"}>
+            {playing && running ? "Pause" : "Lire"}
+          </button>
+          <label className="seek">
+            <span className="sr-only">Position dans {work.title}</span>
+            <input
+              type="range"
+              min="0"
+              max={Math.max(0, duration - work.fps.den / work.fps.num)}
+              step={work.fps.den / work.fps.num}
+              value={position}
+              onChange={event => {
+                setWantsPlay(false);
+                seek(Number(event.target.value));
+              }}
+              aria-valuetext={`${position.toFixed(1)} sur ${duration.toFixed(1)} secondes`}
+            />
+          </label>
+          <output>
+            {position.toFixed(1)} / {duration.toFixed(1)} s
+          </output>
+          <button onClick={toggleFullscreen} aria-pressed={fullscreen} aria-label={fullscreen ? "Quitter le plein écran" : "Plein écran"}>
+            {fullscreen ? "Quitter" : "Plein écran"}
+          </button>
           <details>
             <summary>Source et preuves</summary>
             <div className="provenance">
@@ -220,7 +150,7 @@ function Film({
                   ? work.evidence.join(" · ")
                   : "Aucune qualification associée à cette composition."}
               </p>
-              {work.code && <a href={asset(work.code)}>Code de la démonstration</a>}
+              {work.code && <pre><code>{work.code}</code></pre>}
               <a href="/showcase.json">Manifeste des résultats</a>
             </div>
           </details>
@@ -242,6 +172,7 @@ function App() {
   const [manifest, setManifest] = useState<ShowcaseManifest>();
   const [error, setError] = useState("");
   const [active, setActive] = useState(0);
+  const [fullscreen, setFullscreen] = useState(false);
   const [reduced, setReduced] = useState(() => matchMedia("(prefers-reduced-motion: reduce)").matches);
   const feed = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -258,8 +189,12 @@ function App() {
       .then(async response => {
         if (!response.ok) throw new Error(`Catalogue indisponible (${response.status})`);
         const data: ShowcaseManifest = await response.json();
-        if (data.schema !== "bun-video/showcase/v1" || !Array.isArray(data.works))
-          throw new Error("Catalogue invalide");
+        if (
+          data.schema !== "bun-video/showcase/v1" ||
+          !Array.isArray(data.works) ||
+          data.works.some(work => typeof work.video !== "string" || !work.video || work.video.startsWith("/"))
+        )
+          throw new Error("La timeline n’accepte que des vidéos réellement rendues et publiées.");
         setManifest(data);
       })
       .catch(reason => {
@@ -280,8 +215,22 @@ function App() {
     for (const film of feed.current.querySelectorAll(".film")) observer.observe(film);
     return () => observer.disconnect();
   }, [manifest]);
+  useEffect(() => {
+    const update = () => setFullscreen(document.fullscreenElement === feed.current);
+    document.addEventListener("fullscreenchange", update);
+    return () => document.removeEventListener("fullscreenchange", update);
+  }, []);
+  const toggleFullscreen = () => {
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void feed.current?.requestFullscreen();
+  };
   const page = (event: React.KeyboardEvent<HTMLElement>) => {
     if ((event.target as HTMLElement).closest("button, a, input, audio, summary, iframe")) return;
+    if (event.key.toLowerCase() === "f") {
+      event.preventDefault();
+      toggleFullscreen();
+      return;
+    }
     const direction =
       event.key === "ArrowDown" || event.key === "PageDown"
         ? 1
@@ -308,8 +257,8 @@ function App() {
       )}
       {manifest?.works.length === 0 && (
         <div className="empty">
-          <h1>Aucune vidéo publiée</h1>
-          <a href="https://craft.aphrody.app/film/">Ouvrir Aphrody Video</a>
+          <h1>Aucune vidéo dans la timeline</h1>
+          <p>Les vidéos qualifiées apparaîtront ici.</p>
         </div>
       )}
       {manifest?.works.map((work, index) => (
@@ -321,6 +270,8 @@ function App() {
           active={index === active}
           nearby={Math.abs(index - active) <= 1}
           reduced={reduced}
+          fullscreen={fullscreen}
+          toggleFullscreen={toggleFullscreen}
         />
       ))}
     </main>

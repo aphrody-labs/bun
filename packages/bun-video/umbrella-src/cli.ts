@@ -64,7 +64,7 @@ const commands: Record<string, Command> = {
     },
   },
   media: {
-    usage: "media <inspect|download|cut|compress|serve> [args]",
+    usage: "media <doctor|inspect|download|extract-frame|extract-frames|extract-audio|gif|remux|cut|compress|serve> [args]",
     run: args => guarded(
       import("../src/media-cli"),
       args,

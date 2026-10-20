@@ -54,6 +54,9 @@ button:hover {
   background: var(--md-sys-color-secondary-container);
   color: var(--md-sys-color-on-secondary-container);
 }
+button:active {
+  transform: scale(0.98);
+}
 :focus-visible {
   outline: 3px solid var(--md-sys-color-primary);
   outline-offset: 4px;
@@ -65,6 +68,11 @@ button:hover {
   overscroll-behavior-y: contain;
   scroll-snap-type: y mandatory;
   scrollbar-width: none;
+}
+.timeline:fullscreen {
+  width: 100vw;
+  height: 100dvh;
+  background: var(--md-sys-color-surface);
 }
 .timeline::-webkit-scrollbar {
   display: none;
@@ -79,7 +87,7 @@ button:hover {
   min-height: 420px;
   overflow: clip;
   scroll-snap-align: start;
-  scroll-snap-stop: normal;
+  scroll-snap-stop: always;
   background: var(--md-sys-color-surface-container-lowest);
   isolation: isolate;
 }
@@ -129,12 +137,6 @@ button:hover {
   letter-spacing: -0.03em;
   font-size: 20px;
 }
-.film-top a {
-  min-height: 48px;
-  display: flex;
-  align-items: center;
-  font-size: 13px;
-}
 .chapter,
 .eyebrow,
 .scroll-hint,
@@ -172,10 +174,6 @@ output {
 .caption .eyebrow {
   text-transform: uppercase;
   letter-spacing: 0.12em;
-}
-.render-state {
-  font-size: 12px;
-  color: var(--md-sys-color-secondary);
 }
 .transport {
   position: relative;
@@ -227,6 +225,11 @@ output {
   display: block;
   padding-block: 8px;
 }
+.provenance pre {
+  max-height: 24vh;
+  overflow: auto;
+  white-space: pre-wrap;
+}
 .scroll-hint {
   display: block;
   margin-top: 16px;
@@ -236,7 +239,6 @@ output {
   color: var(--md-sys-color-error);
   font-size: 13px;
 }
-.audio-preview,
 .empty {
   display: grid;
   align-content: center;
@@ -267,9 +269,6 @@ output {
     order: 3;
     width: 100%;
     font-size: 10px;
-  }
-  .film-top a {
-    font-size: 12px;
   }
   .transport {
     gap: 8px;

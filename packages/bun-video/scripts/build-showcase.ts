@@ -387,15 +387,6 @@ try {
           code: "m3IconSVG(await prepareM3Video({ kind: 'logo', bytes }))",
         },
       ];
-      const sourceStill = Bun.file(join(directory, "native/reference.webp"));
-      if (await sourceStill.exists()) {
-        inputs.push({
-          id: "shenron-image",
-          title: "Beerus, de Bun.Video vers M3",
-          input: { kind: "image", bytes: await sourceStill.bytes(), format: "raster", label: "Beerus · Shenron" },
-          code: "new Bun.Video(source).frame(48).resize(960, 540)",
-        });
-      }
       const assets: ShowcaseAsset[] = [];
       for (const demo of inputs) {
         const plan = await prepareM3Video(demo.input, { seed: "#e76f9b", dark: true, ...dimensions });
@@ -520,7 +511,7 @@ try {
 }
 manifest.works = manifest.works.filter(work => Boolean(work.video));
 for (const file of files) {
-  if (/^(frames|native|proofs|m3|sources)\//.test(file)) files.delete(file);
+  if (/^(frames|native|proofs|m3|sources|preview(?:\.|\/))/.test(file) || file === "preview.html") files.delete(file);
 }
 manifest.works = manifest.works.map(work => ({ ...work, frames: undefined, preview: undefined, mediaType: undefined }));
 manifest.evidence = manifest.evidence.map(row => ({
