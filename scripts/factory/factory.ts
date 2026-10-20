@@ -209,11 +209,11 @@ export async function reserveLinuxSlots(locks: readonly string[], min: number, m
     throw new Error("Factory reservation locks must be distinct normalized absolute paths");
   const children = new Set<ReturnType<typeof Bun.spawn>>();
   const release = async () => {
-    for (const child of children) child.kill();
+    for (const child of children) child.kill("SIGKILL");
     await Promise.all([...children].map(child => child.exited));
     children.clear();
   };
-  const abort = () => { for (const child of children) child.kill(); };
+  const abort = () => { for (const child of children) child.kill("SIGKILL"); };
   signal?.throwIfAborted();
   signal?.addEventListener("abort", abort, { once: true });
   const waiter = (lock: string, tryOnly = false) => {
@@ -248,6 +248,7 @@ export async function reserveLinuxSlots(locks: readonly string[], min: number, m
     const held: number[] = [];
     const candidates = locks.map(lock => waiter(lock, true));
     const available = await Promise.all(candidates.map(candidate => candidate.ready));
+    if (process.env.BUN_FACTORY_DEBUG) console.log("factory reservation candidates", available);
     for (const [index, ready] of available.entries()) {
       if (ready) held.push(index);
       else children.delete(candidates[index]!.child);
@@ -269,7 +270,7 @@ export async function reserveLinuxSlots(locks: readonly string[], min: number, m
     const selected = held.slice(0, max).sort((a, b) => a - b);
     const losers = candidates.filter((value, i) => !selected.includes(i) && children.has(value.child)).map(value => value.child);
     losers.push(admission.child);
-    for (const child of losers) child.kill();
+    for (const child of losers) child.kill("SIGKILL");
     await Promise.all(losers.map(child => child.exited));
     for (const child of losers) children.delete(child);
     signal?.removeEventListener("abort", abort);
