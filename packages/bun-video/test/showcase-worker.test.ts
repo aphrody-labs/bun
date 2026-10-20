@@ -39,10 +39,19 @@ test("video product routes serve the same app shell for client-side navigation",
   const env = {
     SHOWCASE_PREFIX: "showcase/test-v1",
     SHOWCASE: {
-      async head() { return null; },
+      async head() {
+        return null;
+      },
       async get(key: string) {
         keys.push(key);
-        return { size: 4, httpEtag: '"app"', body: new Blob(["app!"]).stream(), writeHttpMetadata(headers: Headers) { headers.set("Content-Type", "text/html"); } };
+        return {
+          size: 4,
+          httpEtag: '"app"',
+          body: new Blob(["app!"]).stream(),
+          writeHttpMetadata(headers: Headers) {
+            headers.set("Content-Type", "text/html");
+          },
+        };
       },
     },
   };

@@ -22,15 +22,15 @@ If server accounts are added later, use Postgres with `users`, `collections`, `c
 
 ## Routes and API
 
-| Method / route | Caller | Input | Output | Flow |
-| --- | --- | --- | --- | --- |
-| `GET /` | public | none | discovery app shell | S01 |
-| `GET /watch?v=<workId>` | public | catalog work ID | watch view using the same shell | S02 |
-| `GET /shorts` | public | optional `?v=<workId>` | full-screen timeline | S03 |
-| `GET /playlist/<id>` | local user | local collection ID | saved collection view | S04 |
-| `GET /studio` | public | none | capabilities and workflow entry | S05 |
-| `GET /showcase.json` | public | conditional/range request | generated catalog JSON | all |
-| `GET /<catalog asset>` | public | conditional/range request | typed R2 object | S01-S03 |
+| Method / route          | Caller     | Input                     | Output                          | Flow    |
+| ----------------------- | ---------- | ------------------------- | ------------------------------- | ------- |
+| `GET /`                 | public     | none                      | discovery app shell             | S01     |
+| `GET /watch?v=<workId>` | public     | catalog work ID           | watch view using the same shell | S02     |
+| `GET /shorts`           | public     | optional `?v=<workId>`    | full-screen timeline            | S03     |
+| `GET /playlist/<id>`    | local user | local collection ID       | saved collection view           | S04     |
+| `GET /studio`           | public     | none                      | capabilities and workflow entry | S05     |
+| `GET /showcase.json`    | public     | conditional/range request | generated catalog JSON          | all     |
+| `GET /<catalog asset>`  | public     | conditional/range request | typed R2 object                 | S01-S03 |
 
 The Worker allows only GET/HEAD and denies path traversal. No original YouTube endpoints, cookies, user accounts, uploads or third-party downloads are proxied by the site shell.
 
