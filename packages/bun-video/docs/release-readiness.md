@@ -9,26 +9,23 @@ passed during this audit.
 
 | Surface | Observation |
 | --- | --- |
-| Source | `packages/bun-video/package.json`: `1.4.4-video.3` |
+| Source | `packages/bun-video/package.json`: `1.4.4-video.3`; this version is not published |
 | npm registry | `latest`: `1.4.4-video.0`; `next`: `1.4.4-video.1` |
-| Requested site | HTTPS HEAD returned HTTP 404 |
+| Requested site | HTTPS GET returned HTTP 404 |
 | Supplied fixture | `C:\src\shenron\data\episode\Dragon+Ball+Super+Beerus+-+02+VOSTFR.mp4`, 284,260,952 bytes |
 | Local runtime | Aphrody doctor recognizes `1.4.6-canary.1`, revision `169d8c5ea` |
-| VPS reachability | Native Aphrody `infra ssh status --host vps --json` failed: SSH connection to `10.200.77.1:22` timed out |
-| Infra source | Expected `C:\src\aphrody\docs\operations\cloud\CLOUD-READY.md` is absent; GitHub file retrieval returned 404 |
+| VPS reachability | Native Infra SSH execution succeeded: `vps-203bea89`; DBFR identity is `vps-6732365f` |
+| Infra source | `CLOUD-READY.md` was read from `/home/ubuntu/src/aphrody`; the local Aphrody checkout is absent. On VPS, pass `--root /home/ubuntu/src/aphrody` to read its catalogue and scope `APHRODY_INFRA_ROOT=/home/ubuntu` to SSH execution receipts |
+| Source checkpoint | Commit `787b89d55b7` is pushed to `main`; the VPS checkout is clean at `38e7beb4be3` and has not been synchronized |
+| Shared build lane | A Shenron release currently owns the VPS factory and Cargo locks. Its owner asked Bun Video to wait for an explicit release signal |
+| Current code gates | Bun LSP diagnostics pass for the changed source and authored tests; no tests or builds were run |
 
-The configured Windows `WireGuardTunnel$aphrody` service is stopped. Starting
-that existing service was denied by Windows service permissions. The native
-Infra WireGuard plan lists the VPS public endpoint; its SSH port is reachable.
-An Infra SSH execution through that public endpoint, retaining the configured
-identity and strict host-key verification, failed with `Permission denied
-(publickey)`. The temporary alias change was restored. No remote command ran.
-
-The archived native Windows CLI was found under
-`~/.aphrody/releases/aphrody-native-21ff48ba62/native/aphrody.exe`.
-It exposes `infra ssh exec`, but service catalogue inspection requires the absent
-Infra owner's `tools/config/service-catalog.json`. Do not invent a service, port,
-SSH route or deployment target from these missing inputs.
+The native Windows Infra executable is available, but its default local root has
+no host catalogue. The canonical CLI and catalogue were therefore used from the
+VPS checkout, with explicit source root and receipt root. Read-only Infra status
+and SSH identity commands verified both hosts. No source sync, build or service
+change has been made from this task; the Shenron build currently owns the shared
+VPS lane.
 
 ## Qualification and ownership gaps
 
@@ -50,8 +47,10 @@ requested public domain.
 
 ## Remaining delivery gates
 
-1. Restore the canonical Infra source/catalogue and VPS reachability; read
-   `CLOUD-READY.md`, inspect the native host catalogue, then plan before apply.
+1. **Complete:** read `CLOUD-READY.md` and verify both host identities through
+   the native Infra catalogue. Before any future host mutation, prepare and
+   verify its Infra plan; keep the source checkout rooted at
+   `/home/ubuntu/src/aphrody` and receipt root scoped to `/home/ubuntu`.
 2. Use catalogue episode **876**, series `DBS_BEERUS`, number **2**, for the
    supplied fixture. The current
    [episode catalogue](https://dragonballfr.com/api/episodes?series=DBS_BEERUS&limit=20)
