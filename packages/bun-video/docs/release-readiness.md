@@ -30,11 +30,11 @@ VPS lane.
 ## Qualification and ownership gaps
 
 The repository owner requires builds and qualification on the VPS only.
-`scripts/run-library-build.ts` and `scripts/run-package-qualification.ts` currently
-import `bun:windows` and reject other hosts. The release workflow uses Windows
-and exact-source native full-release receipts. Supporting VPS qualification
-therefore requires adapting the actual native asset build and isolated consumer
-path, not simply deleting the platform guards or skipping publication checks.
+`scripts/run-package-qualification.ts` already accepts Linux x64/arm64 when an
+absolute build-filesystem `TMPDIR` is provided. Its phases include source/script
+type checks, lint, formatting, library build, and outside-consumer archive
+qualification. These gates remain unrun for the current source checkpoint; they
+can start only after the active Shenron build releases the shared factory lane.
 
 `scripts/publish.ts` requires the exact archive's successful outside-consumer
 receipt, registry-sourced types, export checks and the current runtime revision.
