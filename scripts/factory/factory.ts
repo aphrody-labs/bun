@@ -218,8 +218,8 @@ export async function reserveLinuxSlots(locks: readonly string[], min: number, m
   signal?.addEventListener("abort", abort, { once: true });
   const waiter = (lock: string, tryOnly = false) => {
     // --no-fork keeps the handle at one PID, both while flock waits and after exec.
-    const child = Bun.spawn(["flock", "--no-fork", ...(tryOnly ? ["-n", "-E", String(BUSY)] : []), "--", lock, process.execPath, "--no-env-file", "-e",
-      'process.stdout.write("reserved\\n"); await Bun.stdin.text();'],
+    const child = Bun.spawn(["flock", "--no-fork", ...(tryOnly ? ["-n", "-E", String(BUSY)] : []), "--", lock, "/bin/sh", "-c",
+      'printf "reserved\\n"; cat >/dev/null'],
     { stdin: "pipe", stdout: "pipe", stderr: "inherit" });
     children.add(child);
     const ready = (async () => {
