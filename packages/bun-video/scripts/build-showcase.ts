@@ -344,6 +344,54 @@ try {
     );
     work.evidence.push(row.id);
   }
+  await evidence(
+    "composition-visual-diversity",
+    "five time samples per composition and six distinct scene signatures",
+    async () => {
+      const compositions = manifest.works.filter(
+        work => (work.engine === "remotion" || work.engine === "hyperframes") && work.frames?.length,
+      );
+      const samples = [0, 24, 48, 72, 95];
+      const signatures = new Map<string, string[]>();
+      const measurements: Array<{ work: string; distinctTimeSamples: number; posterHash: string }> = [];
+      for (const work of compositions) {
+        const hashes: string[] = [];
+        for (const frame of samples) {
+          const path = work.frames![frame];
+          if (!path) throw new Error(`Missing visual sample ${frame} for ${work.id}`);
+          const pixels = await new Bun.Image(join(directory, path)).rgba();
+          if (pixels.width !== work.width || pixels.height !== work.height || new Set(pixels.data).size < 8)
+            throw new Error(`${work.id} has an empty or incorrectly sized visual sample`);
+          hashes.push(new Bun.CryptoHasher("sha256").update(pixels.data).digest("hex"));
+        }
+        if (new Set(hashes).size < 3) throw new Error(`${work.id} does not visibly animate across its timeline`);
+        measurements.push({ work: work.id, distinctTimeSamples: new Set(hashes).size, posterHash: hashes[3]! });
+        if (work.engine === "remotion") signatures.set(work.artwork, hashes);
+        else {
+          const remotion = signatures.get(work.artwork);
+          if (!remotion || remotion.some((hash, index) => hash !== hashes[index]))
+            throw new Error(`Remotion and HyperFrames visual signatures differ for ${work.artwork}`);
+        }
+      }
+      if (signatures.size !== 6 || new Set([...signatures.values()].map(hashes => hashes[3])).size !== 6)
+        throw new Error("The six authored scenes must have distinct M3 visual signatures");
+      const asset = await write(
+        "proofs/visual-diversity.json",
+        JSON.stringify(measurements, null, 2),
+        "application/json",
+      );
+      return {
+        detail:
+          "Chaque animation change dans le temps; les six scènes et leurs deux moteurs sont visuellement distincts et déterministes.",
+        assets: [asset],
+        measurements: {
+          compositions: compositions.length,
+          uniqueScenes: signatures.size,
+          samplesPerScene: samples.length,
+        },
+      };
+    },
+  );
   const m3Demos = await evidence(
     "m3-input-pipeline",
     "SVG logo, PNG, text and prompt composed into native Bun M3 videos",

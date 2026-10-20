@@ -157,7 +157,7 @@ export function Artwork({ work, frame }: { work: ShowcaseWork; frame: number }) 
           ))}
         </g>
       )}
-      {work.code && (
+      {work.features.length > 0 && (
         <g opacity={reveal}>
           <rect
             x="48"
@@ -171,13 +171,14 @@ export function Artwork({ work, frame }: { work: ShowcaseWork; frame: number }) 
             strokeOpacity="0.5"
           />
           <text x="72" y="78" fill={light} fontSize="14" fontFamily="monospace">
-            BUN OS · {work.engine.toUpperCase()} · CODE DE COMPOSITION
+            BUN VIDEO · MATERIAL 3
           </text>
-          {work.code.split("\n").map((line, index) => (
-            <text key={index} x="72" y={112 + index * 28} fill={light} fontSize="20" fontFamily="monospace">
-              {line}
-            </text>
-          ))}
+          <text x="72" y="124" fill={light} fontSize="27" fontFamily="Showcase, Arial, sans-serif" fontWeight="700">
+            {work.title}
+          </text>
+          <text x="72" y="168" fill={light} fontSize="14" fontFamily="monospace">
+            {work.features.slice(0, 4).join(" · ").toUpperCase()}
+          </text>
         </g>
       )}
       <path d="M48 660H1232" stroke={light} strokeOpacity="0.3" />

@@ -1,6 +1,8 @@
 import React from "react";
 import { createRoot } from "react-dom/client";
 import { flushSync } from "react-dom";
+import { applyDynamicColor } from "@aphrody/m3-tokens/dynamic-color";
+import "@aphrody/m3-tokens/m3-tokens.css";
 import { gsap } from "gsap";
 import { resolveAuthoredTimingWindow } from "../../../hyperframes/core/src/runtime/authoredTiming";
 import { collection } from "./collection";
@@ -38,6 +40,7 @@ const globals = window as unknown as Record<string, any>;
 document.title = `${work.title} — ${work.engine} — Bun Video`;
 document.body.style.cssText = "margin:0;width:100vw;height:100vh;overflow:hidden;background:#080f27";
 document.getElementById("root")!.style.cssText = "width:100%;height:100%";
+applyDynamicColor("#65558f", { dark: true });
 const duration = (work.durationFrames * work.fps.den) / work.fps.num;
 if (work.engine === "hyperframes") {
   const timing = resolveAuthoredTimingWindow({ start: 0, duration });
