@@ -49,9 +49,23 @@ export async function productCapabilities(options: { youtubeSearchEnabled?: bool
     capabilities(),
     import("./video-api"),
   ]);
+  const { name, runtime: runtimeInfo, upstream, nativeBrowser, webgpu, backends } = runtime;
   return {
     schema: "bun-video/product-capabilities/v1",
-    runtime,
+    runtime: {
+      name,
+      ...runtimeInfo,
+      upstream,
+      nativeBrowser: {
+        providerLoaded: nativeBrowser.providerLoaded,
+        renderingQualified: nativeBrowser.renderingQualified,
+      },
+      webgpu: {
+        chromium: { apiAvailable: webgpu.chromium.apiAvailable },
+        native: { providerLoaded: webgpu.native.providerLoaded, wgsl: webgpu.native.wgsl },
+      },
+      backends,
+    },
     apiFamilies: describeVideoAPIs(),
     surfaces: { http: true, cli: true, mcp: true },
     integrations: {

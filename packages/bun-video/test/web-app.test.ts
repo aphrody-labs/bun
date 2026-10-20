@@ -22,16 +22,22 @@ describe("resolveMediaPath", () => {
 
 describe("createVideoWebApp", () => {
   test("serves the shared capability manifest over HTTP", async () => {
-    const app = createVideoWebApp({
-      mediaRoot: ".",
-      productCapabilities: async () => ({ schema: "bun-video/product-capabilities/v1", surfaces: { http: true, cli: true, mcp: true } }),
-    });
+    const app = createVideoWebApp({ mediaRoot: ".", youtube: { apiKey: "server-only-test-key" } });
     const response = await app.fetch(new Request("http://localhost/api/capabilities"));
     expect(response.status).toBe(200);
-    expect(await response.json()).toEqual({
-      schema: "bun-video/product-capabilities/v1",
-      surfaces: { http: true, cli: true, mcp: true },
-    });
+    const manifest = (await response.json()) as {
+      schema: string;
+      apiFamilies: Array<{ id: string }>;
+      surfaces: { http: boolean; cli: boolean; mcp: boolean };
+      integrations: { youtube: { searchEnabled: boolean } };
+    };
+    expect(manifest.schema).toBe("bun-video/product-capabilities/v1");
+    expect(manifest.surfaces).toEqual({ http: true, cli: true, mcp: true });
+    expect(manifest.integrations.youtube.searchEnabled).toBe(true);
+    expect(manifest.apiFamilies.map(({ id }) => id)).toContain("remotion");
+    expect(manifest.apiFamilies.map(({ id }) => id)).toContain("hyperframes");
+    expect(manifest.apiFamilies.map(({ id }) => id)).toContain("ytdlp");
+    expect(JSON.stringify(manifest)).not.toContain("server-only-test-key");
   });
 
   test("serves the unified app shell and its bundles", async () => {
