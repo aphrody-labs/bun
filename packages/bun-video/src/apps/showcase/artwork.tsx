@@ -58,7 +58,7 @@ export function Artwork({ work, frame }: { work: ShowcaseWork; frame: number }) 
                 cx={Math.cos(angle) * radius}
                 cy={Math.sin(angle) * radius * 0.55}
                 r={i % 4 === 0 ? 2 : 1}
-              fill={i % 3 ? light : secondary}
+                fill={i % 3 ? light : secondary}
                 opacity={0.25 + (i % 5) * 0.14}
               />
             );
