@@ -93,6 +93,60 @@ pub type VideoCancel = Option<Arc<AtomicBool>>;
 #[cfg(feature = "filmcraft-encode")]
 pub use encoding::VideoEncoderSession;
 
+/// Bounded RGBA stream export through the existing FilmCraft encoder, without a media subprocess.
+#[cfg(feature = "filmcraft-encode")]
+pub fn encode_rgba_stream(
+    input: &mut impl std::io::Read,
+    output: &Path,
+    width: u32,
+    height: u32,
+    fps: filmcraft_lib::FrameRate,
+    frames: usize,
+) -> Result<u64, VideoError> {
+    use std::io::Write;
+    if !output.is_absolute() || output.exists() {
+        return Err(VideoError::Invalid("encoding requires a new absolute output path"));
+    }
+    if fps.num == 0 || fps.den == 0 || u64::from(fps.num) > u64::from(fps.den) * 240 {
+        return Err(VideoError::Invalid("encoding requires a positive rational FPS at most 240"));
+    }
+    if frames == 0 || frames > 10_000 {
+        return Err(VideoError::Invalid("encoding requires 1..10000 frames"));
+    }
+    dimensions(width, height, (MAX_MEMORY_BYTES / 4) as u64)?;
+    let frame_bytes = (width as usize)
+        .checked_mul(height as usize)
+        .and_then(|pixels| pixels.checked_mul(4))
+        .ok_or(VideoError::Invalid("encoding frame size overflow"))?;
+    let input_bytes = frame_bytes.checked_mul(frames)
+        .filter(|bytes| *bytes <= MAX_MEMORY_BYTES)
+        .ok_or(VideoError::Invalid("encoding input exceeds the 256 MiB job budget"))?;
+    let options = filmcraft_lib::EncoderOptions::new(Some(filmcraft_lib::VideoOptions::new(
+        filmcraft_lib::VideoCodec::H264, width, height, fps,
+    )), None);
+    let mut encoder = VideoEncoderSession::new(options, input_bytes, MAX_MEMORY_BYTES, None)?;
+    let mut pixels = vec![0; frame_bytes];
+    for _ in 0..frames {
+        input.read_exact(&mut pixels)?;
+        encoder.push_rgba(&pixels)?;
+    }
+    if input.read(&mut [0; 1])? != 0 {
+        return Err(VideoError::Invalid("encoding input contains more than the declared frames"));
+    }
+    let (bytes, report) = encoder.finish()?;
+    if report.video_frames != frames as u64 {
+        return Err(VideoError::Invalid("encoder frame count does not match the input"));
+    }
+    let mut file = std::fs::OpenOptions::new().write(true).create_new(true).open(output)?;
+    let result = (|| {
+        file.write_all(&bytes)?;
+        file.sync_all()?;
+        Ok(bytes.len() as u64)
+    })();
+    if result.is_err() { std::fs::remove_file(output)?; }
+    result
+}
+
 #[cfg(feature = "filmcraft-encode")]
 mod encoding {
     use super::*;
@@ -1869,6 +1923,29 @@ mod tests {
                 .chunks_exact(4)
                 .all(|pixel| pixel[0] <= 3 && pixel[1] <= 3 && pixel[2] <= 3 && pixel[3] == 255)
         );
+    }
+
+    #[test]
+    #[cfg(feature = "filmcraft-encode")]
+    fn native_rgba_stream_export_checks_the_declared_frames_before_creating_output() {
+        let root = remux_scratch("encode-stream");
+        let output = root.join("stream.mp4");
+        let fps = filmcraft_lib::FrameRate { num: 24_000, den: 1001 };
+        let pixels = [0, 0, 0, 255].repeat(64 * 48 * 3);
+        assert!(encode_rgba_stream(&mut &pixels[..pixels.len() - 1], &output, 64, 48, fps, 3).is_err());
+        assert!(!output.exists());
+        assert!(encode_rgba_stream(&mut &pixels[..], &output, 64, 48, fps, 2).is_err());
+        assert!(!output.exists());
+        let bytes = encode_rgba_stream(&mut &pixels[..], &output, 64, 48, fps, 3).unwrap();
+        assert_eq!(bytes, std::fs::metadata(&output).unwrap().len());
+        let movie = filmcraft_isobmff::open(std::fs::read(&output).unwrap().as_slice()).unwrap();
+        assert_eq!(movie.tracks[0].samples.len(), 3);
+        assert_eq!(movie.tracks[0].timescale, 24_000);
+        assert!(movie.tracks[0].samples.iter().all(|sample| sample.duration == 1001));
+        assert!(encode_rgba_stream(&mut &pixels[..], &output, 64, 48, fps, 3).is_err());
+        assert_eq!(std::fs::metadata(&output).unwrap().len(), bytes);
+        std::fs::remove_file(output).unwrap();
+        std::fs::remove_dir(root).unwrap();
     }
 
     #[test]

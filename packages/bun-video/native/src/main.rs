@@ -9,6 +9,19 @@ fn run() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = std::env::args().skip(1).collect();
     let ffmpeg = std::env::var_os("BUN_VIDEO_FFMPEG").unwrap_or_else(|| "ffmpeg".into());
     match args.first().map(String::as_str) {
+        #[cfg(feature = "filmcraft-encode")]
+        Some("filmcraft-encode") if args.len() == 6 => {
+            let width: u32 = args[1].parse()?;
+            let height: u32 = args[2].parse()?;
+            let (num, den) = args[3].split_once('/').ok_or("FPS requires numerator/denominator")?;
+            let fps = filmcraft_lib::FrameRate { num: num.parse()?, den: den.parse()? };
+            let frames: usize = args[4].parse()?;
+            let output = PathBuf::from(&args[5]);
+            let bytes = bun_video_native::filmcraft::encode_rgba_stream(
+                &mut io::stdin().lock(), &output, width, height, fps, frames,
+            )?;
+            println!("{{\"provider\":\"filmcraft\",\"codec\":\"h264\",\"frames\":{frames},\"bytes\":{bytes}}}");
+        }
         Some("probe") => {
             for backend in [Backend::Ffv1, Backend::Nvenc, Backend::Qsv, Backend::Amf] {
                 let ready = probe_backend(&ffmpeg, backend)?;

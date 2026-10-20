@@ -78,6 +78,7 @@ for (const entry of ["app", "preview"] as const) {
     entrypoints: [resolve(import.meta.dir, `../src/apps/showcase/${entry}.tsx`)],
     target: "browser",
     minify: true,
+    external: ["/fonts/*"],
     naming: { entry: "[name].[ext]", asset: "[name].[ext]", chunk: "[name]-[hash].[ext]" },
   });
   if (!result.success) throw new AggregateError(result.logs, `Showcase ${entry} build failed`);
