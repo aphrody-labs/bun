@@ -65,7 +65,7 @@ export function Artwork({ work, frame }: { work: ShowcaseWork; frame: number }) 
       {work.artwork === "type" && (
         <g
           fill={accent}
-          fontFamily="Arial, sans-serif"
+          fontFamily="Showcase, Arial, sans-serif"
           fontWeight="900"
           fontSize="156"
           letterSpacing="-10"
@@ -155,7 +155,7 @@ export function Artwork({ work, frame }: { work: ShowcaseWork; frame: number }) 
         </g>
       )}
       <path d="M48 660H1232" stroke={light} strokeOpacity="0.3" />
-      <g fill={light} fontFamily="Arial, sans-serif" fontSize="15" letterSpacing="3">
+      <g fill={light} fontFamily="Showcase, Arial, sans-serif" fontSize="15" letterSpacing="3">
         <text x="48" y="694">
           BUN VIDEO / {work.artwork.toUpperCase()}
         </text>

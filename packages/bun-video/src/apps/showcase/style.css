@@ -1,6 +1,7 @@
 @font-face {
   font-family: Showcase;
-  src: local("Arial");
+  src: url("/fonts/archivo.ttf") format("truetype");
+  font-weight: 100 900;
   font-display: swap;
 }
 :root {
