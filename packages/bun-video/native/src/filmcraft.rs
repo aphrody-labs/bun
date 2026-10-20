@@ -107,7 +107,7 @@ pub fn encode_rgba_stream(
     if !output.is_absolute() || output.exists() {
         return Err(VideoError::Invalid("encoding requires a new absolute output path"));
     }
-    if fps.num == 0 || fps.den == 0 || u64::from(fps.num) > u64::from(fps.den) * 240 {
+    if fps.num <= 0 || fps.den <= 0 || i128::from(fps.num) > i128::from(fps.den) * 240 {
         return Err(VideoError::Invalid("encoding requires a positive rational FPS at most 240"));
     }
     if frames == 0 || frames > 10_000 {

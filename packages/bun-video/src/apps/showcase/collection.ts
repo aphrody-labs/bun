@@ -14,6 +14,12 @@ export interface ShowcaseWork {
   height: number;
   preview?: string;
   mediaType?: "image" | "audio";
+  video?: string;
+  captions?: string;
+  seed?: string;
+  code?: string;
+  sourceRef?: string;
+  chapter?: string;
 }
 
 const palettes = {
