@@ -85,8 +85,7 @@ async function serveShowcaseAsset(root: string, path: string, method: string): P
     return json({ error: "invalid_showcase_path" }, 400);
   }
   if (!relativePath) relativePath = "index.html";
-  if (relativePath.includes("\\") || relativePath.includes("\0"))
-    return json({ error: "invalid_showcase_path" }, 400);
+  if (relativePath.includes("\\") || relativePath.includes("\0")) return json({ error: "invalid_showcase_path" }, 400);
   const parts = relativePath.split("/");
   if (parts.some(part => part === ".." || part === "." || part.startsWith(".")))
     return json({ error: "invalid_showcase_path" }, 400);
