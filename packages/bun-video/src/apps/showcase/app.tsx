@@ -268,8 +268,8 @@ function Discover({ manifest }: { manifest: ShowcaseManifest }) {
             ⌕
           </button>
         </form>
-        <a className="create-link" href="/studio">
-          <span>＋</span> Créer
+        <a className="create-link" href="/workbench">
+          <span>＋</span> Ouvrir Bun Video
         </a>
       </header>
       <aside className="video-sidebar" aria-label="Navigation">
@@ -285,8 +285,8 @@ function Discover({ manifest }: { manifest: ShowcaseManifest }) {
           </a>
           <div className="side-divider" />
           <label>STUDIO BUN</label>
-          <a href="/studio" className={view === "studio" ? "nav-active" : ""}>
-            <b>✳</b> Pipeline créative
+          <a href="/workbench">
+            <b>✳</b> Pipeline, labs et outils
           </a>
           <a href="/about" className={view === "about" ? "nav-active" : ""}>
             <b>◉</b> À propos

@@ -1,4 +1,5 @@
 import { describe, expect, test } from "bun:test";
+import { mkdir, rm } from "node:fs/promises";
 import { resolve } from "node:path";
 import { createVideoWebApp, resolveMediaPath } from "../src/web-app";
 
@@ -21,6 +22,68 @@ describe("resolveMediaPath", () => {
 });
 
 describe("createVideoWebApp", () => {
+  test("mounts the built film timeline and workbench on one origin", async () => {
+    const showcaseRoot = resolve("var", `bun-video-showcase-test-${crypto.randomUUID()}`);
+    await mkdir(showcaseRoot, { recursive: true });
+    try {
+      await Bun.write(resolve(showcaseRoot, "index.html"), "<!doctype html><title>Films</title>");
+      await Bun.write(resolve(showcaseRoot, "app.js"), "window.showcaseReady = true;");
+      const product = createVideoWebApp({ mediaRoot: ".", showcaseRoot });
+      const home = await product.fetch(new Request("http://localhost/"));
+      expect(home.status).toBe(200);
+      expect(home.headers.get("content-type")).toContain("text/html");
+      expect(await home.text()).toContain("Films");
+      const deepLink = await product.fetch(new Request("http://localhost/watch?v=filmcraft-test"));
+      expect(deepLink.status).toBe(200);
+      expect(await deepLink.text()).toContain("Films");
+      const script = await product.fetch(new Request("http://localhost/app.js"));
+      expect(script.headers.get("content-type")).toContain("javascript");
+      expect(await script.text()).toContain("showcaseReady");
+      const workbench = await product.fetch(new Request("http://localhost/workbench"));
+      expect(workbench.status).toBe(200);
+      expect(await workbench.text()).toContain("/app/app.js");
+      const traversal = await product.fetch(new Request("http://localhost/%2e%2e%2fsecret.txt"));
+      expect(traversal.status).toBe(400);
+    } finally {
+      await rm(showcaseRoot, { recursive: true, force: true });
+    }
+  });
+
+  test("keeps the public deployment surface read-only outside Cloudflare Access", async () => {
+    const app = createVideoWebApp({ mediaRoot: ".", publicMode: true, showcaseRoot: "." });
+    expect((await app.fetch(new Request("http://localhost/api/health"))).status).toBe(200);
+    const privateRoute = await app.fetch(
+      new Request("http://localhost/api/pipeline/capture", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ url: "file:///etc/passwd" }),
+      }),
+    );
+    expect(privateRoute.status).toBe(401);
+    expect(await privateRoute.json()).toEqual({ error: "access_required" });
+    const spoofableHeader = await app.fetch(
+      new Request("http://localhost/workbench", {
+        headers: { "cf-access-authenticated-user-email": "user@example.com" },
+      }),
+    );
+    expect(spoofableHeader.status).toBe(401);
+    const protectedApp = createVideoWebApp({
+      mediaRoot: ".",
+      publicMode: true,
+      showcaseRoot: ".",
+      trustCloudflareAccessHeaders: true,
+    });
+    const accessGranted = await protectedApp.fetch(
+      new Request("http://localhost/workbench", {
+        headers: {
+          "cf-access-authenticated-user-email": "user@example.com",
+          "cf-access-jwt-assertion": "edge-authenticated",
+        },
+      }),
+    );
+    expect(accessGranted.status).toBe(200);
+  });
+
   test("serves the shared capability manifest over HTTP", async () => {
     const app = createVideoWebApp({ mediaRoot: ".", youtube: { apiKey: "server-only-test-key" } });
     const response = await app.fetch(new Request("http://localhost/api/capabilities"));

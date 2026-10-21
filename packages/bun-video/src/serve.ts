@@ -10,6 +10,9 @@ const mediaRoot = resolve(Bun.env.BUN_VIDEO_MEDIA_ROOT ?? "var/media");
 const hlsLab = Bun.env.BUN_VIDEO_HLS === "1";
 const app = createVideoWebApp({
   mediaRoot,
+  showcaseRoot: Bun.env.BUN_VIDEO_SHOWCASE_ROOT,
+  publicMode: Bun.env.BUN_VIDEO_PUBLIC_MODE === "1",
+  trustCloudflareAccessHeaders: Bun.env.BUN_VIDEO_TRUST_CF_ACCESS === "1",
   publicOrigin: Bun.env.BUN_VIDEO_PUBLIC_ORIGIN,
   hlsLab,
   hlsCookieSecret: Bun.env.BUN_VIDEO_COOKIE_SECRET,

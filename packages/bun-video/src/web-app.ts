@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-import { readdir } from "node:fs/promises";
+import { realpath, readdir } from "node:fs/promises";
 import { isAbsolute, relative, resolve, sep } from "node:path";
 import { createCrunchyrollShortcutsHandler } from "./apps/crunchyroll-shortcuts";
 import { createCrunchyrollApi, type CrunchyrollApiOptions } from "./crunchyroll-api";
@@ -13,6 +13,12 @@ import { WEBGPU_PROBE_HTML } from "./webgpu";
 export interface VideoWebAppOptions {
   /** Directory that local media paths must stay inside. */
   readonly mediaRoot: string;
+  /** Optional versioned output from scripts/build-showcase.ts, served as the public product home. */
+  readonly showcaseRoot?: string;
+  /** Expose the showcase and explicitly public read routes; all other product surfaces require edge identity. */
+  readonly publicMode?: boolean;
+  /** Trust Access identity headers only when the network origin accepts traffic exclusively from Cloudflare. */
+  readonly trustCloudflareAccessHeaders?: boolean;
   /** Bearer token and upstream client for private Crunchyroll metadata routes. */
   readonly crunchyroll?: CrunchyrollApiOptions;
   /** Public origin used to rewrite lab URLs; defaults to the origin of the first lab request. */
@@ -70,6 +76,42 @@ export function resolveMediaPath(root: string, input: string | null): string | u
   return target;
 }
 
+async function serveShowcaseAsset(root: string, path: string, method: string): Promise<Response | undefined> {
+  if (method !== "GET" && method !== "HEAD") return json({ error: "method_not_allowed" }, 405);
+  let relativePath: string;
+  try {
+    relativePath = decodeURIComponent(path.slice(1));
+  } catch {
+    return json({ error: "invalid_showcase_path" }, 400);
+  }
+  if (!relativePath) relativePath = "index.html";
+  if (relativePath.includes("\\") || relativePath.includes("\0"))
+    return json({ error: "invalid_showcase_path" }, 400);
+  const parts = relativePath.split("/");
+  if (parts.some(part => part === ".." || part === "." || part.startsWith(".")))
+    return json({ error: "invalid_showcase_path" }, 400);
+  const spaPaths = new Set(["watch", "shorts", "studio", "about", "playlist/saved"]);
+  const rootPath = await realpath(root).catch(() => undefined);
+  if (!rootPath) return path === "/" ? json({ error: "showcase_unavailable" }, 503) : undefined;
+  const candidate = resolve(rootPath, relativePath);
+  let target = await realpath(candidate).catch(() => undefined);
+  if (!target && spaPaths.has(relativePath.replace(/\/$/, "")))
+    target = await realpath(resolve(rootPath, "index.html")).catch(() => undefined);
+  if (!target) return undefined;
+  const relativeTarget = relative(rootPath, target);
+  if (!relativeTarget || relativeTarget.startsWith("..") || isAbsolute(relativeTarget))
+    return json({ error: "invalid_showcase_path" }, 400);
+  const extension = target.slice(target.lastIndexOf(".") + 1).toLowerCase();
+  const contentType = SHOWCASE_CONTENT_TYPES[extension] ?? "application/octet-stream";
+  return new Response(method === "HEAD" ? null : Bun.file(target), {
+    headers: {
+      "content-type": contentType,
+      "cache-control": extension === "html" || extension === "json" ? "public, max-age=60" : "public, max-age=3600",
+      "x-content-type-options": "nosniff",
+    },
+  });
+}
+
 async function loaded(load: () => Promise<unknown>): Promise<boolean> {
   try {
     await load();
@@ -103,6 +145,25 @@ function clientScript(entry: string): Promise<string> {
 const shellDocument = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Bun Video</title><link rel="stylesheet" href="/app/app.css"></head><body><div id="root"></div><script type="module" src="/app/app.js"></script></body></html>`;
 
 const DATA_API = /^\/api\/(overview|query|import|export|exports\/|publish|jobs)(\/|$)/;
+
+const SHOWCASE_CONTENT_TYPES: Record<string, string> = {
+  css: "text/css; charset=utf-8",
+  html: "text/html; charset=utf-8",
+  js: "text/javascript; charset=utf-8",
+  json: "application/json; charset=utf-8",
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  mp3: "audio/mpeg",
+  mp4: "video/mp4",
+  png: "image/png",
+  srt: "text/plain; charset=utf-8",
+  svg: "image/svg+xml",
+  vtt: "text/vtt; charset=utf-8",
+  wav: "audio/wav",
+  webm: "video/webm",
+  webp: "image/webp",
+  woff2: "font/woff2",
+};
 
 const page = (title: string, body: string) => `<!doctype html>
 <html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -159,6 +220,28 @@ export function createVideoWebApp(options: VideoWebAppOptions): VideoWebApp {
   const routes = async (request: Request): Promise<Response> => {
     const url = new URL(request.url);
     const path = url.pathname;
+
+    if (options.showcaseRoot && (request.method === "GET" || request.method === "HEAD")) {
+      const showcase = await serveShowcaseAsset(options.showcaseRoot, path, request.method);
+      if (showcase) return showcase;
+    }
+
+    if (options.publicMode) {
+      if (path === "/" && !options.showcaseRoot) return json({ error: "showcase_unavailable" }, 503);
+      const publicRead =
+        (request.method === "GET" || request.method === "HEAD") &&
+        ["/api/health", "/api/capabilities", "/api/youtube/search"].includes(path);
+      const hasEdgeIdentity =
+        options.trustCloudflareAccessHeaders &&
+        Boolean(request.headers.get("cf-access-authenticated-user-email")) &&
+        Boolean(request.headers.get("cf-access-jwt-assertion"));
+      if (!publicRead && !hasEdgeIdentity) return json({ error: "access_required" }, 401);
+    }
+
+    if (options.showcaseRoot && (path === "/workbench" || path === "/workbench/"))
+      return new Response(shellDocument, {
+        headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
+      });
 
     if (hls && path.startsWith(hls.prefix)) return hls.handle(request);
 

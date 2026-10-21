@@ -272,7 +272,9 @@ function App() {
         Aller au contenu
       </a>
       <nav aria-label="Sections">
-        <div className="brand">Bun Video</div>
+        <a className="brand" href="/" aria-label="Retour aux films Bun Video">
+          Bun Video
+        </a>
         <ul>
           {sections.map(item => (
             <li key={item.id}>
