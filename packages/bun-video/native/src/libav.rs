@@ -474,7 +474,7 @@ fn rgba(frame: &ffi::AVFrame) -> Result<Vec<u8>, VideoError> {
             frame.width,
             frame.height,
             ffi::AVPixelFormat::AV_PIX_FMT_RGBA as i32,
-            ffi::SWS_BILINEAR as i32,
+            ffi::SwsFlags::SWS_BILINEAR as i32,
             ptr::null_mut(),
             ptr::null_mut(),
             ptr::null(),
