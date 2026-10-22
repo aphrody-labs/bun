@@ -693,6 +693,8 @@ export async function runMediaBuild(input: MediaBuildInput, configureOnly = fals
       await mediaSDKTool(argv, step.cwd, step.timeout, {
         ...process.env,
         ...plan.env,
+        // verifyMediaBuildInputs hashed every source owner above.
+        BUN_MEDIA_SOURCES_VERIFIED: "1",
         GH_TOKEN: undefined,
         GITHUB_TOKEN: undefined,
         TYPESAFE_API_KEY: undefined,

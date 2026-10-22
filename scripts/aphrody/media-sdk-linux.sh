@@ -41,6 +41,8 @@ if [[ $abi == gnu ]]; then
   link+=(-lm)
 fi
 verify_source() {
+  # A release source snapshot has no .git; runMediaBuild hashed every file against the catalogue first.
+  if [[ ! -e $sources/$1/.git && ${BUN_MEDIA_SOURCES_VERIFIED:-} == 1 ]]; then return 0; fi
   [[ $(git -C "$sources/$1" rev-parse HEAD) == "$2" ]]
   [[ -z $(git -C "$sources/$1" status --porcelain) ]]
 }
