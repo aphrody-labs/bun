@@ -118,7 +118,8 @@ Bun requires LLVM 23.1.1 (`clang` is part of LLVM). The build system enforces th
 <CodeGroup>
 
 ```bash macOS (Homebrew)
-brew install llvm@23
+# Homebrew's unversioned llvm formula is the 23.1 series (there is no llvm@23)
+brew install llvm
 ```
 
 ```bash Ubuntu/Debian
@@ -154,8 +155,8 @@ If not, add it manually:
 
 ```bash macOS (Homebrew)
 # use fish_add_path if you're using fish
-# use path+="$(brew --prefix llvm@23)/bin" if you are using zsh
-export PATH="$(brew --prefix llvm@23)/bin:$PATH"
+# use path+="$(brew --prefix llvm)/bin" if you are using zsh
+export PATH="$(brew --prefix llvm)/bin:$PATH"
 ```
 
 ```bash Arch
