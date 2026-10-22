@@ -174,7 +174,7 @@ export function mediaBuildPlan(input: MediaBuildInput) {
       env.RUSTFLAGS =
         flags.map(flag => `-C link-arg=${flag}`).join(" ") +
         " -C link-arg=-fuse-ld=lld -C link-arg=-static-libgcc -C link-arg=-Wl,--gc-sections";
-      if (selected.abi === "gnu")
+      if (selected.abi === "gnu") {
         command(
           [
             join(llvm, "clang++"),
@@ -196,7 +196,16 @@ export function mediaBuildPlan(input: MediaBuildInput) {
           root,
           60_000,
         );
-      else env.RUSTFLAGS += " -C target-feature=-crt-static";
+        // rustc links -lgcc_s for std's unwinder and ignores -static-libgcc (it passes -nodefaultlibs); this
+        // script, searched before the toolchain's libgcc_s.so, resolves it to the static libgcc_eh instead.
+        const unwinder = join(output, "static-unwinder");
+        env.RUSTFLAGS += ` -L native=${unwinder}`;
+        command(
+          [bash, "-c", 'mkdir -p "$1" && printf "INPUT(-lgcc_eh)\\n" > "$1/libgcc_s.so"', "bash", unwinder],
+          root,
+          60_000,
+        );
+      } else env.RUSTFLAGS += " -C target-feature=-crt-static";
       missing.push(
         "Installed LLVM, target GCC/sysroot and Rust standard library; native libc closure gates remain mandatory",
       );
