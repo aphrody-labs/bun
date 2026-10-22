@@ -1,6 +1,7 @@
+import { existsSync } from "node:fs";
 import { chmod, lstat, mkdir, realpath, stat, statfs } from "node:fs/promises";
-import { availableParallelism, freemem } from "node:os";
-import { dirname, isAbsolute, join, relative, resolve, posix } from "node:path";
+import { availableParallelism, freemem, homedir } from "node:os";
+import { delimiter, dirname, isAbsolute, join, relative, resolve, posix } from "node:path";
 import { pins, locations } from "../build/ci-images/spec";
 import {
   downloadMediaSDK,
@@ -660,7 +661,10 @@ async function packageNativeRuntime(
 export function nativePluginAssets(targetName: string) {
   const target = mediaReleaseTarget(targetName);
   const exe = target.os === "windows" ? ".exe" : "";
-  return plugins.map(plugin => ({ built: `bun-${plugin.name}${exe}`, asset: `bun-${plugin.name}-${targetName}${exe}` }));
+  return plugins.map(plugin => ({
+    built: `bun-${plugin.name}${exe}`,
+    asset: `bun-${plugin.name}-${targetName}${exe}`,
+  }));
 }
 
 /** Copy every built plugin beside its release asset name; the publisher checksums them into SHA256SUMS.txt. */
@@ -790,6 +794,10 @@ async function prepareNativeRuntimeToolchain(input: WorkerInput, diagnostics: st
   if (series(toolchain.version) !== series(pins.llvm.version))
     throw new Error(`LLVM must match source pin series ${series(pins.llvm.version)}.x (${pins.llvm.version})`);
   process.env.BUN_TOOLCHAIN_LLVM = dirname(dirname(toolchain.cc));
+  // setup.ts installs rustup into CARGO_HOME; a container image has no login profile that puts it on PATH.
+  const cargoBin = join(process.env.CARGO_HOME ?? join(homedir(), ".cargo"), "bin");
+  if (existsSync(cargoBin) && !(process.env.PATH ?? "").split(delimiter).includes(cargoBin))
+    process.env.PATH = cargoBin + delimiter + (process.env.PATH ?? "");
   const rust = (await run("rust-pin", ["rustup", "show", "active-toolchain"])).stdout;
   if (!rust.startsWith(pins.rust.channel)) throw new Error("Rust toolchain differs from committed pin");
   const protocPlan = nativeRuntimeProtocPlan(input.target);
