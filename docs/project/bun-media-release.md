@@ -183,6 +183,11 @@ container as described by [GitHub container jobs](https://docs.github.com/en/act
 The documented hosted disk allowance does not establish the factory's Windows
 20 GiB free-space preflight. Fresh disk/memory checks and the pinned toolchain
 remain required; stock runner LLVM versions do not replace the source pin.
+Larger runners are billed: the `macos-15-xlarge` job does not start while the
+account's payment or spending limit blocks it, and the free arm64 runner has
+about 3 GiB of available RAM. `setup.ts` reads LLVM's Windows release digests
+from the GitHub API, so the worker passes the job's `GITHUB_TOKEN` to that step
+alone and strips it from every other native command.
 
 The all-release public inventory on 2026-10-13 found all eight bootstrap archives
 under `aphrody-v1.4.3-aphrody.2`, source
@@ -195,17 +200,29 @@ Before a native worker uses one, it must verify its bytes, architecture, version
 revision and Aphrody `sourceUrl` through native execution. A bootstrap is a build
 tool, not a qualification receipt for the new source.
 
-Complete normalized FFmpeg/mpv SDKs are still missing for Linux GNU ARM, both
-musl targets, both macOS targets and Windows ARM. Existing Windows x64 and
-portable Linux x64 evidence does not fill those six gaps. The SDK factory now
-has pinned source recipes for eight targets and ELF, PE and Mach-O closure
-owners. Native source/toolchain provisioning and actual builds must complete
-these targets before any eight-full aggregate can pass. All eight catalogue
-SDK asset lists remain empty; a source producer can use verified local inputs
-and the existing source recipe without requiring a published artifact first.
-The current Sharp/Remotion packaging owner supports Windows x64 only.
-Linux workers require the sysroots provisioned by `build-host.ts`/the CI image
-owner; the worker stops if those SDK artifacts are absent. Standalone GNU runtime
+Linux x64 is the only target with a published, natively qualified FFmpeg/mpv
+SDK: `media/ffmpeg-9.0.2-27-g7e93014c5b-linux-x64-sdk.zip` and
+`media/mpv-0.41.0-dev-gc3ac7f395-linux-x64-sdk.zip` on `bun-lib.aphrody.app`,
+pinned in `packages/bun-video/src/sdk-manifest.json`. They were built on the
+VPS from the pinned media source archive and passed the ELF closure gate (GLIBC
+2.17), the FFmpeg and libmpv ABI tests, the AVIO provider tests, an FFmpeg FFV1
+round trip and an `mpv` playback to end of file. Every other target's asset
+list is empty.
+
+A target without a published SDK builds its own on its native runner: when
+`BUN_MEDIA_SDK_INPUTS` is unset and `BUN_MEDIA_SOURCE_ARCHIVE_URL`,
+`_SHA256` and `_BYTES` are set (the workflow passes the repository variables),
+`release-native-worker.ts` downloads and verifies the source archive, runs the
+same producer and qualifies its output before using it. The musl container
+receives the same pin. A runner without a factory lock serializes media builds
+through `build/locks/heavy.lock` in the checkout.
+
+Linux runners get the pinned sysroots from the CI image spec before the worker
+starts: `bun scripts/build/ci-images/spec.ts --only glibc-sysroot <image>` for
+GNU targets, and `--only llvm,musl-sysroot <image>` for musl targets, whose
+sysroots are mounted read-only into the Alpine container. The worker stops if a
+sysroot is absent. The current Sharp/Remotion packaging owner supports Windows
+x64 only. Standalone GNU runtime
 SDK modules must also meet the 2.17 floor, and musl manifests must select an actual
 musl Rust target. No CI run or publication is established by these source changes.
 
