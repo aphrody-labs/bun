@@ -78,7 +78,7 @@ async function platformFixture(base: string, target: MediaStageTarget) {
   for (const [name, major] of Object.entries(sdkManifest.ffmpegABI)) {
     await Bun.write(join(prefix, windows ? "bin" : "lib", library(name, major)), binary(target));
     await Bun.write(
-      join(prefix, "include", `lib${name}/version_major.h`),
+      join(prefix, "include", `lib${name}/${name === "avutil" ? "version.h" : "version_major.h"}`),
       `#define LIB${name.toUpperCase()}_VERSION_MAJOR ${major}\n`,
     );
     if (windows) await Bun.write(join(prefix, "lib", `${name}.lib`), "fixture import library");
@@ -140,7 +140,7 @@ async function fixture(base: string) {
   for (const [name, major] of Object.entries(sdkManifest.ffmpegABI)) {
     await Bun.write(join(prefix, "bin", `${name}-${major}.dll`), pe(name === "avcodec" ? ["zlib1.dll"] : []));
     await Bun.write(
-      join(prefix, "include", `lib${name}/version_major.h`),
+      join(prefix, "include", `lib${name}/${name === "avutil" ? "version.h" : "version_major.h"}`),
       `#define LIB${name.toUpperCase()}_VERSION_MAJOR ${major}\n`,
     );
     await Bun.write(join(prefix, "lib", `${name}.lib`), "fixture import library");

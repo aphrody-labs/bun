@@ -259,16 +259,21 @@ export async function planMediaStage(options: {
       )
     )
       throw new Error(`Required ${component} license notices are missing from the SDK prefix`);
+    // FFmpeg installs version_major.h for most libraries; libavutil keeps its major in version.h (as sdk.ts reads it).
+    const versionHeader = (library: string) =>
+      [`include/lib${library}/version_major.h`, `include/lib${library}/version.h`].find(member =>
+        files.some(file => file.name === componentRoot + member),
+      ) ?? `include/lib${library}/version_major.h`;
     for (const required of component === "ffmpeg"
       ? Object.keys(sdkManifest.ffmpegABI).flatMap(name => [
-          `include/lib${name}/version_major.h`,
+          versionHeader(name),
           ...(windows ? [`lib/${name}.lib`] : []),
         ])
       : ["include/mpv/client.h", ...(windows ? ["lib/mpv.lib"] : [])])
       if (!files.some(file => file.name === componentRoot + required))
         throw new Error(`Required ${component} SDK member is missing: ${required}`);
     for (const [library, major] of component === "ffmpeg" ? Object.entries(sdkManifest.ffmpegABI) : []) {
-      const header = await Bun.file(join(prefix, `include/lib${library}/version_major.h`)).text();
+      const header = await Bun.file(join(prefix, versionHeader(library))).text();
       if (!new RegExp(`#\\s*define\\s+LIB${library.toUpperCase()}_VERSION_MAJOR\\s+${major}(?:\\s|$)`).test(header))
         throw new Error(`FFmpeg ${library} SDK header ABI mismatch`);
     }
