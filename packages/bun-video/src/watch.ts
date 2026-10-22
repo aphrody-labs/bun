@@ -9,6 +9,7 @@
 import { mkdir, mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, extname, join, resolve } from "node:path";
+import { parseSubtitle } from "../scripts/episode-subtitles";
 import { downloadYtDlp, extractYtDlp, type YtDlpResult } from "./ytdlp";
 
 export type WatchDetail = "transcript" | "efficient" | "balanced" | "token-burner";
@@ -39,7 +40,7 @@ export interface WatchOptions {
   timestamps?: number[];
   dedup?: boolean;
   whisper?: WhisperBackend | "none";
-  /** Caption file (.vtt or .srt) to use instead of a sidecar or yt-dlp track. */
+  /** Caption file (.vtt, .srt or .ass) to use instead of a sidecar or yt-dlp track. */
   captions?: string;
   subLang?: string;
   cookiesFile?: string;
@@ -388,6 +389,23 @@ async function fetchMedia(url: string, destination: string, signal?: AbortSignal
   }
 }
 
+/** Reads .vtt, .srt or .ass captions into segments. */
+export async function readCaptionFile(path: string): Promise<Segment[]> {
+  const text = await Bun.file(path).text();
+  if (extname(path).toLowerCase() !== ".ass") return parseCaptions(text);
+  return parseSubtitle(text, "ass").map(cue => ({ start: cue.startMs / 1000, end: cue.endMs / 1000, text: cue.text }));
+}
+
+/** First existing `<stem>[.fr|.ja|.en].(vtt|srt|ass)`, in that preference order. */
+async function findSidecar(stem: string): Promise<string | undefined> {
+  for (const language of ["", ".fr", ".ja", ".en"])
+    for (const ext of [".vtt", ".srt", ".ass"]) {
+      const candidate = stem + language + ext;
+      if (await Bun.file(candidate).exists()) return candidate;
+    }
+  return undefined;
+}
+
 interface Acquired {
   videoPath: string | null;
   info: { title?: string; uploader?: string; duration?: number };
@@ -409,16 +427,10 @@ async function acquire(
     result.videoPath = path;
     result.info = { title: basename(path) };
     const stem = path.slice(0, path.length - extname(path).length);
-    const sidecar = options.captions
-      ? resolve(options.captions)
-      : (
-          await Promise.all(
-            [".vtt", ".srt"].map(async ext => ((await Bun.file(stem + ext).exists()) ? stem + ext : null)),
-          )
-        ).find(Boolean);
+    const sidecar = options.captions ? resolve(options.captions) : await findSidecar(stem);
     if (sidecar) {
       try {
-        result.segments = parseCaptions(await Bun.file(sidecar).text());
+        result.segments = await readCaptionFile(sidecar);
         result.track = { key: "sidecar", language: "unknown", kind: "manual", provenance: "unknown", url: sidecar };
       } catch (error) {
         result.errors.push(`Caption parsing failed: ${(error as Error).message}`);
@@ -451,7 +463,7 @@ async function acquire(
   }
   if (needCaptions) {
     if (options.captions) {
-      result.segments = parseCaptions(await Bun.file(resolve(options.captions)).text());
+      result.segments = await readCaptionFile(resolve(options.captions));
       result.track = { key: "file", language: "unknown", kind: "manual", provenance: "unknown", url: options.captions };
     } else if (meta) {
       result.track = selectCaption(meta, options.subLang ?? "auto");
@@ -510,6 +522,12 @@ export interface NativeVideoMetadata {
 export interface NativeVideo {
   frame(seconds: number): NativeFrame;
   metadata(): Promise<NativeVideoMetadata>;
+  frames(options: {
+    start: number;
+    end: number;
+    step: number;
+    maxFrames: number;
+  }): Promise<{ time: number; bytes: Uint8Array }[]>;
   audio(options: { start: number; duration: number; sampleRate: number }): Promise<Uint8Array>;
 }
 
@@ -517,48 +535,113 @@ const NativeVideoClass = (
   Bun as unknown as { Video?: { readonly available: boolean; new (input: string): NativeVideo } }
 ).Video;
 
+interface NativeImage {
+  resize(width: number, height?: number, options?: { fit?: "fill" | "inside" }): NativeImage;
+  jpeg(options?: { quality?: number }): NativeImage;
+  rgba(): Promise<{ data: Uint8Array }>;
+  bytes(): Promise<Uint8Array>;
+}
+
+const NativeImageClass = (Bun as unknown as { Image: new (input: Uint8Array) => NativeImage }).Image;
+
 interface Probe {
   time: number;
   thumb: Uint8Array;
+  /** Encoded output frame, kept from the probe decode so selected frames are never decoded twice. */
+  jpeg?: Uint8Array;
 }
+
+/** Uniform probe grid over [start, start + count * step). */
+interface Grid {
+  start: number;
+  step: number;
+  count: number;
+}
+
+const PNG_BUDGET_BYTES = 40 * 1024 * 1024;
+const JPEG_RETAIN_BYTES = 256 * 1024 * 1024;
 
 class FrameSource {
   readonly video: NativeVideo;
-  constructor(path: string) {
+  readonly outWidth: number;
+  readonly outHeight: number;
+  private retained = 0;
+  constructor(
+    path: string,
+    private readonly meta: NativeVideoMetadata,
+    resolution: number,
+  ) {
     if (!NativeVideoClass) throw new Error("Native Bun.Video provider unavailable in this runtime");
     this.video = new NativeVideoClass(path);
+    this.outWidth = Math.min(resolution, meta.width);
+    this.outHeight = Math.min(MAX_READ_DIMENSION, Math.round((this.outWidth * meta.height) / meta.width));
   }
 
-  async thumb(time: number): Promise<Uint8Array> {
-    const pixels = await this.video.frame(time).resize(DEDUP_THUMB, DEDUP_THUMB, { fit: "fill" }).rgba();
-    return rgbOf(pixels.data);
+  private async process(png: Uint8Array, keep: boolean): Promise<Pick<Probe, "thumb" | "jpeg">> {
+    const [pixels, jpeg] = await Promise.all([
+      new NativeImageClass(png).resize(DEDUP_THUMB, DEDUP_THUMB, { fit: "fill" }).rgba(),
+      new NativeImageClass(png).resize(this.outWidth, this.outHeight, { fit: "inside" }).jpeg({ quality: 80 }).bytes(),
+    ]);
+    const retain = keep && this.retained + jpeg.byteLength <= JPEG_RETAIN_BYTES;
+    if (retain) this.retained += jpeg.byteLength;
+    return { thumb: rgbOf(pixels.data), jpeg: retain ? jpeg : undefined };
   }
 
-  async write(time: number, path: string, resolution: number): Promise<void> {
-    const meta = await this.video.metadata();
-    const width = Math.min(resolution, meta.width);
-    const height = Math.min(MAX_READ_DIMENSION, Math.round((width * meta.height) / meta.width));
-    await this.video.frame(time).resize(width, height, { fit: "inside" }).jpeg({ quality: 80 }).write(path);
-  }
-}
-
-/** Evenly spaced probe times in [start, end), at most `limit`. */
-function probeTimes(start: number, end: number, rate: number, limit = PROBE_LIMIT): number[] {
-  const count = Math.max(1, Math.min(limit, Math.ceil((end - start) * rate)));
-  const step = (end - start) / count;
-  return Array.from({ length: count }, (_, i) => start + i * step);
-}
-
-async function probe(source: FrameSource, times: number[]): Promise<Probe[]> {
-  const out: Probe[] = [];
-  for (const time of times) {
-    try {
-      out.push({ time, thumb: await source.thumb(time) });
-    } catch {
-      // A frame that fails to decode is skipped; coverage gaps show in the candidate count.
+  /** One decode session per chunk: far cheaper than a seek per frame (about 6x in measurement). */
+  async probe(grid: Grid): Promise<Probe[]> {
+    const pngBytes = Math.max(1, this.meta.width * this.meta.height * 2);
+    const chunk = Math.max(1, Math.min(64, Math.floor(PNG_BUDGET_BYTES / pngBytes)));
+    const out: Probe[] = [];
+    for (let first = 0; first < grid.count; first += chunk) {
+      const n = Math.min(chunk, grid.count - first);
+      const start = grid.start + first * grid.step;
+      const end = start + n * grid.step;
+      let batch: { time: number; bytes: Uint8Array }[] = [];
+      try {
+        batch = (await this.video.frames({ start, end, step: grid.step, maxFrames: n })).filter(
+          frame => frame.time < end - grid.step / 2,
+        );
+      } catch {
+        batch = [];
+      }
+      if (batch.length) {
+        const done = await Promise.allSettled(batch.map(frame => this.process(frame.bytes, true)));
+        done.forEach((result, i) => {
+          if (result.status === "fulfilled") out.push({ time: batch[i]!.time, ...result.value });
+        });
+        continue;
+      }
+      // Batch decode refused this window: seek frame by frame and skip what cannot decode.
+      for (let i = 0; i < n; i++) {
+        const time = start + i * grid.step;
+        try {
+          const pixels = await this.video.frame(time).resize(DEDUP_THUMB, DEDUP_THUMB, { fit: "fill" }).rgba();
+          out.push({ time, thumb: rgbOf(pixels.data) });
+        } catch {
+          // Coverage gaps show in the candidate count.
+        }
+      }
     }
+    return out;
   }
-  return out;
+
+  async write(time: number, path: string, jpeg?: Uint8Array): Promise<void> {
+    if (jpeg) {
+      await Bun.write(path, jpeg);
+      return;
+    }
+    await this.video
+      .frame(time)
+      .resize(this.outWidth, this.outHeight, { fit: "inside" })
+      .jpeg({ quality: 80 })
+      .write(path);
+  }
+}
+
+/** Evenly spaced probe grid over [start, end), at most `limit` probes. */
+function probeGrid(start: number, end: number, rate: number, limit = PROBE_LIMIT): Grid {
+  const count = Math.max(1, Math.min(limit, Math.ceil((end - start) * rate)));
+  return { start, step: (end - start) / count, count };
 }
 
 function sceneChanges(probes: Probe[], threshold: number): Probe[] {
@@ -578,7 +661,7 @@ function dedupe(candidates: Probe[], threshold = DEDUP_THRESHOLD): { kept: Probe
 }
 
 interface FrameSelection {
-  frames: Pick<FrameRecord, "timestampSeconds" | "reason">[];
+  frames: (Pick<FrameRecord, "timestampSeconds" | "reason"> & { jpeg?: Uint8Array })[];
   engine: string;
   candidateCount: number;
   dedupedCount: number;
@@ -596,10 +679,10 @@ async function selectFrames(
   const uniform = async (): Promise<FrameSelection> => {
     const cap = budget.maxFrames === null ? budget.target : Math.min(budget.maxFrames, budget.target);
     const rate = Math.min(budget.fps, MAX_FPS, cap / (end - start));
-    const probes = await probe(source, probeTimes(start, end, rate, cap));
+    const probes = await source.probe(probeGrid(start, end, rate, cap));
     const { kept, dropped } = dedup ? dedupe(probes) : { kept: probes, dropped: 0 };
     return {
-      frames: kept.map(p => ({ timestampSeconds: p.time, reason: "uniform" as const })),
+      frames: kept.map(p => ({ timestampSeconds: p.time, reason: "uniform" as const, jpeg: p.jpeg })),
       engine: "uniform",
       candidateCount: probes.length,
       dedupedCount: dropped,
@@ -608,7 +691,7 @@ async function selectFrames(
   };
   // Scene and sampled-keyframe detection both walk the range at a bounded probe rate.
   const probeRate = detail === "efficient" ? 1 : MAX_FPS;
-  const probes = await probe(source, probeTimes(start, end, probeRate));
+  const probes = await source.probe(probeGrid(start, end, probeRate));
   const candidates = detail === "efficient" ? probes : sceneChanges(probes, SCENE_THRESHOLD);
   const minimum = detail === "efficient" ? 4 : SCENE_MIN_FRAMES;
   if (candidates.length < minimum) return await uniform();
@@ -618,6 +701,7 @@ async function selectFrames(
   return {
     frames: chosen.map((p, i) => ({
       timestampSeconds: p.time,
+      jpeg: p.jpeg,
       reason:
         detail === "efficient" ? ("sampled" as const) : i === 0 ? ("first-frame" as const) : ("scene-change" as const),
     })),
@@ -726,8 +810,9 @@ export async function watch(options: WatchOptions): Promise<WatchReport> {
   let meta: NativeVideoMetadata | null = null;
   if (acquired.videoPath) {
     try {
-      source = new FrameSource(acquired.videoPath);
-      meta = await source.video.metadata();
+      const native = new NativeVideoClass!(acquired.videoPath);
+      meta = await native.metadata();
+      source = new FrameSource(acquired.videoPath, meta, resolution);
     } catch (error) {
       errors.push(`Visuals/audio metadata unavailable: ${(error as Error).message}`);
       source = null;
@@ -762,7 +847,7 @@ export async function watch(options: WatchOptions): Promise<WatchReport> {
         maxFrames !== null && inWindow.length > maxFrames
           ? evenIndices(inWindow.length, maxFrames).map(i => inWindow[i]!)
           : inWindow;
-      const planned: Pick<FrameRecord, "timestampSeconds" | "reason">[] = points.map(t => ({
+      const planned: FrameSelection["frames"] = points.map(t => ({
         timestampSeconds: t,
         reason: "transcript-cue",
       }));
@@ -781,11 +866,14 @@ export async function watch(options: WatchOptions): Promise<WatchReport> {
         planned.push(...selection.frames);
       }
       planned.sort((a, b) => a.timestampSeconds - b.timestampSeconds);
-      for (const [index, frame] of planned.entries()) {
-        const path = join(frameDir, `frame_${String(index).padStart(4, "0")}.jpg`);
-        await source.write(frame.timestampSeconds, path, resolution);
-        frames.push({ index, path, ...frame });
-      }
+      const written = await Promise.all(
+        planned.map(async ({ jpeg, ...frame }, index) => {
+          const path = join(frameDir, `frame_${String(index).padStart(4, "0")}.jpg`);
+          await source.write(frame.timestampSeconds, path, jpeg);
+          return { index, path, ...frame };
+        }),
+      );
+      frames.push(...written);
     } catch (error) {
       errors.push(`Visual extraction unavailable: ${(error as Error).message}`);
     }

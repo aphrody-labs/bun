@@ -1,7 +1,8 @@
 import { parseTime, parseTimestamps, renderReport, watch, type WatchDetail, type WatchOptions } from "./watch";
 
-const usage = `bun-video watch <url-or-file> [--detail transcript|efficient|balanced|token-burner] [--start T --end T]
-  [--timestamps T1,T2] [--max-frames N] [--resolution W] [--fps F] [--no-dedup] [--captions FILE.vtt|srt]
+const usage = `bun-video watch --catalogue <videos-directory|catalogue.json> --out DIR [--concurrency N] [--force] [options below]
+bun-video watch <url-or-file> [--detail transcript|efficient|balanced|token-burner] [--start T --end T]
+  [--timestamps T1,T2] [--max-frames N] [--resolution W] [--fps F] [--no-dedup] [--captions FILE.vtt|srt|ass]
   [--whisper groq|openai] [--no-whisper] [--sub-lang CODE] [--cookies FILE] [--out-dir DIR] [--json]`;
 
 const DETAILS = ["transcript", "efficient", "balanced", "token-burner"];
@@ -36,6 +37,10 @@ export async function run(argv: string[]): Promise<void> {
     return;
   }
   const json = flag(args, "--json");
+  const catalogue = take(args, "--catalogue");
+  const out = take(args, "--out");
+  const concurrency = numeric(take(args, "--concurrency"), "--concurrency");
+  const force = flag(args, "--force");
   const noDedup = flag(args, "--no-dedup");
   const noWhisper = flag(args, "--no-whisper");
   const whisper = take(args, "--whisper");
@@ -59,6 +64,16 @@ export async function run(argv: string[]): Promise<void> {
     dedup: !noDedup,
     whisper: noWhisper ? "none" : (whisper as "groq" | "openai" | undefined),
   };
+  if (catalogue) {
+    if (!out) throw new Error("--catalogue requires --out");
+    if (args.length) throw new Error(`Unexpected arguments: ${args.join(" ")}`);
+    const { source: _source, outDir: _outDir, captions: _captions, ...shared } = options;
+    const { loadCatalogue, watchCatalogue } = await import("./watch-catalogue");
+    const results = await watchCatalogue(await loadCatalogue(catalogue), { ...shared, out, concurrency, force });
+    console.log(JSON.stringify(results, null, 2));
+    if (results.some(result => result.status === "failed")) process.exitCode = 1;
+    return;
+  }
   const [source, ...rest] = args;
   if (!source || rest.length) throw new Error(`Expected exactly one source.\n${usage}`);
   options.source = source;

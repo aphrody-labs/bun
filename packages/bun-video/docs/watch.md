@@ -23,6 +23,27 @@ console.log(renderReport(report)); // frame paths to view, then the transcript
 await cleanWatch(report); // removes only this run's work directory
 ```
 
+## Episode catalogues
+
+```sh
+bun-video watch --catalogue episodes/ --out var/watch --concurrency 3 --detail efficient --max-frames 24
+bun-video watch --catalogue catalogue.json --out var/watch   # [{ "id": "ep001", "source": "...", "captions": "..." }]
+```
+
+Each episode writes `<out>/<id>/watch.json` and its frames; `<out>/catalogue.json` lists the status of every
+entry. Episodes run with bounded concurrency (default: a quarter of the cores, at most 4), one failure never
+stops the others, and a rerun skips episodes whose source (path, size, mtime) and options are unchanged, so
+an interrupted catalogue resumes. `--force` redoes everything. A sibling `<name>[.fr|.ja|.en].vtt|srt|ass`
+is used as the transcript.
+
+## Performance
+
+Frames are decoded in batches through one `Video.frames()` session per chunk instead of a seek per frame
+(about 6x faster in measurement on a 480x270 H.264 clip), then the 16x16 thumbnail and the output JPEG come
+from the same decoded frame in parallel. Probe JPEGs are kept in memory (up to 256 MiB) so selected frames
+are never decoded twice. Chunks shrink with frame size to stay under the 64 MiB batch limit, and a window the
+batch decoder refuses falls back to per-frame seeking.
+
 ## What replaces what
 
 | claude-video                          | here                                                                |
