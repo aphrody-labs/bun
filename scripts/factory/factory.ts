@@ -201,11 +201,20 @@ function spawn(cwd: string, argv: string[], held: number) {
 }
 
 /** Kernel waiters own one lock each; the admission mutex prevents partial-set deadlocks. */
-export async function reserveLinuxSlots(locks: readonly string[], min: number, max: number, signal?: AbortSignal, onWaiting?: () => void) {
+export async function reserveLinuxSlots(
+  locks: readonly string[],
+  min: number,
+  max: number,
+  signal?: AbortSignal,
+  onWaiting?: () => void,
+) {
   if (process.platform !== "linux") throw new Error("Linux reservations require Linux");
   if (!Number.isInteger(min) || !Number.isInteger(max) || min < 1 || max < min || max > locks.length)
     throw new Error("Invalid slot reservation bounds");
-  if (new Set(locks).size !== locks.length || locks.some(lock => !lock.startsWith("/") || resolve(lock) !== lock || lock.includes("\0")))
+  if (
+    new Set(locks).size !== locks.length ||
+    locks.some(lock => !lock.startsWith("/") || resolve(lock) !== lock || lock.includes("\0"))
+  )
     throw new Error("Factory reservation locks must be distinct normalized absolute paths");
   const children = new Set<ReturnType<typeof Bun.spawn>>();
   const release = async () => {
@@ -213,14 +222,26 @@ export async function reserveLinuxSlots(locks: readonly string[], min: number, m
     await Promise.all([...children].map(child => child.exited));
     children.clear();
   };
-  const abort = () => { for (const child of children) child.kill("SIGKILL"); };
+  const abort = () => {
+    for (const child of children) child.kill("SIGKILL");
+  };
   signal?.throwIfAborted();
   signal?.addEventListener("abort", abort, { once: true });
   const waiter = (lock: string, tryOnly = false) => {
     // --no-fork keeps the handle at one PID, both while flock waits and after exec.
-    const child = Bun.spawn(["flock", "--no-fork", ...(tryOnly ? ["-n", "-E", String(BUSY)] : []), "--", lock, "/bin/sh", "-c",
-      'printf "reserved\\n"; exec sleep infinity'],
-    { stdin: "pipe", stdout: "pipe", stderr: "inherit" });
+    const child = Bun.spawn(
+      [
+        "flock",
+        "--no-fork",
+        ...(tryOnly ? ["-n", "-E", String(BUSY)] : []),
+        "--",
+        lock,
+        "/bin/sh",
+        "-c",
+        'printf "reserved\\n"; exec sleep infinity',
+      ],
+      { stdin: "pipe", stdout: "pipe", stderr: "inherit" },
+    );
     children.add(child);
     const ready = (async () => {
       const reader = child.stdout.getReader();
@@ -229,7 +250,7 @@ export async function reserveLinuxSlots(locks: readonly string[], min: number, m
         while (!marker.includes("\n")) {
           const chunk = await reader.read();
           if (chunk.done) {
-            if (tryOnly && await child.exited === BUSY) return false;
+            if (tryOnly && (await child.exited) === BUSY) return false;
             signal?.throwIfAborted();
             throw new Error("Factory reservation waiter exited before acquiring its lock");
           }
@@ -238,7 +259,9 @@ export async function reserveLinuxSlots(locks: readonly string[], min: number, m
         if (marker !== "reserved\n") throw new Error("Invalid factory reservation acknowledgement");
         signal?.throwIfAborted();
         return true;
-      } finally { reader.releaseLock(); }
+      } finally {
+        reader.releaseLock();
+      }
     })();
     return { child, ready };
   };
@@ -248,7 +271,6 @@ export async function reserveLinuxSlots(locks: readonly string[], min: number, m
     const held: number[] = [];
     const candidates = locks.map(lock => waiter(lock, true));
     const available = await Promise.all(candidates.map(candidate => candidate.ready));
-    if (process.env.BUN_FACTORY_DEBUG) console.log("factory reservation candidates", available);
     for (const [index, ready] of available.entries()) {
       if (ready) held.push(index);
       else children.delete(candidates[index]!.child);
@@ -257,7 +279,7 @@ export async function reserveLinuxSlots(locks: readonly string[], min: number, m
       await new Promise<void>((resolve, reject) => {
         for (const [index, ready] of available.entries()) {
           if (ready) continue;
-          const candidate = candidates[index] = waiter(locks[index]!);
+          const candidate = (candidates[index] = waiter(locks[index]!));
           candidate.ready.then(() => {
             held.push(index);
             if (held.length === min) resolve();
@@ -268,14 +290,22 @@ export async function reserveLinuxSlots(locks: readonly string[], min: number, m
     }
     signal?.throwIfAborted();
     const selected = held.slice(0, max).sort((a, b) => a - b);
-    const losers = candidates.filter((value, i) => !selected.includes(i) && children.has(value.child)).map(value => value.child);
+    const losers = candidates
+      .filter((value, i) => !selected.includes(i) && children.has(value.child))
+      .map(value => value.child);
     losers.push(admission.child);
     for (const child of losers) child.kill("SIGKILL");
     await Promise.all(losers.map(child => child.exited));
     for (const child of losers) children.delete(child);
     signal?.removeEventListener("abort", abort);
     signal?.throwIfAborted();
-    return { held: selected, release: async () => { signal?.removeEventListener("abort", abort); await release(); } };
+    return {
+      held: selected,
+      release: async () => {
+        signal?.removeEventListener("abort", abort);
+        await release();
+      },
+    };
   } catch (error) {
     signal?.removeEventListener("abort", abort);
     await release();
@@ -322,13 +352,29 @@ export async function run(step: Step, dry: boolean) {
             controller.signal.throwIfAborted();
             const held = reservation.held;
             // The waiter processes already hold these locks; never flock them a second time.
-            const argv = [...(multi() ? ["taskset", "-c", cpuList(held)] : []), "nice", "-n", "10", ...withJobs(step.argv, held.length)];
+            const argv = [
+              ...(multi() ? ["taskset", "-c", cpuList(held)] : []),
+              "nice",
+              "-n",
+              "10",
+              ...withJobs(step.argv, held.length),
+            ];
             const n = String(jobs(held.length));
-            const child = Bun.spawn(argv, { cwd: step.cwd, env: { ...env(), BUN_FACTORY_JOBS: n, CARGO_BUILD_JOBS: n, CMAKE_BUILD_PARALLEL_LEVEL: n }, stdio: ["inherit", "inherit", "inherit"] });
+            const child = Bun.spawn(argv, {
+              cwd: step.cwd,
+              env: { ...env(), BUN_FACTORY_JOBS: n, CARGO_BUILD_JOBS: n, CMAKE_BUILD_PARALLEL_LEVEL: n },
+              stdio: ["inherit", "inherit", "inherit"],
+            });
             const stop = () => child.kill();
             controller.signal.addEventListener("abort", stop, { once: true });
-            try { code = await child.exited; } finally { controller.signal.removeEventListener("abort", stop); }
-          } finally { await reservation.release(); }
+            try {
+              code = await child.exited;
+            } finally {
+              controller.signal.removeEventListener("abort", stop);
+            }
+          } finally {
+            await reservation.release();
+          }
         } finally {
           process.removeListener("SIGINT", cancel);
           process.removeListener("SIGTERM", cancel);
