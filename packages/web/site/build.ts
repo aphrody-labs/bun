@@ -939,6 +939,15 @@ ${installers.length ? `<div class="cmds">${installers.map(i => cmd(i.label, i.co
 </section>`;
 }
 
+/** A docs description beside its module name: drops the trailing "with bun:name" the row already shows. */
+export function rowDescription(name: string, description: string): string {
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const text = description
+    .replace(new RegExp(`\\s+(?:with|through|using) (?:the )?${escaped}(?: module)?\\.?$`), "")
+    .trim();
+  return /[.!?]$/.test(text) ? text : `${text}.`;
+}
+
 /** Built-in modules inherited from upstream Bun; the home page lists the other registry entries. */
 const UPSTREAM_MODULES = new Set([
   "bun:ffi",
@@ -967,7 +976,10 @@ export function releasePlatforms(release: Release): string[] {
 export function renderRuntimeHero(
   d: SiteData,
   o: BuildOptions,
-  extra: { facts?: readonly RuntimeHomeFact[]; docs?: { has(slug: string): boolean } } = {},
+  extra: {
+    facts?: readonly RuntimeHomeFact[];
+    docs?: { has(slug: string): boolean; get?(slug: string): { description: string } | undefined };
+  } = {},
 ): string {
   const rt = d.runtime!;
   const releases = o.releases?.filter(isRuntimeRelease) ?? null;
@@ -980,16 +992,30 @@ export function renderRuntimeHero(
   ];
   const platforms = latest ? releasePlatforms(latest) : [];
   const release = latest
-    ? `<p class="release-chip"><a href="/release-notes#${escapeHtml(latest.tag)}">${escapeHtml(latest.name)}</a> <span class="muted">· ${escapeHtml(latest.publishedAt.slice(0, 10))}${platforms.length ? ` · ${escapeHtml(platforms.join(", "))}` : ""}</span></p>`
+    ? `<p class="release-chip"><a href="/release-notes#${escapeHtml(latest.tag)}">${escapeHtml(latest.name)}</a> <span class="muted">released ${escapeHtml(latest.publishedAt.slice(0, 10))}${platforms.length ? ` for ${escapeHtml(platforms.join(", "))}` : ""}.</span></p>`
     : "";
   const modules = rt.modules.filter(name => !UPSTREAM_MODULES.has(name));
-  const moduleList = modules
+  const moduleDoc = (name: string) => {
+    const slug = `runtime/${name.slice(4)}`;
+    return extra.docs?.has(slug)
+      ? { href: pageUrl(slug), description: extra.docs.get?.(slug)?.description ?? "" }
+      : null;
+  };
+  // The specifier is code: the shared bun: namespace is set lighter than the module name.
+  const specifier = (name: string) => `<span class="ns">bun:</span>${escapeHtml(name.slice(4))}`;
+  const registry = modules
     .map(name => {
-      const slug = `runtime/${name.slice(4)}`;
-      return extra.docs?.has(slug)
-        ? `<li><a href="${pageUrl(slug)}"><code>${escapeHtml(name)}</code></a></li>`
-        : `<li><code>${escapeHtml(name)}</code></li>`;
+      const page = moduleDoc(name);
+      return page ? `<li><a href="${page.href}">${specifier(name)}</a></li>` : `<li>${specifier(name)}</li>`;
     })
+    .join("");
+  const moduleRows = modules
+    .map(name => ({ name, page: moduleDoc(name) }))
+    .filter(m => m.page?.description)
+    .map(
+      m =>
+        `<div><dt><a href="${m.page!.href}"><code>${escapeHtml(m.name)}</code></a></dt><dd>${escapeHtml(rowDescription(m.name, m.page!.description))}</dd></div>`,
+    )
     .join("");
   const facts = extra.facts ?? [];
   const measured = facts.length
@@ -1003,41 +1029,40 @@ export function renderRuntimeHero(
         })
         .join("")}</tbody></table></section>`
     : "";
-  return `<section class="hero">
-<img class="hero-mark" src="/icon.svg" alt="" width="96" height="96">
-<p class="eyebrow">Aphrody Labs</p>
-<h1>Bun OS</h1>
-<p class="lead">A JavaScript and TypeScript runtime, package manager, test runner and bundler in one executable. Bun OS is built from ${link("Bun", rt.upstream.url)} ${escapeHtml(rt.upstream.version)} and adds native modules for Windows, Linux, Python, .NET, media and source graphs.</p>
+  return `<section class="hero registry-hero">
+<h1>Bun, with native modules for Windows, Linux, Python, .NET, media and source graphs built in.</h1>
+${modules.length ? `<ul class="registry" aria-label="Modules this Bun adds">${registry}</ul>` : ""}
+<p class="lead">One executable runs, installs, tests and bundles JavaScript and TypeScript. It is built from ${link("Bun", rt.upstream.url)} ${escapeHtml(rt.upstream.version)} and keeps its APIs.</p>
 ${release}
 <div class="cmds">${commands.join("")}</div>
-<div class="btns"><a class="btn" href="${doc("quickstart")}">Get started</a><a class="btn tonal" href="/downloads">Downloads</a><a class="btn outlined" href="https://github.com/${escapeHtml(rt.repo)}">GitHub</a></div>
+<p class="hero-actions"><a class="btn" href="${doc("quickstart")}">Read the quickstart</a> <a href="/downloads">Downloads</a> <a href="https://github.com/${escapeHtml(rt.repo)}">Source on GitHub</a></p>
 </section>
-<section aria-labelledby="runtime-toolkit"><h2 id="runtime-toolkit">One executable for the whole workflow</h2>
-<p>Use each tool on its own in an existing Node.js project, or build the whole application on Bun OS.</p>
-<div class="card-group">
-<div class="card"><p class="card-title"><a href="${doc("runtime/index")}">Runtime</a></p><p class="muted">Run JavaScript, TypeScript and JSX on JavaScriptCore, with Node.js and Web APIs.</p><pre><code>bun run index.tsx</code></pre></div>
-<div class="card"><p class="card-title"><a href="${doc("pm/cli/install")}">Package manager</a></p><p class="muted">Install npm packages, manage workspaces and keep a text lockfile.</p><pre><code>bun install</code></pre></div>
-<div class="card"><p class="card-title"><a href="${doc("test/index")}">Test runner</a></p><p class="muted">Jest-compatible tests with mocks, snapshots and watch mode.</p><pre><code>bun test</code></pre></div>
-<div class="card"><p class="card-title"><a href="${doc("bundler/index")}">Bundler</a></p><p class="muted">Bundle JavaScript, TypeScript, JSX and CSS for browsers or servers.</p><pre><code>bun build ./app.tsx</code></pre></div>
-</div></section>
 ${
-  modules.length
-    ? `<section aria-labelledby="native-modules"><h2 id="native-modules">Built-in modules</h2>
-<p>Bun OS keeps Bun's module names and adds these entries to the built-in module registry. Each documentation page lists its platform support.</p>
-<ul class="chips">${moduleList}</ul></section>`
+  moduleRows
+    ? `<section aria-labelledby="native-modules"><h2 id="native-modules">What each module does</h2>
+<p>Each page lists the platforms the module supports.</p>
+<dl class="rows">${moduleRows}</dl></section>`
     : ""
 }
+<section aria-labelledby="runtime-toolkit"><h2 id="runtime-toolkit">The tools Bun already has</h2>
+<p>Use each one on its own in an existing Node.js project, or all of them together.</p>
+<dl class="rows">
+<div><dt><a href="${doc("runtime/index")}"><code>bun run index.tsx</code></a></dt><dd>Run JavaScript, TypeScript and JSX on JavaScriptCore, with Node.js and Web APIs.</dd></div>
+<div><dt><a href="${doc("pm/cli/install")}"><code>bun install</code></a></dt><dd>Install npm packages, manage workspaces and keep a text lockfile.</dd></div>
+<div><dt><a href="${doc("test/index")}"><code>bun test</code></a></dt><dd>Run Jest-compatible tests with mocks, snapshots and watch mode.</dd></div>
+<div><dt><a href="${doc("bundler/index")}"><code>bun build ./app.tsx</code></a></dt><dd>Bundle JavaScript, TypeScript, JSX and CSS for browsers or servers.</dd></div>
+</dl></section>
 <section aria-labelledby="bun-video"><h2 id="bun-video">Bun.Video</h2>
 <p>Read media metadata, extract frames and create thumbnails in TypeScript. Native Rust decoding feeds the same resize, crop and encode pipeline as <code>Bun.Image</code>.</p>
 <pre tabindex="0"><code class="language-typescript">const video = new Bun.Video("clip.mp4");
 const metadata = await video.metadata();
 await video.frame(1).resize(320, 180).webp().write("preview.webp");</code></pre>
-<p><a href="${doc("runtime/video")}">Bun.Video reference</a> · <a href="${doc("runtime/image")}">Bun.Image transforms</a></p>
+<p>Read the <a href="${doc("runtime/video")}">Bun.Video reference</a> and the <a href="${doc("runtime/image")}">Bun.Image transforms</a>.</p>
 </section>
 ${measured}
 <section aria-labelledby="open-source"><h2 id="open-source">Open source</h2>
 <p>Bun OS is developed by Aphrody Labs at ${link(rt.repo, `https://github.com/${rt.repo}`)} and includes code from ${link(rt.upstream.name, rt.upstream.url)} under its original licences. Packages are published under the <code>@aphrody</code> npm scope.</p>
-<p><a href="/release-notes">Release notes</a> · <a href="/benchmarks">Benchmarks</a> · <a href="/runtime">Source inventory</a></p>
+<p>See the <a href="/release-notes">release notes</a>, the <a href="/benchmarks">benchmarks</a> and the <a href="/runtime">source inventory</a>.</p>
 </section>`;
 }
 

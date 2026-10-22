@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { renderPerfTable, renderRuntimeHero } from "./build";
+import { renderPerfTable, renderRuntimeHero, rowDescription } from "./build";
 import type { SiteData } from "./collect";
 import { runtimePage } from "./pages";
 import { releaseReadme } from "../../../scripts/aphrody/release-surfaces";
@@ -70,7 +70,7 @@ test("public hero and README preserve upstream authors and licences", () => {
   }
   expect(hero).toContain("includes code from");
   expect(hero).toContain("https://github.com/oven-sh/bun");
-  expect(hero).toContain("<code>bun:native-only</code>");
+  expect(hero).toContain('<span class="ns">bun:</span>native-only');
   expect(readme).toContain("includes code derived from oven-sh/Bun");
   expect(readme).toContain("Bun retains its upstream authors, notices");
   expect(readme).toContain("JavaScriptCore");
@@ -129,4 +129,20 @@ test("canonical runtime fiche replaces stale release recipes in the actual gener
     expect(String(text)).not.toContain("test/js/first_party");
     expect(String(text)).toContain("Historical receipts retain their recorded runtime");
   }
+});
+
+test("the home page leads with the modules this Bun adds, each row described by its docs page", () => {
+  const docs = new Map([["runtime/python", { description: "Run Python files and embed CPython with bun:python" }]]);
+  const hero = renderRuntimeHero(
+    { ...data, runtime: { ...data.runtime!, modules: ["bun:sqlite", "bun:python", "bun:rio"] } },
+    { src: ".", out: ".", origin: "https://bun.aphrody.app", commit: source, repo: "aphrody-labs/bun", releases: [] },
+    { docs },
+  );
+  const registry = /<ul class="registry"[^>]*>([\s\S]*?)<\/ul>/.exec(hero)![1]!;
+  expect(registry).toContain('<a href="/docs/runtime/python"><span class="ns">bun:</span>python</a>');
+  expect(registry).toContain('<li><span class="ns">bun:</span>rio</li>');
+  expect(registry).not.toContain("sqlite");
+  expect(hero.indexOf("<h1>")).toBeLessThan(hero.indexOf('class="registry"'));
+  expect(hero).toContain("<dd>Run Python files and embed CPython.</dd>");
+  expect(rowDescription("bun:linux", "Call Linux interfaces with the bun:linux module")).toBe("Call Linux interfaces.");
 });

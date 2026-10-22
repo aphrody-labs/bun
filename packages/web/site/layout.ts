@@ -75,7 +75,7 @@ ${s.description ? `<meta property="og:description" content="${escapeHtml(s.descr
 </div></header>
 <div class="layout${s.sidebar ? " with-sidebar" : ""}${toc ? " with-toc" : ""}">
 ${s.sidebar ? `<aside class="sidebar" aria-label="Documentation"><button class="side-btn" type="button" aria-expanded="false">Browse documentation</button><div class="side-body">${s.sidebar}</div></aside>` : ""}
-<main id="content">${s.body}</main>
+<main id="content" tabindex="-1">${s.body}</main>
 ${toc}
 </div>
 <footer class="foot"><div>
@@ -91,6 +91,18 @@ export const CSS = `:root{color-scheme:light dark;--bg:var(--md-sys-color-surfac
 body{margin:0;background:var(--bg);color:var(--on-bg);font:16px/1.65 var(--font);-webkit-font-smoothing:antialiased}
 a{color:var(--primary)}a:hover{text-decoration-thickness:2px}
 :focus-visible{outline:3px solid var(--primary);outline-offset:2px}
+.hero.registry-hero{display:flex;flex-direction:column;align-items:flex-start;gap:1.25rem;text-align:left;padding:3rem 0 2.5rem}
+.registry-hero .registry{order:-1;list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:.05em .55em;font:500 clamp(1.375rem,2.7vw,2.375rem)/1.2 var(--mono);letter-spacing:-.02em;max-width:68rem}
+.registry-hero .registry a{color:var(--on-bg);text-decoration:none;border-radius:6px}
+.registry-hero .registry a:hover{text-decoration:underline;text-decoration-thickness:.05em;text-underline-offset:.14em}
+.registry-hero .ns{color:var(--on-sv)}
+.hero.registry-hero h1{font-size:clamp(1.25rem,2.2vw,1.625rem);line-height:1.35;font-weight:500;max-width:40ch;margin:0;text-wrap:balance}
+.hero.registry-hero .lead,.hero.registry-hero .cmds{margin:0;max-width:44rem}
+.hero-actions{display:flex;flex-wrap:wrap;align-items:center;gap:.75rem 1.5rem;margin:0}
+.rows{margin:0}
+.rows>div{display:grid;grid-template-columns:minmax(11rem,15rem) 1fr;gap:.25rem 2rem;padding:.75rem 0;border-top:1px solid var(--outline-v)}
+.rows dt,.rows dd{margin:0}.rows dd{color:var(--on-sv)}
+@media (max-width:640px){.rows>div{grid-template-columns:1fr}}
 .skip{position:absolute;left:1rem;top:-4rem;z-index:20;padding:.75rem 1rem;border-radius:var(--radius);background:var(--primary);color:var(--on-primary);font-weight:600;text-decoration:none}.skip:focus{top:.5rem}
 .top{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--outline-v)}
 .bar{display:flex;align-items:center;gap:1rem;max-width:1440px;margin:0 auto;padding:.5rem 1rem;min-height:60px}
@@ -188,8 +200,9 @@ figure.frame{margin:1rem 0;padding:.5rem;border:1px solid var(--outline-v);borde
 .pet{width:96px;height:104px;margin:0 auto 1rem;background:url(/pet.webp) 0 0/768px 1144px no-repeat}
 .cmds{display:grid;gap:.75rem;max-width:40rem;margin:1rem 0}.hero .cmds{margin:0 auto}
 .cmd{display:grid;grid-template-columns:auto 1fr;gap:.25rem 1rem;align-items:center;text-align:left;border:1px solid var(--outline-v);border-radius:var(--radius);background:var(--sc);padding:.75rem 1rem;color:inherit;font:inherit;cursor:pointer}
-.cmd:hover{background:var(--sc-high)}.cmd span{font-size:.75rem;color:var(--on-sv)}.cmd code{background:none;padding:0;word-break:break-all}
-.cmd.ok span::after{content:" · copied";color:var(--primary)}
+.cmd:hover{background:var(--sc-high)}.cmd span{font-size:.75rem;color:var(--on-sv)}.cmd code{background:none;padding:0;overflow-wrap:anywhere;min-width:0}
+@media (max-width:640px){.cmd{grid-template-columns:1fr}}
+.cmd.ok span::after{content:", copied";color:var(--primary)}
 .btns{display:flex;gap:.75rem;justify-content:center;flex-wrap:wrap;margin:2rem 0}
 .btn{display:inline-flex;align-items:center;height:40px;padding:0 24px;border-radius:20px;text-decoration:none;font-weight:500;font-size:.875rem;background:var(--primary);color:var(--on-primary)}
 .btn.tonal{background:var(--primary-container);color:var(--on-primary-container)}.btn.outlined{background:none;border:1px solid var(--outline);color:var(--primary)}

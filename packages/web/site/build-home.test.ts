@@ -165,7 +165,7 @@ test("every page shares one shell; the home, release notes and downloads use onl
   const home = read("index.html");
   // Keyboard users skip the header, tabs and documentation sidebar (WCAG 2.4.1).
   expect(home).toContain('<a class="skip" href="#content">Skip to content</a>');
-  expect(home).toContain('<main id="content">');
+  expect(home).toContain('<main id="content" tabindex="-1">');
   // The M3 scheme ships in site.css: no page depends on cdn.aphrody.com for its colours.
   expect(home).not.toContain("cdn.aphrody.com");
   expect(read("assets/site.css")).toStartWith(":root{color-scheme:light dark;--md-sys-color-background:#fef9eb;");
@@ -181,11 +181,13 @@ test("every page shares one shell; the home, release notes and downloads use onl
   ])
     expect(header(read(path))).toBe(header(home));
   expect(header(home)).toContain('class="menu-btn"');
-  expect(home).toContain("<h1>Bun OS</h1>");
+  expect(home).toContain(
+    "<h1>Bun, with native modules for Windows, Linux, Python, .NET, media and source graphs built in.</h1>",
+  );
   expect(home).toContain('href="/release-notes#bun-v1.4.5">Bun OS 1.4.5</a>');
   expect(home).toContain("Linux x64, Windows x64");
-  expect(home).toContain('<a href="/docs/runtime/python"><code>bun:python</code></a>');
-  expect(home).toContain("<li><code>bun:windows</code></li>");
+  expect(home).toContain('<a href="/docs/runtime/python"><span class="ns">bun:</span>python</a>');
+  expect(home).toContain('<li><span class="ns">bun:</span>windows</li>');
   expect(home).not.toContain("bun:sqlite");
   expect(home).toContain("Measured builds");
   expect(home).toContain('<td class="num">161</td>');

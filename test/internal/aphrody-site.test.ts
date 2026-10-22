@@ -674,7 +674,9 @@ describe("runtime site", () => {
     const index = read("index.html");
     expect(index).toContain("<title>Aphrody Bun</title>");
     expect(index).toContain('<span class="mark">Bun</span>');
-    expect(index).toContain("<h1>Bun OS</h1>");
+    expect(index).toContain(
+      "<h1>Bun, with native modules for Windows, Linux, Python, .NET, media and source graphs built in.</h1>",
+    );
     expect(index).toContain("curl -fsSL https://bun.aphrody.test/install | bash");
     expect(index).toContain('<a href="/runtime">Source</a>');
     expect(index).toContain('<meta property="og:url" content="https://bun.aphrody.test/">');
