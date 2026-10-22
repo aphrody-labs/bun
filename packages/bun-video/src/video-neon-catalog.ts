@@ -249,6 +249,36 @@ export class NeonVideoCatalog {
     return rows.map(row => ({ ...row, metadata: JSON.parse(String(row.metadata)) }) as unknown as VideoArtifact);
   }
 
+  async recordFrame(input: {
+    jobId: string;
+    frame: number;
+    artifactId: string;
+    timestampMs?: number;
+  }): Promise<string> {
+    const owner = await this.#sql.unsafe<Row[]>('SELECT "jobId" FROM bun_video.artifacts WHERE "id"=$1', [
+      input.artifactId,
+    ]);
+    if (owner[0]?.jobId !== input.jobId) throw new TypeError("Frame artifact must belong to the same job");
+    const id = crypto.randomUUID();
+    await this.#sql.unsafe(
+      'INSERT INTO bun_video.frames ("id","jobId","frame","artifactId","timestampMs") VALUES ($1,$2,$3,$4,$5)',
+      [id, input.jobId, input.frame, input.artifactId, input.timestampMs ?? null],
+    );
+    return id;
+  }
+
+  async listFrames(jobId: string): Promise<{ frame: number; artifactId: string; timestampMs: number | null }[]> {
+    const rows = await this.#sql.unsafe<Row[]>(
+      'SELECT "frame","artifactId","timestampMs" FROM bun_video.frames WHERE "jobId"=$1 ORDER BY "frame"',
+      [jobId],
+    );
+    return rows.map(row => ({
+      frame: Number(row.frame),
+      artifactId: String(row.artifactId),
+      timestampMs: row.timestampMs === null ? null : Number(row.timestampMs),
+    }));
+  }
+
   async recordQualification(input: {
     sourceId?: string;
     providerId?: string;

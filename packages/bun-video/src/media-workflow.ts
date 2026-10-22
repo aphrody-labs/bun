@@ -15,6 +15,13 @@ export type MediaJob =
     }
   | { readonly action: "inspect"; readonly source: string; readonly signal?: AbortSignal }
   | {
+      /** Timestamped frames and a transcript for an agent; see `docs/watch.md`. */
+      readonly action: "watch";
+      readonly source: string;
+      readonly options?: Omit<import("./watch").WatchOptions, "source" | "signal">;
+      readonly signal?: AbortSignal;
+    }
+  | {
       readonly action: "extract-frame";
       readonly input: string;
       readonly output: string;
@@ -213,6 +220,14 @@ export async function executeMediaJob(job: MediaJob) {
     if (!(await Bun.file(input).exists())) throw new Error("Input media file does not exist");
     const video = openNativeVideo(input);
     return { action: job.action, input, metadata: await video.metadata() } as const;
+  }
+
+  if (job.action === "watch") {
+    const { watch } = await import("./watch");
+    return {
+      action: job.action,
+      report: await watch({ ...job.options, source: job.source, signal: job.signal }),
+    } as const;
   }
 
   const input = localInput(job.input);

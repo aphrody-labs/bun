@@ -81,6 +81,16 @@ export class UnifiedVideoPipeline {
     const { openVideoPipeline } = await import("./pipeline");
     return openVideoPipeline(options);
   }
+  /** Watch a video (frames and transcript) and record the evidence as a catalog job. */
+  async watch(options: import("./watch").WatchOptions) {
+    const { watchAndRecord } = await import("./video-watch");
+    return watchAndRecord(this.catalog, options);
+  }
+  /** Frames and transcript of an earlier watch job, read back from the catalog. */
+  async watchEvidence(jobId: string) {
+    const { watchEvidence } = await import("./video-watch");
+    return watchEvidence(this.catalog, jobId);
+  }
   media(job: import("./media-workflow").MediaJob) {
     return import("./media-workflow").then(({ executeMediaJob }) => executeMediaJob(job));
   }

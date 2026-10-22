@@ -236,6 +236,13 @@ export class VideoCatalog {
       .run(id, input.jobId, input.frame, input.artifactId, input.timestampMs ?? null);
     return id;
   }
+  listFrames(jobId: string): { frame: number; artifactId: string; timestampMs: number | null }[] {
+    return this.db
+      .query<{ frame: number; artifactId: string; timestampMs: number | null }, [string]>(
+        "SELECT frame,artifactId,timestampMs FROM frames WHERE jobId=? ORDER BY frame",
+      )
+      .all(jobId);
+  }
   recordQualification(input: {
     sourceId?: string;
     providerId?: string;

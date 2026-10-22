@@ -50,6 +50,18 @@ domain (not `r2.dev`), and the source hash covers the whole file. Timecodes are 
 frame-exact presentation times. The hand-off to Shenron's intake is unqualified here: validate
 `delivery.json` against its current `episode-video-delivery.ts` before publishing.
 
+## Unified pipeline and catalog
+
+`UnifiedVideoPipeline.watch(options)` runs watch and records it in the catalog (SQLite or Neon) as an
+`engine: "watch"` job: a source (a clean public URL, or the local media path; signed or credentialed URLs are
+never stored), one `frame` artifact per frame with its sha256 and a `frames` row with the timestamp, a
+`transcript` artifact, and the job result (counts, warnings, errors). A run with no frames and no transcript is
+recorded as `failed`. `pipeline.watchEvidence(jobId)` reads the ordered frames and the transcript back, so
+later stages (a Remotion or HyperFrames composition, dataset export, a data site) work from the catalog
+without rerunning the decode. `executeMediaJob({ action: "watch", source, options })` exposes the same run
+beside the FilmCraft actions. `NeonVideoCatalog` gained `recordFrame` and `listFrames`, matching SQLite;
+that Neon path is type-checked but not exercised against a live database here.
+
 ## Performance
 
 Frames are decoded in batches through one `Video.frames()` session per chunk instead of a seek per frame
