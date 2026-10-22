@@ -60,8 +60,6 @@ ${s.description ? `<meta property="og:description" content="${escapeHtml(s.descr
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="manifest" href="/site.webmanifest">
-<link rel="stylesheet" href="${BRAND.tokensCss}">
-<link rel="stylesheet" href="${BRAND.fontsCss}">
 <link rel="stylesheet" href="/assets/site.css">
 <script src="/assets/site.js" defer></script>
 </head><body class="${s.bodyClass ?? ""}">

@@ -166,6 +166,9 @@ test("every page shares one shell; the home, release notes and downloads use onl
   // Keyboard users skip the header, tabs and documentation sidebar (WCAG 2.4.1).
   expect(home).toContain('<a class="skip" href="#content">Skip to content</a>');
   expect(home).toContain('<main id="content">');
+  // The M3 scheme ships in site.css: no page depends on cdn.aphrody.com for its colours.
+  expect(home).not.toContain("cdn.aphrody.com");
+  expect(read("assets/site.css")).toStartWith(":root{color-scheme:light dark;--md-sys-color-background:#fef9eb;");
   const header = (html: string) =>
     /<header class="top">[\s\S]*?<\/header>/.exec(html)![0].replace(/ aria-current="page"/g, "");
   for (const path of [

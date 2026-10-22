@@ -19,6 +19,7 @@ import { dirname, join, relative, resolve } from "node:path";
 import { SITE_ROOT_FILES } from "./brand.ts";
 import type { SiteData } from "./collect.ts";
 import { HIGHLIGHT_CSS, highlightHtml } from "./highlight.ts";
+import { M3_SCHEME_CSS } from "./m3-scheme.ts";
 import { CSS, JS, PUBLIC_WEBMCP_JS, shell, type NavLink, type Shell } from "./layout.ts";
 import { APHRODY_DOMAINS } from "../src/domains.ts";
 import {
@@ -853,7 +854,7 @@ ${runtimeInstallCommands(o.origin)}
       .map(u => `<url><loc>${escapeHtml(o.origin + u)}</loc><lastmod>${now.slice(0, 10)}</lastmod></url>`)
       .join("\n")}\n</urlset>\n`,
   );
-  write(join(o.out, "assets", "site.css"), CSS + HIGHLIGHT_CSS);
+  write(join(o.out, "assets", "site.css"), M3_SCHEME_CSS + CSS + HIGHLIGHT_CSS);
   write(join(o.out, "assets", "site.js"), JS + PUBLIC_WEBMCP_JS);
   write(
     join(o.out, "site.json"),

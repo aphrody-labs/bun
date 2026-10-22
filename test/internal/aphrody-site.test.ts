@@ -337,12 +337,13 @@ describe("site build helpers", () => {
       '<link rel="icon" href="/favicon.ico" sizes="any">',
       '<link rel="apple-touch-icon" href="/apple-touch-icon.png">',
       '<link rel="manifest" href="/site.webmanifest">',
-      `<link rel="stylesheet" href="${BRAND.tokensCss}">`,
-      `<link rel="stylesheet" href="${BRAND.fontsCss}">`,
       `<meta name="theme-color" media="(prefers-color-scheme: dark)" content="${BRAND.themeColor.dark}">`,
     ])
       expect(head).toContain(tag);
     expect(read("assets/site.css")).toContain("--bg:var(--md-sys-color-surface)");
+    // The colour scheme ships in site.css (m3-scheme.ts), not as a cdn.aphrody.com stylesheet.
+    expect(head).not.toContain(BRAND.tokensCss);
+    expect(read("assets/site.css")).toContain("--md-sys-color-surface:#fef9eb");
     for (const p of [
       "index.html",
       "404.html",
