@@ -340,12 +340,13 @@ const APK_PACKAGES = [
   "file",
 ];
 const BREW_PACKAGES = ["cmake", "ccache", "nasm", "pkg-config", "git"];
+// NASM assembles only x64 sources (scripts/build/compile.ts), so arm64 hosts do not need it.
 const WINGET_PACKAGES: { id: string; exe: string; dirs: string[] }[] = [
   { id: "Git.Git", exe: "git", dirs: ["C:\\Program Files\\Git\\cmd"] },
   { id: "Kitware.CMake", exe: "cmake", dirs: ["C:\\Program Files\\CMake\\bin"] },
   { id: "NASM.NASM", exe: "nasm", dirs: ["C:\\Program Files\\NASM"] },
   { id: "Microsoft.PowerShell", exe: "pwsh", dirs: ["C:\\Program Files\\PowerShell\\7"] },
-];
+].filter(p => !(arm64 && p.id === "NASM.NASM"));
 
 export type WindowsProtocPin = {
   version: string;
@@ -458,7 +459,12 @@ function systemStep(): Step {
         return missing.length === 0 ? WINGET_PACKAGES.map(p => p.exe).join(", ") : undefined;
       },
       async run() {
-        if (!Bun.which("winget")) throw new Error("winget is missing: install App Installer from the Microsoft Store");
+        if (!Bun.which("winget")) {
+          const missing = WINGET_PACKAGES.filter(p => !which(p.exe, p.dirs)).map(p => p.exe);
+          throw new Error(
+            `winget is missing (needed for ${missing.join(", ")}): install App Installer from the Microsoft Store`,
+          );
+        }
         for (const p of WINGET_PACKAGES) {
           if (which(p.exe, p.dirs)) continue;
           await exec([
@@ -555,7 +561,10 @@ function llvmStep(pins: Pins): Step {
     if (process.env.BUN_TOOLCHAIN_LLVM)
       return [join(process.env.BUN_TOOLCHAIN_LLVM, "bin", windows ? "clang-cl.exe" : "clang")];
     if (windows) return [join(winDir, "bin", "clang-cl.exe"), "C:\\Program Files\\LLVM\\bin\\clang-cl.exe"];
-    if (darwin) return [`${capture(["brew", "--prefix"]) ?? "/opt/homebrew"}/opt/llvm@${major}/bin/clang`];
+    if (darwin) {
+      const prefix = capture(["brew", "--prefix"]) ?? "/opt/homebrew";
+      return [`${prefix}/opt/llvm@${major}/bin/clang`, `${prefix}/opt/llvm/bin/clang`];
+    }
     return [
       `/usr/lib/llvm-${major}/bin/clang`,
       `/usr/lib/llvm${major}/bin/clang`,
@@ -620,7 +629,17 @@ function llvmStep(pins: Pins): Step {
         return;
       }
       if (darwin) {
-        await exec(["brew", "install", `llvm@${major}`]);
+        // Homebrew keeps the newest major as the unversioned `llvm` until a newer one ships.
+        const versioned = capture(["brew", "info", "--json=v2", `llvm@${major}`]) !== undefined;
+        if (!versioned) {
+          const info = JSON.parse(capture(["brew", "info", "--json=v2", "llvm"]) ?? "{}") as {
+            formulae?: { versions?: { stable?: string } }[];
+          };
+          const stable = info.formulae?.[0]?.versions?.stable;
+          if (!inSeries(stable))
+            throw new Error(`Homebrew has no llvm@${major} and its llvm is ${stable ?? "unknown"}`);
+        }
+        await exec(["brew", "install", versioned ? `llvm@${major}` : "llvm"]);
         return;
       }
       if (alpine) {
@@ -1090,9 +1109,9 @@ export async function collectDependencies(checkout: string): Promise<Dependency[
     });
   }
 
-  // Cargo git dependencies outside the root workspace (its Cargo.lock has none).
+  // Cargo git dependencies: the flat root workspace pins forks in [patch.crates-io]; packages keep their own.
   const gitDeps = new Map<string, Dependency>();
-  for (const manifest of await cargoDependencyManifests(checkout)) {
+  for (const manifest of ["Cargo.toml", ...(await cargoDependencyManifests(checkout))]) {
     const text = readFileSync(join(checkout, manifest), "utf8");
     for (const line of text.split("\n")) {
       if (line.trimStart().startsWith("#")) continue;

@@ -141,6 +141,8 @@ test("dry run plans every step and changes nothing", async () => {
   await using proc = Bun.spawn({
     cmd: [process.execPath, setup, "--dry-run", "--json", "--no-system", "--no-update", "--packages"],
     cwd: root,
+    // A host protoc that is not the pinned one must not decide the plan.
+    env: { ...process.env, PROTOC: undefined, PROTOC_INCLUDE: undefined },
     stdout: "pipe",
     stderr: "pipe",
   });
