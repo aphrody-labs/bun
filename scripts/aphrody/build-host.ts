@@ -65,8 +65,8 @@ export const releaseTargets: ReleaseTarget[] = [
     runner: "ubuntu-24.04-arm",
     container: "alpine:3.24",
   },
-  { target: "darwin-aarch64", os: "darwin", arch: "aarch64", runner: "macos-15" },
-  { target: "darwin-x64", os: "darwin", arch: "x64", runner: "macos-15-intel" },
+  { target: "darwin-aarch64", os: "darwin", arch: "aarch64", runner: "macos-15-xlarge" },
+  { target: "darwin-x64", os: "darwin", arch: "x64", runner: "macos-15-large" },
   { target: "windows-x64", os: "windows", arch: "x64", runner: "windows-2025" },
   { target: "windows-aarch64", os: "windows", arch: "aarch64", runner: "windows-11-arm" },
 ].map(t => {
