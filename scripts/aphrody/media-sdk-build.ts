@@ -182,6 +182,9 @@ export function mediaBuildPlan(input: MediaBuildInput) {
             "-std=c++17",
             "-O2",
             "-fPIC",
+            // Linked into a Rust binary without libstdc++: no unwinding or guard symbols, as in Bun's own build.
+            "-fno-exceptions",
+            "-fno-threadsafe-statics",
             "-ffunction-sections",
             "-fdata-sections",
             "-D_GNU_SOURCE",
