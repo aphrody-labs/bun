@@ -87,11 +87,11 @@
   },
   {
     "id": "R-release",
-    "goal": "Passe finale : musl, tests Linux, release aphrody-v*, rien publié avant ; inclut native-sdk-registry pack (VPS), publish et record (reste de N-native-sdk)",
+    "goal": "Passe finale : musl, tests Linux, release aphrody-v*, rien publié avant ; inclut native-sdk-registry pack (VPS), publish et record (reste de N-native-sdk). Bloqué 2026-10-22 (run 39782826361) : native-full linux-x64/aarch64 exigent BUN_MEDIA_SDK_INPUTS (SDK ffmpeg épinglé), darwin-aarch64 manque de RAM (3/6 GiB), darwin-x64 et windows-aarch64 échouent au setup natif, musl x64/aarch64 sortent en 1",
     "paths": [
       "scripts/aphrody/release"
     ],
-    "status": "todo"
+    "status": "blocked"
   },
   {
     "id": "V-remotion",
