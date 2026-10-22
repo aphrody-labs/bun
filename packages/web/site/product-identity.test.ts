@@ -63,7 +63,8 @@ test("public hero and README preserve upstream authors and licences", () => {
   const readme = releaseReadme("1.4.4", source, "aphrody-labs/bun", ["bun:native-only"]);
   for (const text of [hero, readme]) {
     expect(text).toContain("Bun OS");
-    expect(text).not.toMatch(/\bfork\b/i);
+    // Visible wording only: link targets keep existing page slugs such as /docs/runtime/fork-features.
+    expect(text.replace(/\]\([^)]*\)|\b(?:href|src)="[^"]*"/g, "")).not.toMatch(/\bfork\b/i);
     expect(text).not.toContain("stable release is pending");
     expect(text).not.toContain("stable release remains pending");
   }

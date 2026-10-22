@@ -7,6 +7,7 @@ import { generate } from "../../packages/bun-agent-plugin/src/generate.ts";
 import { moduleNames } from "./fork-capabilities.ts";
 import { buildReleaseGraph } from "./release-graph.ts";
 import { completeReleaseKnowledge } from "./release-knowledge.ts";
+import { tar } from "./release-package.ts";
 import { writeGraphView } from "./site-mirror/graph-view.ts";
 import {
   build,
@@ -218,7 +219,7 @@ export async function regenerate(
     path => tree.has(path) || [...tree.files.keys()].some(file => file.startsWith(`${path}/`)),
   );
   run(["git", "archive", "--format=tar", `--output=${archive}`, tree.sha, "--", ...paths]);
-  run(["tar", "-xf", archive, "-C", snapshot]);
+  run([tar, "-xf", archive, "-C", snapshot]);
   using database = new Database(join(out, "monorepo.sqlite"), { readonly: true });
   const sourceText = (path: string) =>
     database.query<{ content: string }, [string]>("SELECT content FROM release_files WHERE path=?").get(path)!.content;
