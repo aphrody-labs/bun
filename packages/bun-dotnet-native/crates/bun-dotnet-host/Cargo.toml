@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 [package]
 name = "bun-dotnet-host"
-version = "1.4.6"
+version = "1.4.7"
 edition = "2024"
 license = "MIT"
 repository = "https://github.com/aphrody-labs/bun"

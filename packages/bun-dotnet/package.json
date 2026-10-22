@@ -1,6 +1,6 @@
 {
   "name": "@aphrody/bun-dotnet",
-  "version": "1.4.6",
+  "version": "1.4.7",
   "description": "Optional Microsoft node-api-dotnet payload and compatibility facade for Bun's canonical bun:dotnet SDK",
   "license": "MIT",
   "type": "module",

@@ -1,7 +1,7 @@
 [package]
 name = "bun_browser_ssrf"
 description = "Shared SSRF deny-set and private-network opt-in for BunBrowser network transports and renderer."
-version = "1.4.6"
+version = "1.4.7"
 edition = "2021"
 license = "Apache-2.0"
 repository = "https://github.com/aphrody-labs/bun-os"

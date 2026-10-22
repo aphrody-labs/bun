@@ -1,6 +1,6 @@
 [package]
 name = "bun-webview-core"
-version = "1.4.6"
+version = "1.4.7"
 edition = "2024"
 rust-version = "1.93"
 license = "MIT"

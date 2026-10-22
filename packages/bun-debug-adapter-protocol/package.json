@@ -1,6 +1,6 @@
 {
   "name": "@aphrody/bun-debug-adapter-protocol",
-  "version": "1.4.6",
+  "version": "1.4.7",
   "type": "module",
   "dependencies": {
     "semver": "^7.5.4",

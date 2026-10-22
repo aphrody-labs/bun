@@ -1,6 +1,6 @@
 {
   "name": "@aphrody/bun-cloudflare",
-  "version": "1.4.6",
+  "version": "1.4.7",
   "description": "Cloudflare developer platform on the Aphrody Bun runtime: official Cloudflare packages, local Workers with bindings, REST API and Wrangler.",
   "license": "Apache-2.0",
   "repository": "https://github.com/aphrody-labs/bun",

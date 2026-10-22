@@ -1,6 +1,6 @@
 {
   "name": "bun-agent-plugin",
-  "version": "1.4.6",
+  "version": "1.4.7",
   "description": "Bun OS agent plugin for Claude Code, Codex, Antigravity, Gemini CLI and OpenCode: MCP server, hooks and skills",
   "type": "module",
   "license": "MIT",

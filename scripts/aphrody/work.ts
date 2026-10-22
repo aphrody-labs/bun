@@ -58,6 +58,9 @@ function cratePackage(root: string, dir: string): string | undefined {
   return /^\s*name\s*=\s*"([^"]+)"/m.exec(readFileSync(f, "utf8"))?.[1];
 }
 
+// Sous Windows, cargo n'a l'environnement MSVC (LIB, INCLUDE) qu'au travers de bun msvc.
+const cargo = process.platform === "win32" ? ["bun", "msvc", "exec", "--toolset", "14.44", "--", "cargo"] : ["cargo"];
+
 /** Commandes de vérification pour un chemin ; vide si rien d'automatisable sans build natif. */
 export function gateFor(root: string, path: string): string[][] {
   const p = path.replaceAll("\\", "/");
@@ -65,7 +68,7 @@ export function gateFor(root: string, path: string): string[][] {
   const crate = /^src\/([^/]+)\//.exec(p)?.[1];
   if (crate && /\.(rs|toml)$/.test(p)) {
     const pkg = cratePackage(root, `src/${crate}`);
-    if (pkg) gates.push(["cargo", "check", "-p", pkg, "--all-targets"]);
+    if (pkg) gates.push([...cargo, "check", "-p", pkg, "--all-targets"]);
   }
   const script = /^scripts\/aphrody\/([^/]+)\.ts$/.exec(p)?.[1];
   if (script) {

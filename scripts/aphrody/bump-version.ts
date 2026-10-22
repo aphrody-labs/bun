@@ -36,6 +36,10 @@ for (const f of files) {
         if (m && (section === "package" || section === "workspace.package") && lines.has(m[2]!)) {
           return l.replace(m[0], m[1] + target + m[3]);
         }
+        // An exact requirement on a workspace crate of the release line (`version = "=1.4.6"`) moves with it.
+        if (m && section.startsWith("dependencies.") && m[2]!.startsWith("=") && lines.has(m[2]!.slice(1))) {
+          return l.replace(m[0], m[1] + "=" + target + m[3]);
+        }
         return l;
       })
       .join("\n");

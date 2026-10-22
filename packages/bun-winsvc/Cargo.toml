@@ -1,6 +1,6 @@
 [package]
 name = "bun-winsvc"
-version = "1.4.6"
+version = "1.4.7"
 edition = "2021"
 publish = false
 description = "Windows service host for the Bun fork: runs a command (bun.exe ...) as a service, restarts it and stops its process tree"

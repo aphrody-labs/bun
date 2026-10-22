@@ -1,6 +1,6 @@
 {
   "name": "@aphrody/bun-m3",
-  "version": "1.4.6",
+  "version": "1.4.7",
   "type": "module",
   "license": "Apache-2.0",
   "description": "Compatibility entrypoint for the canonical @aphrody/web site API.",

@@ -39,7 +39,8 @@ test("gateFor maps paths to the right checks and dedupes", () => {
     "docs/a.mdx": "",
   });
   const root = String(dir);
-  expect(gateFor(root, "src/foo/lib.rs")).toEqual([["cargo", "check", "-p", "bun_foo", "--all-targets"]]);
+  const cargo = process.platform === "win32" ? ["bun", "msvc", "exec", "--toolset", "14.44", "--", "cargo"] : ["cargo"];
+  expect(gateFor(root, "src/foo/lib.rs")).toEqual([[...cargo, "check", "-p", "bun_foo", "--all-targets"]]);
   expect(gateFor(root, "scripts/aphrody/thing.ts")).toEqual([["bun", "test", "test/internal/aphrody-thing.test.ts"]]);
   expect(gateFor(root, "scripts/aphrody/none.ts")).toEqual([]);
   expect(gateFor(root, "test/cli/x/y.test.ts")).toEqual([["bun", "bd", "test", "test/cli/x/y.test.ts"]]);

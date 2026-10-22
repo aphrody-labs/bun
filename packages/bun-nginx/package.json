@@ -1,6 +1,6 @@
 {
   "name": "@aphrody/bun-nginx",
-  "version": "1.4.6",
+  "version": "1.4.7",
   "description": "Typed SDK for Bun's native NGINX process controller",
   "type": "module",
   "license": "MIT",

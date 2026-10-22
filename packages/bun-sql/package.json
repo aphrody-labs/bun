@@ -1,6 +1,6 @@
 {
   "name": "@aphrody/bun-sql",
-  "version": "1.4.6",
+  "version": "1.4.7",
   "description": "Native Bun.SQL provider connections and official Neon and Supabase SDKs",
   "license": "MIT",
   "type": "module",

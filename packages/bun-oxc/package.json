@@ -1,6 +1,6 @@
 {
   "name": "bun-plugin-oxc",
-  "version": "1.4.6",
+  "version": "1.4.7",
   "description": "Oxc 0.153 for Bun: parser, transformer (TS, JSX, decorators, React Refresh), isolated declarations, minifier, resolver, oxlint (all rules, fixes) and oxfmt in one Node-API addon, as a Bun plugin, a typed API, oxc-parser/oxc-transform/oxc-minify drop-ins and a CLI.",
   "license": "MIT",
   "type": "module",

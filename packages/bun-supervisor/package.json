@@ -1,6 +1,6 @@
 {
   "name": "@aphrody/supervisor",
-  "version": "1.4.6",
+  "version": "1.4.7",
   "private": false,
   "description": "Cross-platform command supervision, Windows Jobs, health probes, and systemd notification, watchdog and memory budgets for Bun",
   "license": "MIT",

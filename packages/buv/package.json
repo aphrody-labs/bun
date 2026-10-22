@@ -1,6 +1,6 @@
 {
   "name": "@aphrody/buv",
-  "version": "1.4.6",
+  "version": "1.4.7",
   "private": true,
   "description": "Packaging and lifecycle tools for the native Buv JavaScript, UV and PyJS runtime.",
   "license": "Apache-2.0",

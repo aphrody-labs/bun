@@ -1,6 +1,6 @@
 {
   "name": "@aphrody/bun-chromium",
-  "version": "1.4.6",
+  "version": "1.4.7",
   "description": "Chromium CDP SDK over the existing Aphrody Bun Chromium and Chrome builtins.",
   "license": "Apache-2.0",
   "repository": "https://github.com/aphrody-labs/bun",

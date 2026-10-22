@@ -1,6 +1,6 @@
 {
   "name": "bun-llama",
-  "version": "1.4.6",
+  "version": "1.4.7",
   "description": "llama.cpp for Bun through bun:ffi: GGUF loading, tokenization and streaming CPU inference",
   "type": "module",
   "private": true,

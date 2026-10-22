@@ -1,6 +1,6 @@
 {
   "name": "@aphrody/bun-tools",
-  "version": "1.4.6",
+  "version": "1.4.7",
   "private": false,
   "description": "Native Bun tools, configurable host metadata indexing, cache publication, event streams and CONNECT proxy",
   "license": "MIT",

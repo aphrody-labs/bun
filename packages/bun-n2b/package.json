@@ -1,6 +1,6 @@
 {
   "name": "bun-plugin-n2b",
-  "version": "1.4.6",
+  "version": "1.4.7",
   "description": "Node.js to Bun migration for Bun: scan, codemods at load/build time and the n2b CLI (Aphrody fork of Bun)",
   "license": "Apache-2.0",
   "type": "module",

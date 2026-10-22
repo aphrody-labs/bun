@@ -3,7 +3,7 @@ name = "bun_browser_net"
 description = "Bun browser module bun_browser_net."
 # Transitional version avoids a same-name/same-version collision with the
 # retained source checkout while its MCP consumers still compile there.
-version = "1.4.6"
+version = "1.4.7"
 edition = "2021"
 license = "Apache-2.0"
 repository = "https://github.com/aphrody-labs/bun-os"

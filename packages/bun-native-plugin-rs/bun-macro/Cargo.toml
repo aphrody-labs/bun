@@ -3,7 +3,7 @@
 name = "bun-macro"
 description = "Proc macros for writing Bun native plugins."
 license = "MIT"
-version = "1.4.6"
+version = "1.4.7"
 edition = "2021"
 
 [lib]

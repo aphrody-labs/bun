@@ -1,6 +1,6 @@
 {
   "name": "@aphrody/bun-google",
-  "version": "1.4.6",
+  "version": "1.4.7",
   "description": "Google REST services over the Aphrody Bun runtime, with explicit credential ownership.",
   "license": "Apache-2.0",
   "repository": "https://github.com/aphrody-labs/bun",

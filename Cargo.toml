@@ -638,7 +638,7 @@ exclude = ["scripts/verify-baseline-static", "vendor"]
 "authors" = ["aphrody-dev <contact@aphrody.com>"]
 "rust-version" = "1.97"
 "license" = "MIT"
-version = "1.4.6"
+version = "1.4.7"
 edition = "2024"
 
 # ─── Release optimization ───────────────────────────────────────────────────

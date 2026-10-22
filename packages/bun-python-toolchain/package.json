@@ -1,6 +1,6 @@
 {
   "name": "@aphrody/bun-python-toolchain",
-  "version": "1.4.6",
+  "version": "1.4.7",
   "private": true,
   "description": "Demand-loaded discovery and delegation for the pinned Aphrody Python toolchain.",
   "license": "Apache-2.0",
