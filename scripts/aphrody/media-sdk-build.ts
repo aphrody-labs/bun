@@ -562,6 +562,18 @@ async function cargoNotices(input: MediaBuildInput, plan: ReturnType<typeof medi
     for await (const name of new Bun.Glob("{LICENSE*,COPYING*,NOTICE*}").scan({ cwd: base, onlyFiles: true }))
       notices.add(name);
     if (pkg.license_file) notices.add(pkg.license_file);
+    // Workspace crates (filmcraft-*) inherit the notices of their nearest owning directory in this checkout.
+    if (!pkg.source) {
+      const checkout = await realpath(input.root);
+      for (let parent = dirname(base); !notices.size; parent = dirname(parent)) {
+        const within = relative(checkout, parent);
+        if (within.startsWith("..") || isAbsolute(within)) break;
+        for await (const name of new Bun.Glob("{LICENSE*,COPYING*,NOTICE*}").scan({ cwd: parent, onlyFiles: true }))
+          notices.add(name);
+        if (notices.size) base = parent;
+        if (!within) break;
+      }
+    }
     if (!notices.size && pkg.source?.startsWith("git+https://")) {
       const revision = pkg.source.slice(pkg.source.lastIndexOf("#") + 1);
       const workspace = (await mediaSDKTool(["git", "rev-parse", "--show-toplevel"], base)).trim();
