@@ -95,6 +95,7 @@
     "docs/video-publish.md",
     "docs/video-workers.md",
     "docs/webgpu.md",
+    "docs/watch.md",
     "docs/ytdlp-bun.md",
     "docs/ytdlp-standalone.md",
     "hyperframes/LICENSE",
@@ -3773,6 +3774,8 @@
     "src/x-source.ts",
     "src/webgpu.ts",
     "src/ytdlp.ts",
+    "src/watch.ts",
+    "src/watch-cli.ts",
     "tsconfig.json",
     "umbrella-src/cli.ts",
     "yt-dlp/LICENSE",
@@ -4971,6 +4974,11 @@
       "bun": "./dist/mediabunny/src/index.ts",
       "default": "./dist/mediabunny/src/index.ts"
     },
+    "./watch": {
+      "types": "./dist/types/src/watch.d.ts",
+      "bun": "./dist/src/watch.ts",
+      "default": "./dist/src/watch.ts"
+    },
     "./ytdlp": {
       "types": "./dist/types/src/ytdlp.d.ts",
       "bun": "./dist/src/ytdlp.ts",
@@ -5346,6 +5354,7 @@
       "./secrets": "./src/secrets.ts",
       "./webgpu": "./src/webgpu.ts",
       "./mediabunny": "./mediabunny/src/index.ts",
+      "./watch": "./src/watch.ts",
       "./ytdlp": "./src/ytdlp.ts",
       "./media": "./src/media-workflow.ts",
       "./x-source": "./src/x-source.ts",

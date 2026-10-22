@@ -41,6 +41,9 @@ Preserve these boundaries when choosing operations:
   platform behavior and HEIC/AVIF output require their own qualification.
   `Bun.Video.backend` shares Image's transform backend, not a decoder selector.
 
+`bun-video watch <url-or-file>` (`@aphrody/bun-video/watch`) turns a video into timestamped JPEG frames and a
+transcript for an agent using only `Bun.Video`: no FFmpeg, Deno or Python. Read `packages/bun-video/docs/watch.md`.
+
 Use `@aphrody/bun-video` for Remotion/HyperFrames compositions, HLS/DASH/MPD,
 HAR inspection, browser capture, yt-dlp and optional FFmpeg/mpv adapters.
 Those adapters have separate media SDK, browser, Python or license requirements.

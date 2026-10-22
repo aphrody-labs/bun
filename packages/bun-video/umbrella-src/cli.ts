@@ -73,6 +73,15 @@ const commands: Record<string, Command> = {
         "Media command failed; check local files and options. Private URLs and paths are omitted.",
       ),
   },
+  watch: {
+    usage: "watch <url-or-file> [args]",
+    run: args =>
+      guarded(
+        import("../src/watch-cli"),
+        args,
+        "Watch failed; check the source and options. Private URLs and paths are omitted.",
+      ),
+  },
   x: {
     usage: "x <inspect|download> <X status URL> [output]",
     run: async args => {
