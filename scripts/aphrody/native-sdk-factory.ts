@@ -200,7 +200,9 @@ export async function qualifyZlibNativeSDK(outputDirectory: string, target: Medi
   if (archives.length !== 1 || notes.length !== 1)
     throw new Error("Cargo did not report exactly one zlib-rs staticlib and its native libraries");
   const archive = await containedFile(cargoTarget, archives[0]!);
-  const systemLibraries = zlibSystemLibraries(notes[0]!);
+  // GNU SDK consumers link libgcc statically (-static-libgcc), so std's unwinder comes from libgcc_eh, not libgcc_s.so.
+  const gnu = target.startsWith("linux-") && !target.endsWith("-musl");
+  const systemLibraries = zlibSystemLibraries(notes[0]!).map(name => (gnu && name === "-lgcc_s" ? "-lgcc_eh" : name));
   const prefix = join(outputDirectory, "prefix");
   const owner = join(checkout, zlibSDKOwner);
   const members: [string, string][] = [
