@@ -36,6 +36,20 @@ stops the others, and a rerun skips episodes whose source (path, size, mtime) an
 an interrupted catalogue resumes. `--force` redoes everything. A sibling `<name>[.fr|.ja|.en].vtt|srt|ass`
 is used as the transcript.
 
+## Shenron delivery
+
+With `--shenron-origin https://assets.example.com [--shenron-frames N]`, catalogue entries that carry
+`episodeId` (the numeric wiki ID) and `sourceUrl` also get `<out>/<id>/delivery/`: original-resolution PNGs
+at the times `watch` selected (at most 600, 240 by default), an optional `subtitles/<lang>.vtt` from the
+entry's `subtitleLanguage`, and `delivery.json` in the `ShenronEpisodeVideoDelivery` shape. Public URLs are
+`<origin>/episodes/<episodeId>/<path>`. From code, use `exportShenronAssets` then `createWatchDelivery` from
+`src/watch-shenron.ts` with your own qualified URLs.
+
+Nothing is uploaded or ingested: the export writes local files only, the origin must be a custom HTTPS
+domain (not `r2.dev`), and the source hash covers the whole file. Timecodes are the requested times, not
+frame-exact presentation times. The hand-off to Shenron's intake is unqualified here: validate
+`delivery.json` against its current `episode-video-delivery.ts` before publishing.
+
 ## Performance
 
 Frames are decoded in batches through one `Video.frames()` session per chunk instead of a seek per frame

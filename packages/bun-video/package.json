@@ -3777,6 +3777,7 @@
     "src/watch.ts",
     "src/watch-cli.ts",
     "src/watch-catalogue.ts",
+    "src/watch-shenron.ts",
     "tsconfig.json",
     "umbrella-src/cli.ts",
     "yt-dlp/LICENSE",

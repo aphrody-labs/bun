@@ -1,6 +1,7 @@
 import { parseTime, parseTimestamps, renderReport, watch, type WatchDetail, type WatchOptions } from "./watch";
 
-const usage = `bun-video watch --catalogue <videos-directory|catalogue.json> --out DIR [--concurrency N] [--force] [options below]
+const usage = `bun-video watch --catalogue <videos-directory|catalogue.json> --out DIR [--concurrency N] [--force]
+  [--shenron-origin https://assets.example [--shenron-frames N]]  (entries need episodeId and sourceUrl) [options below]
 bun-video watch <url-or-file> [--detail transcript|efficient|balanced|token-burner] [--start T --end T]
   [--timestamps T1,T2] [--max-frames N] [--resolution W] [--fps F] [--no-dedup] [--captions FILE.vtt|srt|ass]
   [--whisper groq|openai] [--no-whisper] [--sub-lang CODE] [--cookies FILE] [--out-dir DIR] [--json]`;
@@ -41,6 +42,8 @@ export async function run(argv: string[]): Promise<void> {
   const out = take(args, "--out");
   const concurrency = numeric(take(args, "--concurrency"), "--concurrency");
   const force = flag(args, "--force");
+  const shenronOrigin = take(args, "--shenron-origin");
+  const shenronFrames = numeric(take(args, "--shenron-frames"), "--shenron-frames");
   const noDedup = flag(args, "--no-dedup");
   const noWhisper = flag(args, "--no-whisper");
   const whisper = take(args, "--whisper");
@@ -69,7 +72,13 @@ export async function run(argv: string[]): Promise<void> {
     if (args.length) throw new Error(`Unexpected arguments: ${args.join(" ")}`);
     const { source: _source, outDir: _outDir, captions: _captions, ...shared } = options;
     const { loadCatalogue, watchCatalogue } = await import("./watch-catalogue");
-    const results = await watchCatalogue(await loadCatalogue(catalogue), { ...shared, out, concurrency, force });
+    const results = await watchCatalogue(await loadCatalogue(catalogue), {
+      ...shared,
+      out,
+      concurrency,
+      force,
+      shenron: shenronOrigin ? { publicAssetOrigin: shenronOrigin, maxFrames: shenronFrames } : undefined,
+    });
     console.log(JSON.stringify(results, null, 2));
     if (results.some(result => result.status === "failed")) process.exitCode = 1;
     return;

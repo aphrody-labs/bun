@@ -28,11 +28,11 @@ export interface ShenronEpisodeDeliveryOptions {
   maxFrames?: number;
 }
 
-function controlCharacters(value: string) {
+export function controlCharacters(value: string) {
   return [...value].some(character => character.codePointAt(0)! < 32 || character.codePointAt(0) === 127);
 }
 
-function publicURL(value: string): URL {
+export function publicURL(value: string): URL {
   const url = new URL(value);
   const path = decodeURIComponent(url.pathname);
   if (

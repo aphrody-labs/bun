@@ -1,6 +1,7 @@
-import { mkdir, readdir, stat } from "node:fs/promises";
+import { mkdir, readdir, rm, stat } from "node:fs/promises";
 import { cpus } from "node:os";
 import { extname, join, resolve } from "node:path";
+import { createWatchDelivery, exportShenronAssets } from "./watch-shenron";
 import { cleanWatch, watch, type WatchOptions, type WatchReport } from "./watch";
 
 export interface CatalogueEntry {
@@ -8,6 +9,11 @@ export interface CatalogueEntry {
   id: string;
   source: string;
   captions?: string;
+  /** Database wiki ID. With `sourceUrl` and `options.shenron`, a Shenron delivery is exported. */
+  episodeId?: number;
+  sourceUrl?: string;
+  /** Normalized transcript language (`fr`, `ja`) for the delivered VTT track. */
+  subtitleLanguage?: string;
 }
 
 export interface CatalogueOptions extends Omit<WatchOptions, "source" | "captions" | "outDir"> {
@@ -17,6 +23,8 @@ export interface CatalogueOptions extends Omit<WatchOptions, "source" | "caption
   concurrency?: number;
   /** Re-run entries even when a matching cached report exists. */
   force?: boolean;
+  /** Export `<out>/<id>/delivery/` (original-size PNGs, VTT, delivery.json) for entries with episodeId and sourceUrl. */
+  shenron?: { publicAssetOrigin: string; maxFrames?: number };
 }
 
 export interface CatalogueResult {
@@ -24,6 +32,7 @@ export interface CatalogueResult {
   status: "done" | "cached" | "failed";
   elapsedMs: number;
   frames?: number;
+  delivery?: boolean;
   transcriptSegments?: number;
   error?: string;
 }
@@ -62,7 +71,16 @@ async function cacheKey(entry: CatalogueEntry, options: CatalogueOptions): Promi
   }
   const { out: _out, concurrency: _concurrency, force: _force, signal: _signal, ...rest } = options;
   const hasher = new Bun.CryptoHasher("sha256");
-  hasher.update(JSON.stringify([identity, entry.captions ?? null, rest]));
+  hasher.update(
+    JSON.stringify([
+      identity,
+      entry.captions ?? null,
+      entry.episodeId ?? null,
+      entry.sourceUrl ?? null,
+      entry.subtitleLanguage ?? null,
+      rest,
+    ]),
+  );
   return hasher.digest("hex");
 }
 
@@ -80,6 +98,7 @@ async function runEntry(entry: CatalogueEntry, options: CatalogueOptions): Promi
           status: "cached",
           elapsedMs: 0,
           frames: cached.report.frames.length,
+          delivery: await Bun.file(join(dir, "delivery", "delivery.json")).exists(),
           transcriptSegments: cached.report.transcript.length,
         };
     }
@@ -89,11 +108,30 @@ async function runEntry(entry: CatalogueEntry, options: CatalogueOptions): Promi
       .catch(() => null)) as { report?: { workDir?: string } } | null;
     if (previous?.report?.workDir?.startsWith(dir)) await cleanWatch({ workDir: previous.report.workDir });
     await mkdir(dir, { recursive: true });
-    const { out: _out, concurrency: _concurrency, force: _force, ...watchOptions } = options;
+    const { out: _out, concurrency: _concurrency, force: _force, shenron: _shenron, ...watchOptions } = options;
     const report = await watch({ ...watchOptions, source: entry.source, captions: entry.captions, outDir: dir });
     if (report.errors.length && !report.frames.length && !report.transcript.length) {
       await cleanWatch(report);
       throw new Error(report.errors.join("; "));
+    }
+    let delivery = false;
+    if (options.shenron && entry.episodeId !== undefined && entry.sourceUrl) {
+      const deliveryDir = join(dir, "delivery");
+      await rm(deliveryDir, { recursive: true, force: true });
+      const assets = await exportShenronAssets(report, {
+        outDir: deliveryDir,
+        maxFrames: options.shenron.maxFrames,
+        subtitleLanguage: entry.subtitleLanguage,
+      });
+      const origin = options.shenron.publicAssetOrigin.replace(/\/$/, "");
+      const manifest = createWatchDelivery(assets, {
+        episodeId: entry.episodeId,
+        sourceUrl: entry.sourceUrl,
+        publicAssetOrigin: origin,
+        assetUrls: path => `${origin}/episodes/${entry.episodeId}/${path}`,
+      });
+      await Bun.write(join(deliveryDir, "delivery.json"), JSON.stringify(manifest, null, 2));
+      delivery = true;
     }
     await Bun.write(reportPath, JSON.stringify({ cacheKey: key, report }, null, 2));
     return {
@@ -101,6 +139,7 @@ async function runEntry(entry: CatalogueEntry, options: CatalogueOptions): Promi
       status: "done",
       elapsedMs: Math.round(performance.now() - started),
       frames: report.frames.length,
+      delivery,
       transcriptSegments: report.transcript.length,
     };
   } catch (error) {
