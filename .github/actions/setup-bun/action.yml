@@ -77,9 +77,15 @@ runs:
             curl -fsSL --retry 5 -K - "https://api.github.com/repos/$repo/$1"
         }
         # Newest first; later entries are fallbacks for hosts the newest build cannot run on.
+        # Per-commit main-runtime pre-releases can fill whole pages, so page until five stable tags.
         latest() {
-          api "releases?per_page=50" |
-            jq -r '[.[] | select((.draft | not) and (.prerelease | not) and (.tag_name | test("^(bun-v|aphrody-v)")))][:5][].tag_name'
+          local page found="" body
+          for page in 1 2 3 4 5 6 7 8 9 10; do
+            body=$(api "releases?per_page=100&page=$page")
+            found="$found $(jq -r '.[] | select((.draft | not) and (.prerelease | not) and (.tag_name | test("^(bun-v|aphrody-v)"))) | .tag_name' <<<"$body")"
+            [ "$(wc -w <<<"$found")" -ge 5 ] || [ "$(jq length <<<"$body")" -lt 100 ] && break
+          done
+          tr ' ' '\n' <<<"$found" | sed '/^$/d' | head -n 5
         }
 
         version="${BUN_VERSION:-latest}"
