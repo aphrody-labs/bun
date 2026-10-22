@@ -578,6 +578,8 @@ async function cargoNotices(input: MediaBuildInput, plan: ReturnType<typeof medi
       for await (const name of new Bun.Glob("{LICENSE*,COPYING*,NOTICE*}").scan({ cwd: base, onlyFiles: true }))
         notices.add(name);
     }
+    // A crate that ships no notice file (ffmpeg-sys-next) declares its license only in its published manifest.
+    if (!notices.size && pkg.license && pkg.source?.startsWith("registry+")) notices.add("Cargo.toml");
     if (!notices.size) throw new Error(`Native media Cargo source lacks retained notices: ${pkg.name}`);
     const hashes: Record<string, string> = {};
     for (const name of notices) {
