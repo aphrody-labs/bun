@@ -91,6 +91,11 @@ export class UnifiedVideoPipeline {
     const { watchEvidence } = await import("./video-watch");
     return watchEvidence(this.catalog, jobId);
   }
+  /** Compare a rendered video with a watch job's reference frames, natively, and record the qualification. */
+  async verifyRender(options: import("./video-verify").VerifyRenderOptions) {
+    const { verifyRenderAgainstWatch } = await import("./video-verify");
+    return verifyRenderAgainstWatch(this.catalog, options);
+  }
   media(job: import("./media-workflow").MediaJob) {
     return import("./media-workflow").then(({ executeMediaJob }) => executeMediaJob(job));
   }

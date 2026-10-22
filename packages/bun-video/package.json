@@ -3779,6 +3779,7 @@
     "src/watch-catalogue.ts",
     "src/watch-shenron.ts",
     "src/video-watch.ts",
+    "src/video-verify.ts",
     "tsconfig.json",
     "umbrella-src/cli.ts",
     "yt-dlp/LICENSE",

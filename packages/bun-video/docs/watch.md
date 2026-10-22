@@ -62,6 +62,15 @@ without rerunning the decode. `executeMediaJob({ action: "watch", source, option
 beside the FilmCraft actions. `NeonVideoCatalog` gained `recordFrame` and `listFrames`, matching SQLite;
 that Neon path is type-checked but not exercised against a live database here.
 
+### Checking a render against a reference
+
+`pipeline.verifyRender({ watchJobId, render })` decodes a rendered video (Remotion, HyperFrames or any other)
+at the timestamps of a watch job's reference frames and compares them, with native decoding only: the existing
+`verifyPixelFrames` needs an FFmpeg executable to decode. The candidate frame goes through the same resize and
+JPEG round trip as the reference, so compression noise cancels. Defaults: 8 per channel, 2% of pixels. The report
+is written next to the frames and a `passed` or `failed` qualification is recorded for the source. It is
+approximate by construction (the reference is lossy) and says so; it is not a pixel-exact, playback or DRM gate.
+
 ## Performance
 
 Frames are decoded in batches through one `Video.frames()` session per chunk instead of a seek per frame
