@@ -1,4 +1,5 @@
-import { readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import type { Dependency } from "../source.ts";
 
@@ -74,6 +75,21 @@ export function winfwSources(root: string): string[] {
   return sources;
 }
 
+/**
+ * Setup fetches the gitlink archives on Windows hosts only. A cross build from Linux or macOS fetches the same
+ * pinned archives at configure, the way it fetches the Windows sysroot: configure reads their project files.
+ */
+function crossWinfwSourceRoot(checkout: string, hostOs: string, cache: string): string {
+  const root = resolve(checkout, "vendor/mullvad");
+  if (hostOs === "windows" || WINFW_SOURCE_ARCHIVES.every(source => existsSync(resolve(root, source.path))))
+    return root;
+  for (const command of winfwSourceFetchCommands(checkout, process.execPath, resolve(cache, "tarballs"))) {
+    const fetched = spawnSync(command[0]!, command.slice(1), { stdio: "inherit" });
+    if (fetched.status !== 0) throw new Error(`WinFw source fetch failed: ${command.slice(3, 5).join(" ")}`);
+  }
+  return root;
+}
+
 export const winfw: Dependency = {
   name: "winfw",
   enabled: cfg => cfg.windows,
@@ -112,7 +128,7 @@ export const winfw: Dependency = {
         "vendor/mullvad/talpid-types/src/net/mod.rs",
       ].map(path => resolve(cfg.cwd, path)),
     },
-    sources: winfwSources(resolve(cfg.cwd, "vendor/mullvad")),
+    sources: winfwSources(crossWinfwSourceRoot(cfg.cwd, cfg.host.os, cfg.cacheDir)),
     includes: [
       resolve(cfg.buildDir, "deps/winfw/generated"),
       "windows/winfw/src",
