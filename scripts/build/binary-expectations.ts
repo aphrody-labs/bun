@@ -524,7 +524,6 @@ export function binaryExpectations(cfg: Config): BinaryExpectations {
           names: [
             "ADVAPI32.dll",
             "bcrypt.dll",
-            "cfgmgr32.dll",
             "CRYPT32.dll",
             "IPHLPAPI.DLL",
             "KERNEL32.dll",
@@ -540,11 +539,14 @@ export function binaryExpectations(cfg: Config): BinaryExpectations {
             "ntdll.dll",
             "ole32.dll",
             "secur32.dll",
+            ...(cfg.coreutils ? ["MPR.dll", "version.dll"] : []),
+            ...(cfg.curlNative ? ["WLDAP32.dll", "Normaliz.dll"] : []),
           ],
           exact: true,
           // bcrypt.dll: AWS-LC uses BCryptGenRandom as a Windows entropy source.
-          // cfgmgr32.dll: embedded uv-torch enumerates Windows device IDs.
           // secur32.dll: Pageant's Windows named-pipe owner resolves the UPN.
+          // MPR.dll, version.dll: uutils (WNetGetConnectionW; platform-info's GetFileVersionInfoW for uname/arch).
+          // WLDAP32.dll, Normaliz.dll: native curl's Win32 LDAP and IDN backends (deps/curl.ts).
           allowed: sanitizerLibs,
         },
         minOSVersion: "6.0",
