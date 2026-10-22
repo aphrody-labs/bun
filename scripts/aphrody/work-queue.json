@@ -87,7 +87,7 @@
   },
   {
     "id": "R-release",
-    "goal": "Passe finale : musl, tests Linux, release aphrody-v*, rien publié avant",
+    "goal": "Passe finale : musl, tests Linux, release aphrody-v*, rien publié avant ; inclut native-sdk-registry pack (VPS), publish et record (reste de N-native-sdk)",
     "paths": [
       "scripts/aphrody/release"
     ],
@@ -110,7 +110,7 @@
       "scripts/build/native-sdk.ts",
       "scripts/build/native-sdk-index.json"
     ],
-    "status": "active"
+    "status": "blocked"
   },
   {
     "id": "audit-untracked-crate-0",
@@ -118,7 +118,7 @@
     "paths": [
       "src/bun-os/native"
     ],
-    "status": "blocked"
+    "status": "done"
   },
   {
     "id": "audit-untracked-crate-1",
@@ -126,6 +126,6 @@
     "paths": [
       "src/bun-os/pkg/core"
     ],
-    "status": "blocked"
+    "status": "done"
   }
 ]

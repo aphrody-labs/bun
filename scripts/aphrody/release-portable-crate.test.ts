@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { join } from "node:path";
 import {
   isPortableCrateSelection,
   portableCrateCommands,
@@ -162,13 +163,7 @@ test("publisher rejects Cargo archive drift before uploading", async () => {
 
 test("portable publication refuses absent qualification before Cargo or registry access", async () => {
   const child = Bun.spawn(
-    [
-      process.execPath,
-      new URL("./publish-crates.ts", import.meta.url).pathname,
-      "--only",
-      "crates/aphrody-jev",
-      "--publish",
-    ],
+    [process.execPath, join(import.meta.dir, "publish-crates.ts"), "--only", "crates/aphrody-jev", "--publish"],
     { stdout: "pipe", stderr: "pipe", env: { ...process.env, CARGO_REGISTRY_TOKEN: undefined } },
   );
   const [stdout, stderr, status] = await Promise.all([child.stdout.text(), child.stderr.text(), child.exited]);
@@ -233,14 +228,14 @@ test("registered browser commands exercise both Rust libraries and a locked offl
     "generate-lockfile",
     "--offline",
     "--manifest-path",
-    "/private/output/consumer/Cargo.toml",
+    join("/private/output", "consumer", "Cargo.toml"),
   ]);
   expect(commands[5]).toEqual([
     "run",
     "--locked",
     "--offline",
     "--manifest-path",
-    "/private/output/consumer/Cargo.toml",
+    join("/private/output", "consumer", "Cargo.toml"),
   ]);
   expect(commands.flat()).not.toContain("--no-verify");
   expect(commands.flat()).not.toContain("--allow-dirty");
@@ -360,7 +355,7 @@ test("browser publication refuses absent or mixed qualification before Cargo and
     ["--only", portableBrowserSelection, "--publish"],
     ["--only", `${portableBrowserSelection},sdk`, "--portable-qualification", "/missing", "--publish"],
   ]) {
-    const child = Bun.spawn([process.execPath, new URL("./publish-crates.ts", import.meta.url).pathname, ...args], {
+    const child = Bun.spawn([process.execPath, join(import.meta.dir, "publish-crates.ts"), ...args], {
       stdout: "pipe",
       stderr: "pipe",
       env: { ...process.env, CARGO_REGISTRY_TOKEN: undefined },

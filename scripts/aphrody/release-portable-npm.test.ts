@@ -1,6 +1,7 @@
 import { expect, test } from "bun:test";
 import { utimes, chmod } from "node:fs/promises";
-import { join } from "node:path";
+import { existsSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { tempDir } from "../../test/harness";
 import {
   inspectPortableNpmArchive,
@@ -189,55 +190,69 @@ test("source proofs bind source, lock, exact selection, runtime and retained gat
   expect(proof.nativePayloadQualified).toBe(false);
 });
 
-test("CI routes only exact qualified source selections away from the native release gate", async () => {
-  const workflow = Bun.YAML.parse(
-    await Bun.file(new URL("../../.github/workflows/aphrody-publish-npm.yml", import.meta.url)).text(),
-  ) as {
-    jobs: { publish: { steps: { id?: string; name?: string; run?: string; if?: string }[] } };
-  };
-  const steps = workflow.jobs.publish.steps;
-  const route = steps.find(step => step.id === "qualification");
-  expect(typeof route?.run).toBe("string");
-  using directory = tempDir("portable-npm-workflow-route", {});
-  for (const [only, expected] of [
-    ["bun-tools", "portable-source"],
-    ["bun-agent-plugin", "plugin-source"],
-    ["bun-tools,bun-agent-plugin", "native-full"],
-    ["bun-tools,bun-runtime-sdk", "native-full"],
-    ["", "native-full"],
-    ["bun-tools,bun-tools", "native-full"],
-    ["windows-win32", "native-full"],
-  ]) {
-    const output = join(String(directory), "github-output");
-    await Bun.write(output, "");
-    const child = Bun.spawn(["bash", "-e", "-c", route!.run!], {
-      cwd: join(import.meta.dir, "../.."),
-      env: { ...process.env, ONLY: only, GITHUB_OUTPUT: output },
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-    const [stdout, stderr, code] = await Promise.all([
-      Bun.readableStreamToText(child.stdout),
-      Bun.readableStreamToText(child.stderr),
-      child.exited,
-    ]);
-    expect(stdout).toBe("");
-    expect(stderr).toBe("");
-    expect(code).toBe(0);
-    expect(await Bun.file(output).text()).toBe(
-      `kind=${expected}\nplugin=${npmSelectionIncludesPlugin(only)}\nruntime-version=${(await Bun.file(join(import.meta.dir, "../../package.json")).json()).version}\n`,
+// The workflow step is bash; on Windows `bash` on PATH is the WSL launcher, so use Git Bash.
+function workflowBash(): string | undefined {
+  if (process.platform !== "win32") return Bun.which("bash") ?? undefined;
+  const git = Bun.which("git");
+  return [
+    ...(git ? [join(dirname(git), "../bin/bash.exe")] : []),
+    ...[process.env.ProgramFiles, process.env.ProgramW6432].filter(Boolean).map(dir => join(dir!, "Git/bin/bash.exe")),
+  ].find(path => existsSync(path));
+}
+
+test.skipIf(!workflowBash())(
+  "CI routes only exact qualified source selections away from the native release gate",
+  async () => {
+    const workflow = Bun.YAML.parse(
+      await Bun.file(new URL("../../.github/workflows/aphrody-publish-npm.yml", import.meta.url)).text(),
+    ) as {
+      jobs: { publish: { steps: { id?: string; name?: string; run?: string; if?: string }[] } };
+    };
+    const steps = workflow.jobs.publish.steps;
+    const route = steps.find(step => step.id === "qualification");
+    expect(typeof route?.run).toBe("string");
+    using directory = tempDir("portable-npm-workflow-route", {});
+    for (const [only, expected] of [
+      ["bun-tools", "portable-source"],
+      ["bun-agent-plugin", "plugin-source"],
+      ["bun-tools,bun-agent-plugin", "native-full"],
+      ["bun-tools,bun-runtime-sdk", "native-full"],
+      ["", "native-full"],
+      ["bun-tools,bun-tools", "native-full"],
+      ["windows-win32", "native-full"],
+    ]) {
+      const output = join(String(directory), "github-output");
+      await Bun.write(output, "");
+      const child = Bun.spawn([workflowBash()!, "-e", "-c", route!.run!], {
+        cwd: join(import.meta.dir, "../.."),
+        env: { ...process.env, ONLY: only, GITHUB_OUTPUT: output },
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      const [stdout, stderr, code] = await Promise.all([
+        Bun.readableStreamToText(child.stdout),
+        Bun.readableStreamToText(child.stderr),
+        child.exited,
+      ]);
+      expect(stdout).toBe("");
+      expect(stderr).toBe("");
+      expect(code).toBe(0);
+      expect(await Bun.file(output).text()).toBe(
+        `kind=${expected}\nplugin=${npmSelectionIncludesPlugin(only)}\nruntime-version=${(await Bun.file(join(import.meta.dir, "../../package.json")).json()).version}\n`,
+      );
+    }
+    expect(steps.find(step => step.id === "portable")?.if).toBe(
+      "inputs.dry-run != true && steps.qualification.outputs.kind == 'portable-source'",
     );
-  }
-  expect(steps.find(step => step.id === "portable")?.if).toBe(
-    "inputs.dry-run != true && steps.qualification.outputs.kind == 'portable-source'",
-  );
-  expect(steps.find(step => step.run?.includes("download-verify"))?.if).toBe(
-    "inputs.dry-run != true && steps.qualification.outputs.kind != 'portable-source' && steps.qualification.outputs.kind != 'plugin-source'",
-  );
-  const publish = steps.findIndex(step => step.name === "Publish");
-  expect(publish).toBeGreaterThan(steps.findIndex(step => step.id === "portable"));
-  expect(steps[publish]?.run).toContain("--portable-qualification");
-});
+    expect(steps.find(step => step.run?.includes("download-verify"))?.if).toBe(
+      "inputs.dry-run != true && steps.qualification.outputs.kind != 'portable-source' && steps.qualification.outputs.kind != 'plugin-source'",
+    );
+    const publish = steps.findIndex(step => step.name === "Publish");
+    expect(publish).toBeGreaterThan(steps.findIndex(step => step.id === "portable"));
+    expect(steps[publish]?.run).toContain("--portable-qualification");
+  },
+  30_000,
+);
 
 test.each(["bun-supervisor", "bun-tools"] as const)(
   "real tracked %s archive exposes all declared exports to an isolated consumer",
