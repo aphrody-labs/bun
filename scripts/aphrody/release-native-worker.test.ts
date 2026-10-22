@@ -190,11 +190,12 @@ test("unpublished media SDKs use pinned source recipes while unrelated native ow
   }
 });
 
+// linux-arm64 has no published SDK archive: its source recipe is the only owner.
 test("a missing source recipe cannot be substituted by an unqualified target label", () => {
-  const plans = (["ffmpeg", "mpv"] as const).map(component => mediaSDKPlan(component, "linux-x64"));
+  const plans = (["ffmpeg", "mpv"] as const).map(component => mediaSDKPlan(component, "linux-arm64"));
   delete plans[0]!.buildRecipe;
   plans[1]!.sourceRevision = "main";
-  const missing = nativeOwnerPrerequisites("linux-x64", plans);
+  const missing = nativeOwnerPrerequisites("linux-aarch64", plans);
   expect(missing.some(cause => cause.includes("pinned ffmpeg SDK recipe or archive absent"))).toBe(true);
   expect(missing.some(cause => cause.includes("pinned mpv SDK recipe or archive absent"))).toBe(true);
 });
@@ -202,9 +203,9 @@ test("a missing source recipe cannot be substituted by an unqualified target lab
 test("runtime-only production retains native media prerequisites without claiming optional component qualification", () => {
   for (const allocation of nativeFullReleasePlan("a".repeat(40)).targets)
     expect(nativeOwnerPrerequisites(allocation.target, undefined, "runtime")).toEqual([]);
-  const plans = (["ffmpeg", "mpv"] as const).map(component => mediaSDKPlan(component, "linux-x64"));
+  const plans = (["ffmpeg", "mpv"] as const).map(component => mediaSDKPlan(component, "linux-arm64"));
   delete plans[0]!.buildRecipe;
-  expect(nativeOwnerPrerequisites("linux-x64", plans, "runtime").join(" ")).toContain("pinned ffmpeg SDK");
+  expect(nativeOwnerPrerequisites("linux-aarch64", plans, "runtime").join(" ")).toContain("pinned ffmpeg SDK");
   expect(nativeOwnerPrerequisites("linux-x64").join(" ")).toContain("Sharp/Remotion");
 });
 

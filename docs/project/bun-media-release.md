@@ -170,12 +170,12 @@ target-specific products only after all native commands and assertions succeed.
 The aggregate downloads the eight producers from the same workflow run. Failed
 preflights upload diagnostics and prevent the aggregate and publication jobs.
 
-| Targets                | Native runner                        | ABI execution                                                    |
-| ---------------------- | ------------------------------------ | ---------------------------------------------------------------- |
-| Linux GNU x64 / arm64  | `ubuntu-24.04` / `ubuntu-24.04-arm`  | Native GNU process, pinned sysroot and closure audit             |
-| Linux musl x64 / arm64 | `ubuntu-24.04` / `ubuntu-24.04-arm`  | Same-architecture `alpine:3.24` container; no QEMU               |
-| macOS x64 / arm64      | `macos-15-large` / `macos-15-xlarge` | Native macOS process; larger runners for the 6 GiB free-RAM gate |
-| Windows x64 / arm64    | `windows-2025` / `windows-11-arm`    | Native Windows process                                           |
+| Targets                | Native runner                        | ABI execution                                                                   |
+| ---------------------- | ------------------------------------ | ------------------------------------------------------------------------------- |
+| Linux GNU x64 / arm64  | `ubuntu-24.04` / `ubuntu-24.04-arm`  | Native GNU process, pinned sysroot and closure audit                            |
+| Linux musl x64 / arm64 | `ubuntu-24.04` / `ubuntu-24.04-arm`  | Same-architecture `alpine:3.24` container; no QEMU                              |
+| macOS x64 / arm64      | `macos-15-intel` / `macos-15-xlarge` | Native macOS process; arm64 needs the larger runner for the 6 GiB free-RAM gate |
+| Windows x64 / arm64    | `windows-2025` / `windows-11-arm`    | Native Windows process                                                          |
 
 Runner names follow the [GitHub hosted runner catalogue](https://docs.github.com/en/actions/reference/runners/github-hosted-runners).
 Container actions run on the Linux host; ABI execution runs inside the native

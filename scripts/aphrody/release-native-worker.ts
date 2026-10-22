@@ -423,16 +423,49 @@ async function preflight(input: WorkerInput, component: "media" | "runtime" = "m
   return diagnostics;
 }
 
+/** Builds the FFmpeg/mpv SDK of this native host from the pinned media source archive. */
+async function mediaSDKFromSource(input: WorkerInput, target: MediaSDKTarget) {
+  // runMediaBuild serializes heavy builds through this lock; a runner has no factory lock of its own.
+  if (!process.env.BUN_MEDIA_HEAVY_LOCK) {
+    await mkdir(join(input.root, "build/locks"), { recursive: true });
+    process.env.BUN_MEDIA_HEAVY_LOCK = join(input.root, "build/locks/heavy.lock");
+  }
+  const pin = nativeMediaSourceArchivePin(process.env);
+  const archive = join(input.output, "media-sources.tar.gz");
+  await downloadWithRetry(pin.url, archive, "native-media-sources", undefined, undefined, pin);
+  const snapshot = await materializeMediaSources({
+    ...pin,
+    archive,
+    output: join(input.output, "media-source-snapshot"),
+  });
+  process.env.BUN_MEDIA_VULKAN_HEADERS = snapshot.include;
+  process.env.BUN_MEDIA_VULKAN_LICENSE = snapshot.notice;
+  const result = await bootstrapNativeMediaInputs({
+    root: input.root,
+    sources: snapshot.sources,
+    output: join(input.output, "media-bootstrap"),
+    target,
+  });
+  return { ...result, pin, snapshot };
+}
+
 async function sdkPrefix(input: WorkerInput, diagnostics: string) {
   const target = mediaReleaseTarget(input.target);
   const sdkTarget = target.sdkTarget as MediaSDKTarget;
   let inputs: NativeMediaInputs;
+  const published = (["ffmpeg", "mpv"] as const).every(
+    component => mediaSDKPlan(component, sdkTarget).assets.length === 1,
+  );
   if (process.env.BUN_MEDIA_SDK_INPUTS) {
     inputs = await readNativeMediaInputs(
       process.env.BUN_MEDIA_SDK_INPUTS,
       process.env.BUN_MEDIA_SDK_INPUTS_SHA256 ?? "",
       sdkTarget,
     );
+  } else if (!published && process.env.BUN_MEDIA_SOURCE_ARCHIVE_URL) {
+    // No published SDK for this target: this native host builds it from the pinned source snapshot.
+    const built = await mediaSDKFromSource(input, sdkTarget);
+    inputs = await readNativeMediaInputs(built.inputPath, built.inputSHA256, sdkTarget);
   } else {
     inputs = { schema: 1, target: sdkTarget, components: {} as NativeMediaInputs["components"] };
     for (const component of ["ffmpeg", "mpv"] as const) {
@@ -761,8 +794,7 @@ async function prepareNativeRuntimeToolchain(input: WorkerInput, diagnostics: st
   const target = mediaReleaseTarget(input.target);
   const run = async (id: string, argv: string[], timeout = 120_000) =>
     command(argv, input.root, join(diagnostics, id + ".log"), { timeout });
-  await run(
-    "setup",
+  await command(
     [
       process.execPath,
       "--no-env-file",
@@ -775,7 +807,13 @@ async function prepareNativeRuntimeToolchain(input: WorkerInput, diagnostics: st
       "--no-update",
       "--no-agent-plugin",
     ],
-    1_800_000,
+    input.root,
+    join(diagnostics, "setup.log"),
+    {
+      timeout: 1_800_000,
+      // Only setup reads the GitHub API (LLVM's Windows release digests); unauthenticated runners get HTTP 403.
+      env: { GITHUB_TOKEN: process.env.GITHUB_TOKEN },
+    },
   );
   if (target.os === "windows" && !process.env.BUN_TOOLCHAIN_LLVM && process.env.LOCALAPPDATA)
     process.env.BUN_TOOLCHAIN_LLVM = join(process.env.LOCALAPPDATA, "bun/toolchain", `llvm-${pins.llvm.version}`);
@@ -1242,6 +1280,10 @@ async function produceMusl(input: WorkerInput, diagnostics: string, component: "
       `type=bind,source=${input.root},target=${input.root}`,
       "--mount",
       `type=bind,source=${input.output},target=${input.output}`,
+      // The runner provisions the pinned musl sysroots (ci-images/spec.ts); the container builds against them.
+      ...Object.values(locations.muslSysroot)
+        .filter(path => existsSync(path))
+        .flatMap(path => ["--mount", `type=bind,source=${path},target=${path},readonly`]),
       "--workdir",
       input.root,
       "--env",
@@ -1254,6 +1296,10 @@ async function produceMusl(input: WorkerInput, diagnostics: string, component: "
       `NATIVE_VERSION=${input.version}`,
       "--env",
       `NATIVE_OUTPUT=${input.output}`,
+      // The container builds its own musl media SDK from the pinned source archive.
+      ...["BUN_MEDIA_SOURCE_ARCHIVE_URL", "BUN_MEDIA_SOURCE_ARCHIVE_SHA256", "BUN_MEDIA_SOURCE_ARCHIVE_BYTES"].flatMap(
+        name => (process.env[name] ? ["--env", `${name}=${process.env[name]}`] : []),
+      ),
       allocation.nativeABIContainer!,
       "sh",
       "-c",
@@ -1379,22 +1425,7 @@ async function bootstrapWorkerMedia(input: WorkerInput) {
     diagnostics,
   });
   await prepareNativeRuntimeToolchain(input, diagnostics);
-  const pin = nativeMediaSourceArchivePin(process.env);
-  const archive = join(input.output, "media-sources.tar.gz");
-  await downloadWithRetry(pin.url, archive, "native-media-sources", undefined, undefined, pin);
-  const snapshot = await materializeMediaSources({
-    ...pin,
-    archive,
-    output: join(input.output, "media-source-snapshot"),
-  });
-  process.env.BUN_MEDIA_VULKAN_HEADERS = snapshot.include;
-  process.env.BUN_MEDIA_VULKAN_LICENSE = snapshot.notice;
-  const result = await bootstrapNativeMediaInputs({
-    root: input.root,
-    sources: snapshot.sources,
-    output: join(input.output, "media-bootstrap"),
-    target: target.sdkTarget as MediaSDKTarget,
-  });
+  const { pin, snapshot, ...result } = await mediaSDKFromSource(input, target.sdkTarget as MediaSDKTarget);
   if ((await hashSDKFile(runtime)) !== preparation.runtimeSHA256)
     throw new Error("Candidate changed during SDK bootstrap");
   await sourceIdentity(input, diagnostics);

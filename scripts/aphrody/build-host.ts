@@ -66,7 +66,8 @@ export const releaseTargets: ReleaseTarget[] = [
     container: "alpine:3.24",
   },
   { target: "darwin-aarch64", os: "darwin", arch: "aarch64", runner: "macos-15-xlarge" },
-  { target: "darwin-x64", os: "darwin", arch: "x64", runner: "macos-15-large" },
+  // The free Intel runner has 14 GB; only arm64 needs a larger (billed) runner for the 6 GiB free-RAM gate.
+  { target: "darwin-x64", os: "darwin", arch: "x64", runner: "macos-15-intel" },
   { target: "windows-x64", os: "windows", arch: "x64", runner: "windows-2025" },
   { target: "windows-aarch64", os: "windows", arch: "aarch64", runner: "windows-11-arm" },
 ].map(t => {

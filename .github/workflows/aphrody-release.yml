@@ -122,6 +122,12 @@ jobs:
       GIT_SHA: ${{ github.sha }}
       VERSION: ${{ needs.plan.outputs.version }}
       TARGET: ${{ matrix.target }}
+      # A target without a published media SDK builds its own from this pinned source archive, on its native runner.
+      BUN_MEDIA_SOURCE_ARCHIVE_URL: ${{ vars.BUN_MEDIA_SOURCE_ARCHIVE_URL }}
+      BUN_MEDIA_SOURCE_ARCHIVE_SHA256: ${{ vars.BUN_MEDIA_SOURCE_ARCHIVE_SHA256 }}
+      BUN_MEDIA_SOURCE_ARCHIVE_BYTES: ${{ vars.BUN_MEDIA_SOURCE_ARCHIVE_BYTES }}
+      # The worker strips it from every native command except setup's GitHub API reads.
+      GITHUB_TOKEN: ${{ github.token }}
     steps:
       - name: Enable Git long paths
         if: runner.os == 'Windows'
@@ -144,6 +150,16 @@ jobs:
           secret-access-key: ${{ secrets.R2_SECRET_ACCESS_KEY }}
       - name: Resolve committed workspace dependencies
         run: bun install --frozen-lockfile --ignore-scripts
+      - name: Provision the pinned Linux sysroots
+        if: runner.os == 'Linux'
+        run: |
+          key="linux-$([ "$(uname -m)" = aarch64 ] && echo aarch64 || echo x64)-ubuntu"
+          case "$TARGET" in *-musl) tools=llvm,musl-sysroot ;; *) tools=glibc-sysroot ;; esac
+          bake="$RUNNER_TEMP/sysroot-bake"
+          mkdir -p "$bake"
+          bun scripts/build/ci-images/spec.ts --only "$tools" "$key" > "$bake/bootstrap.sh"
+          sudo apt-get update -qq
+          sudo sh "$bake/bootstrap.sh" "$GITHUB_SHA" "$key"
       - name: Build the exact Windows core before SDK packaging
         if: startsWith(matrix.target, 'windows-')
         env:
