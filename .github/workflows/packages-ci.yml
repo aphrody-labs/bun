@@ -9,6 +9,8 @@ on:
       - main
     paths:
       - "packages/**"
+      - .github/actions/setup-bun/**
+      - .github/workflows/packages-ci.yml
       - .oxfmtrc.json
       - tsconfig.json
       - oxlint.json
@@ -18,6 +20,8 @@ on:
       - main
     paths:
       - "packages/**"
+      - .github/actions/setup-bun/**
+      - .github/workflows/packages-ci.yml
       - .oxfmtrc.json
       - tsconfig.json
       - oxlint.json
