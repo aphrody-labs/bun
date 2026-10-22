@@ -515,6 +515,7 @@ async function cargoNotices(input: MediaBuildInput, plan: ReturnType<typeof medi
   );
   const metadata = JSON.parse(raw) as {
     packages: Array<{
+      id: string;
       name: string;
       version: string;
       license: string | null;
@@ -522,8 +523,24 @@ async function cargoNotices(input: MediaBuildInput, plan: ReturnType<typeof medi
       manifest_path: string;
       source: string | null;
     }>;
+    resolve: {
+      root: string | null;
+      nodes: Array<{ id: string; deps: Array<{ pkg: string; dep_kinds: Array<{ kind: string | null }> }> }>;
+    } | null;
   };
-  if (!Array.isArray(metadata.packages) || metadata.packages.length > 2048)
+  // The root workspace lists every member; only the sidecar's linked closure (normal and build deps) ships.
+  const nodes = new Map(metadata.resolve?.nodes.map(node => [node.id, node]));
+  const closure = new Set<string>();
+  const pending = metadata.resolve?.root ? [metadata.resolve.root] : [];
+  for (let id; (id = pending.pop()) !== undefined; ) {
+    if (closure.has(id)) continue;
+    closure.add(id);
+    for (const dep of nodes.get(id)?.deps ?? [])
+      if (dep.dep_kinds.some(kind => kind.kind !== "dev")) pending.push(dep.pkg);
+  }
+  if (!closure.size) throw new Error("Native media Cargo metadata lacks its resolved sidecar root");
+  const linked = metadata.packages.filter(pkg => closure.has(pkg.id));
+  if (linked.length !== closure.size || linked.length > 2048)
     throw new Error("Native media Cargo license inventory exceeded its bound");
   const packages: Array<{
       name: string;
@@ -533,7 +550,7 @@ async function cargoNotices(input: MediaBuildInput, plan: ReturnType<typeof medi
       notices: Record<string, string>;
     }> = [],
     files: Array<{ source: string; member: string; sha256: string }> = [];
-  for (const pkg of metadata.packages) {
+  for (const pkg of linked) {
     if (
       !/^[A-Za-z0-9._+-]+$/.test(pkg.name) ||
       !/^[A-Za-z0-9._+-]+$/.test(pkg.version) ||
@@ -581,7 +598,7 @@ async function cargoNotices(input: MediaBuildInput, plan: ReturnType<typeof medi
     }
     packages.push({ name: pkg.name, version: pkg.version, license: pkg.license, source, notices: hashes });
   }
-  return { packages, files, lockSHA256: await hashSDKFile(join(plan.source, "Cargo.lock")) };
+  return { packages, files, lockSHA256: await hashSDKFile(join(input.root, "Cargo.lock")) };
 }
 
 /** No subprocess can start before every selected source and dependency is verified. */
@@ -827,7 +844,7 @@ export async function runMediaBuild(input: MediaBuildInput, configureOnly = fals
           source: verified.source ?? {
             revision: (await mediaSDKTool(["git", "rev-parse", "HEAD"], input.root)).trim(),
             owner: "packages/bun-video/native",
-            lockSHA256: await hashSDKFile(join(plan.source, "Cargo.lock")),
+            lockSHA256: await hashSDKFile(join(input.root, "Cargo.lock")),
           },
           dependencies: verified.dependencies,
           features: plan.sidecarFeatures,
