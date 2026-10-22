@@ -69,6 +69,8 @@ export function emitPlugins(n: Ninja, cfg: Config): string[] {
     // needs no Visual C++ runtime installed.
     const rustflags = [
       ...(cfg.windows ? ["-Ctarget-feature=+crt-static"] : ["-Clink-arg=-fuse-ld=lld"]),
+      // A cross build's lld-link finds the CRT and SDK import libraries only through the sysroot, as the shim's does.
+      ...(cfg.windows && cfg.winsysroot !== undefined ? [`-Clink-arg=/winsysroot:${cfg.winsysroot}`] : []),
       ...native.rustflags,
     ];
     const env: Record<string, string> = {
