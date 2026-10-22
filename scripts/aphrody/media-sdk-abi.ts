@@ -152,9 +152,16 @@ export function qualifyMediaELFs(target: MediaSDKTarget, inputs: MediaELF[]): Me
       throw new Error(`SDK requires an unsupported libc ABI tag: ${input.file}`);
     if (!musl && /\((?:RELR|RELRSZ|RELRENT)\)/.test(input.dynamic))
       throw new Error(`SDK requires packed relocations beyond its GNU loader floor: ${input.file}`);
-    const glibcVersions = [...new Set(input.versions.match(/\bGLIBC_\d+(?:\.\d+)+\b/g) ?? [])]
-      .map(version => version.slice(6))
-      .sort(compareVersions);
+    // A WEAK version need does not stop the loader (Rust std's statx/gettid fallbacks); only hard needs set the floor.
+    // Without GNU readelf's version-need entries, every GLIBC tag counts.
+    const needs = [...input.versions.matchAll(/Name:\s+GLIBC_(\d+(?:\.\d+)+)\s+Flags:\s+([^\n]*?)\s+Version:/g)];
+    const glibcVersions = [
+      ...new Set(
+        needs.length
+          ? needs.filter(match => !/\bWEAK\b/.test(match[2]!)).map(match => match[1]!)
+          : (input.versions.match(/\bGLIBC_\d+(?:\.\d+)+\b/g) ?? []).map(version => version.slice(6)),
+      ),
+    ].sort(compareVersions);
     const floor = glibcVersions.at(-1) ?? null;
     if (musl && floor) throw new Error(`musl SDK requires GNU libc: ${input.file}`);
     if (floor && compareVersions(floor, "2.17") > 0)
