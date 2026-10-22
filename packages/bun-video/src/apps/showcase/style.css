@@ -137,6 +137,16 @@ button:active {
   letter-spacing: -0.03em;
   font-size: 20px;
 }
+.timeline-catalog-link {
+  color: inherit;
+  font-family: var(--md-ref-typeface-brand);
+  font-weight: 650;
+  letter-spacing: -0.03em;
+  font-size: 20px;
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+}
 .chapter,
 .eyebrow,
 .scroll-hint,

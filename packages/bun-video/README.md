@@ -12,16 +12,21 @@ The optional open-source media toolchain is documented in
 authorized downloads and mpv handles local playback. Their executables remain
 caller-owned and are never installed implicitly.
 
-The generated film timeline can be mounted as the home page of the same Bun.serve
-product as the editor, API and labs. Build it with `scripts/build-showcase.ts`,
-then set `BUN_VIDEO_SHOWCASE_ROOT` to that versioned output directory. For a
-public deployment, set `BUN_VIDEO_PUBLIC_MODE=1`: only the static timeline,
-health, sanitized capabilities and bounded official YouTube search remain
-public; capture, extraction, cookies, media-library and lab APIs require
-Cloudflare Access identity headers. Set `BUN_VIDEO_TRUST_CF_ACCESS=1` only when
-the origin is network-restricted to Cloudflare, and keep the server bound to
-loopback behind the configured edge proxy. YouTube playback remains in the
-official IFrame player; media downloading is not provided by this API.
+The generated film timeline is the full-screen vertical feed at `/` (and `/shorts`).
+The searchable catalogue is available at `/catalog`. The feed can be mounted as
+the home page of the same Bun.serve product as the editor, API and labs. Build it
+with `scripts/build-showcase.ts`, then set `BUN_VIDEO_SHOWCASE_ROOT` to that versioned output directory. For a
+public deployment, configure the showcase Worker’s `BUN_VIDEO_BACKEND_URL` as a
+bare HTTPS origin for this Bun.serve application. The Worker keeps the feed and
+catalogue static in R2 while forwarding same-origin app, media, API and lab
+routes to Bun. Restrict that origin to Cloudflare and set
+`BUN_VIDEO_PUBLIC_MODE=1`: only health, the sanitized capability manifest, and
+bounded official YouTube search remain public; capture, extraction, cookies,
+the media library, workbench and lab APIs require Cloudflare Access identity
+headers. Set `BUN_VIDEO_TRUST_CF_ACCESS=1` only when the origin cannot be reached
+outside Cloudflare, and keep the server bound to loopback behind its configured
+edge proxy. YouTube playback remains in the official IFrame player; media
+downloading is not provided by this API.
 
 The source of [Mediabunny](mediabunny/README.md) v1.9.3 is absorbed into the unified package tree and
 available through `@aphrody/bun-video/mediabunny`. This export is the media

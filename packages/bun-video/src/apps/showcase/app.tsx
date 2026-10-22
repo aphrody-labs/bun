@@ -99,7 +99,9 @@ function Film({
         </video>
       </div>
       <div className="film-top">
-        <span>Aphrody Video</span>
+        <a className="timeline-catalog-link" href="/catalog">
+          Aphrody Video · Catalogue
+        </a>
         <span className="chapter">
           {work.chapter ?? work.engine} · {String(index + 1).padStart(2, "0")} / {String(count).padStart(2, "0")}
         </span>
@@ -219,7 +221,7 @@ function Discover({ manifest }: { manifest: ShowcaseManifest }) {
   };
   const close = () => {
     setSelected(null);
-    history.pushState({}, "", query ? `/?q=${encodeURIComponent(query)}` : "/");
+    history.pushState({}, "", query ? `/catalog?q=${encodeURIComponent(query)}` : "/catalog");
   };
   const toggleSaved = (id: string) =>
     setSaved(old => {
@@ -251,7 +253,7 @@ function Discover({ manifest }: { manifest: ShowcaseManifest }) {
           className="video-search"
           onSubmit={event => {
             event.preventDefault();
-            history.pushState({}, "", `/?q=${encodeURIComponent(query)}`);
+            history.pushState({}, "", `/catalog?q=${encodeURIComponent(query)}`);
           }}
         >
           <label className="sr-only" htmlFor="video-search">
@@ -274,7 +276,7 @@ function Discover({ manifest }: { manifest: ShowcaseManifest }) {
       </header>
       <aside className="video-sidebar" aria-label="Navigation">
         <nav>
-          <a href="/" className={view === "discover" ? "nav-active" : ""}>
+          <a href="/catalog" className={view === "discover" ? "nav-active" : ""}>
             <b>⌂</b> Découvrir
           </a>
           <a href="/shorts">
@@ -576,7 +578,7 @@ function App() {
     return () => controller.abort();
   }, []);
   useEffect(() => {
-    if (!manifest || !feed.current || !location.pathname.startsWith("/shorts")) return;
+    if (!manifest || !feed.current || (location.pathname !== "/" && !location.pathname.startsWith("/shorts"))) return;
     const workId = new URLSearchParams(location.search).get("v");
     const initial = workId ? manifest.works.findIndex(work => work.id === workId) : 0;
     if (initial >= 0) setActive(initial);
@@ -622,7 +624,8 @@ function App() {
         block: "start",
       });
   };
-  if (manifest && !location.pathname.startsWith("/shorts")) return <Discover manifest={manifest} />;
+  if (manifest && location.pathname !== "/" && !location.pathname.startsWith("/shorts"))
+    return <Discover manifest={manifest} />;
   return (
     <main ref={feed} className="timeline" aria-label="Timeline des vidéos Aphrody" tabIndex={0} onKeyDown={page}>
       {!manifest && (

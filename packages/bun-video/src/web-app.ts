@@ -89,7 +89,7 @@ async function serveShowcaseAsset(root: string, path: string, method: string): P
   const parts = relativePath.split("/");
   if (parts.some(part => part === ".." || part === "." || part.startsWith(".")))
     return json({ error: "invalid_showcase_path" }, 400);
-  const spaPaths = new Set(["watch", "shorts", "studio", "about", "playlist/saved"]);
+  const spaPaths = new Set(["catalog", "watch", "shorts", "studio", "about", "playlist/saved"]);
   const rootPath = await realpath(root).catch(() => undefined);
   if (!rootPath) return path === "/" ? json({ error: "showcase_unavailable" }, 503) : undefined;
   const candidate = resolve(rootPath, relativePath);

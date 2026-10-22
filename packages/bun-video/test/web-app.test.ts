@@ -36,6 +36,9 @@ describe("createVideoWebApp", () => {
       const deepLink = await product.fetch(new Request("http://localhost/watch?v=filmcraft-test"));
       expect(deepLink.status).toBe(200);
       expect(await deepLink.text()).toContain("Films");
+      const catalog = await product.fetch(new Request("http://localhost/catalog"));
+      expect(catalog.status).toBe(200);
+      expect(await catalog.text()).toContain("Films");
       const script = await product.fetch(new Request("http://localhost/app.js"));
       expect(script.headers.get("content-type")).toContain("javascript");
       expect(await script.text()).toContain("showcaseReady");
