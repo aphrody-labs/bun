@@ -93,8 +93,15 @@
         "sourceRevision": "7e93014c5bbb61e7c22afebb478bf92f7a08d59a",
         "sourceRepository": "https://github.com/FFmpeg/FFmpeg",
         "license": "LGPL-2.1-or-later",
-        "status": "upstream-digest-pinned-awaiting-sdk-qualification",
-        "assets": [],
+        "status": "native-sdk-qualified",
+        "assets": [
+          {
+            "url": "https://bun-lib.aphrody.app/media/ffmpeg-9.0.2-27-g7e93014c5b-linux-x64-sdk.zip",
+            "sha256": "cf975aedbefbcd70615994783bb392e365a98e003535067af5062d01b081e62b",
+            "bytes": 65228800,
+            "format": "zip"
+          }
+        ],
         "upstreamAssets": [
           {
             "url": "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-10-12-13-12/ffmpeg-n9.0.2-27-g7e93014c5b-linux64-lgpl-shared-9.0.tar.xz",
@@ -111,8 +118,15 @@
         "license": "LGPL-2.1-or-later",
         "apiMajor": 2,
         "libraryName": "libmpv.so.2",
-        "status": "no-qualified-complete-prebuilt-sdk",
-        "assets": [],
+        "status": "native-sdk-qualified",
+        "assets": [
+          {
+            "url": "https://bun-lib.aphrody.app/media/mpv-0.41.0-dev-gc3ac7f395-linux-x64-sdk.zip",
+            "sha256": "d6dab2bce6ca7fcc3b2812ce192ba7046c65f27d2ab3f2f2e56046497b82553a",
+            "bytes": 64778240,
+            "format": "zip"
+          }
+        ],
         "upstreamAssets": []
       }
     },

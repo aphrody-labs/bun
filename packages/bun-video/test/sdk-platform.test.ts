@@ -64,12 +64,20 @@ test("host media target is a selected SDK target", () => {
   expect(Object.hasOwn(manifest.targets, mediaSDKHostTarget())).toBe(true);
 });
 
-test("all selected SDK sources remain pinned and unqualified distributions stay unavailable", () => {
+test("all selected SDK sources remain pinned and only natively qualified distributions are published", () => {
   for (const target of Object.keys(manifest.targets) as (keyof typeof manifest.targets)[]) {
     for (const component of ["ffmpeg", "mpv"] as const) {
       const plan = mediaSDKPlan(component, target);
       expect(plan.sourceRevision).toMatch(/^[a-f0-9]{40}$/);
-      expect(plan.assets).toHaveLength(0);
+      if (plan.status === "native-sdk-qualified") {
+        expect(plan.assets).toHaveLength(1);
+        for (const asset of plan.assets) {
+          expect(() => validateSDKAsset(asset)).not.toThrow();
+          expect(asset.url).toStartWith(
+            `https://bun-lib.aphrody.app/media/${component}-${plan.version}-${target}-sdk.zip`,
+          );
+        }
+      } else expect(plan.assets).toHaveLength(0);
       expect(plan.status).toMatch(/qualification|qualified/);
       expect(plan.buildRecipe?.owner).toBe("scripts/aphrody/media-sdk-build.ts");
       expect(plan.buildRecipe?.status).toContain("gates required per target");
