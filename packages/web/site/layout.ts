@@ -65,6 +65,7 @@ ${s.description ? `<meta property="og:description" content="${escapeHtml(s.descr
 <link rel="stylesheet" href="/assets/site.css">
 <script src="/assets/site.js" defer></script>
 </head><body class="${s.bodyClass ?? ""}">
+<a class="skip" href="#content">Skip to content</a>
 <header class="top"><div class="bar">
 <a class="brand" href="/"><img src="/icon.svg" alt="" width="28" height="28">${brandHtml(s.brand ?? "Aphrody")}</a>
 <button class="menu-btn" type="button" aria-controls="site-nav" aria-expanded="false" aria-label="Menu"><span></span></button>
@@ -92,6 +93,7 @@ export const CSS = `:root{color-scheme:light dark;--bg:var(--md-sys-color-surfac
 body{margin:0;background:var(--bg);color:var(--on-bg);font:16px/1.65 var(--font);-webkit-font-smoothing:antialiased}
 a{color:var(--primary)}a:hover{text-decoration-thickness:2px}
 :focus-visible{outline:3px solid var(--primary);outline-offset:2px}
+.skip{position:absolute;left:1rem;top:-4rem;z-index:20;padding:.75rem 1rem;border-radius:var(--radius);background:var(--primary);color:var(--on-primary);font-weight:600;text-decoration:none}.skip:focus{top:.5rem}
 .top{position:sticky;top:0;z-index:10;background:color-mix(in srgb,var(--bg) 88%,transparent);backdrop-filter:blur(12px);border-bottom:1px solid var(--outline-v)}
 .bar{display:flex;align-items:center;gap:1rem;max-width:1440px;margin:0 auto;padding:.5rem 1rem;min-height:60px}
 .brand{display:flex;align-items:center;gap:.5rem;color:inherit;text-decoration:none;font-weight:600;white-space:nowrap}
