@@ -11,75 +11,75 @@ Agents: load the `bun-fork-features` skill (or the `bun-fork-features` memory no
 
 Upstream commands (`run`, `test`, `build`, `install`, `add`, `remove`, `update`, `audit`, `outdated`, `link`, `publish`, `patch`, `pm`, `init`, `create`, `x`/`bunx`, `repl`, `upgrade`, `why`, `info`) keep their behavior. The fork adds or replaces the following.
 
-| Command | What it does | Owner and docs |
-| --- | --- | --- |
-| `bun check` | Native TypeScript type checker (port of typescript-go, `bun_sema`); `--check` on `bun run` type checks before running | `src/sema`, [TypeScript](/typescript) |
-| `bun lint` | Native lint engine with lint-rule plugins and rule docs | `src/quality`, `src/lint`, [Lint](/lint/index), [plugins](/lint/plugins) |
-| `bun fmt` | Native formatter | `src/quality`, [Format](/format/index) |
-| `bun n2b` / `bun migrate` | Scan, rewrite and migrate Node.js projects to Bun; `n2b` plugin for load and build time | `src/migrate`, `packages/bun-n2b`, [n2b](/runtime/n2b) |
-| `bun wasm build <crate>` | Build a Rust crate into a WebAssembly ES module; `bun build --target=wasm` | `src/runtime/cli/toolchain_command.rs`, `src/wasm` |
-| `bun rename --from a --to b` | Rename identifiers and paths across a git repository | `src/runtime/cli/devtools_command.rs` |
-| `bun docs [query]` | Search the embedded Bun documentation | `devtools_command.rs` |
-| `bun parse <file...>` | Lines, bytes, hash, imports and exports of JS/TS files from the transpiler scan | `devtools_command.rs` |
-| `bun bench` | Benchmark helper of the devtools set | `devtools_command.rs` |
-| `bun video metadata \| frame` | Native video metadata, frames, audio, GIF and MP4 remux | `video_command.rs`, [Video](/runtime/video) |
-| `bun just [recipe]` | Run justfile recipes (`just`, the `just` plugin) | `src/just`, `src/plugins/just`, [just](/runtime/just) |
-| `bun mcp [install]` | Model Context Protocol server for coding agents (stdio and HTTP) | `src/mcp`, [mcp](/runtime/mcp), [agent tools](/project/agent-tools) |
-| `bun agent-plugin [install]` | Install the plugin into Claude Code, Codex, Antigravity, Gemini CLI and OpenCode | `packages/bun-agent-plugin`, [agent plugin](/project/agent-plugin) |
-| `bun lsp [query]` | One language server for TypeScript, JavaScript, Python, Rust, C, C++ and C# | `src/lsp`, [lsp](/runtime/lsp) |
-| `bun ssh <host> [command]` | SSH client, copy, forwards, server and connection pool, via system OpenSSH or the built-in client | `src/ssh`, `src/plugins/ssh` (the `ssh` plugin), [ssh](/runtime/ssh) |
-| `bun git`, `bun rclone`, `bun rsync` | Pinned installed tools; `bun rsync --native` uses the built-in delta copy | `tools_command.rs`, `packages/bun-tools` |
-| `bun docker` | Native Docker Engine client (`version`, `info`, `ps`, `images`, `start`, `stop`; plan unless `--apply`) | `src/docker`, `src/plugins/docker` (the `docker` plugin) |
-| `bun vpn` | Mullvad VPN (the `vpn` plugin): `daemon`, `status`, `connect`, `disconnect`, `login --stdin` and `login --from-env NAME` | `src/bun_vpn`, `src/plugins/vpn`, [vpn](/vpn/index) |
-| `bun host` | Resource inventory of a machine and a signed registry shared between machines: `collect`, `schema`, `push`, `sync`, `list`, `find` | `src/host`, [host](/runtime/host) |
-| `bun msvc` | Resolve and cache Visual Studio, MSVC and the Windows SDK; cross-compile for Windows | `msvc_command.rs`, [msvc](/runtime/msvc) |
-| `bun winmd` | Generate Rust or `bun:ffi` bindings from Windows metadata (the `winmd` plugin) | `winmd_command.rs`, `src/plugins/winmd`, [msvc](/runtime/msvc) |
-| `bun dotnet` | Run the .NET SDK inside Bun, run C# files, call assemblies from `bun:dotnet` | `dotnet_command.rs`, [dotnet](/runtime/dotnet) |
-| `bun python`, `bun uv` | CPython host, `bun compile` for Python, UV package manager (the `uv` plugin) | `python_command.rs`, `uv_command.rs`, `src/plugins/uv`, [python](/runtime/python), [buv](/runtime/buv) |
-| `bun plugin list \| install \| remove` | Plugins: cold subsystems built as separate `bun-<name>` executables, fetched on first use from the release of the running bun and checked against its `SHA256SUMS.txt` | `plugin_command.rs`, `scripts/build/plugins.ts`, [plugins](/runtime/bun-plugin) |
-| `bun search` | Google search owner (SERP, discovery, cache, browser fallback) | `search_command.rs`, `src/google`, `packages/bun-google` |
-| `bun env`, `bun cookie` | `.env` files (`list`, `get`, `set`, `unset`, `check`, `files`; secrets hidden) and cookie jars (`import`, `jars`, `list`, `get`, `header`, `rm`, `check`) | `env_command.rs`, `cookie_command.rs`, `src/env_cookie`, [bun env](/runtime/bun-env), [bun cookie](/runtime/bun-cookie) |
-| `bunsh` (argv0) | Bun Shell as a system shell: `-c`, script, interactive, `--root` | `src/runtime/cli/bunsh.rs` |
-| Coreutils applets | uutils coreutils linked in; `bun` run under an applet name (`head`, `sort`, ...) runs that utility, Bun Shell uses them | `src/coreutils` |
-| `bun bd`, `bun factory` | Build the checkout (`bun bd [command]`), drive the VPS build factory (`sync`, `gen`, `build`, `all`, `slots`, `run -- <cmd>`) | `scripts/build.ts`, `scripts/factory/factory.ts`, [VPS factory](/project/vps-factory) |
+| Command                                | What it does                                                                                                                                                           | Owner and docs                                                                                                          |
+| -------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `bun check`                            | Native TypeScript type checker (port of typescript-go, `bun_sema`); `--check` on `bun run` type checks before running                                                  | `src/sema`, [TypeScript](/typescript)                                                                                   |
+| `bun lint`                             | Native lint engine with lint-rule plugins and rule docs                                                                                                                | `src/quality`, `src/lint`, [Lint](/lint/index), [plugins](/lint/plugins)                                                |
+| `bun fmt`                              | Native formatter                                                                                                                                                       | `src/quality`, [Format](/format/index)                                                                                  |
+| `bun n2b` / `bun migrate`              | Scan, rewrite and migrate Node.js projects to Bun; `n2b` plugin for load and build time                                                                                | `src/migrate`, `packages/bun-n2b`, [n2b](/runtime/n2b)                                                                  |
+| `bun wasm build <crate>`               | Build a Rust crate into a WebAssembly ES module; `bun build --target=wasm`                                                                                             | `src/runtime/cli/toolchain_command.rs`, `src/wasm`                                                                      |
+| `bun rename --from a --to b`           | Rename identifiers and paths across a git repository                                                                                                                   | `src/runtime/cli/devtools_command.rs`                                                                                   |
+| `bun docs [query]`                     | Search the embedded Bun documentation                                                                                                                                  | `devtools_command.rs`                                                                                                   |
+| `bun parse <file...>`                  | Lines, bytes, hash, imports and exports of JS/TS files from the transpiler scan                                                                                        | `devtools_command.rs`                                                                                                   |
+| `bun bench`                            | Benchmark helper of the devtools set                                                                                                                                   | `devtools_command.rs`                                                                                                   |
+| `bun video metadata \| frame`          | Native video metadata, frames, audio, GIF and MP4 remux                                                                                                                | `video_command.rs`, [Video](/runtime/video)                                                                             |
+| `bun just [recipe]`                    | Run justfile recipes (`just`, the `just` plugin)                                                                                                                       | `src/just`, `src/plugins/just`, [just](/runtime/just)                                                                   |
+| `bun mcp [install]`                    | Model Context Protocol server for coding agents (stdio and HTTP)                                                                                                       | `src/mcp`, [mcp](/runtime/mcp), [agent tools](/project/agent-tools)                                                     |
+| `bun agent-plugin [install]`           | Install the plugin into Claude Code, Codex, Antigravity, Gemini CLI and OpenCode                                                                                       | `packages/bun-agent-plugin`, [agent plugin](/project/agent-plugin)                                                      |
+| `bun lsp [query]`                      | One language server for TypeScript, JavaScript, Python, Rust, C, C++ and C#                                                                                            | `src/lsp`, [lsp](/runtime/lsp)                                                                                          |
+| `bun ssh <host> [command]`             | SSH client, copy, forwards, server and connection pool, via system OpenSSH or the built-in client                                                                      | `src/ssh`, `src/plugins/ssh` (the `ssh` plugin), [ssh](/runtime/ssh)                                                    |
+| `bun git`, `bun rclone`, `bun rsync`   | Pinned installed tools; `bun rsync --native` uses the built-in delta copy                                                                                              | `tools_command.rs`, `packages/bun-tools`                                                                                |
+| `bun docker`                           | Native Docker Engine client (`version`, `info`, `ps`, `images`, `start`, `stop`; plan unless `--apply`)                                                                | `src/docker`, `src/plugins/docker` (the `docker` plugin)                                                                |
+| `bun vpn`                              | Mullvad VPN (the `vpn` plugin): `daemon`, `status`, `connect`, `disconnect`, `login --stdin` and `login --from-env NAME`                                               | `src/bun_vpn`, `src/plugins/vpn`, [vpn](/vpn/index)                                                                     |
+| `bun host`                             | Resource inventory of a machine and a signed registry shared between machines: `collect`, `schema`, `push`, `sync`, `list`, `find`                                     | `src/host`, [host](/runtime/host)                                                                                       |
+| `bun msvc`                             | Resolve and cache Visual Studio, MSVC and the Windows SDK; cross-compile for Windows                                                                                   | `msvc_command.rs`, [msvc](/runtime/msvc)                                                                                |
+| `bun winmd`                            | Generate Rust or `bun:ffi` bindings from Windows metadata (the `winmd` plugin)                                                                                         | `winmd_command.rs`, `src/plugins/winmd`, [msvc](/runtime/msvc)                                                          |
+| `bun dotnet`                           | Run the .NET SDK inside Bun, run C# files, call assemblies from `bun:dotnet`                                                                                           | `dotnet_command.rs`, [dotnet](/runtime/dotnet)                                                                          |
+| `bun python`, `bun uv`                 | CPython host, `bun compile` for Python, UV package manager (the `uv` plugin)                                                                                           | `python_command.rs`, `uv_command.rs`, `src/plugins/uv`, [python](/runtime/python), [buv](/runtime/buv)                  |
+| `bun plugin list \| install \| remove` | Plugins: cold subsystems built as separate `bun-<name>` executables, fetched on first use from the release of the running bun and checked against its `SHA256SUMS.txt` | `plugin_command.rs`, `scripts/build/plugins.ts`, [plugins](/runtime/bun-plugin)                                         |
+| `bun search`                           | Google search owner (SERP, discovery, cache, browser fallback)                                                                                                         | `search_command.rs`, `src/google`, `packages/bun-google`                                                                |
+| `bun env`, `bun cookie`                | `.env` files (`list`, `get`, `set`, `unset`, `check`, `files`; secrets hidden) and cookie jars (`import`, `jars`, `list`, `get`, `header`, `rm`, `check`)              | `env_command.rs`, `cookie_command.rs`, `src/env_cookie`, [bun env](/runtime/bun-env), [bun cookie](/runtime/bun-cookie) |
+| `bunsh` (argv0)                        | Bun Shell as a system shell: `-c`, script, interactive, `--root`                                                                                                       | `src/runtime/cli/bunsh.rs`                                                                                              |
+| Coreutils applets                      | uutils coreutils linked in; `bun` run under an applet name (`head`, `sort`, ...) runs that utility, Bun Shell uses them                                                | `src/coreutils`                                                                                                         |
+| `bun bd`, `bun factory`                | Build the checkout (`bun bd [command]`), drive the VPS build factory (`sync`, `gen`, `build`, `all`, `slots`, `run -- <cmd>`)                                          | `scripts/build.ts`, `scripts/factory/factory.ts`, [VPS factory](/project/vps-factory)                                   |
 
 ## Bun APIs added to the `Bun` global
 
 Upstream APIs are in [Bun APIs](/runtime/bun-apis). The fork adds:
 
-| API | Purpose | Docs |
-| --- | --- | --- |
-| `Bun.Video` | Metadata, frames, audio, GIF, MP4 remux, with the [`Bun.Image`](/runtime/image) pipeline | [video](/runtime/video) |
-| `Bun.HTML` | Native HTML parser, CSS parser, readability and structured extraction | [readability](/runtime/readability) |
-| `Bun.BrowserRealm` | DOM realm over a parsed HTML document | `packages/bun-types/bun.d.ts` |
-| `Bun.Crawl`, `Bun.Curl` | Native crawler and curl-style client | `packages/bun-types/bun.d.ts` |
-| `Bun.WebDetect` | Offline technology and anti-bot detection of a fetched response; SSRF deny-set | [web-detect](/runtime/web-detect) |
-| `Bun.VectorIndex` | Persistent native vector search with filtered nearest neighbors | [vector-index](/runtime/vector-index) |
-| `Bun.Terminal`, `Bun.TerminalScreen` | Interactive processes and a headless VT screen (cell grid, scrollback) | [terminal](/runtime/terminal) |
-| `Bun.Archive` | tar and zip input and output | `packages/bun-types/bun.d.ts` |
+| API                                  | Purpose                                                                                  | Docs                                  |
+| ------------------------------------ | ---------------------------------------------------------------------------------------- | ------------------------------------- |
+| `Bun.Video`                          | Metadata, frames, audio, GIF, MP4 remux, with the [`Bun.Image`](/runtime/image) pipeline | [video](/runtime/video)               |
+| `Bun.HTML`                           | Native HTML parser, CSS parser, readability and structured extraction                    | [readability](/runtime/readability)   |
+| `Bun.BrowserRealm`                   | DOM realm over a parsed HTML document                                                    | `packages/bun-types/bun.d.ts`         |
+| `Bun.Crawl`, `Bun.Curl`              | Native crawler and curl-style client                                                     | `packages/bun-types/bun.d.ts`         |
+| `Bun.WebDetect`                      | Offline technology and anti-bot detection of a fetched response; SSRF deny-set           | [web-detect](/runtime/web-detect)     |
+| `Bun.VectorIndex`                    | Persistent native vector search with filtered nearest neighbors                          | [vector-index](/runtime/vector-index) |
+| `Bun.Terminal`, `Bun.TerminalScreen` | Interactive processes and a headless VT screen (cell grid, scrollback)                   | [terminal](/runtime/terminal)         |
+| `Bun.Archive`                        | tar and zip input and output                                                             | `packages/bun-types/bun.d.ts`         |
 
 ## Built-in modules (`bun:*`)
 
 Fork-only modules, from the module registry diffed against upstream.
 
-| Module | Purpose | Docs |
-| --- | --- | --- |
-| `bun:yolo` | Typed judgments: yes/no, choice and score with confidence and abstention | [yolo](/runtime/yolo), [decisions](/runtime/decisions) |
-| `bun:graph`, `bun:graph-index`, `bun:graph-native`, `bun:graphx` | Code graphs of Rust, TypeScript, JavaScript and Markdown | [graph](/runtime/graph) |
-| `bun:python` | Embed CPython in the JavaScript process | [python](/runtime/python) |
-| `bun:dotnet` | Call .NET assemblies | [dotnet](/runtime/dotnet) |
-| `bun:windows`, `bun:winrt`, `bun:winui` | Win32/COM/NT, WinRT projections, native WinUI 3 windows with Fluent 2 tokens | [windows](/runtime/windows), [winrt](/runtime/winrt), [winui](/runtime/winui) |
-| `bun:linux` | Namespaces, cgroups, seccomp, io_uring, eBPF, netlink, perf_event | [linux](/runtime/linux) |
-| `bun:cosmic` | COSMIC desktop and text stack | [cosmic](/runtime/cosmic) |
-| `bun:nginx` | Validate, start, reload and stop a pinned NGINX | [nginx](/runtime/nginx) |
-| `bun:chromium` | Chromium and Chrome CDP | `packages/bun-chromium` |
-| `bun:google` | Google search and project contract | `packages/bun-google` |
-| `bun:adblock` | Brave adblock-rust engine, `attachWebView` | [adblock](/runtime/adblock) |
-| `bun:privacy` | STAR, Privacy Pass, OPAQUE | [privacy](/runtime/privacy) |
-| `bun:rio` | Rio-backed virtual terminal screen (`Bun.RioTerminal`) | `packages/bun-types/rio.d.ts`, `src/rio` |
-| `bun:obscura` | Chromium launcher sharing the `bun:chromium` owner | `packages/bun-types/obscura.d.ts` |
-| `bun:wasm` | WebAssembly surface of the Rust crates | `src/wasm` |
-| `bun:vitest` | Vitest compatibility for `bun test` | `packages/bun-types` |
+| Module                                                           | Purpose                                                                      | Docs                                                                          |
+| ---------------------------------------------------------------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| `bun:yolo`                                                       | Typed judgments: yes/no, choice and score with confidence and abstention     | [yolo](/runtime/yolo), [decisions](/runtime/decisions)                        |
+| `bun:graph`, `bun:graph-index`, `bun:graph-native`, `bun:graphx` | Code graphs of Rust, TypeScript, JavaScript and Markdown                     | [graph](/runtime/graph)                                                       |
+| `bun:python`                                                     | Embed CPython in the JavaScript process                                      | [python](/runtime/python)                                                     |
+| `bun:dotnet`                                                     | Call .NET assemblies                                                         | [dotnet](/runtime/dotnet)                                                     |
+| `bun:windows`, `bun:winrt`, `bun:winui`                          | Win32/COM/NT, WinRT projections, native WinUI 3 windows with Fluent 2 tokens | [windows](/runtime/windows), [winrt](/runtime/winrt), [winui](/runtime/winui) |
+| `bun:linux`                                                      | Namespaces, cgroups, seccomp, io_uring, eBPF, netlink, perf_event            | [linux](/runtime/linux)                                                       |
+| `bun:cosmic`                                                     | COSMIC desktop and text stack                                                | [cosmic](/runtime/cosmic)                                                     |
+| `bun:nginx`                                                      | Validate, start, reload and stop a pinned NGINX                              | [nginx](/runtime/nginx)                                                       |
+| `bun:chromium`                                                   | Chromium and Chrome CDP                                                      | `packages/bun-chromium`                                                       |
+| `bun:google`                                                     | Google search and project contract                                           | `packages/bun-google`                                                         |
+| `bun:adblock`                                                    | Brave adblock-rust engine, `attachWebView`                                   | [adblock](/runtime/adblock)                                                   |
+| `bun:privacy`                                                    | STAR, Privacy Pass, OPAQUE                                                   | [privacy](/runtime/privacy)                                                   |
+| `bun:rio`                                                        | Rio-backed virtual terminal screen (`Bun.RioTerminal`)                       | `packages/bun-types/rio.d.ts`, `src/rio`                                      |
+| `bun:obscura`                                                    | Chromium launcher sharing the `bun:chromium` owner                           | `packages/bun-types/obscura.d.ts`                                             |
+| `bun:wasm`                                                       | WebAssembly surface of the Rust crates                                       | `src/wasm`                                                                    |
+| `bun:vitest`                                                     | Vitest compatibility for `bun test`                                          | `packages/bun-types`                                                          |
 
 ## Agent tools (`bun mcp`)
 
@@ -107,27 +107,27 @@ Sources live in `.claude/skills`; entries listed in `src/agent_tools/skills.json
 
 Directory `packages/` (scope `@aphrody` unless noted).
 
-| Package | Purpose |
-| --- | --- |
-| `bun-types` | Type definitions, including every fork module |
-| `bun-agent-plugin` | Plugin for Claude Code, Codex, Antigravity, Gemini CLI, OpenCode and local harnesses: MCP, hooks, skills, memory |
-| `bun-video` | Video protocols, native capture, Remotion and HyperFrames, WebGPU compute (`bun-video-webgpu`) |
-| `bun-web`, `bun-webview-core`, `bun-webview-page` | Browser SDK over `Bun.WebView`, Playwright-shaped pages and locators, web service (fetch, scrape, crawl) |
-| `bun-chromium`, `bun-google` | Chromium and Chrome CDP SDK; Google REST and Cloud Code SDK |
-| `bun-cloudflare` | Workers with bindings, REST API, Wrangler |
-| `bun-next` | Next.js on Bun, App Router on `Bun.build` and `Bun.serve` |
-| `bun-plugin-tailwind`, `bun-plugin-svelte`, `bun-plugin-yaml`, `bun-icons`, `bun-fluent`, `bun-m3` | Build plugins, Fluent 2 tokens, Material 3 preset |
-| `bun-sql` | Postgres clients and migrations on `Bun.SQL` |
-| `bun-oxc` | Oxc parser, transformer, minifier, resolver, oxlint and oxfmt |
-| `bun-n2b` | Node.js to Bun migration plugin and CLI |
-| `bun-dotnet`, `bun-dotnet-native`, `bun-winsvc` | .NET payload, Windows service host |
-| `bun-python-toolchain`, `bun-python-native`, `bun-python-conformance`, `buv`, `bun-runtime-sdk` | Python, UV and PyJS runtime and C ABI |
-| `bun-llama` | llama.cpp through `bun:ffi` |
-| `bun-nginx` | Typed NGINX controller |
-| `bun-supervisor`, `bun-tools`, `bun-timeline` | Process supervision, native tool distribution and metadata, timeline projections |
-| `bun-x`, `bun-qr`, `bun-fuzzy` | X client and tools, QR encoder, Bitap fuzzy search |
-| `web` | aphrody.app site, Cloudflare Worker and the self-hosted server ([aphrody-server](/project/aphrody-server)) |
-| `aphrody-migrated`, `aphrody-pkg-system` | Migrated Aphrody sources and package system |
+| Package                                                                                            | Purpose                                                                                                          |
+| -------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `bun-types`                                                                                        | Type definitions, including every fork module                                                                    |
+| `bun-agent-plugin`                                                                                 | Plugin for Claude Code, Codex, Antigravity, Gemini CLI, OpenCode and local harnesses: MCP, hooks, skills, memory |
+| `bun-video`                                                                                        | Video protocols, native capture, Remotion and HyperFrames, WebGPU compute (`bun-video-webgpu`)                   |
+| `bun-web`, `bun-webview-core`, `bun-webview-page`                                                  | Browser SDK over `Bun.WebView`, Playwright-shaped pages and locators, web service (fetch, scrape, crawl)         |
+| `bun-chromium`, `bun-google`                                                                       | Chromium and Chrome CDP SDK; Google REST and Cloud Code SDK                                                      |
+| `bun-cloudflare`                                                                                   | Workers with bindings, REST API, Wrangler                                                                        |
+| `bun-next`                                                                                         | Next.js on Bun, App Router on `Bun.build` and `Bun.serve`                                                        |
+| `bun-plugin-tailwind`, `bun-plugin-svelte`, `bun-plugin-yaml`, `bun-icons`, `bun-fluent`, `bun-m3` | Build plugins, Fluent 2 tokens, Material 3 preset                                                                |
+| `bun-sql`                                                                                          | Postgres clients and migrations on `Bun.SQL`                                                                     |
+| `bun-oxc`                                                                                          | Oxc parser, transformer, minifier, resolver, oxlint and oxfmt                                                    |
+| `bun-n2b`                                                                                          | Node.js to Bun migration plugin and CLI                                                                          |
+| `bun-dotnet`, `bun-dotnet-native`, `bun-winsvc`                                                    | .NET payload, Windows service host                                                                               |
+| `bun-python-toolchain`, `bun-python-native`, `bun-python-conformance`, `buv`, `bun-runtime-sdk`    | Python, UV and PyJS runtime and C ABI                                                                            |
+| `bun-llama`                                                                                        | llama.cpp through `bun:ffi`                                                                                      |
+| `bun-nginx`                                                                                        | Typed NGINX controller                                                                                           |
+| `bun-supervisor`, `bun-tools`, `bun-timeline`                                                      | Process supervision, native tool distribution and metadata, timeline projections                                 |
+| `bun-x`, `bun-qr`, `bun-fuzzy`                                                                     | X client and tools, QR encoder, Bitap fuzzy search                                                               |
+| `web`                                                                                              | bun.aphrody.app site, Cloudflare Worker and the self-hosted server ([aphrody-server](/project/aphrody-server))   |
+| `aphrody-migrated`, `aphrody-pkg-system`                                                           | Migrated Aphrody sources and package system                                                                      |
 
 ## Native crates
 
@@ -137,7 +137,7 @@ Fork crates under `src/`: `adblock`, `agent_tools`, `browser`, `bun-os`, `bun_vp
 
 - `apps/desktop` (`@aphrody/desktop`): Bun WebOS, a browser desktop with browser-permission probes, WebAssembly modules and a loopback host server (`bun run apps/desktop/server.ts --port 3000`).
 - `apps/mobile` (`@aphrody/mobile`): mobile shell over the desktop and web packages.
-- `aphrody-server`: one executable serving the aphrody.app site and API with the same handler as the Cloudflare Worker ([aphrody-server](/project/aphrody-server)).
+- `aphrody-server`: one executable serving the bun.aphrody.app site and API with the same handler as the Cloudflare Worker ([aphrody-server](/project/aphrody-server)).
 - Static site, `llms.txt` and `llms-full.txt`: generated from `docs/` by `packages/web/site/build.ts`, so this page appears in both.
 
 ## Keeping this page true

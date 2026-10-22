@@ -14,7 +14,7 @@ use serde::Deserialize;
 use crate::registry::{Annotations, Args, Context, Output, Tool, ToolError};
 use crate::util::{agent_dir, clip, env, project_root, words};
 
-pub(crate) const REMOTE: &str = "https://aphrody.app/api/bun/search?q=";
+pub(crate) const REMOTE: &str = "https://bun.aphrody.app/api/bun/search?q=";
 
 #[derive(Deserialize)]
 pub(crate) struct Entry {

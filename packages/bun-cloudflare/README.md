@@ -69,9 +69,9 @@ internals (`*-shared`, `workers-utils`, `workers-auth`, `deploy-helpers`), dashb
 framework-specific UI kits (`@cloudflare/realtimekit-react*`, `@cloudflare/stream-react`, `@cloudflare/kumo`).
 Add those to your app directly when you need them.
 
-## aphrody.app
+## bun.aphrody.app
 
-`app/` is the production Worker of https://aphrody.app: the Aphrody Bun site as static assets and an API under
+`app/` is the production Worker of https://bun.aphrody.app: the Aphrody Bun site as static assets and an API under
 `/api` (R2 buckets `aphrody` and `dragonballfr`, D1, KV, Queues, Workflows, a Durable Object, Workers AI through
 the `aphrody` AI Gateway). Credentials come from `app/.env` (git-ignored, see `app/.env.example`) or the host key
 store `~/.aphrody/config/cloudflare.env`.

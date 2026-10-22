@@ -3,7 +3,7 @@
   "version": "1.4.4",
   "repository": "aphrody-labs/bun",
   "description": "Bun OS by Aphrody Labs: JavaScript and TypeScript runtime, package manager, test runner and bundler with native system integrations",
-  "homepage": "https://aphrody.app",
+  "homepage": "https://bun.aphrody.app",
   "topics": [
     "bun",
     "javascript",

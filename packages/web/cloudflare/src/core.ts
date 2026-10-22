@@ -1,4 +1,4 @@
-// One fetch handler for aphrody.app: the Cloudflare Worker (worker.ts) and the self-hosted binary
+// One fetch handler for bun.aphrody.app: the Cloudflare Worker (worker.ts) and the self-hosted binary
 // (packages/web/server) both build an AphrodyPlatform and call createAphrodyHandler.
 import { timingSafeEqual } from "node:crypto";
 import { publicSiteAPI } from "../../site/site-api.ts";

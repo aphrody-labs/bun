@@ -406,7 +406,7 @@ console.log(Bun.version);`,
 
 export const NATIVE_SKILL = "bun-native";
 export const DATASET_URL = "https://dist.aphrody.app/datasets/bun-native/latest.json";
-export const SEARCH_URL = "https://aphrody.app/api/bun/search?q=";
+export const SEARCH_URL = "https://bun.aphrody.app/api/bun/search?q=";
 
 /** Compact, injected at session start (hooks/context.md) and summarized by the user-prompt-submit hook. */
 export const RULES = [

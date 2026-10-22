@@ -58,7 +58,7 @@ and its existing system stack for plain text. Bun OS surfaces use Aphrody
 Google Sans Flex independently, without changing captured line breaks.
 Bun OS navigation exposes release downloads, docs, guides, plugin skills, the
 visual code graph and measured benchmarks. Installer and canonical URLs change
-to aphrody.app. Upstream analytics are removed. Upstream benchmark values
+to bun.aphrody.app. Upstream analytics are removed. Upstream benchmark values
 retain their original provenance and measurement scope.
 
 `mirror-coverage.json` records each original and adapted SHA-256, missing local

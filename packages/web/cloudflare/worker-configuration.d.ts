@@ -12,7 +12,7 @@ interface __BaseEnv_Env {
   AI: Ai;
   VERSION: WorkerVersionMetadata;
   ASSETS: Fetcher;
-  PUBLIC_ORIGIN: "https://aphrody.app";
+  PUBLIC_ORIGIN: "https://bun.aphrody.app";
   AI_MODEL: "@cf/qwen/qwen3-30b-a3b-fp8";
   AI_GATEWAY: "aphrody";
   EMBEDDING_MODEL: "@cf/baai/bge-m3";

@@ -25,20 +25,13 @@ export const APHRODY_DOMAINS = Object.freeze([
     routes: ["/*"],
     indexable: false,
   },
+  // aphrody.app and www.aphrody.app belong to the Bun OS desktop (aphrody-webos); the Bun site lives on bun.*.
   {
-    host: "aphrody.app",
-    canonical: "https://aphrody.app",
+    host: "bun.aphrody.app",
+    canonical: "https://bun.aphrody.app",
     surface: "runtime",
     routes: ["/", "/runtime/*", "/docs/*", "/downloads/*", "/api/*"],
     indexable: true,
-  },
-  {
-    host: "www.aphrody.app",
-    canonical: "https://aphrody.app",
-    surface: "runtime",
-    redirects: ["https://aphrody.app"],
-    routes: ["/*"],
-    indexable: false,
   },
   {
     host: "os.aphrody.com",
@@ -49,9 +42,9 @@ export const APHRODY_DOMAINS = Object.freeze([
   },
   {
     host: "bun.aphrody.com",
-    canonical: "https://aphrody.app",
+    canonical: "https://bun.aphrody.app",
     surface: "runtime",
-    redirects: ["https://aphrody.app"],
+    redirects: ["https://bun.aphrody.app"],
     routes: ["/*"],
     indexable: false,
   },

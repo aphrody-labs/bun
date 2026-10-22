@@ -600,7 +600,7 @@ describe("upstream interface mirror", () => {
     const adapted = adaptHtml(html, source);
     expect(adapted).toContain('<script src="page.js" type="module"></script>');
     expect(adapted).toContain('<button data-tab="windows">Windows</button>');
-    expect(adapted).toContain("https://aphrody.app/install.ps1");
+    expect(adapted).toContain("https://bun.aphrody.app/install.ps1");
     expect(adapted).toContain(source);
     expect(adapted).toContain("upstream benchmark results are not fork measurements");
     expect(() => adaptHtml(html, "HEAD")).toThrow("source SHA");

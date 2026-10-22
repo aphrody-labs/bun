@@ -55,11 +55,11 @@ Before starting, you will need to already have a release build of Bun installed,
 {% codetabs %}
 
 ```bash#Linux
-$ curl -fsSL https://aphrody.app/install.sh | bash
+$ curl -fsSL https://bun.aphrody.app/install.sh | bash
 ```
 
 ```powershell#Windows
-> irm https://aphrody.app/install.ps1 | iex
+> irm https://bun.aphrody.app/install.ps1 | iex
 ```
 
 ```bash#npm

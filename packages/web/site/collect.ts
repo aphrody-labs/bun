@@ -1,4 +1,4 @@
-// Collecte les données du site aphrody.app (runtime seul) ou de la distribution depuis les dépôts réels : rien de ce qui décrit un produit, un composant,
+// Collecte les données du site bun.aphrody.app (runtime seul) ou de la distribution depuis les dépôts réels : rien de ce qui décrit un produit, un composant,
 // une version ou un chiffre n'est écrit à la main dans les gabarits (pages.ts, build.ts), tout vient d'ici.
 //
 //   bun packages/web/site/collect.ts --out site-data.json
@@ -100,7 +100,7 @@ export type SiteData = {
     } | null;
     npm: { name: string; version?: string } | null;
     image: { name: string; dockerfile: string; release: string; pull: string } | null;
-    /** APHRODY.md du fork (rôle, patches, amont, releases) : sections de l'accueil de aphrody.app. */
+    /** APHRODY.md du fork (rôle, patches, amont, releases) : sections de l'accueil de bun.aphrody.app. */
     guide: string;
   } | null;
   distribution: {

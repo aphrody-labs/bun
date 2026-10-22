@@ -1,4 +1,4 @@
-// Idempotent Cloudflare provisioning for aphrody.app and its account: zone security/performance settings,
+// Idempotent Cloudflare provisioning for bun.aphrody.app and its account: zone security/performance settings,
 // DNSSEC, DNS records (CAA, no-mail policy), www redirect, R2 buckets with CDN custom domains, CORS, lifecycle and
 // cache rules, smart tiered cache, AI Gateway, Vectorize indexes. Re-running converges to the same state.
 //
@@ -39,8 +39,8 @@ async function cf<T = any>(method: string, path: string, body?: unknown, allow: 
 
 const step = (message: string) => console.log(`• ${message}`);
 
-export const site = "aphrody.app";
-export const zones = ["aphrody.app", "aphrody.com", "dragonballfr.com", "rosegriffon.fr"];
+export const site = "bun.aphrody.app";
+export const zones = ["bun.aphrody.app", "aphrody.com", "dragonballfr.com", "rosegriffon.fr"];
 // Objects are cached 30 days at the edge; on hosts with `channels`, versioned paths a year and the channel files
 // (latest.json, manifest.json, rewritten in place by scripts/aphrody/release-r2.ts) a minute. r2.dev stays off.
 export const cdn: { bucket: string; domain: string; channels?: boolean }[] = [
@@ -49,8 +49,8 @@ export const cdn: { bucket: string; domain: string; channels?: boolean }[] = [
   { bucket: "bun-lib", domain: "bun-lib.aphrody.app" },
 ];
 export const corsOrigins = [
-  "https://aphrody.app",
-  "https://www.aphrody.app",
+  "https://bun.aphrody.app",
+  "https://bun.aphrody.app",
   "https://aphrody.com",
   "https://dragonballfr.com",
   "https://www.dragonballfr.com",
@@ -91,7 +91,7 @@ async function zoneSettings(zone: { id: string; name: string }) {
   );
   for (const [id, value] of Object.entries(settings)) {
     const now = current.get(id);
-    // includeSubDomains/preload only on aphrody.app (.app is HSTS-preloaded anyway); the other zones keep hosts
+    // includeSubDomains/preload only on bun.aphrody.app (.app is HSTS-preloaded anyway); the other zones keep hosts
     // whose subdomains may not all serve HTTPS yet.
     const hsts = zone.name === site ? {} : { include_subdomains: false, preload: false };
     const want =
@@ -208,7 +208,7 @@ async function siteRules(zone: { id: string; name: string }) {
   await entrypoint(zone, "http_request_dynamic_redirect", [
     {
       ref: "aphrody-www",
-      description: "www.aphrody.app -> aphrody.app",
+      description: "bun.aphrody.app -> bun.aphrody.app",
       expression: `(http.host eq "www.${zone.name}")`,
       action: "redirect",
       action_parameters: {

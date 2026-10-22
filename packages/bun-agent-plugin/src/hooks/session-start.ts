@@ -23,7 +23,7 @@ if (aphrody) {
 } else {
   lines.push(
     `WARNING: the bun on PATH (${process.execPath}, ${Bun.version_with_sha}) is not the Aphrody runtime (aphrody-labs/bun). ` +
-      'Install it: `curl -fsSL https://aphrody.app/install | bash` (Windows: `powershell -c "irm aphrody.app/install.ps1|iex"`), ' +
+      'Install it: `curl -fsSL https://bun.aphrody.app/install | bash` (Windows: `powershell -c "irm bun.aphrody.app/install.ps1|iex"`), ' +
       "then make sure ~/.bun/bin comes first on PATH.",
   );
 }

@@ -624,7 +624,7 @@ export function documentPages(d: SiteData, ctx: PageContext): GeneratedPage[] {
 }
 
 // ---------------------------------------------------------------------------------------------------------------
-// Site de Bun OS (aphrody.app) : accueil depuis APHRODY.md, page /runtime
+// Site de Bun OS (bun.aphrody.app) : accueil depuis APHRODY.md, page /runtime
 
 /**
  * Liens relatifs d'un document du runtime : une page de `docs/` devient sa route du site (`/docs/...`), tout autre

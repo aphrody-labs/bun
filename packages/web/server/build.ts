@@ -1,4 +1,4 @@
-// Builds the single self-hostable executable: the aphrody.app site and every route are embedded.
+// Builds the single self-hostable executable: the bun.aphrody.app site and every route are embedded.
 //   bun packages/web/server/build.ts [--out <dir>] [--assets <built site>] [--target <bun-target>] [--origin <url>]
 // Writes <out>/aphrody (aphrody.exe on Windows). Default out: ./build/aphrody-server.
 import { mkdirSync, readdirSync, rmSync, statSync } from "node:fs";
@@ -46,7 +46,7 @@ if (import.meta.main) {
         "--out",
         assets,
         "--origin",
-        arg("--origin") ?? "https://aphrody.app",
+        arg("--origin") ?? "https://bun.aphrody.app",
       ],
       cwd: repo,
       stdio: ["ignore", "inherit", "inherit"],

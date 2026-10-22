@@ -13,11 +13,11 @@ crates, and .NET, C and C++ interop. The product consumes this layer; it does no
 | Artifact                   | Source in this repository                                                                                                                                      | Consumer in Aphrody                                                                       |
 | -------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
 | Runtime binary             | `aphrody-v*` GitHub releases; npm `@aphrody/bun-runtime` ([`scripts/aphrody/publish-runtime.ts`](scripts/aphrody/publish-runtime.ts))                          | the distribution's Bun pin (`tools/config/update/pins.json` follows these releases)       |
-| Installers                 | [`scripts/aphrody/install.sh`](scripts/aphrody/install.sh), [`install.ps1`](scripts/aphrody/install.ps1), served as `aphrody.app/install` (`.sh`) and `/install.ps1` | every runtime install in Aphrody: bootstrap, Docker images, `yolo update`, hosts          |
+| Installers                 | [`scripts/aphrody/install.sh`](scripts/aphrody/install.sh), [`install.ps1`](scripts/aphrody/install.ps1), served as `bun.aphrody.app/install` (`.sh`) and `/install.ps1` | every runtime install in Aphrody: bootstrap, Docker images, `yolo update`, hosts          |
 | Container image            | `ghcr.io/aphrody-labs/bun` (private), from [`scripts/aphrody/deploy/docker/`](scripts/aphrody/deploy/docker)                                                   | build and production hosts ([docs/project/auto-deploy.mdx](docs/project/auto-deploy.mdx)) |
 | Types and tooling packages | npm `@aphrody/bun-types`, `@aphrody/bun-inspector-protocol`, … ([`scripts/aphrody/publish-npm.ts`](scripts/aphrody/publish-npm.ts))                            | workspaces                                                                                |
 | Rust crates                | crates.io `aphrody-bun-native-plugin`, `aphrody-bun-macro` ([`scripts/aphrody/publish-crates.ts`](scripts/aphrody/publish-crates.ts))                          | native plugins                                                                            |
-| Documentation              | [`docs/`](docs), published at [aphrody.app](https://aphrody.app) by [`packages/web/site/`](packages/web/site) | `docs/reference/upstream-bun` (`bun run docs:bun:update`), MCP `bun_docs_*`               |
+| Documentation              | [`docs/`](docs), published at [bun.aphrody.app](https://bun.aphrody.app) by [`packages/web/site/`](packages/web/site) | `docs/reference/upstream-bun` (`bun run docs:bun:update`), MCP `bun_docs_*`               |
 | Source checkout            | `APHRODY_BUN_CHECKOUT`, else the `bun/` child of the selected workspace                                                                                         | MCP `bun_docs_*`, training corpora                                                        |
 
 ## Patches
@@ -46,7 +46,7 @@ The Aphrody commits on top of upstream that merges keep. Each one has its test.
   (`--check` lists remaining upstream names, `--write` rewrites them).
 
 The other additions (`bun:*` modules, CLI commands, packages, documentation pages) are listed with their sources on
-[aphrody.app/runtime](https://aphrody.app/runtime), generated from the Git history.
+[bun.aphrody.app/runtime](https://bun.aphrody.app/runtime), generated from the Git history.
 
 ## Governance
 

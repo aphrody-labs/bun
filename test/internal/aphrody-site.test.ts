@@ -750,8 +750,8 @@ describe("site publish", () => {
     expect(dataDigest('{"x":1}')).not.toBe(dataDigest('{"x":2}'));
   });
 
-  test("publishes to aphrody.app", () => {
-    expect(ORIGIN).toBe("https://aphrody.app");
+  test("publishes to bun.aphrody.app", () => {
+    expect(ORIGIN).toBe("https://bun.aphrody.app");
   });
 });
 

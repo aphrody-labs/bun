@@ -89,9 +89,9 @@ test("retrieval pins graph and documentation to the selected current snapshot an
   const result = await searchPublicSiteDocs(sql, { query: "Bun.Video", limit: 8 });
   expect(calls[1].parameters).toEqual([snapshot.id, "Bun.Video", 8]);
   expect(result.documents[0].url).toContain(`/blob/${snapshot.source}/docs/runtime/video.mdx`);
-  expect((await publicSiteAPI(new Request("https://aphrody.app/api/site/docs?q=x&limit=9"), sql)).status).toBe(400);
+  expect((await publicSiteAPI(new Request("https://bun.aphrody.app/api/site/docs?q=x&limit=9"), sql)).status).toBe(400);
   expect(
-    (await publicSiteAPI(new Request("https://aphrody.app/api/site/snapshot", { method: "POST" }), sql)).status,
+    (await publicSiteAPI(new Request("https://bun.aphrody.app/api/site/snapshot", { method: "POST" }), sql)).status,
   ).toBe(405);
 });
 

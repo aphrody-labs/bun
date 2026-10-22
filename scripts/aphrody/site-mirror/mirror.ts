@@ -146,7 +146,7 @@ export function externalizeInlineScripts(html: string): {
   );
   return { html: output, assets };
 }
-export function adaptHtml(html: string, source: string, origin = "https://aphrody.app"): string {
+export function adaptHtml(html: string, source: string, origin = "https://bun.aphrody.app"): string {
   if (!/^[a-f0-9]{40}$/.test(source)) throw new Error("A release source SHA is required");
   const links = [
     ["Fork releases", "/downloads"],
@@ -230,7 +230,7 @@ export function buildMirror(capture: string, output: string, source: string, ori
       } else if (path.endsWith(".js"))
         writeFileSync(
           join(root, path),
-          rewritePagefindLoader(rewriteInstallers(bytes.toString("utf8"), "https://aphrody.app")),
+          rewritePagefindLoader(rewriteInstallers(bytes.toString("utf8"), "https://bun.aphrody.app")),
         );
       else writeFileSync(join(root, path), bytes);
       return {

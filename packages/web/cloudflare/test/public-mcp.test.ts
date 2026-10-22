@@ -16,7 +16,7 @@ const environment: Parameters<typeof yoloAPI>[1] = {
   },
 };
 function request(body: unknown, origin?: string) {
-  return new Request("https://aphrody.app/mcp", {
+  return new Request("https://bun.aphrody.app/mcp", {
     method: "POST",
     headers: { "content-type": "application/json", ...(origin ? { origin } : {}) },
     body: JSON.stringify(body),

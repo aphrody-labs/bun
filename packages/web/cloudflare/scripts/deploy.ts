@@ -1,4 +1,4 @@
-// Deploys aphrody.app: the Aphrody Bun site as static assets plus the API Worker, then D1 migrations.
+// Deploys bun.aphrody.app: the Aphrody Bun site as static assets plus the API Worker, then D1 migrations.
 //
 //   bun packages/web/cloudflare/scripts/deploy.ts [--assets <built site>] [wrangler deploy flags]
 //
@@ -11,7 +11,7 @@ import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { wrangler } from "../../../bun-cloudflare/src/wrangler.ts";
 
-export const ORIGIN = "https://aphrody.app";
+export const ORIGIN = "https://bun.aphrody.app";
 const app = join(import.meta.dir, "..");
 const repo = join(app, "..", "..", "..");
 

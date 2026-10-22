@@ -28,7 +28,7 @@ function fixture() {
 test("ordered bounded LLM assets reconstruct every UTF-8 byte and source hash", () => {
   using directory = fixture();
   const text = "\ufeffBun 🐇 日本語 é\r\n".repeat(17);
-  const result = distributeLlmText(directory.root, "immutable-source", text, "https://aphrody.app", 31);
+  const result = distributeLlmText(directory.root, "immutable-source", text, "https://bun.aphrody.app", 31);
   expect(result.manifest!.parts.length).toBeGreaterThan(2);
   expect(result.manifest!.trainingQualified).toBe(false);
   const payload = Buffer.concat(
@@ -45,14 +45,14 @@ test("ordered bounded LLM assets reconstruct every UTF-8 byte and source hash", 
   expect(readFileSync(join(directory.root, "site/llms-full.txt"), "utf8")).toContain(
     "not a complete source or training dataset",
   );
-  const again = distributeLlmText(directory.root, "immutable-source", text, "https://aphrody.app", 31);
+  const again = distributeLlmText(directory.root, "immutable-source", text, "https://bun.aphrody.app", 31);
   expect(again.manifest).toEqual(result.manifest);
 });
 
 test("small LLM text remains inline and a verified shrink removes former managed parts", () => {
   using directory = fixture();
-  const large = distributeLlmText(directory.root, "fixture", "🐇".repeat(100), "https://aphrody.app", 41);
-  const result = distributeLlmText(directory.root, "fixture", "Small\n", "https://aphrody.app", 41);
+  const large = distributeLlmText(directory.root, "fixture", "🐇".repeat(100), "https://bun.aphrody.app", 41);
+  const result = distributeLlmText(directory.root, "fixture", "Small\n", "https://bun.aphrody.app", 41);
   expect(result.manifest).toBeNull();
   expect(readDistributedLlmText(directory.root, "fixture")).toBe("Small\n");
   expect(() => readFileSync(join(directory.root, "site", large.manifest!.parts[0]!.path))).toThrow();
@@ -61,7 +61,13 @@ test("small LLM text remains inline and a verified shrink removes former managed
 
 test("manifest path, source and payload corruption are rejected before replacing text", () => {
   using directory = fixture();
-  const result = distributeLlmText(directory.root, "fixture", "Source bytes\n".repeat(12), "https://aphrody.app", 40);
+  const result = distributeLlmText(
+    directory.root,
+    "fixture",
+    "Source bytes\n".repeat(12),
+    "https://bun.aphrody.app",
+    40,
+  );
   const index = readFileSync(join(directory.root, "site/llms-full.txt"));
   expect(() => distributeLlmText(directory.root, "another-source", "replacement")).toThrow("manifest");
   const manifestPath = join(directory.root, "site/knowledge/llms/manifest.json");
@@ -84,7 +90,7 @@ test("manifest path, source and payload corruption are rejected before replacing
 
 test("part count and invalid UTF-16 fail without overwriting the inline output", () => {
   using directory = fixture();
-  expect(() => distributeLlmText(directory.root, "fixture", "a".repeat(1025), "https://aphrody.app", 4)).toThrow(
+  expect(() => distributeLlmText(directory.root, "fixture", "a".repeat(1025), "https://bun.aphrody.app", 4)).toThrow(
     "too many",
   );
   expect(() => distributeLlmText(directory.root, "fixture", "\ud800")).toThrow("losslessly");

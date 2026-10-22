@@ -1,4 +1,4 @@
-// Self-hostable Aphrody server: the aphrody.app site plus the same routes as the Worker (createAphrodyHandler).
+// Self-hostable Aphrody server: the bun.aphrody.app site plus the same routes as the Worker (createAphrodyHandler).
 import { createAphrodyHandler } from "../cloudflare/src/core.ts";
 import { loadConfig, type AphrodyConfig } from "./config.ts";
 import { createPlatform } from "./platform.ts";

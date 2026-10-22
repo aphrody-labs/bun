@@ -326,7 +326,7 @@ export async function yoloAPI(request: Request, env: YoloEnv, context: YoloAPICo
     const body = object(await boundedJSON(request, signal));
     if (path === "/mcp") {
       const originHeader = request.headers.get("origin");
-      if (originHeader && originHeader !== new URL(request.url).origin && originHeader !== "https://aphrody.app")
+      if (originHeader && originHeader !== new URL(request.url).origin && originHeader !== "https://bun.aphrody.app")
         throw new APIError(403, "invalid_origin", "MCP origin is not allowed");
       await rateLimit(env, "mcp:" + (request.headers.get("CF-Connecting-IP") ?? "unknown"));
       return await mcp(body, context, request, signal);

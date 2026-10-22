@@ -1,4 +1,4 @@
-// Gabarit HTML unique (en-tête, navigation, recherche, pied de page), feuille de style et script des sites aphrody.app et aphrody.com. Couleurs : rôles --md-sys-color-* de m3-tokens.css et
+// Gabarit HTML unique (en-tête, navigation, recherche, pied de page), feuille de style et script des sites bun.aphrody.app et aphrody.com. Couleurs : rôles --md-sys-color-* de m3-tokens.css et
 // police Google Sans Flex d'aphrody-fonts.css, servis par cdn.aphrody.com (brand.ts, scripts/aphrody/brand-sync.ts).
 import { BRAND } from "./brand.ts";
 import { WEBMCP_SCRIPT } from "./webmcp.ts";
@@ -21,7 +21,7 @@ export type Shell = {
   footer: string;
   /** Lien GitHub de l'en-tête. */
   github: string;
-  /** Nom affiché dans l'en-tête : `Aphrody Bun` pour le site du runtime (aphrody.app), `Aphrody` sinon. */
+  /** Nom affiché dans l'en-tête : `Aphrody Bun` pour le site du runtime (bun.aphrody.app), `Aphrody` sinon. */
   brand?: string;
 };
 

@@ -10,19 +10,20 @@ async function bundle() {
     entrypoints: [join(app, "src", "worker.ts")],
     target: "browser",
     format: "esm",
-    external: ["cloudflare:*"],
+    // The Worker runs with nodejs_compat (wrangler.jsonc, startWorker's default): workerd provides node:*.
+    external: ["cloudflare:*", "node:*"],
   });
   if (!result.success) throw new AggregateError(result.logs, "bundle failed");
   return result.outputs[0].text();
 }
 
-test("aphrody.app Worker serves the API with its bindings", async () => {
+test("bun.aphrody.app Worker serves the API with its bindings", async () => {
   await using worker = await startWorker({
     script: await bundle(),
     compatibilityDate: "2026-10-06",
     d1Databases: ["DB"],
     kvNamespaces: ["CACHE"],
-    r2Buckets: ["APHRODY", "DRAGONBALLFR"],
+    r2Buckets: ["APHRODY"],
     durableObjects: { ROOMS: { className: "Room", useSQLite: true } },
     queueProducers: { JOBS: { queueName: "aphrody-app-jobs" } },
     workflows: { INGEST: { name: "aphrody-app-ingest", className: "Ingest" } },
@@ -41,19 +42,19 @@ test("aphrody.app Worker serves the API with its bindings", async () => {
   const auth = { Authorization: `Bearer ${secret}` };
 
   const health = await (await worker.fetch("/api/health")).json();
-  expect(health).toMatchObject({ ok: true, buckets: ["aphrody", "dragonballfr"] });
+  expect(health).toMatchObject({ ok: true, buckets: ["aphrody-assets"] });
 
-  expect((await worker.fetch("/api/files/aphrody/a.txt", { method: "PUT", body: "x" })).status).toBe(401);
+  expect((await worker.fetch("/api/files/aphrody-assets/a.txt", { method: "PUT", body: "x" })).status).toBe(401);
   expect(
     (
-      await worker.fetch("/api/files/aphrody/a.txt", {
+      await worker.fetch("/api/files/aphrody-assets/a.txt", {
         method: "PUT",
         body: "x",
         headers: { Authorization: "Bearer no" },
       })
     ).status,
   ).toBe(401);
-  const put = await worker.fetch("/api/files/aphrody/dir/a.txt", {
+  const put = await worker.fetch("/api/files/aphrody-assets/dir/a.txt", {
     method: "PUT",
     body: "bonjour",
     headers: { ...auth, "Content-Type": "text/plain" },
@@ -61,21 +62,23 @@ test("aphrody.app Worker serves the API with its bindings", async () => {
   expect(await put.json()).toMatchObject({ key: "dir/a.txt", size: 7 });
   expect(put.status).toBe(201);
 
-  const list = (await (await worker.fetch("/api/files/aphrody")).json()) as {
+  const list = (await (await worker.fetch("/api/files/aphrody-assets")).json()) as {
     objects: { key: string }[];
   };
   expect(list.objects.map((o: { key: string }) => o.key)).toEqual(["dir/a.txt"]);
 
-  const get = await worker.fetch("/api/files/aphrody/dir/a.txt");
+  const get = await worker.fetch("/api/files/aphrody-assets/dir/a.txt");
   expect(await get.text()).toBe("bonjour");
   expect(get.headers.get("Content-Type")).toBe("text/plain");
-  const range = await worker.fetch("/api/files/aphrody/dir/a.txt", {
+  const range = await worker.fetch("/api/files/aphrody-assets/dir/a.txt", {
     headers: { Range: "bytes=0-2" },
   });
   expect(await range.text()).toBe("bon");
   expect(range.status).toBe(206);
   const etag = get.headers.get("ETag")!;
-  expect((await worker.fetch("/api/files/aphrody/dir/a.txt", { headers: { "If-None-Match": etag } })).status).toBe(304);
+  expect(
+    (await worker.fetch("/api/files/aphrody-assets/dir/a.txt", { headers: { "If-None-Match": etag } })).status,
+  ).toBe(304);
 
   expect((await worker.fetch("/api/files/nope")).status).toBe(404);
 

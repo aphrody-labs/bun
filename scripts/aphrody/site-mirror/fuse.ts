@@ -70,7 +70,7 @@ export function designResources(
   return `<section class="fusion-design" aria-label="Design sources"><details><summary>${symbol("palette")}Design sources</summary><h2>Google Design</h2>${google.map(entry => link(entry.href, entry.title, "article")).join("")}<h2>Material 3</h2>${material.map(entry => link(entry.slug === undefined ? entry.source_url! : "https://m3.material.io/" + entry.slug, entry.title!, "auto_awesome")).join("")}<p>Public captured references. Aphrody M3 tokens, typography and symbols style this interface.</p></details></section>`;
 }
 
-export function adaptProductHome(html: string, source: string, origin = "https://aphrody.app"): string {
+export function adaptProductHome(html: string, source: string, origin = "https://bun.aphrody.app"): string {
   if (!/^[a-f0-9]{40}$/.test(source)) throw new Error("A release source SHA is required");
   const notes = `<span class="fusion-status">${symbol("construction")}Stable Bun OS release qualification in progress</span><a href="/downloads">Published downloads</a>`;
   let lead = 0;

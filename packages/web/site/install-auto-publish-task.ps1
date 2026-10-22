@@ -62,8 +62,8 @@ $publishedSource = (& git -C $Checkout rev-parse "refs/remotes/$remote/main^{com
 if ($LASTEXITCODE -ne 0 -or $receipt.commit -ne $publishedSource) { throw 'The current published main source has no production qualification receipt.' }
 $qualifiedBootstrap = (& git -C $Checkout rev-parse "$($receipt.commit):packages/web/site/auto-publish.ts").Trim()
 if ($LASTEXITCODE -ne 0 -or $qualifiedBootstrap -ne $blob) { throw 'The production source does not contain this publisher bootstrap.' }
-$public = Invoke-RestMethod -Uri 'https://aphrody.app/publish.json' -TimeoutSec 15 -Headers @{ 'Cache-Control'='no-cache' }
-$api = Invoke-RestMethod -Uri 'https://aphrody.app/api/site/snapshot' -TimeoutSec 15 -Headers @{ 'Cache-Control'='no-cache' }
+$public = Invoke-RestMethod -Uri 'https://bun.aphrody.app/publish.json' -TimeoutSec 15 -Headers @{ 'Cache-Control'='no-cache' }
+$api = Invoke-RestMethod -Uri 'https://bun.aphrody.app/api/site/snapshot' -TimeoutSec 15 -Headers @{ 'Cache-Control'='no-cache' }
 $apiSource = if ($api.snapshot) { $api.snapshot.source } else { $api.source }
 if ($public.commit -ne $receipt.commit -or $public.evidence -ne $receipt.evidence -or $apiSource -ne $receipt.commit) {
   throw 'Public static and database routes do not confirm the production receipt.'

@@ -134,7 +134,7 @@ async function main(args: string[]) {
     url: `${PUBLIC}/${k.data}`,
     manifest: `${PUBLIC}/${k.manifest}`,
     vectors: k.vectors,
-    search: "https://aphrody.app/api/bun/search?q=",
+    search: "https://bun.aphrody.app/api/bun/search?q=",
   };
   console.log(`${entries.length} entries -> ${PUBLIC}/${k.data}`);
   if (dryRun) return;

@@ -20,7 +20,7 @@ Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy Unrestricted
 Bun v1.1 or later. The build uses Bun to run its own code generators.
 
 ```ps1
-irm https://aphrody.app/install.ps1 | iex
+irm https://bun.aphrody.app/install.ps1 | iex
 ```
 
 The installer puts `bun.exe` in `$Env:BUN_INSTALL\bin` (`~\.bun\bin` by default). Set `APHRODY_BUN_BIN_DIR` (or pass `-BinDir` to `scripts/aphrody/install.ps1`) to put the executable in another directory; `BUN_INSTALL` still holds packages and caches.

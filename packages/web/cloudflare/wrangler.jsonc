@@ -1,4 +1,4 @@
-// aphrody.app: the Aphrody Bun site and its AI/API routes, built from packages/web/site.
+// bun.aphrody.app: the Aphrody Bun site and its AI/API routes, built from packages/web/site.
 // Secrets and account credentials live in .env (git-ignored, see .env.example). KV, D1 and Queue
 // resources without ids are provisioned by the first `wrangler deploy` and found by name afterwards.
 {
@@ -9,44 +9,15 @@
   "compatibility_flags": ["nodejs_compat"],
   "workers_dev": false,
   "preview_urls": true,
+  // aphrody.app, www and the app subdomains are served by the Bun OS desktop Worker (aphrody-webos).
   "routes": [
-    { "pattern": "app-audio.aphrody.app/*", "zone_id": "f4dab237b9811435da6fee0b5b3438d4" },
-    { "pattern": "app-cad.aphrody.app/*", "zone_id": "f4dab237b9811435da6fee0b5b3438d4" },
-    { "pattern": "app-compositing.aphrody.app/*", "zone_id": "f4dab237b9811435da6fee0b5b3438d4" },
-    { "pattern": "app-documents.aphrody.app/*", "zone_id": "f4dab237b9811435da6fee0b5b3438d4" },
-    { "pattern": "app-generation.aphrody.app/*", "zone_id": "f4dab237b9811435da6fee0b5b3438d4" },
-    { "pattern": "app-images.aphrody.app/*", "zone_id": "f4dab237b9811435da6fee0b5b3438d4" },
-    { "pattern": "app-interface-layouts.aphrody.app/*", "zone_id": "f4dab237b9811435da6fee0b5b3438d4" },
-    { "pattern": "app-layout.aphrody.app/*", "zone_id": "f4dab237b9811435da6fee0b5b3438d4" },
-    { "pattern": "app-pdf.aphrody.app/*", "zone_id": "f4dab237b9811435da6fee0b5b3438d4" },
-    { "pattern": "app-photo-processing.aphrody.app/*", "zone_id": "f4dab237b9811435da6fee0b5b3438d4" },
-    { "pattern": "app-slides.aphrody.app/*", "zone_id": "f4dab237b9811435da6fee0b5b3438d4" },
-    { "pattern": "app-tables.aphrody.app/*", "zone_id": "f4dab237b9811435da6fee0b5b3438d4" },
-    { "pattern": "app-vectors.aphrody.app/*", "zone_id": "f4dab237b9811435da6fee0b5b3438d4" },
-    { "pattern": "app-video.aphrody.app/*", "zone_id": "f4dab237b9811435da6fee0b5b3438d4" },
-    { "pattern": "aphrody.app", "custom_domain": true },
-    { "pattern": "artcraft.aphrody.app", "custom_domain": true },
-    { "pattern": "apt.aphrody.app", "custom_domain": true },
-    { "pattern": "cadcraft.aphrody.app", "custom_domain": true },
-    { "pattern": "deckcraft.aphrody.app", "custom_domain": true },
-    { "pattern": "designcraft.aphrody.app", "custom_domain": true },
-    { "pattern": "desktop.aphrody.app", "custom_domain": true },
-    { "pattern": "effectcraft.aphrody.app", "custom_domain": true },
-    { "pattern": "figcraft.aphrody.app", "custom_domain": true },
-    { "pattern": "filmcraft.aphrody.app", "custom_domain": true },
-    { "pattern": "gridcraft.aphrody.app", "custom_domain": true },
-    { "pattern": "lightcraft.aphrody.app", "custom_domain": true },
-    { "pattern": "pdfcraft.aphrody.app", "custom_domain": true },
-    { "pattern": "photocraft.aphrody.app", "custom_domain": true },
-    { "pattern": "soundcraft.aphrody.app", "custom_domain": true },
-    { "pattern": "vectorcraft.aphrody.app", "custom_domain": true },
-    { "pattern": "wordcraft.aphrody.app", "custom_domain": true },
-    { "pattern": "www.aphrody.app", "custom_domain": true },
+    { "pattern": "bun.aphrody.app", "custom_domain": true },
+    { "pattern": "bun.aphrody.com", "custom_domain": true },
   ],
   // Both packages export only "import"/"require" conditions, which the workerd bundling conditions miss.
   "alias": {
     "@neondatabase/serverless": "../../bun-sql/node_modules/@neondatabase/serverless/index.mjs",
-    "@aphrody/typesafe-sdk": "../node_modules/@aphrody/typesafe-sdk/dist/index.mjs"
+    "@aphrody/typesafe-sdk": "../node_modules/@aphrody/typesafe-sdk/dist/index.mjs",
   },
   "assets": {
     "directory": "./dist/site",

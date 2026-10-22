@@ -1,12 +1,12 @@
 // Génère un site statique dans une seule coque (layout.ts). Sans données de distribution, c'est le site du runtime,
-// aphrody.app (« Aphrody Bun » : accueil natif, /runtime, /docs, téléchargements, notes de version, benchmarks,
+// bun.aphrody.app (« Aphrody Bun » : accueil natif, /runtime, /docs, téléchargements, notes de version, benchmarks,
 // installateurs) ; avec elles (--data d'un collect.ts --distribution), le site de la distribution Aphrody (accueil
 // produit, /components, /runtime, /m3, /security, /contributing, /about, pages générées par pages.ts depuis
 // site-data.json de collect.ts), la doc du runtime aphrody-labs/bun (/docs depuis docs/docs.json + .mdx, pages .md
 // brutes, recherche), /benchmarks, /downloads, /release-notes, /install (+ .sh, .ps1), /bun/setup.sh|ps1, /llms.txt,
 // /llms-full.txt, sitemap.xml, robots.txt.
 //
-//   bun packages/web/site/build.ts --out <dir> [--src <arbre du dépôt>] [--origin https://aphrody.app]
+//   bun packages/web/site/build.ts --out <dir> [--src <arbre du dépôt>] [--origin https://bun.aphrody.app]
 //       [--commit <sha>] [--repo aphrody-labs/bun] [--perf <dossier des perf-report.json>] [--perf-run <url>]
 //       [--releases <releases.json> | --offline] [--data <site-data.json>]
 //       [--home-runtime-fact <receipt.json> ...] [--home-graph <graph-summary.json>]
@@ -442,7 +442,7 @@ export async function build(o: BuildOptions) {
   pages.push(...readRulePages(docs, new Set(pages.map(p => p.slug))));
   const now = (o.now ?? new Date()).toISOString();
   const data = o.data ?? null;
-  /** Nom du site : la distribution (aphrody.com) ou le runtime seul (aphrody.app). */
+  /** Nom du site : la distribution (aphrody.com) ou le runtime seul (bun.aphrody.app). */
   const brand = data?.distribution ? "Aphrody" : "Aphrody Bun";
   const readSnippet = (path: string) => {
     const file = join(docs, path);
@@ -1314,7 +1314,7 @@ if (import.meta.main) {
   const result = await build({
     src,
     out: resolve(out),
-    origin: option("--origin", "https://aphrody.app")!.replace(/\/$/, ""),
+    origin: option("--origin", "https://bun.aphrody.app")!.replace(/\/$/, ""),
     commit,
     repo,
     ...(option("--perf") ? { perf: option("--perf")! } : {}),

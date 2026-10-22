@@ -29,7 +29,7 @@ export function symbol(name: string): string {
 }
 
 export function navigationSymbol(href: string): string {
-  const path = new URL(href, "https://aphrody.app").pathname;
+  const path = new URL(href, "https://bun.aphrody.app").pathname;
   if (path.startsWith("/docs")) return "menu_book";
   if (path.startsWith("/guides")) return "explore";
   if (path.startsWith("/reference") || path.startsWith("/knowledge")) return "data_object";

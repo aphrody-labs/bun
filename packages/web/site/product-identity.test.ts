@@ -37,7 +37,7 @@ const data: SiteData = {
 };
 
 test("runtime inventory preserves attribution and distinguishes declarations from qualified behavior", () => {
-  const page = runtimePage(data, { origin: "https://aphrody.app", releases: [] })!;
+  const page = runtimePage(data, { origin: "https://bun.aphrody.app", releases: [] })!;
   expect(page.description).toContain("Bun OS");
   expect(page.description).not.toMatch(/fork/i);
   expect(page.markdown).toContain("oven-sh/bun");
@@ -55,7 +55,7 @@ test("public hero and README preserve upstream authors and licences", () => {
   const hero = renderRuntimeHero(data, {
     src: ".",
     out: ".",
-    origin: "https://aphrody.app",
+    origin: "https://bun.aphrody.app",
     commit: source,
     repo: "aphrody-labs/bun",
     releases: [],

@@ -98,7 +98,7 @@ export function distributeLlmText(
   out: string,
   source: string,
   text: string,
-  origin = "https://aphrody.app",
+  origin = "https://bun.aphrody.app",
   maxPartBytes = llmPartLimit,
 ) {
   if (
@@ -187,7 +187,7 @@ export function distributeLlmText(
   return { changed, manifest: manifest ?? null, bytes: bytes.length, sha256: textHash(bytes) };
 }
 
-export function completeReleaseKnowledge(out: string, origin = "https://aphrody.app") {
+export function completeReleaseKnowledge(out: string, origin = "https://bun.aphrody.app") {
   const graph = JSON.parse(readFileSync(join(out, "graph.json"), "utf8"));
   using db = new Database(join(out, "monorepo.sqlite"), { readonly: true });
   const files = db

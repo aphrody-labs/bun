@@ -4,7 +4,8 @@ import { APHRODY_DOMAINS, canonicalUrl, domainForHost } from "../src/domains.ts"
 describe("public domain manifest", () => {
   test("has one canonical owner per public host", () => {
     expect(new Set(APHRODY_DOMAINS.map(domain => domain.host)).size).toBe(APHRODY_DOMAINS.length);
-    expect(domainForHost("WWW.APHRODY.APP:443")?.canonical).toBe("https://aphrody.app");
+    expect(domainForHost("BUN.APHRODY.COM:443")?.canonical).toBe("https://bun.aphrody.app");
+    expect(domainForHost("aphrody.app")).toBeUndefined();
   });
 
   test("does not make AI or infrastructure hosts indexable", () => {
@@ -15,6 +16,6 @@ describe("public domain manifest", () => {
 
   test("builds canonical URLs from the owning host", () => {
     expect(canonicalUrl("www.aphrody.com", "/docs/start")).toBe("https://aphrody.com/docs/start");
-    expect(canonicalUrl("bun.aphrody.com", "/install")).toBe("https://aphrody.app/install");
+    expect(canonicalUrl("bun.aphrody.com", "/install")).toBe("https://bun.aphrody.app/install");
   });
 });

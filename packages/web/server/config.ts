@@ -14,7 +14,7 @@ const defaults = {
   APP_SECRET: "",
   NEON_DATABASE_URL: "",
   TYPESAFE_API_KEY: "",
-  /** Another host serving /api/bun/search (for example https://aphrody.app); empty disables the route. */
+  /** Another host serving /api/bun/search (for example https://bun.aphrody.app); empty disables the route. */
   BUN_SEARCH_UPSTREAM: "",
   /** OpenAI-compatible endpoint for /api/ai and grounded site answers; empty disables them. */
   AI_BASE_URL: "",

@@ -1,9 +1,9 @@
 ---
 title: Aphrody self-hosted server
-description: One executable that serves the aphrody.app site and its API, with the same request handler as the Cloudflare Worker.
+description: One executable that serves the bun.aphrody.app site and its API, with the same request handler as the Cloudflare Worker.
 ---
 
-`packages/web/server` compiles the aphrody.app site (static pages, `/install*`, `/llms.txt`) and its routes into a single executable. The Cloudflare Worker (`packages/web/cloudflare/src/worker.ts`) and the binary share one handler, `createAphrodyHandler` in `packages/web/cloudflare/src/core.ts`; each only supplies an `AphrodyPlatform` (storage, cache, limiters, AI).
+`packages/web/server` compiles the bun.aphrody.app site (static pages, `/install*`, `/llms.txt`) and its routes into a single executable. The Cloudflare Worker (`packages/web/cloudflare/src/worker.ts`) and the binary share one handler, `createAphrodyHandler` in `packages/web/cloudflare/src/core.ts`; each only supplies an `AphrodyPlatform` (storage, cache, limiters, AI).
 
 ## Build
 

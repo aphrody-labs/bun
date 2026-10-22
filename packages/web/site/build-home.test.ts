@@ -152,7 +152,7 @@ test("every page shares one shell; the home, release notes and downloads use onl
   const result = await build({
     src: String(dir),
     out,
-    origin: "https://aphrody.app",
+    origin: "https://bun.aphrody.app",
     commit: source,
     repo: "aphrody-labs/bun",
     releases,
@@ -183,8 +183,8 @@ test("every page shares one shell; the home, release notes and downloads use onl
   expect(home).not.toContain("bun:sqlite");
   expect(home).toContain("Measured builds");
   expect(home).toContain('<td class="num">161</td>');
-  expect(home).toContain('<meta property="og:url" content="https://aphrody.app/">');
-  expect(home).toContain('<meta property="og:image" content="https://aphrody.app/icon-512.png">');
+  expect(home).toContain('<meta property="og:url" content="https://bun.aphrody.app/">');
+  expect(home).toContain('<meta property="og:image" content="https://bun.aphrody.app/icon-512.png">');
   expect(home).not.toMatch(/bun\.com|bun\.sh|bunjavascript|Anthropic|Unrelated generated README|google-chromium-sdk/);
   const notes = read("release-notes/index.html");
   expect(notes).toContain('<h3 id="bun-v1.4.5">');
@@ -209,7 +209,7 @@ test("evidence errors refuse a build before any site output or source overwrite"
     build({
       src: directory + "/missing-source",
       out: String(directory),
-      origin: "https://aphrody.app",
+      origin: "https://bun.aphrody.app",
       commit: "a".repeat(40),
       repo: "aphrody-labs/bun",
       releases: [],

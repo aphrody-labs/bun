@@ -114,7 +114,7 @@ export async function siteSyncFreshness(
   config: Pick<SiteSyncConfig, "buildRoot">,
   source: string,
   evidence: string,
-  origin = "https://aphrody.app",
+  origin = "https://bun.aphrody.app",
 ): Promise<{ fresh: boolean }> {
   try {
     const file = Bun.file(join(config.buildRoot, "last-sync.json"));
@@ -208,7 +208,7 @@ export async function syncSite(
       credentialFile: config.credentialFile,
     });
     if (!options.dryRun) {
-      const response = await fetch("https://aphrody.app/api/site/snapshot", {
+      const response = await fetch("https://bun.aphrody.app/api/site/snapshot", {
         cache: "no-store",
         signal: AbortSignal.timeout(10000),
       });

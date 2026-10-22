@@ -634,7 +634,7 @@ exclude = ["scripts/verify-baseline-static", "vendor"]
 
 [workspace.package]
 "repository" = "https://github.com/aphrody-labs/bun"
-"homepage" = "https://aphrody.app"
+"homepage" = "https://bun.aphrody.app"
 "authors" = ["aphrody-dev <contact@aphrody.com>"]
 "rust-version" = "1.97"
 "license" = "MIT"

@@ -1,4 +1,4 @@
-// Publie le site du runtime, https://aphrody.app, depuis origin/main d'aphrody-labs/bun (timer systemd du VPS ou
+// Publie le site du runtime, https://bun.aphrody.app, depuis origin/main d'aphrody-labs/bun (timer systemd du VPS ou
 // poste local) : git fetch, `git archive` de docs/ bench/ packages/web/ packages/bun-cloudflare/ dans un dossier
 // temporaire, collect.ts (site-data.json : runtime et APHRODY.md, organisation GitHub), rapports perf du dernier run
 // réussi d'aphrody-perf.yml (gh), releases GitHub, build.ts de l'arbre extrait, puis déploiement Cloudflare : assets
@@ -17,7 +17,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "nod
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 
-export const ORIGIN = "https://aphrody.app";
+export const ORIGIN = "https://bun.aphrody.app";
 const REPO = "aphrody-labs/bun";
 const APP = "packages/web/cloudflare";
 

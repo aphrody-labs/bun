@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Republication automatique de aphrody.app (timer systemd --user aphrody-site-publish sur le VPS).
+# Republication automatique de bun.aphrody.app (timer systemd --user aphrody-site-publish sur le VPS).
 # Fetch seul du checkout (le worktree n'est jamais touché), scripts du site pris dans origin/main,
 # puis sync.ts : docs, graphe SQLite/Neon et homepage partagent origin/main.
 # Les reçus mesurés et la capture publique sont référencés dans bun-site-sync.json.

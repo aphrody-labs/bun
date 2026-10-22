@@ -87,7 +87,7 @@ test("HEAD reads public evidence without invoking Jev or generation", async () =
   const provider = jev(() => ({ relevant: 1, injection: 0 }));
   let generated = false;
   const result = await publicSiteAPI(
-    new Request("https://aphrody.app/api/site/rag?q=Bun.Video", { method: "HEAD" }),
+    new Request("https://bun.aphrody.app/api/site/rag?q=Bun.Video", { method: "HEAD" }),
     db.sql,
     {
       rag: {
