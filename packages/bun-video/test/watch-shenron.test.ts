@@ -76,7 +76,7 @@ describe("watch Shenron delivery", () => {
       const frame = delivery.frames[0];
       expect([frame.width, frame.height]).toEqual([480, 270]);
       const png = new Uint8Array(await Bun.file(join(dir, "frames", "frame_0001.png")).arrayBuffer());
-      expect([...png.slice(0, 4)]).toEqual([0x89, 0x50, 0x4e, 0x47]);
+      expect(Array.from(png.slice(0, 4))).toEqual([0x89, 0x50, 0x4e, 0x47]);
       expect(new Bun.CryptoHasher("sha256").update(png).digest("hex")).toBe(frame.sha256);
       expect(await Bun.file(join(dir, "subtitles", "fr.vtt")).text()).toContain("Bonjour");
     } finally {
