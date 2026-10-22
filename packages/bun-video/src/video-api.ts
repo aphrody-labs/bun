@@ -58,6 +58,15 @@ const owners = {
   "frame-plan": () => import("./frame-plan"),
   "remotion-frame": () => import("./remotion-frame"),
   "hyperframes-native": () => import("./hyperframes-native"),
+  media: () => import("./media-workflow"),
+  "x-source": () => import("./x-source"),
+  photocraft: () => import("./photocraft"),
+  "m3-video": () => import("./m3-video"),
+  watch: () => import("./watch"),
+  "watch-catalogue": () => import("./watch-catalogue"),
+  "watch-shenron": () => import("./watch-shenron"),
+  "video-watch": () => import("./video-watch"),
+  "video-verify": () => import("./video-verify"),
 } as const;
 
 export type VideoAPIFamily = keyof typeof owners;
@@ -128,6 +137,15 @@ const definitions: readonly [VideoAPIFamily, string, VideoAPIDescriptor["scope"]
   ["frame-plan", "Validated rational-FPS frame plans", "render"],
   ["remotion-frame", "Native served Remotion frame capture", "render"],
   ["hyperframes-native", "Native served HyperFrames frame capture", "render"],
+  ["media", "FilmCraft media jobs: inspect, download, frames, audio, GIF, remux and cuts", "native"],
+  ["x-source", "Public X status video source normalization", "acquisition"],
+  ["photocraft", "Native image transformation operations shared with frame output", "native"],
+  ["m3-video", "Material 3 video: deterministic typography, logo icons and native export", "render"],
+  ["watch", "Timestamped frames and transcript of a video, decoded natively without FFmpeg", "native"],
+  ["watch-catalogue", "Episode catalogue runs with bounded concurrency and a resumable cache", "catalog"],
+  ["watch-shenron", "Original-size PNG frames and the Shenron episode delivery manifest", "catalog"],
+  ["video-watch", "Watch jobs recorded as catalog frames, transcripts and job state", "catalog"],
+  ["video-verify", "Native render verification against watch reference frames", "render"],
 ];
 
 export const VIDEO_APIS: readonly VideoAPIDescriptor[] = Object.freeze(
@@ -142,6 +160,10 @@ export const VIDEO_APIS: readonly VideoAPIDescriptor[] = Object.freeze(
         "frame-plan",
         "remotion-frame",
         "hyperframes-native",
+        "watch-catalogue",
+        "watch-shenron",
+        "video-watch",
+        "video-verify",
       ].includes(id)
         ? `./src/${id}.ts`
         : `@aphrody/bun-video/${id.replace("remotion-renderer", "remotion/renderer").replace("hyperframes-engine", "hyperframes/engine").replace("crunchyroll-api", "crunchyroll/api").replace("crunchyroll-service", "crunchyroll/service").replace("crunchyroll-cli", "crunchyroll/cli").replace("crunchyroll-watchlist", "crunchyroll/watchlist")}`,
