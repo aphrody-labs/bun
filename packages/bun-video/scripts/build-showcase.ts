@@ -6,6 +6,7 @@ import { openChromiumFrameContext } from "../src/chromium-frame";
 import { compareRGBAFrames } from "../src/pixel-verify";
 import { encodeFilmCraftFrames } from "../src/encode";
 import { m3IconSVG, m3VideoDocument, prepareM3Video, rasterizeM3SVG, renderM3Video } from "../src/m3-video";
+import type { ForkRuns } from "../src/apps/site/fork-scenes";
 import {
   collection,
   type ShowcaseAsset,
@@ -21,6 +22,12 @@ const directory = resolve(output);
 await mkdir(directory, { recursive: true });
 if (await Bun.file(join(directory, "showcase.json")).exists())
   throw new Error("Use a fresh versioned showcase directory");
+// Fork scenes play recorded runs of the runtime (scripts/fork-runs.ts); a scene without a run is not built.
+const forkRunsPath = Bun.env.BUN_VIDEO_FORK_RUNS;
+if (forkRunsPath && !isAbsolute(forkRunsPath)) throw new Error("BUN_VIDEO_FORK_RUNS must be an absolute path");
+const forkRuns = forkRunsPath ? ((await Bun.file(forkRunsPath).json()) as ForkRuns) : null;
+if (forkRuns && forkRuns.schema !== "bun-video/fork-runs/v1")
+  throw new Error("BUN_VIDEO_FORK_RUNS is not a fork runs file");
 const privateDirectory = Bun.env.BUN_VIDEO_SHOWCASE_PRIVATE;
 if (!privateDirectory || !isAbsolute(privateDirectory))
   throw new Error("Set BUN_VIDEO_SHOWCASE_PRIVATE outside the public artifacts");
@@ -33,7 +40,9 @@ const manifest: ShowcaseManifest = {
   generatedAt: new Date().toISOString(),
   sourceRevision: Bun.env.BUN_VIDEO_SOURCE_REVISION ?? "uncommitted",
   runtime: { version: Bun.version, revision: Bun.revision, platform: process.platform },
-  works: collection.map(work => ({ ...work, evidence: [] })),
+  works: collection
+    .filter(work => work.artwork !== "fork" || forkRuns?.runs.some(run => run.id === work.id))
+    .map(work => ({ ...work, evidence: [] })),
   evidence: [],
   apis: [...pipeline.apis()],
 };
@@ -99,7 +108,8 @@ for (const entry of ["app", "preview"] as const) {
     "text/html",
   );
 }
-for (const name of ["collection.ts", "artwork.tsx", "preview.tsx", "remotion.tsx"])
+if (forkRuns) await write("fork-runs.json", `${JSON.stringify(forkRuns, null, 2)}\n`, "application/json");
+for (const name of ["collection.ts", "artwork.tsx", "preview.tsx", "remotion.tsx", "fork-scenes.ts", "fork-frame.tsx"])
   await write(
     `sources/${name}`,
     await Bun.file(resolve(import.meta.dir, `../src/apps/site/${name}`)).bytes(),
@@ -112,6 +122,16 @@ await write(
   "font/woff2",
 );
 await write("fonts/OFL.txt", await Bun.file(join(fonts, "RobotoFlex-OFL.txt")).bytes(), "text/plain");
+await write(
+  "fonts/GoogleSansCode-latin.woff2",
+  await Bun.file(join(fonts, "web/GoogleSansCode-latin.woff2")).bytes(),
+  "font/woff2",
+);
+await write(
+  "fonts/GoogleSansCode-OFL.txt",
+  await Bun.file(join(fonts, "GoogleSansCode-OFL.txt")).bytes(),
+  "text/plain",
+);
 const source = Bun.env.BUN_VIDEO_SHOWCASE_SOURCE;
 if (source) {
   const expected = Bun.env.BUN_VIDEO_SHOWCASE_SOURCE_SHA256;
@@ -327,6 +347,31 @@ try {
           });
           assets.push(await write(videoFile, await Bun.file(join(directory, videoFile)).bytes(), "video/mp4"));
           work.video = videoFile;
+          const run = work.artwork === "fork" ? forkRuns?.runs.find(item => item.id === work.id) : undefined;
+          if (run) {
+            // Captions say what the scene shows and where its output was recorded.
+            const end = (work.durationFrames * work.fps.den) / work.fps.num;
+            const stamp = (seconds: number) => `00:00:${seconds.toFixed(3).padStart(6, "0")}`;
+            const platform = { win32: "Windows", linux: "Linux", darwin: "macOS" }[run.platform] ?? run.platform;
+            const captions = `captions/${work.id}.vtt`;
+            assets.push(
+              await write(
+                captions,
+                [
+                  "WEBVTT",
+                  "",
+                  `${stamp(0)} --> ${stamp(4.6)}`,
+                  `${work.title}: ${work.description}`,
+                  "",
+                  `${stamp(4.7)} --> ${stamp(end)}`,
+                  `${run.command}, output recorded on ${platform} with Bun ${run.bun.version}.`,
+                  "",
+                ].join("\n"),
+                "text/vtt",
+              ),
+            );
+            work.captions = captions;
+          }
         }
         return {
           detail: `${frames.length} images capturées à ${work.fps.num}/${work.fps.den} i/s. Aucun encodage vidéo implicite.`,

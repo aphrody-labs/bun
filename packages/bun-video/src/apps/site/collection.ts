@@ -1,5 +1,7 @@
+import { forkScenes } from "./fork-scenes";
+
 export type ShowcaseEngine = "remotion" | "hyperframes" | "filmcraft" | "native";
-export type Artwork = "orbit" | "type" | "terrain" | "wave" | "grid" | "bloom";
+export type Artwork = "orbit" | "type" | "terrain" | "wave" | "grid" | "bloom" | "fork";
 export interface ShowcaseWork {
   id: string;
   title: string;
@@ -67,8 +69,29 @@ const briefs: readonly Brief[] = [
   ],
 ];
 
+/**
+ * The runtime presented by its own programs: each fork scene is a Remotion composition that types a program and
+ * plays the output recorded when the runtime ran it (scripts/fork-runs.ts). Ten seconds at 12 FPS keeps the raw
+ * frames of a 960x540 render inside the FilmCraft encoder's 256 MiB input budget.
+ */
+export const forkCollection: readonly ShowcaseWork[] = forkScenes.map(scene => ({
+  id: scene.id,
+  title: scene.title,
+  description: scene.description,
+  engine: "remotion",
+  artwork: "fork",
+  features: ["recorded-run", "typing", "terminal"],
+  durationFrames: 120,
+  fps: { num: 12, den: 1 },
+  width: 960,
+  height: 540,
+  chapter: "Bun OS",
+  sourceRef: "packages/bun-video/src/apps/site/fork-scenes.ts",
+  code: Object.values(scene.files)[0],
+}));
+
 /** Each engine gets the same authored scene and cadence for measured comparisons. */
-export const collection: readonly ShowcaseWork[] = (["remotion", "hyperframes"] as const).flatMap(engine =>
+const artworkCollection: readonly ShowcaseWork[] = (["remotion", "hyperframes"] as const).flatMap(engine =>
   briefs.map(([id, title, description, artwork, features]) => ({
     id: `${engine}-${id}`,
     title,
@@ -91,6 +114,8 @@ export const collection: readonly ShowcaseWork[] = (["remotion", "hyperframes"] 
         : "const timeline = gsap.timeline({ paused: true });\ntimeline.to(clock, { frame: 95, duration: 4 });\nwindow.__hf.seek(seconds);",
   })),
 );
+
+export const collection: readonly ShowcaseWork[] = [...forkCollection, ...artworkCollection];
 
 export interface ShowcaseAsset {
   file: string;

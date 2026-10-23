@@ -7,6 +7,8 @@ import { gsap } from "gsap";
 import { resolveAuthoredTimingWindow } from "../../../hyperframes/core/src/runtime/authoredTiming";
 import { collection } from "./collection";
 import { Artwork } from "./artwork";
+import { ForkFrame } from "./fork-frame";
+import { forkScenes, type ForkRuns } from "./fork-scenes";
 import { Player, type PlayerRef } from "../../../remotion/player/src/index";
 import { useCurrentFrame } from "../../../remotion/core/src/index";
 
@@ -15,12 +17,25 @@ const work = collection.find(item => item.id === params.get("work")) ?? collecti
 const root = createRoot(document.getElementById("root")!);
 const state = { frame: 0 };
 const player = React.createRef<PlayerRef>();
+// A fork scene plays the output its program printed when the runtime ran it; the build publishes those runs.
+const scene = work.artwork === "fork" ? forkScenes.find(item => item.id === work.id) : undefined;
+const run = scene
+  ? ((await (await fetch("/fork-runs.json")).json()) as ForkRuns).runs.find(item => item.id === work.id)
+  : undefined;
+if (scene && !run) throw new Error(`No recorded run for ${work.id}`);
+function Scene({ frame }: { frame: number }) {
+  return scene ? (
+    <ForkFrame work={work} scene={scene} run={run!} frame={frame} />
+  ) : (
+    <Artwork work={work} frame={frame} />
+  );
+}
 function RemotionScene() {
-  return <Artwork work={work} frame={useCurrentFrame()} />;
+  return <Scene frame={useCurrentFrame()} />;
 }
 const render = () =>
   flushSync(() => {
-    if (work.engine === "hyperframes") root.render(<Artwork work={work} frame={Math.round(state.frame)} />);
+    if (work.engine === "hyperframes") root.render(<Scene frame={Math.round(state.frame)} />);
     else if (player.current) player.current.seekTo(Math.round(state.frame));
     else
       root.render(

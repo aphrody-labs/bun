@@ -104,15 +104,24 @@ async function main() {
   const config = Bun.JSONC.parse(await Bun.file(join(app, "wrangler.jsonc")).text()) as {
     secrets?: { required?: string[] };
   };
-  const secrets = Object.fromEntries((config.secrets?.required ?? []).map(name => [name, env[name]]));
-  const missing = Object.keys(secrets).filter(name => !secrets[name]);
-  if (missing.length) throw new Error(`${envFile()} is missing ${missing.join(", ")}`);
+  const required = config.secrets?.required ?? [];
+  const secrets = Object.fromEntries(required.filter(name => env[name]).map(name => [name, env[name]!]));
+  // A required secret absent from this host's key store is accepted only when the Worker already holds it.
+  const absent = required.filter(name => !secrets[name]);
+  if (absent.length) {
+    const listing = wrangler(["secret", "list", "--format", "json"], { cwd: app, env, stdio: "pipe" });
+    const [stdout, code] = await Promise.all([new Response(listing.stdout as ReadableStream).text(), listing.exited]);
+    const stored = new Set(code === 0 ? (JSON.parse(stdout) as { name: string }[]).map(secret => secret.name) : []);
+    const missing = absent.filter(name => !stored.has(name));
+    if (missing.length) throw new Error(`${envFile()} and the deployed Worker both lack ${missing.join(", ")}`);
+  }
 
   const run = async (wranglerArgs: string[], input?: string) => {
     const code = await wrangler(wranglerArgs, { cwd: app, env, input }).exited;
     if (code !== 0) throw new Error(`wrangler ${wranglerArgs[0]} exited with ${code}`);
   };
-  if (!args.includes("--dry-run")) await run(["secret", "bulk"], JSON.stringify(secrets));
+  if (!args.includes("--dry-run") && Object.keys(secrets).length)
+    await run(["secret", "bulk"], JSON.stringify(secrets));
   await run(["deploy", "--assets", assets, "--keep-vars", ...args]);
   if (!args.includes("--dry-run")) await run(["d1", "migrations", "apply", "aphrody-app", "--remote"]);
 }
