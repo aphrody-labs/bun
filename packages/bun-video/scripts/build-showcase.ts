@@ -1,4 +1,4 @@
-import { mkdir, realpath } from "node:fs/promises";
+import { mkdir, realpath, rm } from "node:fs/promises";
 import { isAbsolute, join, relative, resolve } from "node:path";
 import { createUnifiedVideoPipeline } from "../src/video-workflow";
 import { captureCompositionFrames } from "../src/render-frame";
@@ -55,6 +55,24 @@ async function write(file: string, bytes: string | Uint8Array, mime: string): Pr
   files.add(file);
   return { file, bytes: data.byteLength, sha256: new Bun.CryptoHasher("sha256").update(data).digest("hex"), mime };
 }
+/**
+ * Chromium on a loaded host can miss a navigation or startup deadline, or not exit in time; such a capture runs
+ * again with a fresh browser. Any other failure, and the last attempt's, is the evidence result.
+ */
+async function withChromiumRetries<T>(id: string, capture: (attempt: number) => Promise<T>, attempts = 3): Promise<T> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await capture(attempt);
+    } catch (error) {
+      const causes = error instanceof SuppressedError ? [error.suppressed, error.error] : [error];
+      const message = causes.map(cause => (cause instanceof Error ? cause.message : String(cause))).join("; ");
+      const transient =
+        /CDP command timed out|Composition startup expired|Chrome connection closed|Chromium did not exit/;
+      if (attempt >= attempts || !transient.test(message)) throw error;
+      console.error(`${id}: Chromium failed (${message}); attempt ${attempt + 1} of ${attempts} with a fresh browser`);
+    }
+  }
+}
 async function evidence(
   id: string,
   scope: string,
@@ -64,7 +82,9 @@ async function evidence(
   try {
     row = { id, scope, status: "passed", ...(await operation()) };
   } catch (error) {
-    console.error(error);
+    // `await using` wraps a failure and the failure to dispose the browser together; log both causes.
+    if (error instanceof SuppressedError) console.error(id, error.error, "\nwhile disposing:", error.suppressed);
+    else console.error(id, error);
     const code = typeof error === "object" && error && "code" in error ? String(error.code) : "OPERATION_FAILED";
     row = {
       id,
@@ -283,109 +303,113 @@ try {
     const row = await evidence(
       `composition-${work.id}`,
       sampleOnly ? "seven sampled PNG frames; Chromium provider" : "every authored PNG frame; Chromium provider",
-      async () => {
-        const url = `http://127.0.0.1:${server.port}/preview.html?work=${work.id}`;
-        await using browser = await openChromiumFrameContext({
-          url,
-          width: work.width,
-          height: work.height,
-          executable: browserPath,
-          signal: AbortSignal.timeout(300000),
-        });
-        const assets: ShowcaseAsset[] = [];
-        const frames = sampleOnly
-          ? Array.from({ length: 7 }, (_, index) => Math.round((index * (work.durationFrames - 1)) / 6))
-          : Array.from({ length: work.durationFrames }, (_, index) => index);
-        for (const frame of frames) {
-          for await (const captured of captureCompositionFrames(browser.context, {
-            kind: work.engine as "remotion" | "hyperframes",
-            compositionUrl: url,
-            composition: work.id,
-            fps: work.fps,
-            startFrame: frame,
-            endFrame: frame + 1,
+      () =>
+        withChromiumRetries(work.id, async attempt => {
+          const url = `http://127.0.0.1:${server.port}/preview.html?work=${work.id}`;
+          await using browser = await openChromiumFrameContext({
+            url,
             width: work.width,
             height: work.height,
-            workers: 1,
-          })) {
-            const pixels = await new Bun.Image(captured.png).rgba();
-            if (pixels.width !== work.width || pixels.height !== work.height)
-              throw new Error("Captured dimensions do not match composition");
-            assets.push(
-              await write(`frames/${work.id}/${String(frame).padStart(4, "0")}.png`, captured.png, "image/png"),
-            );
-          }
-        }
-        const poster = assets.find(asset => asset.file.endsWith("0072.png")) ?? assets[0]!;
-        work.poster = `posters/${work.id}.webp`;
-        assets.push(
-          await write(
-            work.poster,
-            await new Bun.Image(join(directory, poster.file)).resize(800, 450).webp({ quality: 88 }).bytes(),
-            "image/webp",
-          ),
-        );
-        work.frames = assets.filter(asset => asset.mime === "image/png").map(asset => asset.file);
-        const nativeExecutable = Bun.env.BUN_VIDEO_NATIVE_EXECUTABLE;
-        if (!sampleOnly && nativeExecutable) {
-          const frameFiles = work.frames;
-          async function* rgba() {
-            for (const file of frameFiles) {
-              const pixels = await new Bun.Image(join(directory, file)).rgba();
-              yield { data: pixels.data, width: pixels.width, height: pixels.height };
+            executable: browserPath,
+            signal: AbortSignal.timeout(300000),
+          });
+          const assets: ShowcaseAsset[] = [];
+          const frames = sampleOnly
+            ? Array.from({ length: 7 }, (_, index) => Math.round((index * (work.durationFrames - 1)) / 6))
+            : Array.from({ length: work.durationFrames }, (_, index) => index);
+          for (const frame of frames) {
+            for await (const captured of captureCompositionFrames(browser.context, {
+              kind: work.engine as "remotion" | "hyperframes",
+              compositionUrl: url,
+              composition: work.id,
+              fps: work.fps,
+              startFrame: frame,
+              endFrame: frame + 1,
+              width: work.width,
+              height: work.height,
+              workers: 1,
+            })) {
+              const pixels = await new Bun.Image(captured.png).rgba();
+              if (pixels.width !== work.width || pixels.height !== work.height)
+                throw new Error("Captured dimensions do not match composition");
+              assets.push(
+                await write(`frames/${work.id}/${String(frame).padStart(4, "0")}.png`, captured.png, "image/png"),
+              );
             }
           }
-          const videoFile = `videos/${work.id}.mp4`;
-          await mkdir(join(directory, "videos"), { recursive: true });
-          await encodeFilmCraftFrames(rgba(), {
-            nativeExecutable,
-            output: join(directory, videoFile),
-            width: work.width,
-            height: work.height,
-            fps: work.fps,
-            frames: work.durationFrames,
-          });
-          assets.push(await write(videoFile, await Bun.file(join(directory, videoFile)).bytes(), "video/mp4"));
-          work.video = videoFile;
-          const run = work.artwork === "fork" ? forkRuns?.runs.find(item => item.id === work.id) : undefined;
-          if (run) {
-            // Captions say what the scene shows and where its output was recorded.
-            const end = (work.durationFrames * work.fps.den) / work.fps.num;
-            const stamp = (seconds: number) => `00:00:${seconds.toFixed(3).padStart(6, "0")}`;
-            const platform = { win32: "Windows", linux: "Linux", darwin: "macOS" }[run.platform] ?? run.platform;
-            const captions = `captions/${work.id}.vtt`;
-            assets.push(
-              await write(
-                captions,
-                [
-                  "WEBVTT",
-                  "",
-                  `${stamp(0)} --> ${stamp(4.6)}`,
-                  `${work.title}: ${work.description}`,
-                  "",
-                  `${stamp(4.7)} --> ${stamp(end)}`,
-                  `${run.command}, output recorded on ${platform} with Bun ${run.bun.version}.`,
-                  "",
-                ].join("\n"),
-                "text/vtt",
-              ),
-            );
-            work.captions = captions;
+          const poster = assets.find(asset => asset.file.endsWith("0072.png")) ?? assets[0]!;
+          work.poster = `posters/${work.id}.webp`;
+          assets.push(
+            await write(
+              work.poster,
+              await new Bun.Image(join(directory, poster.file)).resize(800, 450).webp({ quality: 88 }).bytes(),
+              "image/webp",
+            ),
+          );
+          work.frames = assets.filter(asset => asset.mime === "image/png").map(asset => asset.file);
+          const nativeExecutable = Bun.env.BUN_VIDEO_NATIVE_EXECUTABLE;
+          if (!sampleOnly && nativeExecutable) {
+            const frameFiles = work.frames;
+            async function* rgba() {
+              for (const file of frameFiles) {
+                const pixels = await new Bun.Image(join(directory, file)).rgba();
+                yield { data: pixels.data, width: pixels.width, height: pixels.height };
+              }
+            }
+            const videoFile = `videos/${work.id}.mp4`;
+            await mkdir(join(directory, "videos"), { recursive: true });
+            // An earlier attempt may have written the file before its browser failed to exit.
+            await rm(join(directory, videoFile), { force: true });
+            await encodeFilmCraftFrames(rgba(), {
+              nativeExecutable,
+              output: join(directory, videoFile),
+              width: work.width,
+              height: work.height,
+              fps: work.fps,
+              frames: work.durationFrames,
+            });
+            assets.push(await write(videoFile, await Bun.file(join(directory, videoFile)).bytes(), "video/mp4"));
+            work.video = videoFile;
+            const run = work.artwork === "fork" ? forkRuns?.runs.find(item => item.id === work.id) : undefined;
+            if (run) {
+              // Captions say what the scene shows and where its output was recorded.
+              const end = (work.durationFrames * work.fps.den) / work.fps.num;
+              const stamp = (seconds: number) => `00:00:${seconds.toFixed(3).padStart(6, "0")}`;
+              const platform = { win32: "Windows", linux: "Linux", darwin: "macOS" }[run.platform] ?? run.platform;
+              const captions = `captions/${work.id}.vtt`;
+              assets.push(
+                await write(
+                  captions,
+                  [
+                    "WEBVTT",
+                    "",
+                    `${stamp(0)} --> ${stamp(4.6)}`,
+                    `${work.title}: ${work.description}`,
+                    "",
+                    `${stamp(4.7)} --> ${stamp(end)}`,
+                    `${run.command}, output recorded on ${platform} with Bun ${run.bun.version}.`,
+                    "",
+                  ].join("\n"),
+                  "text/vtt",
+                ),
+              );
+              work.captions = captions;
+            }
           }
-        }
-        return {
-          detail: `${frames.length} images capturées à ${work.fps.num}/${work.fps.den} i/s. Aucun encodage vidéo implicite.`,
-          assets,
-          measurements: {
-            frames: frames.length,
-            width: work.width,
-            height: work.height,
-            frameNumbers: frames,
-            provider: "bun:chromium",
-            engine: work.engine,
-          },
-        };
-      },
+          return {
+            detail: `${frames.length} images capturées à ${work.fps.num}/${work.fps.den} i/s. Aucun encodage vidéo implicite.`,
+            assets,
+            measurements: {
+              frames: frames.length,
+              width: work.width,
+              height: work.height,
+              frameNumbers: frames,
+              provider: "bun:chromium",
+              engine: work.engine,
+              attempts: attempt,
+            },
+          };
+        }),
     );
     work.evidence.push(row.id);
   }
@@ -411,6 +435,8 @@ try {
         }
         if (new Set(hashes).size < 3) throw new Error(`${work.id} does not visibly animate across its timeline`);
         measurements.push({ work: work.id, distinctTimeSamples: new Set(hashes).size, posterHash: hashes[3]! });
+        // Fork scenes must animate too, but they are not part of the six-scene engine comparison.
+        if (work.artwork === "fork") continue;
         if (work.engine === "remotion") signatures.set(work.artwork, hashes);
         else {
           const remotion = signatures.get(work.artwork);
@@ -556,7 +582,10 @@ try {
     },
   );
   if (m3Demos.status !== "passed") console.error("M3 input pipeline video generation failed");
-  for (const remotion of manifest.works.filter(work => work.engine === "remotion" && work.frames?.length)) {
+  // Parity compares the two renders of each authored scene; fork scenes have a single Remotion render.
+  for (const remotion of manifest.works.filter(
+    work => work.engine === "remotion" && work.id.startsWith("remotion-") && work.frames?.length,
+  )) {
     const hyperframes = manifest.works.find(work => work.id === remotion.id.replace("remotion-", "hyperframes-"));
     if (!hyperframes?.frames?.length) continue;
     await evidence(
