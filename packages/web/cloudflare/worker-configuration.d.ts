@@ -14,7 +14,7 @@ interface __BaseEnv_Env {
   VERSION: WorkerVersionMetadata;
   ASSETS: Fetcher;
   PUBLIC_ORIGIN: "https://bun.aphrody.app";
-  VIDEO_PREFIX: "showcase/20261022-v3";
+  VIDEO_PREFIX: "showcase/20261023-fork";
   AI_MODEL: "@cf/qwen/qwen3-30b-a3b-fp8";
   AI_GATEWAY: "aphrody";
   EMBEDDING_MODEL: "@cf/baai/bge-m3";

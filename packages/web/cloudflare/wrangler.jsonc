@@ -36,7 +36,7 @@
   "vars": {
     "PUBLIC_ORIGIN": "https://aphrody.app",
     // Published Bun Video render served under /video/media/ (packages/bun-video/scripts/publish-showcase.ts).
-    "VIDEO_PREFIX": "showcase/20261022-v3",
+    "VIDEO_PREFIX": "showcase/20261023-fork",
     "AI_MODEL": "@cf/qwen/qwen3-30b-a3b-fp8",
     "AI_GATEWAY": "aphrody",
     "EMBEDDING_MODEL": "@cf/baai/bge-m3",
