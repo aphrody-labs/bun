@@ -23,6 +23,13 @@ const run = scene
   ? ((await (await fetch("/fork-runs.json")).json()) as ForkRuns).runs.find(item => item.id === work.id)
   : undefined;
 if (scene && !run) throw new Error(`No recorded run for ${work.id}`);
+// The identity fonts load before the scene reports ready, so no frame is captured with a fallback face.
+if (scene)
+  for (const face of [
+    new FontFace("Google Sans Flex", "url(/fonts/GoogleSansFlex-latin.woff2)", { weight: "1 1000" }),
+    new FontFace("Google Sans Code", "url(/fonts/GoogleSansCode-latin.woff2)", { weight: "300 800" }),
+  ])
+    document.fonts.add(await face.load());
 function Scene({ frame }: { frame: number }) {
   return scene ? (
     <ForkFrame work={work} scene={scene} run={run!} frame={frame} />

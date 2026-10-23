@@ -143,6 +143,16 @@ await write(
 );
 await write("fonts/OFL.txt", await Bun.file(join(fonts, "RobotoFlex-OFL.txt")).bytes(), "text/plain");
 await write(
+  "fonts/GoogleSansFlex-latin.woff2",
+  await Bun.file(join(fonts, "web/GoogleSansFlex-latin.woff2")).bytes(),
+  "font/woff2",
+);
+await write(
+  "fonts/GoogleSansFlex-OFL.txt",
+  await Bun.file(join(fonts, "GoogleSansFlex-OFL.txt")).bytes(),
+  "text/plain",
+);
+await write(
   "fonts/GoogleSansCode-latin.woff2",
   await Bun.file(join(fonts, "web/GoogleSansCode-latin.woff2")).bytes(),
   "font/woff2",

@@ -40,17 +40,16 @@ export function ForkFrame({
     interpolate(t, [5.3, 7.8], [0, output.length], { extrapolateLeft: "clamp", extrapolateRight: "clamp" }),
   );
   const where = `${recordedOn(run)} · Bun ${run.bun.version}`;
-  // Short programs get large type: the largest size, from 3.3vh down, at which both panels' wrapped lines fit in
-  // their 52vh of height. A monospace character is about 0.6em wide; the code panel holds 140/size characters per
-  // line and the narrower terminal 125/size.
+  // Short programs get large type: the largest size, from 3.3vh down, at which both panels fit their 52vh of height
+  // and no word is split across lines. Google Sans Code is about 0.66em per character, so the code panel holds
+  // 128/size characters per line and the narrower terminal 114/size.
+  const program = code.split("\n");
+  const terminal = [`$ ${run.command}`, ...output];
   const wrapped = (text: string[], width: number, size: number) =>
     text.reduce((count, line) => count + Math.max(1, Math.ceil(line.length / (width / size))), 0);
-  let fit = 3.3;
-  while (
-    fit > 1.6 &&
-    Math.max(wrapped(code.split("\n"), 140, fit), wrapped([`$ ${run.command}`, ...output], 125, fit)) * fit * 1.45 > 52
-  )
-    fit -= 0.1;
+  const longest = (text: string[]) => Math.max(1, ...text.flatMap(line => line.split(" ")).map(word => word.length));
+  let fit = Math.min(3.3, 128 / longest(program), 114 / longest(terminal));
+  while (fit > 1.6 && Math.max(wrapped(program, 128, fit), wrapped(terminal, 114, fit)) * fit * 1.45 > 52) fit -= 0.1;
   const size = `${fit.toFixed(2)}vh`;
   return (
     <div
@@ -64,10 +63,9 @@ export function ForkFrame({
         gap: "2.4vh",
         background: "var(--md-sys-color-surface)",
         color: "var(--md-sys-color-on-surface)",
-        fontFamily: '"Roboto Flex", system-ui, sans-serif',
+        fontFamily: '"Google Sans Flex", system-ui, sans-serif',
       }}
     >
-      <style>{`@font-face{font-family:"Google Sans Code";src:url("/fonts/GoogleSansCode-latin.woff2") format("woff2");font-weight:300 800;font-display:block}`}</style>
       <header style={{ display: "flex", alignItems: "center", gap: "1.4vw", opacity: intro }}>
         <img
           src={mark}
@@ -131,7 +129,7 @@ const codeStyle: React.CSSProperties = {
   fontSize: "2.15vh",
   lineHeight: 1.45,
   whiteSpace: "pre-wrap",
-  overflowWrap: "anywhere",
+  overflowWrap: "break-word",
   overflow: "hidden",
 };
 
