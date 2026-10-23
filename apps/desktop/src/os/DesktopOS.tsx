@@ -47,7 +47,7 @@ const Static: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   return <>{children}</>;
 };
 
-export const DesktopOS: React.FC = () => {
+export const DesktopOS: React.FC<{ onExit?: () => void }> = ({ onExit }) => {
   const system = useSystemSnapshot();
   const [soundEnabled, setSoundEnabled] = useState(true);
   const [isDark, setIsDark] = useState(true);
@@ -222,6 +222,7 @@ export const DesktopOS: React.FC = () => {
         onToggleDark={() => setIsDark(!isDark)}
         onOpenAbout={() => setShowAboutModal(true)}
         onOpenApp={toggleApp}
+        onExit={onExit}
       />
 
       <main className="absolute inset-0 top-10 bottom-16 overflow-hidden">

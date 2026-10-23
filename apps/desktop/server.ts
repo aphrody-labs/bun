@@ -37,6 +37,7 @@ import { WebOSStore } from "./src/server/store";
 import { systemSnapshot } from "./src/server/system-metrics";
 import { pageRoutes, SHELL_PATHS } from "./src/server/page-manifest";
 import { createVideoApi } from "./src/server/video";
+import { assetRoutes } from "./src/server/assets";
 import { createExplorer, type ExplorerOptions } from "./src/server/explorer";
 export type { ExplorerOptions } from "./src/server/explorer";
 
@@ -205,6 +206,7 @@ export async function startWebOS(options: WebOSOptions = {}): Promise<WebOSServe
     development: development ? { hmr: true, console: true } : false,
     routes: {
       ...pageRoutes(index, import.meta.dir, SHELL_PATHS),
+      ...assetRoutes(),
       "/api/video/works": { GET: host(async () => json({ works: await video.works() })) },
       "/api/video/*": host(req => video.handle(req)),
       "/media/*": host(req => video.handle(req)),

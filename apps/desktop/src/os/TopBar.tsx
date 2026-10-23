@@ -13,6 +13,8 @@ interface TopBarProps {
   onToggleDark: () => void;
   onOpenAbout: () => void;
   onOpenApp?: (appId: string) => void;
+  /** Set when the desktop is hosted by the unified app: adds a way back to its hub. */
+  onExit?: () => void;
 }
 
 const MENU_ITEM =
@@ -39,6 +41,7 @@ export const TopBar: React.FC<TopBarProps> = ({
   onToggleDark,
   onOpenAbout,
   onOpenApp,
+  onExit,
 }) => {
   const [timeStr, setTimeStr] = useState("");
   const [dateStr, setDateStr] = useState("");
@@ -121,6 +124,17 @@ export const TopBar: React.FC<TopBarProps> = ({
               <span>🔍 Command Palette</span>
               <kbd className="font-mono text-[10px] opacity-60">⌘K</kbd>
             </button>
+            {onExit && (
+              <button
+                onClick={() => {
+                  setShowMainMenu(false);
+                  onExit();
+                }}
+                className={MENU_ITEM}
+              >
+                ← Quitter le bureau
+              </button>
+            )}
             <div className="h-px bg-[var(--md-sys-color-outline-variant)] my-1" />
             <div
               className="px-3 py-1 text-[10px] text-[var(--md-sys-color-on-surface-variant)] uppercase font-bold tracking-wider font-mono"

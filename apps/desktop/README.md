@@ -118,3 +118,19 @@ It serves no backend APIs, host snapshots, private index or model endpoint. Depl
 those static files under `/labs/webos/`; public downloads use the qualified package
 archives. The installed WebOS is a separate loopback application with explicit
 host access policy and optional integrations.
+
+## One app for the repository
+
+`/` is the hub of the unified app, a Material 3 shell (`@aphrody/m3-react`, `@aphrody/m3-theme`) routed by
+TanStack Router with TanStack Query for data: `/video` (catalogue, player, series, shorts, studio), `/os` (the
+windowed WebOS), `/tools` (every bun-video module with live panels), `/m3` (the Material 3 components). Docs
+and the other server-rendered sections keep their paths.
+
+Development: `bun run dev` bundles without HMR and restarts on change. `bun run dev:hmr` (`bun --hot`) cannot
+load the app: Bun's dev bundler evaluates a module's dependencies before it defines its exports, so a circular
+import that uses an imported function at load time (`@tanstack/router-core`: `router.js` and `load-client.js`)
+reads `null`. Production bundling and the tests are unaffected.
+
+`bun run shots [out-dir] [--routes /,/video] [--widths 1280,390]` drives the served app with `Bun.WebView`
+and writes one screenshot per route and a JSON report. In Git Bash set `MSYS_NO_PATHCONV=1` when an argument
+starts with `/`, and write the output directory as a Windows path.

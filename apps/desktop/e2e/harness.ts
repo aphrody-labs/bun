@@ -68,7 +68,8 @@ export interface WebOSSession extends AsyncDisposable {
 }
 
 export async function openWebOS(backend: BackendName, size = { width: 1280, height: 800 }): Promise<WebOSSession> {
-  const server = await startWebOS({ port: 0, hostname: "127.0.0.1" });
+  // Without HMR: the dev bundler cannot load the circular imports of @tanstack/router-core (see README).
+  const server = await startWebOS({ port: 0, hostname: "127.0.0.1", development: false });
   const url = new URL(server.url);
   const pageErrors: string[] = [];
   const view = new Bun.WebView({
@@ -83,7 +84,7 @@ export async function openWebOS(backend: BackendName, size = { width: 1280, heig
     pageErrors.push(details?.exception?.description ?? details?.text ?? "uncaught exception");
   });
   try {
-    await view.navigate(url.href);
+    await view.navigate(new URL("os", url).href);
     await waitFor(view, `document.querySelector("[data-webos-desktop]") !== null`);
   } catch (error) {
     view.close();

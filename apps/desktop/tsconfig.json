@@ -17,7 +17,7 @@
     "noEmit": true,
     "allowImportingTsExtensions": true,
     "types": [
-      "bun-types"
+      "@aphrody/bun-types"
     ],
     "paths": {
       "@aphrody/m3-react": [
@@ -40,6 +40,15 @@
       ],
       "@aphrody/m3-react/wrappers/*": [
         "../../packages/aphrody-migrated/m3/aphrody-m3/packages/m3-react/wrappers/*"
+      ],
+      "@aphrody/m3-theme": [
+        "../../packages/aphrody-migrated/m3/aphrody-m3/packages/m3-theme/src/index.ts"
+      ],
+      "@aphrody/m3-theme/react": [
+        "../../packages/aphrody-migrated/m3/aphrody-m3/packages/m3-theme/src/react.tsx"
+      ],
+      "@aphrody/m3-react/video.css": [
+        "../../packages/aphrody-migrated/m3/aphrody-m3/packages/m3-react/video/video.css"
       ]
     },
     "experimentalDecorators": true,

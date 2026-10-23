@@ -11,7 +11,10 @@
     "./tailwind": "./src/tailwind.ts"
   },
   "scripts": {
-    "dev": "bun --hot server.ts",
+    "dev": "NODE_ENV=production bun --watch server.ts",
+    "dev:hmr": "bun --hot server.ts",
+    "shots": "bun scripts/shots.ts",
+    "assets": "bun scripts/build-assets.ts",
     "start": "NODE_ENV=production bun server.ts",
     "build": "bun build.ts",
     "test": "bun test ./test"
