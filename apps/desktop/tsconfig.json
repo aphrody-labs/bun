@@ -3,7 +3,12 @@
     "target": "ESNext",
     "module": "ESNext",
     "moduleResolution": "bundler",
-    "lib": ["ESNext", "DOM", "DOM.Iterable", "WebWorker"],
+    "lib": [
+      "ESNext",
+      "DOM",
+      "DOM.Iterable",
+      "WebWorker"
+    ],
     "jsx": "react-jsx",
     "strict": true,
     "skipLibCheck": true,
@@ -11,7 +16,41 @@
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
     "allowImportingTsExtensions": true,
-    "types": ["bun-types"]
+    "types": [
+      "bun-types"
+    ],
+    "paths": {
+      "@aphrody/m3-react": [
+        "../../packages/aphrody-migrated/m3/aphrody-m3/packages/m3-react/index.ts"
+      ],
+      "@aphrody/m3-react/video": [
+        "../../packages/aphrody-migrated/m3/aphrody-m3/packages/m3-react/video/index.ts"
+      ],
+      "@aphrody/m3-react/adaptive": [
+        "../../packages/aphrody-migrated/m3/aphrody-m3/packages/m3-react/adaptive/index.ts"
+      ],
+      "@aphrody/m3-react/transitions": [
+        "../../packages/aphrody-migrated/m3/aphrody-m3/packages/m3-react/transitions/index.ts"
+      ],
+      "@aphrody/m3-react/state": [
+        "../../packages/aphrody-migrated/m3/aphrody-m3/packages/m3-react/state/index.ts"
+      ],
+      "@aphrody/m3-react/adapters/tanstack": [
+        "../../packages/aphrody-migrated/m3/aphrody-m3/packages/m3-react/adapters/tanstack.ts"
+      ],
+      "@aphrody/m3-react/wrappers/*": [
+        "../../packages/aphrody-migrated/m3/aphrody-m3/packages/m3-react/wrappers/*"
+      ]
+    },
+    "experimentalDecorators": true,
+    "useDefineForClassFields": false
   },
-  "include": ["src/**/*", "test/**/*", "e2e/**/*", "desktop/**/*", "server.ts", "build.ts"]
+  "include": [
+    "src/**/*",
+    "test/**/*",
+    "e2e/**/*",
+    "desktop/**/*",
+    "server.ts",
+    "build.ts"
+  ]
 }

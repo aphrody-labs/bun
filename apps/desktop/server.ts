@@ -35,7 +35,8 @@ import { resolvePublicAsset } from "./src/server/public-assets";
 import { evalJs, runShell, terminalShell } from "./src/server/shell";
 import { WebOSStore } from "./src/server/store";
 import { systemSnapshot } from "./src/server/system-metrics";
-import { pageRoutes } from "./src/server/page-manifest";
+import { pageRoutes, SHELL_PATHS } from "./src/server/page-manifest";
+import { createVideoApi } from "./src/server/video";
 import { createExplorer, type ExplorerOptions } from "./src/server/explorer";
 export type { ExplorerOptions } from "./src/server/explorer";
 
@@ -44,6 +45,10 @@ export interface WebOSOptions {
   publicSite?: Omit<M3SiteOptions, "hostname" | "port">;
   /** Optional metadata index, service health and assistant endpoints. Disabled by default. */
   explorer?: ExplorerOptions;
+  /** Directory of the video library. Default: <root>/Videos. */
+  mediaRoot?: string;
+  /** Output of bun-video's build-showcase; when it holds showcase.json its films replace the library listing. */
+  showcaseRoot?: string;
   /** 0 picks a free port. Default: $PORT or 3000. */
   port?: number;
   /** Default 127.0.0.1; host routes refuse to answer on a non-loopback listener. */
@@ -167,6 +172,11 @@ export async function startWebOS(options: WebOSOptions = {}): Promise<WebOSServe
   const policy: HostAccessPolicy = { enabled: options.hostAccess ?? true, trustedOrigins };
   const store = new WebOSStore(join(dataDir, "webos.sqlite"));
   const explorer = createExplorer(options.explorer);
+  const video = createVideoApi({
+    root,
+    mediaRoot: options.mediaRoot ?? process.env.BUN_WEBOS_MEDIA,
+    showcaseRoot: options.showcaseRoot ?? process.env.BUN_VIDEO_SHOWCASE_ROOT,
+  });
   const publicSite = options.publicSite ? await createM3Site(options.publicSite) : undefined;
   const children = new Map<number, Subprocess>();
   const track = (proc: Subprocess) => {
@@ -194,7 +204,12 @@ export async function startWebOS(options: WebOSOptions = {}): Promise<WebOSServe
     hostname: options.hostname ?? "127.0.0.1",
     development: development ? { hmr: true, console: true } : false,
     routes: {
-      ...pageRoutes(index, import.meta.dir),
+      ...pageRoutes(index, import.meta.dir, SHELL_PATHS),
+      "/api/video/works": { GET: host(async () => json({ works: await video.works() })) },
+      "/api/video/*": host(req => video.handle(req)),
+      "/media/*": host(req => video.handle(req)),
+      "/api/capabilities": { GET: host(req => video.handle(req)) },
+      "/showcase/*": { GET: host(req => video.showcase(req)) },
       "/api/explorer/:action": {
         GET: host(req => explorer.handle(new URL(req.url).pathname.split("/").at(-1)!, req)),
       },
