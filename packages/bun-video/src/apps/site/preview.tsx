@@ -7,8 +7,6 @@ import { gsap } from "gsap";
 import { resolveAuthoredTimingWindow } from "../../../hyperframes/core/src/runtime/authoredTiming";
 import { collection } from "./collection";
 import { Artwork } from "./artwork";
-import { ForkFrame } from "./fork-frame";
-import { forkScenes, type ForkRuns } from "./fork-scenes";
 import { Player, type PlayerRef } from "../../../remotion/player/src/index";
 import { useCurrentFrame } from "../../../remotion/core/src/index";
 
@@ -17,32 +15,12 @@ const work = collection.find(item => item.id === params.get("work")) ?? collecti
 const root = createRoot(document.getElementById("root")!);
 const state = { frame: 0 };
 const player = React.createRef<PlayerRef>();
-// A fork scene plays the output its program printed when the runtime ran it; the build publishes those runs.
-const scene = work.artwork === "fork" ? forkScenes.find(item => item.id === work.id) : undefined;
-const run = scene
-  ? ((await (await fetch("/fork-runs.json")).json()) as ForkRuns).runs.find(item => item.id === work.id)
-  : undefined;
-if (scene && !run) throw new Error(`No recorded run for ${work.id}`);
-// The identity fonts load before the scene reports ready, so no frame is captured with a fallback face.
-if (scene)
-  for (const face of [
-    new FontFace("Google Sans Flex", "url(/fonts/GoogleSansFlex-latin.woff2)", { weight: "1 1000" }),
-    new FontFace("Google Sans Code", "url(/fonts/GoogleSansCode-latin.woff2)", { weight: "300 800" }),
-  ])
-    document.fonts.add(await face.load());
-function Scene({ frame }: { frame: number }) {
-  return scene ? (
-    <ForkFrame work={work} scene={scene} run={run!} frame={frame} />
-  ) : (
-    <Artwork work={work} frame={frame} />
-  );
-}
 function RemotionScene() {
-  return <Scene frame={useCurrentFrame()} />;
+  return <Artwork work={work} frame={useCurrentFrame()} />;
 }
 const render = () =>
   flushSync(() => {
-    if (work.engine === "hyperframes") root.render(<Scene frame={Math.round(state.frame)} />);
+    if (work.engine === "hyperframes") root.render(<Artwork work={work} frame={Math.round(state.frame)} />);
     else if (player.current) player.current.seekTo(Math.round(state.frame));
     else
       root.render(

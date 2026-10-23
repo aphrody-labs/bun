@@ -211,8 +211,6 @@ export function createPlatform(config: AphrodyConfig): AphrodyPlatform & { close
       },
     },
     files,
-    // The published Bun Video files live in the aphrody-video bucket, which this host does not mirror.
-    video: null,
     site: () =>
       config.NEON_DATABASE_URL
         ? createNeonHTTPClient({ connectionString: config.NEON_DATABASE_URL, expectedDatabase: "bun_site" })

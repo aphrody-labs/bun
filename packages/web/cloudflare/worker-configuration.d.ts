@@ -3,7 +3,6 @@
 interface __BaseEnv_Env {
   CACHE: KVNamespace;
   APHRODY: R2Bucket;
-  VIDEO: R2Bucket;
   DB: D1Database;
   BUN_NATIVE: VectorizeIndex;
   JOBS: Queue;
@@ -14,7 +13,6 @@ interface __BaseEnv_Env {
   VERSION: WorkerVersionMetadata;
   ASSETS: Fetcher;
   PUBLIC_ORIGIN: "https://bun.aphrody.app";
-  VIDEO_PREFIX: "showcase/20261023-fork";
   AI_MODEL: "@cf/qwen/qwen3-30b-a3b-fp8";
   AI_GATEWAY: "aphrody";
   EMBEDDING_MODEL: "@cf/baai/bge-m3";
