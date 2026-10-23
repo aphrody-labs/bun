@@ -148,9 +148,12 @@ const entries: Record<string, Blob> = {};
 for await (const path of new Bun.Glob("**/*").scan({ cwd: join(desktop, "dist"), onlyFiles: true }))
   entries[path.replaceAll("\\", "/")] = Bun.file(join(desktop, "dist", path));
 if (!entries["server.js"]) fail("dist/server.js is missing: the build produced nothing to ship");
-await Bun.write(local, new Bun.Archive(entries, { compress: "gzip", mtime: Date.now() }));
-console.log(`${Object.keys(entries).length} files`);
+// The tar is compressed here, not through the Archive option: the host needs a real .tgz and this checks it.
+const tar = await new Bun.Archive(entries, { mtime: Date.now() }).bytes();
+await Bun.write(local, Bun.gzipSync(tar, { level: 9 }));
+console.log(`${Object.keys(entries).length} files, ${tar.byteLength} bytes of tar`);
 const bytes = new Uint8Array(await Bun.file(local).arrayBuffer());
+if (bytes[0] !== 0x1f || bytes[1] !== 0x8b) fail("the archive is not gzip data");
 const sha256 = new Bun.CryptoHasher("sha256").update(bytes).digest("hex");
 console.log(`${archive}: ${bytes.byteLength} bytes, sha256 ${sha256}`);
 
@@ -167,10 +170,13 @@ base="$HOME/${base}"
 cd "$base/incoming"
 echo "${sha256}  ${archive}" | sha256sum -c -
 mkdir -p "$base/releases/${release}"
+# Until the link is switched, a failure leaves nothing of this release behind.
+trap 'rm -rf -- "$base/releases/${release}"' ERR
 tar -xzf "${archive}" -C "$base/releases/${release}"
 previous="$(readlink "$base/current" || true)"
 echo "previous release: \${previous:-none}"
 ln -sfn "$base/releases/${release}" "$base/current"
+trap - ERR
 echo ${unitB64} | base64 -d > "$HOME/.config/systemd/user/aphrody-desktop.service"
 systemctl --user daemon-reload
 systemctl --user enable aphrody-desktop.service
