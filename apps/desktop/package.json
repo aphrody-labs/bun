@@ -15,6 +15,7 @@
     "dev:hmr": "bun --hot server.ts",
     "shots": "bun scripts/shots.ts",
     "assets": "bun scripts/build-assets.ts",
+    "smoke:dist": "bun scripts/smoke-dist.ts",
     "start": "NODE_ENV=production bun server.ts",
     "build": "bun build.ts",
     "test": "bun test ./test"

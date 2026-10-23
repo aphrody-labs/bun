@@ -6,7 +6,9 @@
  */
 import { mkdirSync } from "node:fs";
 import { readdir } from "node:fs/promises";
-import { extname, join, relative, resolve } from "node:path";
+import { existsSync } from "node:fs";
+import { dirname, extname, join, relative, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 
 export interface VideoWork {
   id: string;
@@ -58,15 +60,37 @@ interface NativeVideo {
   metadata(): Promise<{ width: number; height: number; duration: number | null; fpsNumerator: number; fpsDenominator: number }>;
 }
 
+/**
+ * The bun-video source tree: $BUN_VIDEO_ROOT, else packages/bun-video found by walking up from this file. It is
+ * loaded through a computed specifier, so `bun build` does not bundle Remotion, HyperFrames and the other owners
+ * behind its capability registry; a deployment without a checkout answers 503 for these routes instead.
+ */
+function findVideoRoot(): string | undefined {
+  const fromEnv = process.env.BUN_VIDEO_ROOT;
+  if (fromEnv) return resolve(fromEnv);
+  for (let directory = import.meta.dir; ; directory = dirname(directory)) {
+    const candidate = join(directory, "packages", "bun-video");
+    if (existsSync(join(candidate, "src", "web-app.ts"))) return candidate;
+    if (dirname(directory) === directory) return undefined;
+  }
+}
+
+type CreateVideoWebApp = (options: { mediaRoot: string }) => { fetch: (request: Request) => Promise<Response> };
+
+async function loadVideoWebApp(): Promise<CreateVideoWebApp> {
+  const root = findVideoRoot();
+  if (!root) throw new Error("bun-video sources not found; set BUN_VIDEO_ROOT");
+  const specifier = pathToFileURL(join(root, "src", "web-app.ts")).href;
+  return ((await import(specifier)) as { createVideoWebApp: CreateVideoWebApp }).createVideoWebApp;
+}
+
 export function createVideoApi(options: VideoApiOptions): VideoApi {
   const mediaRoot = resolve(options.mediaRoot ?? join(options.root, "Videos"));
   mkdirSync(mediaRoot, { recursive: true });
   const showcaseRoot = options.showcaseRoot ? resolve(options.showcaseRoot) : undefined;
   let handler: Promise<(request: Request) => Promise<Response>> | undefined;
   const web = () =>
-    (handler ??= import("../../../../packages/bun-video/src/web-app").then(
-      mod => mod.createVideoWebApp({ mediaRoot }).fetch,
-    ));
+    (handler ??= loadVideoWebApp().then(create => create({ mediaRoot }).fetch));
 
   async function fromShowcase(): Promise<VideoWork[] | undefined> {
     if (!showcaseRoot) return undefined;
@@ -143,7 +167,12 @@ export function createVideoApi(options: VideoApiOptions): VideoApi {
       return (await fromShowcase()) ?? (await fromLibrary());
     },
     async handle(request) {
-      return (await web())(request);
+      try {
+        return await (await web())(request);
+      } catch (error) {
+        handler = undefined;
+        return json({ error: "video_backend_unavailable", detail: error instanceof Error ? error.message : "" }, 503);
+      }
     },
     async showcase(request) {
       if (!showcaseRoot) return json({ error: "showcase_unavailable" }, 404);
