@@ -28,24 +28,15 @@ const replacements: Record<string, string> = {
   "system-stream.ts": "packages/bun-tools/src/system-stream.ts",
   "japan-http-proxy.ts": "packages/bun-tools/src/connect-proxy.ts",
   "proxy-reconnect.ts": "packages/bun-supervisor/src/services.ts",
-  "configure-webos-origin.ts": "apps/desktop/server.ts",
-  "manifest-webos.ts": "apps/desktop/scripts/stage-bun-wasm.ts",
 };
 
 function ownerFor(source: string): { owner: string; disposition: string } {
-  const webos = "server/apps/desktop/";
-  if (source.startsWith(webos)) {
-    const path = source.slice(webos.length);
-    const renamed: Record<string, string> = {
-      "src/server/omar.ts": "src/server/explorer.ts",
-      "src/os/apps/OmarExplorerApp.tsx": "src/os/apps/IndexExplorerApp.tsx",
-      "src/os/apps/OmarServices.tsx": "src/os/apps/ExplorerServices.tsx",
-      "scripts/build-bun-wasm.ts": "scripts/stage-bun-wasm.ts",
-      "bun-wasm.manifest.json": "scripts/stage-bun-wasm.ts",
-      "desktop/.gitignore": "desktop/Dockerfile",
-    };
-    return { owner: "apps/desktop/" + (renamed[path] ?? path), disposition: "owner-source" };
-  }
+  // The WebOS desktop app and its host scripts were removed from Bun; their Omar sources are history only.
+  if (
+    source.startsWith("server/apps/desktop/") ||
+    /^server\/(configure-webos-origin|manifest-webos|probe-webos|probe-webos-origin|fix-nginx)\.ts$/.test(source)
+  )
+    return { owner: "docs/project/omar-integration.md", disposition: "removed-webos" };
   if (source.startsWith("server/apps/bun-plugin-tailwind/")) {
     return { owner: source.replace("server/apps/", "packages/"), disposition: "existing-owner" };
   }
@@ -76,9 +67,6 @@ function ownerFor(source: string): { owner: string; disposition: string } {
       "ops.ts": "packages/bun-tools/src/cli.ts",
       "repair-a2a.ts": "packages/bun-supervisor/src/services.ts",
       "probe-server.ts": "packages/bun-supervisor/src/services.ts",
-      "probe-webos.ts": "apps/desktop/test/server.test.ts",
-      "probe-webos-origin.ts": "apps/desktop/test/server.test.ts",
-      "fix-nginx.ts": "apps/desktop/server.ts",
       "provision-redis.ts": "packages/bun-tools/src/indexing/cache.ts",
       "read-native-guidance.ts": "scripts/aphrody/agent-plugin.ts",
       "inventory-export.ts": "src/js/bun/windows.ts",

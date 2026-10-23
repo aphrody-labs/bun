@@ -29,7 +29,7 @@ Full catalog with owners and docs: `docs/runtime/fork-features.mdx` (site: /docs
 
 ## Packages and apps
 
-`packages/`: bun-types, bun-agent-plugin, bun-video, bun-web (+webview-core/page), bun-chromium, bun-google, bun-cloudflare, bun-next, bun-plugin-{tailwind,svelte,yaml,neon,supabase}, bun-oxc, bun-n2b, bun-dotnet, bun-python-*, buv, bun-runtime-sdk, bun-llama, bun-nginx, bun-supervisor, bun-tools, bun-timeline, bun-x, bun-qr, bun-fuzzy, bun-fluent, bun-icons, bun-m3, web. Apps: `apps/desktop` (Bun WebOS), `apps/mobile`, self-hosted `aphrody` server (`packages/web/server`).
+`packages/`: bun-types, bun-agent-plugin, bun-video, bun-web (+webview-core/page), bun-chromium, bun-google, bun-cloudflare, bun-next, bun-plugin-{tailwind,svelte,yaml,neon,supabase}, bun-oxc, bun-n2b, bun-dotnet, bun-python-*, buv, bun-runtime-sdk, bun-llama, bun-nginx, bun-supervisor, bun-tools, bun-timeline, bun-x, bun-qr, bun-fuzzy, bun-fluent, bun-icons, bun-m3, web. Apps: self-hosted `aphrody` server (`packages/web/server`).
 
 ## Generated surfaces
 

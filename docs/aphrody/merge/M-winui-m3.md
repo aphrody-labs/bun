@@ -186,9 +186,7 @@ Le thème clair/sombre du système choisit le mode M3 (`m3-theme mode="auto"`). 
 
 `bun:windows.theme` fournit ces intégrations : `get()` lit le mode, `SystemAccentColor` et ses nuances (`AccentPalette`), `watch()` signale leurs changements, `applyWindow(hwnd, { backdrop: "mica", dark })` applique Mica/Acrylic et la barre de titre sombre via `DwmSetWindowAttribute`. Sur Linux, l’exemple n’importe pas ces capacités.
 
-### Exemple Bun
-
-[`apps/desktop/examples/m3-native-app`](../../../apps/desktop/examples/m3-native-app) montre une app lancée par Bun : Bun démarre une fenêtre `Bun.WebView` avec backend Chrome, sert l’interface M3 depuis une origine locale, et lit/écrit un fichier fixe via `Bun.file` et `Bun.write`. Sous Windows, elle tente aussi l’import de `bun:windows`; ailleurs l’interface indique que l’API n’est pas disponible. Elle ne contient ni XAML ni WinUI.
+### WebView
 
 La WebView repose sur l’implémentation partagée `packages/bun-webview-core`. Aucun code de cette couche n’est dupliqué ici.
 

@@ -17,9 +17,7 @@
     "./packages/bun-x",
     "./packages/bun-fuzzy",
     "./packages/bun-qr",
-    "./packages/bun-timeline",
-    "./apps/desktop",
-    "./apps/mobile"
+    "./packages/bun-timeline"
   ],
   "scripts": {
     "gn": "bun scripts/aphrody/gn.ts",

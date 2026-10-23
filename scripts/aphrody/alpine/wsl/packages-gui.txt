@@ -27,7 +27,7 @@ libxi
 fontconfig
 font-noto
 # Bun.WebView's Chrome backend (src/runtime/webview/ChromeProcess.rs finds
-# /usr/bin/chromium-browser): the desktop app (apps/desktop) window through WSLg.
+# /usr/bin/chromium-browser): Bun.WebView windows through WSLg.
 chromium
 font-noto-emoji
 # Probes: eglinfo/glxinfo (mesa-utils), vulkaninfo (vulkan-tools).
