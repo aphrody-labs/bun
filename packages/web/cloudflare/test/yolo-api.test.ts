@@ -39,24 +39,22 @@ function context(
     ...(originFetch ? { originFetch } : {}),
   };
 }
-test("unqualified defaults make models explicit and never invoke an origin", async () => {
+test("without a qualified origin the decision routes are not offered and never invoke an origin", async () => {
   let calls = 0;
   const env = environment(false);
   const ctx = context(async () => {
     calls++;
     throw Error("must not run");
   });
-  const models = await (await yoloAPI(request("/v1/models"), env, ctx))!.json();
-  expect(models.data[0].x_bun).toMatchObject({
-    inferenceEnabled: false,
-    trainedForkWeights: false,
-    trainingDatasetQualified: false,
-  });
-  expect((await yoloAPI(request("/v1/systemone", decision), env, ctx))!.status).toBe(503);
-  expect(calls).toBe(0);
   const quotaPending = environment();
   quotaPending.YOLO_QUOTA_QUALIFIED = "false";
-  expect((await yoloAPI(request("/v1/systemone", decision), quotaPending, ctx))!.status).toBe(503);
+  for (const unqualified of [env, quotaPending])
+    for (const path of ["/v1/models", "/v1/systemone", "/v1/chat/completions", "/a2a", "/message:send"])
+      expect(await yoloAPI(request(path, path === "/v1/models" ? undefined : decision), unqualified, ctx)).toBeNull();
+  expect(calls).toBe(0);
+  // The read-only MCP server stays available.
+  const mcp = await yoloAPI(request("/mcp", { jsonrpc: "2.0", id: 1, method: "ping" }), env, ctx);
+  expect(await mcp!.json()).toEqual({ jsonrpc: "2.0", id: 1, result: {} });
 });
 test("authentication, limiter and source identity fail before accepting a decision", async () => {
   let calls = 0;
@@ -218,5 +216,5 @@ test("private Clef transport requires the qualified native source and preserves 
   const response = await yoloAPI(callback, env, context());
   expect(await response!.json()).toEqual(raw);
   expect((await yoloAPI(request("/api/yolo/provider", decision), env, context()))!.status).toBe(401);
-  expect((await yoloAPI(request("/api/yolo/provider", decision), environment(false), context()))!.status).toBe(503);
+  expect(await yoloAPI(request("/api/yolo/provider", decision), environment(false), context())).toBeNull();
 });

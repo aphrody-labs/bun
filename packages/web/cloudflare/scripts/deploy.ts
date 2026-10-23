@@ -2,11 +2,10 @@
 //
 //   bun packages/web/cloudflare/scripts/deploy.ts [--assets <built site>] [wrangler deploy flags]
 //
-// Without --assets the site is built from packages/web/site into packages/web/cloudflare/dist/site.
+// Without --assets the site is built by scripts/aphrody/release-surfaces.ts from the committed HEAD.
 // Credentials: app/.env when present, else the host key store ~/.aphrody/config/cloudflare.env
 // (APHRODY_CLOUDFLARE_ENV overrides); only the Worker's required secrets are uploaded.
 import { existsSync } from "node:fs";
-import { rm } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import { wrangler } from "../../../bun-cloudflare/src/wrangler.ts";
@@ -85,22 +84,16 @@ async function main() {
     assets = resolve(args[at + 1]);
     args.splice(at, 2);
   } else {
-    await rm(assets, { recursive: true, force: true });
+    // The production site is the release-surfaces build of the committed HEAD (docs, site data, releases and
+    // measurements); a bare packages/web/site build would replace it with a page that has none of them.
+    const out = join(app, "dist", `release-${Date.now()}`);
     const build = Bun.spawn({
-      cmd: [
-        process.execPath,
-        join(repo, "packages/web/site/build.ts"),
-        "--src",
-        repo,
-        "--out",
-        assets,
-        "--origin",
-        ORIGIN,
-      ],
+      cmd: [process.execPath, join(repo, "scripts/aphrody/release-surfaces.ts"), "--out", out],
       cwd: repo,
       stdio: ["ignore", "inherit", "inherit"],
     });
     if ((await build.exited) !== 0) throw new Error("site build failed");
+    assets = join(out, "site");
   }
   await prepareAssets(assets);
 

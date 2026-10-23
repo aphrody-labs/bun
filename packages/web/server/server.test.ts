@@ -68,11 +68,14 @@ test("files: authenticated write, ranged read, listing, delete", async () => {
   const ranged = await fetch(url, { headers: { range: "bytes=6-10" } });
   expect(ranged.status).toBe(206);
   expect(await ranged.text()).toBe("world");
-  const list = (await (await fetch(base + "/api/files/aphrody-assets?prefix=a/")).json()) as {
+  // Reading by key is public; enumerating the bucket or the upload index needs the secret.
+  expect((await fetch(base + "/api/files/aphrody-assets?prefix=a/")).status).toBe(401);
+  expect((await fetch(base + "/api/index")).status).toBe(401);
+  const list = (await (await fetch(base + "/api/files/aphrody-assets?prefix=a/", { headers: auth })).json()) as {
     objects: { key: string }[];
   };
   expect(list.objects.map(o => o.key)).toEqual(["a/b.txt"]);
-  expect((await fetch(base + "/api/index")).status).toBe(200);
+  expect((await fetch(base + "/api/index", { headers: auth })).status).toBe(200);
   expect((await fetch(url, { method: "DELETE", headers: auth })).status).toBe(204);
   expect((await fetch(url)).status).toBe(404);
 });

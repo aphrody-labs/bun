@@ -28,11 +28,10 @@ export function sourceDomain(path: string): string {
 }
 
 export function sourceReadable(path: string): boolean {
-  if (
-    /(^|\/)(?:cookies|credentials|secrets|sessions|models|weights|node_modules|\.env(?:\.|$))|\.(?:pem|key|pfx|p12)$/i.test(
-      path,
-    )
-  )
+  // Key material and env files are never readable. Names that usually hold secrets or large data are skipped too,
+  // except under docs/, where pages such as docs/runtime/cookies.mdx and secrets.mdx document public APIs.
+  if (/(^|\/)(?:node_modules|\.env(?:\.|$))|\.(?:pem|key|pfx|p12)$/i.test(path)) return false;
+  if (!path.startsWith("docs/") && /(^|\/)(?:cookies|credentials|secrets|sessions|models|weights)/i.test(path))
     return false;
   return (
     textExtensions.has(extname(path).slice(1).toLowerCase()) ||

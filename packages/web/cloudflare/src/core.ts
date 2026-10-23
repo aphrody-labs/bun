@@ -77,6 +77,9 @@ export function createAphrodyHandler(p: AphrodyPlatform) {
     if (!isBucket(bucketName)) return error(404, `unknown bucket, expected one of ${buckets.join(", ")}`);
     if (!key) {
       if (request.method !== "GET") return error(405, "method not allowed");
+      // Objects are public by key; enumerating a bucket needs the app secret.
+      const denied = await guardWrite(request);
+      if (denied) return denied;
       const url = new URL(request.url);
       return json(await p.files.list(url.searchParams.get("prefix"), url.searchParams.get("cursor")));
     }
@@ -149,6 +152,8 @@ export function createAphrodyHandler(p: AphrodyPlatform) {
         if (name !== "search" || request.method !== "GET") return error(404, "not found");
         return bunSearch(request);
       case "index": {
+        const denied = await guardWrite(request);
+        if (denied) return denied;
         const cached = await p.cache.get("index:recent");
         if (cached) return json(cached, { headers: { "X-Cache": "HIT" } });
         const results = await p.files.recent();

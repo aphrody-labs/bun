@@ -6,6 +6,7 @@ import { pack } from "../../packages/bun-agent-plugin/src/archive.ts";
 import { generate } from "../../packages/bun-agent-plugin/src/generate.ts";
 import { moduleNames } from "./fork-capabilities.ts";
 import { buildReleaseGraph } from "./release-graph.ts";
+import { mirrorReleases } from "./release-mirror.ts";
 import { completeReleaseKnowledge } from "./release-knowledge.ts";
 import { tar } from "./release-package.ts";
 import { writeGraphView } from "./site-mirror/graph-view.ts";
@@ -215,7 +216,8 @@ export async function regenerate(
   };
   const graph = await buildReleaseGraph(tree, snapshot, out, resume);
   const archive = join(out, "source.tar");
-  const paths = ["docs/logo", "src/bun.ico"].filter(
+  // Binary files the site serves next to the docs text: logos, images and icons.
+  const paths = ["docs/logo", "docs/images", "docs/icons", "src/bun.ico"].filter(
     path => tree.has(path) || [...tree.files.keys()].some(file => file.startsWith(`${path}/`)),
   );
   run(["git", "archive", "--format=tar", `--output=${archive}`, tree.sha, "--", ...paths]);
@@ -242,7 +244,7 @@ export async function regenerate(
   const plugin = generate({ root: snapshot });
   for (const [path, data] of plugin) artifacts.set(`plugin/${path}`, data);
   artifacts.set("bun-agent-plugin.bin", pack(plugin));
-  const releases: Release[] = offline
+  const github: Release[] = offline
     ? []
     : JSON.parse(run(["gh", "api", "repos/aphrody-labs/bun/releases?per_page=30"]))
         .filter((r: any) => !r.draft)
@@ -259,7 +261,7 @@ export async function regenerate(
             size: a.size,
           })),
         }));
-  for (const release of releases) {
+  for (const release of github) {
     const sums = release.assets.find(a => /^SHA256SUMS(?:\.txt)?$/.test(a.name));
     if (!sums) continue;
     const response = await fetch(sums.url, { signal: AbortSignal.timeout(30000) });
@@ -270,7 +272,38 @@ export async function regenerate(
       if (value !== undefined) asset.sha256 = value;
     }
   }
+  // The mirror holds the published runtime builds; GitHub keeps the other releases.
+  const mirrored = offline ? [] : await mirrorReleases(root, repo);
+  const releases = [...mirrored, ...github.filter(release => !mirrored.some(m => m.tag === release.tag))].sort((a, b) =>
+    b.publishedAt.localeCompare(a.publishedAt),
+  );
   artifacts.set("releases.json", `${JSON.stringify(releases, null, 2)}\n`);
+  // Measured performance: the reports of the latest successful perf gate run (scripts/aphrody/perf-gate.ts in CI).
+  let perf: { dir: string; url: string } | null = null;
+  if (!offline) {
+    const [latestRun] = JSON.parse(
+      run([
+        "gh",
+        "run",
+        "list",
+        "-R",
+        repo,
+        "-w",
+        "aphrody-perf.yml",
+        "--status",
+        "success",
+        "-L",
+        "1",
+        "--json",
+        "databaseId,url",
+      ]),
+    ) as { databaseId: number; url: string }[];
+    if (latestRun) {
+      const dir = join(out, "perf");
+      run(["gh", "run", "download", String(latestRun.databaseId), "-R", repo, "-D", dir]);
+      perf = { dir, url: latestRun.url };
+    }
+  }
   const now = new Date(tree.date);
   const data = await collect({
     runtime: { repo: root, ref: tree.sha },
@@ -296,6 +329,7 @@ export async function regenerate(
     releases,
     data,
     now,
+    ...(perf ? { perf: perf.dir, perfRun: perf.url } : {}),
     home: {
       runtimeFactFiles: home?.runtimeFactFiles ?? [],
       graphFile: home?.graphFile ?? join(out, "graph-summary.json"),
@@ -303,10 +337,6 @@ export async function regenerate(
   });
   cpSync(join(out, "graph-docs"), join(out, "site", "graph", "domains"), { recursive: true });
   cpSync(join(out, "graph.json"), join(out, "site", "graph", "graph.json"));
-  writeFileSync(
-    join(out, "site", "graph", "index.html"),
-    `<!doctype html><html lang="en"><meta charset="utf-8"><title>Bun monorepo graph</title><h1>Bun monorepo graph</h1><p>Source ${tree.sha}. ${graph.files} tracked files; ${graph.readableFiles} readable source files.</p><p>${Bun.escapeHTML(graph.coverage)}</p><a href="graph.json">Domain network and coverage</a><ul>${graph.documents.map(doc => `<li><a href="domains/${doc.directory.split("/").at(-1)}/graph.html">${Bun.escapeHTML(doc.domain)}</a></li>`).join("")}</ul></html>`,
-  );
   const hashes: Record<string, string> = {};
   completeReleaseKnowledge(out);
   writeGraphView(graph, join(out, "site", "graph", "index.html"));

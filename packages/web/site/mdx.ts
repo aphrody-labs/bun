@@ -297,7 +297,34 @@ function joinMultilineTags(lines: string[]): string[] {
 }
 
 /** MDX (snippets déjà inlinés) vers Markdown dont les composants sont du HTML. */
+/**
+ * JSX `<video>` blocks (multi-line, camelCase flags, `style={{…}}`) as one line of plain HTML that Markdown passes
+ * through: the first `<source>` keeps its `src` and `type`, the playback flags are kept, and `controls` is always
+ * added so a looping video can be paused.
+ */
+export function normalizeVideoTags(body: string, ctx: HtmlContext): string {
+  return mapOutsideFences(body, chunk =>
+    chunk.replace(/<video\b([\s\S]*?)>([\s\S]*?)<\/video>/g, (_, open: string, inner: string) => {
+      const source = /<source\b([\s\S]*?)\/?>/.exec(inner)?.[1] ?? open;
+      const src = /\bsrc\s*=\s*["']([^"']+)["']/.exec(source)?.[1];
+      if (!src) return "";
+      const type = /\btype\s*=\s*["']([^"']+)["']/.exec(source)?.[1];
+      const flags = [
+        ["loop", /\bloop\b/],
+        ["autoplay", /\bautoPlay\b/i],
+        ["muted", /\bmuted\b/],
+        ["playsinline", /\bplaysInline\b/i],
+      ]
+        .filter(([, pattern]) => (pattern as RegExp).test(open))
+        .map(([name]) => ` ${name}`)
+        .join("");
+      return `\n<video controls${flags} preload="metadata" class="doc-video"><source src="${escapeHtml(ctx.link(src))}"${type ? ` type="${escapeHtml(type)}"` : ""}></video>\n`;
+    }),
+  );
+}
+
 export function mdxToHtmlMarkdown(body: string, ctx: HtmlContext): string {
+  body = normalizeVideoTags(body, ctx);
   const lines = joinMultilineTags(body.split("\n").map(l => l.replace(/^[\t ]+/, ws => ws.replace(/\t/g, "    "))));
   const out: string[] = [];
   const stack: { name: string; attrs: Record<string, string | true>; base?: number }[] = [];

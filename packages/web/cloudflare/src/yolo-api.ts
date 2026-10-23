@@ -299,17 +299,20 @@ async function mcp(body: Record<string, unknown>, context: YoloAPIContext, reque
 
 export async function yoloAPI(request: Request, env: YoloEnv, context: YoloAPIContext): Promise<Response | null> {
   const path = new URL(request.url).pathname;
-  const paths = [
-    "/v1/models",
-    "/v1/systemone",
-    "/v1/chat/completions",
-    "/v1/responses",
-    "/mcp",
-    "/a2a",
-    "/message:send",
-    "/api/yolo/provider",
-  ];
-  if (!paths.includes(path)) return null;
+  // Decision routes exist only once the native origin is qualified; until then the site does not offer them at all
+  // and they fall through to 404. The read-only MCP server does not depend on it.
+  const decisions = origin(env)
+    ? [
+        "/v1/models",
+        "/v1/systemone",
+        "/v1/chat/completions",
+        "/v1/responses",
+        "/a2a",
+        "/message:send",
+        "/api/yolo/provider",
+      ]
+    : [];
+  if (path !== "/mcp" && !decisions.includes(path)) return null;
   if (path === "/v1/models") {
     if (request.method !== "GET") return json({ error: { code: "method_not_allowed" } }, 405);
     return json({

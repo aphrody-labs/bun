@@ -246,4 +246,7 @@ bun run start
 Listening on http://localhost:3000/
 ```
 
-<Note>⚡️ **Performance** — `bun run` is roughly 28x faster than `npm run` (6ms vs 170ms of overhead).</Note>
+<Note>
+  ⚡️ **Performance** — `bun run` runs the script from the Bun process itself, without first booting the npm CLI on
+  Node.js as `npm run` does.
+</Note>

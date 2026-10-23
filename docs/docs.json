@@ -133,6 +133,7 @@
               "/runtime/archive",
               "/runtime/sql",
               "/runtime/sqlite",
+              "/runtime/vector-index",
               "/runtime/s3",
               "/runtime/redis"
             ]

@@ -80,6 +80,10 @@ test("monorepo subgraphs resolve relative references and keep protected stores o
   expect(sourceReadable("vendor/lib/source.cpp")).toBe(true);
   expect(sourceReadable("credentials/token.json")).toBe(false);
   expect(sourceReadable("cookies/session.json")).toBe(false);
+  // Public API pages named after sensitive stores stay readable; key material under docs/ does not.
+  expect(sourceReadable("docs/runtime/cookies.mdx")).toBe(true);
+  expect(sourceReadable("docs/runtime/secrets.mdx")).toBe(true);
+  expect(sourceReadable("docs/keys/server.pem")).toBe(false);
   expect(resolvedImport("scripts/site/a.ts", "../../packages/sdk", new Set(["packages/sdk/index.ts"]))).toBe(
     "packages/sdk/index.ts",
   );

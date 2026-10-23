@@ -136,7 +136,7 @@ const inlineCode = (s: string) => escapeHtml(s).replace(/`([^`]+)`/g, "<code>$1<
 /** Liens racine Mintlify dans le HTML rendu (`/runtime/x`) vers `/docs/runtime/x`. */
 export function prefixDocsLinks(html: string): string {
   return html.replace(
-    /(href|src)="\/(?!\/|docs(?:\/|"|#)|install|downloads|benchmarks|blog|guides|llms|bun\/|favicon\.ico|apple-touch-icon\.png|site\.webmanifest|icon(?:-\d+)?\.(?:svg|png)|maskable-\d+\.png|pet\.webp|assets\/)([^"]*)"/g,
+    /(href|src)="\/(?!\/|docs(?:\/|"|#)|install(?:\.sh|\.ps1)?(?=["?#])|downloads|benchmarks|blog|llms|bun\/|favicon\.ico|apple-touch-icon\.png|site\.webmanifest|icon(?:-\d+)?\.(?:svg|png)|maskable-\d+\.png|pet\.webp|assets\/)([^"]*)"/g,
     (_, attr, path) => `${attr}="/docs/${path.replace(/\.mdx?(?=$|#)/, "")}"`,
   );
 }
@@ -611,7 +611,15 @@ ${pager}`;
       g.path === "/"
         ? data?.distribution
           ? `${renderHero(data)}\n<article>${html}</article>`
-          : renderRuntimeHero(data!, o, { facts: home.facts, docs: bySlug })
+          : renderRuntimeHero(data!, o, {
+              facts: home.facts,
+              docs: bySlug,
+              modules: moduleCatalog(
+                existsSync(join(docs, "runtime/fork-features.mdx"))
+                  ? readFileSync(join(docs, "runtime/fork-features.mdx"), "utf8")
+                  : "",
+              ),
+            })
         : `<h1>${escapeHtml(g.title)}</h1>
 ${g.description ? `<p class="lead">${escapeHtml(g.description)}</p>` : ""}
 <div class="page-actions"><button type="button" data-copy-url="${mdUrl}">Copy page</button><a href="${mdUrl}">View as Markdown</a></div>
@@ -763,8 +771,11 @@ ${g.description ? `<p class="lead">${escapeHtml(g.description)}</p>` : ""}
     page({
       path: "/benchmarks",
       title: titled("Benchmarks"),
-      description:
-        "Measured Bun, Python, .NET, Tailwind CSS and Next.js workloads, raw samples and reproducible methodology.",
+      description: existsSync(join(productsDirectory, "product-benchmarks.json"))
+        ? "Measured Bun, Python, .NET, Tailwind CSS and Next.js workloads, raw samples and reproducible methodology."
+        : reports.length
+          ? `Performance gate of the Aphrody runtime against upstream Bun (${reports.map(r => r.platform).join(", ")}), with the commands to reproduce it.`
+          : "The benchmark cases of the Aphrody runtime and the commands to run them.",
       body: highlightHtml(renderBenchmarks(reports, o, latest)),
       tabs: topTabs("Benchmarks"),
       toc: reports.map(r => ({ level: 2, id: r.platform, text: r.platform })),
@@ -948,6 +959,23 @@ export function rowDescription(name: string, description: string): string {
   return /[.!?]$/.test(text) ? text : `${text}.`;
 }
 
+/** Rows of the "Built-in modules" table of docs/runtime/fork-features.mdx: each module's purpose and docs slug. */
+export function moduleCatalog(markdown: string): Map<string, { purpose: string; slug?: string }> {
+  const section = markdown.split(/^## /m).find(s => s.startsWith("Built-in modules")) ?? "";
+  const catalog = new Map<string, { purpose: string; slug?: string }>();
+  for (const line of section.split("\n")) {
+    if (!line.startsWith("| `bun:")) continue;
+    const [names = "", purpose = "", docs = ""] = line
+      .split("|")
+      .slice(1, 4)
+      .map(cell => cell.trim());
+    const slug = /\]\(\/([^)#]+)\)/.exec(docs)?.[1];
+    for (const [, name] of names.matchAll(/`(bun:[\w-]+)`/g))
+      catalog.set(name!, { purpose: purpose.replace(/`/g, ""), slug });
+  }
+  return catalog;
+}
+
 /** Built-in modules inherited from upstream Bun; the home page lists the other registry entries. */
 const UPSTREAM_MODULES = new Set([
   "bun:ffi",
@@ -979,6 +1007,8 @@ export function renderRuntimeHero(
   extra: {
     facts?: readonly RuntimeHomeFact[];
     docs?: { has(slug: string): boolean; get?(slug: string): { description: string } | undefined };
+    /** Modules without a page of their own are described from the feature catalogue. */
+    modules?: Map<string, { purpose: string; slug?: string }>;
   } = {},
 ): string {
   const rt = d.runtime!;
@@ -997,9 +1027,11 @@ export function renderRuntimeHero(
   const modules = rt.modules.filter(name => !UPSTREAM_MODULES.has(name));
   const moduleDoc = (name: string) => {
     const slug = `runtime/${name.slice(4)}`;
-    return extra.docs?.has(slug)
-      ? { href: pageUrl(slug), description: extra.docs.get?.(slug)?.description ?? "" }
-      : null;
+    if (extra.docs?.has(slug)) return { href: pageUrl(slug), description: extra.docs.get?.(slug)?.description ?? "" };
+    const entry = extra.modules?.get(name);
+    if (!entry) return null;
+    const page = entry.slug && extra.docs?.has(entry.slug) ? entry.slug : "runtime/fork-features";
+    return { href: pageUrl(page), description: entry.purpose };
   };
   // The specifier is code: the shared bun: namespace is set lighter than the module name.
   const specifier = (name: string) => `<span class="ns">bun:</span>${escapeHtml(name.slice(4))}`;
@@ -1114,7 +1146,7 @@ function renderDownloads(
   o: BuildOptions,
   data: SiteData | null,
 ): string {
-  const head = `<h2 id="runtime">Runtime (${escapeHtml(o.repo)})</h2><p>Release builds from <a href="https://github.com/${o.repo}/releases">GitHub releases</a>, each file with its SHA-256 from the release checksum file.</p>
+  const head = `<h2 id="runtime">Runtime (${escapeHtml(o.repo)})</h2><p>Release builds from the Aphrody distribution mirror (<code>dist.aphrody.app</code>), the source of the install scripts, each file with its SHA-256 from the release checksum file.</p>
 ${runtimeInstallCommands(o.origin, latest)}`;
   if (!releases || !latest)
     return `${head}<p class="banner">The release list could not be read when this page was built. See <a href="https://github.com/${o.repo}/releases">GitHub releases</a>.</p>`;
