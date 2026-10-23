@@ -11,7 +11,10 @@ impl Invocation {
     #[inline]
     pub(crate) fn from_argv(argv0: &[u8], first_arg: Option<&[u8]>) -> Option<Self> {
         let name = bun_paths::resolve_path::basename(argv0);
-        let name = name.strip_suffix(b".exe").unwrap_or(name);
+        // Windows ignores case in file names and PATHEXT spells the extension its own way: `UV.EXE`
+        // and `uv.EXE` are `uv`.
+        let name = name.to_ascii_lowercase();
+        let name = name.strip_suffix(b".exe").unwrap_or(&name);
         match name {
             b"uv" => Some(Self::Uv),
             b"uvx" => Some(Self::Uvx),

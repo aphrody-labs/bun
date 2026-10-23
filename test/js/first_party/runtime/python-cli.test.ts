@@ -343,6 +343,13 @@ test.concurrent("embedded uvx uses its tool command namespace", async () => {
   expect(result.code).toBe(0);
 });
 
+test.concurrent("uv plugin runs under an upper-case executable extension", async () => {
+  const result = await run(["--version"], undefined, environment, "UV.EXE");
+  expect(result.out).toMatch(/^uv 0.12.24(?: .*)?$/);
+  expect(result.err).toBe("");
+  expect(result.code).toBe(0);
+});
+
 test.concurrent("uv plugin honors explicit engine dispatch under another name", async () => {
   const result = await run(["uv", "--version"], undefined, { ...environment, BUN_BE_BUN: "1" }, "custom-runtime");
   expect(result.out).toMatch(/^uv 0\.12\.24(?: .*)?$/);
