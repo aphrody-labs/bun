@@ -12,7 +12,7 @@ import {
   type ShowcaseEvidence,
   type ShowcaseManifest,
   type ShowcaseWork,
-} from "../src/apps/showcase/collection";
+} from "../src/apps/site/collection";
 
 const output = Bun.env.BUN_VIDEO_SHOWCASE_OUTPUT;
 if (!output || !isAbsolute(output))
@@ -78,7 +78,7 @@ const html = (entry: string, title: string) =>
   `<!doctype html><html lang="fr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><link rel="stylesheet" href="/${entry}.css"></head><body><div id="root"></div><script type="module" src="/${entry}.js"></script></body></html>`;
 for (const entry of ["app", "preview"] as const) {
   const result = await Bun.build({
-    entrypoints: [resolve(import.meta.dir, `../src/apps/showcase/${entry}.tsx`)],
+    entrypoints: [resolve(import.meta.dir, `../src/apps/site/${entry}.tsx`)],
     target: "browser",
     minify: true,
     external: ["/fonts/*"],
@@ -102,7 +102,7 @@ for (const entry of ["app", "preview"] as const) {
 for (const name of ["collection.ts", "artwork.tsx", "preview.tsx", "remotion.tsx"])
   await write(
     `sources/${name}`,
-    await Bun.file(resolve(import.meta.dir, `../src/apps/showcase/${name}`)).bytes(),
+    await Bun.file(resolve(import.meta.dir, `../src/apps/site/${name}`)).bytes(),
     "text/plain",
   );
 const fonts = resolve(import.meta.dir, "../../aphrody-migrated/m3/aphrody-m3/packages/m3-fonts/fonts");

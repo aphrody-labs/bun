@@ -89,7 +89,7 @@ async function serveShowcaseAsset(root: string, path: string, method: string): P
   const parts = relativePath.split("/");
   if (parts.some(part => part === ".." || part === "." || part.startsWith(".")))
     return json({ error: "invalid_showcase_path" }, 400);
-  const spaPaths = new Set(["catalog", "watch", "shorts", "studio", "about", "playlist/saved"]);
+  const spaPaths = new Set(["catalog", "watch", "shorts", "studio", "about", "playlist/saved", "series", "tools"]);
   const rootPath = await realpath(root).catch(() => undefined);
   if (!rootPath) return path === "/" ? json({ error: "showcase_unavailable" }, 503) : undefined;
   const candidate = resolve(rootPath, relativePath);
@@ -181,6 +181,7 @@ export function createVideoWebApp(options: VideoWebAppOptions): VideoWebApp {
   let pipelineInstance: ReturnType<typeof import("./video-workflow").openConfiguredUnifiedVideoPipeline> | undefined;
   let episode: Promise<{ fetch: (request: Request) => Promise<Response> }> | undefined;
   const youtubeSearchWindow = new Map<string, number[]>();
+  let watchRunning = false;
 
   const unifiedPipeline = () => {
     pipelineInstance ??= import("./video-workflow")
@@ -466,6 +467,57 @@ export function createVideoWebApp(options: VideoWebAppOptions): VideoWebApp {
         });
       } catch {
         return json({ error: "frame_unavailable" }, 422);
+      }
+    }
+
+    if (path === "/api/video/watch") {
+      const file = resolveMediaPath(options.mediaRoot, url.searchParams.get("src"));
+      if (!file) return json({ error: "invalid_media_path" }, 400);
+      if (!Bun.Video.available) return json({ error: "video_provider_unavailable" }, 503);
+      const detail = url.searchParams.get("detail") ?? "efficient";
+      if (!["transcript", "efficient", "balanced"].includes(detail)) return json({ error: "invalid_detail" }, 400);
+      const number = (name: string, fallback: number | undefined, min: number, max: number) => {
+        const raw = url.searchParams.get(name);
+        if (raw === null) return fallback;
+        const value = Number(raw);
+        return Number.isFinite(value) && value >= min && value <= max ? value : Number.NaN;
+      };
+      const start = number("start", undefined, 0, 86400);
+      const end = number("end", undefined, 0, 86400);
+      const frames = number("frames", 12, 1, 24);
+      const width = number("width", 320, 64, 480);
+      if ([start, end, frames, width].some(value => Number.isNaN(value))) return json({ error: "invalid_range" }, 400);
+      if (watchRunning) return json({ error: "watch_busy" }, 429);
+      watchRunning = true;
+      try {
+        const { watch, cleanWatch } = await import("./watch");
+        const report = await watch({
+          source: file,
+          detail: detail as "transcript" | "efficient" | "balanced",
+          start,
+          end,
+          maxFrames: frames,
+          resolution: width,
+          whisper: "none",
+        });
+        try {
+          const shots = await Promise.all(
+            report.frames.map(async frame => ({
+              index: frame.index,
+              timestampSeconds: frame.timestampSeconds,
+              reason: frame.reason,
+              dataUrl: `data:image/jpeg;base64,${Buffer.from(await Bun.file(frame.path).arrayBuffer()).toString("base64")}`,
+            })),
+          );
+          const { workDir: _workDir, localMedia: _localMedia, source: _source, frames: _frames, ...summary } = report;
+          return json({ ...summary, frames: shots });
+        } finally {
+          await cleanWatch(report);
+        }
+      } catch (error) {
+        return json({ error: "watch_failed", detail: error instanceof Error ? error.message.slice(0, 200) : "" }, 422);
+      } finally {
+        watchRunning = false;
       }
     }
 

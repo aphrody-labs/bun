@@ -4,9 +4,9 @@
   "files": [
     "src/apps/hls-live.ts",
     "src/apps/filmcraft/server.ts",
-    "src/apps/showcase/app.tsx",
-    "src/apps/showcase/artwork.tsx",
-    "src/apps/showcase/collection.ts",
+    "src/apps/site/app.tsx",
+    "src/apps/site/artwork.tsx",
+    "src/apps/site/collection.ts",
     "src/encode.ts",
     "src/image.ts",
     "src/m3-video.ts",

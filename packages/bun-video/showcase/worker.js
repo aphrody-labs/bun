@@ -165,7 +165,7 @@ export async function serveShowcase(request, env, fetchBackend = fetch) {
     key.split("/").some(part => part === ".." || part === "." || part.startsWith("."))
   )
     return new Response("Not found", { status: 404 });
-  if (["catalog", "shorts", "watch", "studio", "about", "playlist/saved"].includes(key)) key = "index.html";
+  if (["catalog", "shorts", "watch", "studio", "about", "playlist/saved", "series", "tools"].includes(key)) key = "index.html";
   const headers = new Headers({
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "strict-origin-when-cross-origin",
