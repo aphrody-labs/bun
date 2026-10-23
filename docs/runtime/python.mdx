@@ -21,12 +21,25 @@ Python dispatch is enabled only when `BUN_PYTHON_HOST_LIBRARY` is set. Without i
 | Variable                  | Purpose                                                                                                                                                       |
 | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `BUN_PYTHON_HOST_LIBRARY` | Path to the `bun_python_host` shared library. Required. Its `bun_py_abi_version()` must return `1`.                                                           |
-| `BUN_PYTHON_LIBPYTHON`    | Path to the CPython shared library (`libpython3.x.so`, `.dylib` or `python3x.dll`). Required for `.py` dispatch.                                              |
-| `BUN_PYTHON_EXECUTABLE`   | Explicit `sys.executable`. Takes precedence over the two below.                                                                                               |
-| `VIRTUAL_ENV`             | An activated virtual environment: `bin/python` (`Scripts/python.exe` on Windows) becomes `sys.executable`.                                                    |
+| `VIRTUAL_ENV`             | An activated virtual environment. Takes precedence over a project `.venv` and over the default interpreter below.                                             |
+| `BUN_PYTHON_LIBPYTHON`    | Path to the CPython shared library (`libpython3.x.so`, `.dylib` or `python3x.dll`) of the default interpreter. Optional inside a virtual environment.         |
+| `BUN_PYTHON_EXECUTABLE`   | `sys.executable` of the default interpreter. Takes precedence over `BUV_RUNTIME`.                                                                             |
 | `BUV_RUNTIME`             | A CPython prefix (`bin/python3`, or `python.exe` on Windows). On Linux and macOS it is otherwise derived from the `lib/` directory of `BUN_PYTHON_LIBPYTHON`. |
 
-On Windows, set `BUV_RUNTIME` or `BUN_PYTHON_EXECUTABLE`, or activate a virtual environment: the prefix cannot be derived from the DLL path.
+On Windows, outside a virtual environment, set `BUV_RUNTIME` or `BUN_PYTHON_EXECUTABLE`: the prefix cannot be derived from the DLL path.
+
+## Run a Python project
+
+Inside a project, the environment selects the interpreter. An activated `VIRTUAL_ENV` wins; otherwise the nearest `.venv` of the current directory or one of its parents, where `bun uv sync` creates it, is used. Its `bin/python` (`Scriptspython.exe` on Windows) becomes `sys.executable`, and the matching shared library is found from the `home` and `version` (or `version_info`) keys of `pyvenv.cfg`: `python3XY.dll` in `home` on Windows, `lib/libpython3.X.so` (`.dylib`) beside `home` elsewhere. If it is not there, `BUN_PYTHON_LIBPYTHON` is used, and a library of another Python version is refused before CPython starts.
+
+```sh terminal icon="terminal"
+git clone https://github.com/nousresearch/hermes-agent && cd hermes-agent
+bun uv sync                      # creates .venv with the project's Python and dependencies
+bun python -m hermes_cli.main --version
+bun run hermes --help            # the project's console script, in the Bun process
+```
+
+`bun run <name>` runs a console script of the selected environment (`bin/<name>`, or the `Scripts<name>.exe` launcher on Windows) in the hosted interpreter, after `package.json` scripts and files and before `node_modules/.bin` and `PATH`. A file without a suffix whose `#!` line names `python`, `python3` or `python3.X` (directly or through `env`) also runs as Python.
 
 ## Run Python files and the CLI
 

@@ -338,14 +338,14 @@ mod sys {
 
     /// Windows has no global symbol scope: a module loaded once is shared by every caller of the
     /// process, which gives the same single-libpython guarantee as `RTLD_GLOBAL`.
-    pub fn open(path: &str) -> *mut c_void {
+    pub(crate) fn open(path: &str) -> *mut c_void {
         let w = wide(path);
         // SAFETY: valid NUL-terminated UTF-16 path.
         unsafe { LoadLibraryW(w.as_ptr()) }
     }
 
     /// A `python3XY.dll` already mapped by the host (the Bun fork or an embedding process).
-    pub fn already_loaded() -> *mut c_void {
+    pub(crate) fn already_loaded() -> *mut c_void {
         for name in library_candidates() {
             let w = wide(&name);
             // SAFETY: valid NUL-terminated UTF-16 name; no reference count is taken.
@@ -363,7 +363,7 @@ mod sys {
             .map_or(std::ptr::null_mut(), |f| f as *mut c_void)
     }
 
-    pub fn bind(handle: *mut c_void) -> Result<Api, String> {
+    pub(crate) fn bind(handle: *mut c_void) -> Result<Api, String> {
         super::bind_with(|name| sym(handle, name))
     }
 }
@@ -371,13 +371,13 @@ mod sys {
 #[cfg(not(any(unix, windows)))]
 mod sys {
     use super::{Api, c_void};
-    pub fn open(_: &str) -> *mut c_void {
+    pub(crate) fn open(_: &str) -> *mut c_void {
         std::ptr::null_mut()
     }
-    pub fn already_loaded() -> *mut c_void {
+    pub(crate) fn already_loaded() -> *mut c_void {
         std::ptr::null_mut()
     }
-    pub fn bind(_: *mut c_void) -> Result<Api, String> {
+    pub(crate) fn bind(_: *mut c_void) -> Result<Api, String> {
         Err("hosting libpython is not supported on this platform".into())
     }
 }

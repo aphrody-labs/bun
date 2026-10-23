@@ -2,8 +2,8 @@
 import { afterAll, expect, test } from "bun:test";
 import { bunEnv, bunExe, tempDir } from "harness";
 import { Database } from "bun:sqlite";
-import { realpathSync, writeFileSync } from "node:fs";
-import { basename, join } from "node:path";
+import { chmodSync, copyFileSync, mkdirSync, realpathSync, writeFileSync } from "node:fs";
+import { basename, dirname, join } from "node:path";
 
 const fixture = tempDir("bun-python-cli", {});
 const root = String(fixture);
@@ -480,6 +480,100 @@ nativeTest.concurrent("real virtual environment retains prefix and site paths", 
     ),
     "VENV_OK",
   );
+});
+const projectEnvironment = (() => {
+  const { BUN_PYTHON_EXECUTABLE, BUN_PYTHON_LIBPYTHON, VIRTUAL_ENV, ...rest } = environment;
+  return rest;
+})();
+async function runIn(cwd: string, args: string[], env: NodeJS.ProcessEnv) {
+  await using child = Bun.spawn({ cmd: [bunExe(), ...args], cwd, env, stdout: "pipe", stderr: "pipe" });
+  const [out, err, code] = await Promise.all([child.stdout.text(), child.stderr.text(), child.exited]);
+  return { code, out: out.trim(), err: err.trim() };
+}
+async function makeVenv(venv: string) {
+  await using made = Bun.spawn([python!, "-m", "venv", "--without-pip", venv], {
+    env: environment,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [out, err, code] = await Promise.all([made.stdout.text(), made.stderr.text(), made.exited]);
+  expect({ out, err, code }).toEqual({ out: "", err: "", code: 0 });
+}
+nativeTest.concurrent("project .venv selects its interpreter and shared library from a subdirectory", async () => {
+  using dir = tempDir("buv-project-venv", { "pyproject.toml": "[project]\nname = 'demo'\n", "src/app/.keep": "" });
+  const venv = join(String(dir), ".venv");
+  await makeVenv(venv);
+  const check =
+    "import os,sys; assert os.path.samefile(sys.prefix, os.environ['EXPECTED_VENV']); assert sys.prefix != sys.base_prefix; print('PROJECT_VENV_OK')";
+  expect(
+    await runIn(join(String(dir), "src", "app"), ["python", "-c", check], {
+      ...projectEnvironment,
+      EXPECTED_VENV: venv,
+    }),
+  ).toEqual({ code: 0, out: "PROJECT_VENV_OK", err: "" });
+});
+nativeTest.concurrent("project console scripts run in the hosted interpreter", async () => {
+  using dir = tempDir("buv-project-script", { "pyproject.toml": "[project]\nname = 'demo'\n" });
+  const venv = join(String(dir), ".venv");
+  await makeVenv(venv);
+  const main =
+    "import os,sys; print('SCRIPT', os.path.basename(sys.argv[0]), sys.argv[1:], sys.prefix != sys.base_prefix)";
+  if (process.platform === "win32") {
+    // Installer launchers carry the program as an appended zip application.
+    await using zipped = Bun.spawn(
+      [
+        python!,
+        "-c",
+        "import io,sys,zipfile; b=io.BytesIO(); z=zipfile.ZipFile(b,'w'); z.writestr('__main__.py', sys.argv[2]); z.close(); open(sys.argv[1],'wb').write(b'MZ'+bytes(510)+b.getvalue())",
+        join(venv, "Scripts", "hello.exe"),
+        main,
+      ],
+      { env: environment, stdout: "pipe", stderr: "pipe" },
+    );
+    expect(await zipped.exited).toBe(0);
+  } else {
+    writeFileSync(join(venv, "bin", "hello"), `#!${join(venv, "bin", "python")}\n${main}\n`, { mode: 0o755 });
+  }
+  const scriptName = process.platform === "win32" ? "hello.exe" : "hello";
+  expect(await runIn(String(dir), ["run", "hello", "été🐍", "--flag"], projectEnvironment)).toEqual({
+    code: 0,
+    out: `SCRIPT ${scriptName} ['été🐍', '--flag'] True`,
+    err: "",
+  });
+});
+nativeTest.concurrent("Python shebang files without a suffix run in the hosted interpreter", async () => {
+  using dir = tempDir("buv-shebang", {
+    tool: "#!/usr/bin/env python3\nimport sys\nprint('SHEBANG', sys.argv[1:])\n",
+    "node-tool": "#!/usr/bin/env node\nconsole.log('NODE_SHEBANG');\n",
+  });
+  for (const target of ["./tool", "tool"]) {
+    expect(await runIn(String(dir), ["run", target, "été🐍"], environment)).toEqual({
+      code: 0,
+      out: "SHEBANG ['été🐍']",
+      err: "",
+    });
+  }
+  expect(await runIn(String(dir), ["run", "./node-tool"], environment)).toEqual({
+    code: 0,
+    out: "NODE_SHEBANG",
+    err: "",
+  });
+});
+nativeTest.concurrent("environment and shared library version mismatch is refused", async () => {
+  using dir = tempDir("buv-venv-mismatch", {
+    ".venv/pyvenv.cfg": `home = ${join(root, "absent-python")}\nversion = 3.99.0\n`,
+  });
+  const executable = join(String(dir), ".venv", process.platform === "win32" ? "Scripts/python.exe" : "bin/python");
+  mkdirSync(dirname(executable), { recursive: true });
+  copyFileSync(python!, executable);
+  chmodSync(executable, 0o755);
+  const result = await runIn(String(dir), ["python", "-c", "print('UNREACHABLE')"], {
+    ...projectEnvironment,
+    BUN_PYTHON_LIBPYTHON: process.env.BUN_PYTHON_LIBPYTHON,
+  });
+  expect(result.out).toBe("");
+  expect(result.err).toContain("uses Python 3.99 but BUN_PYTHON_LIBPYTHON is Python 3.");
+  expect(result.code).toBe(1);
 });
 nativeTest.concurrent("missing host fails before Python source evaluation", async () => {
   const result = await run([script, "été🐍"], undefined, {

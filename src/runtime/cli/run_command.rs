@@ -2371,8 +2371,11 @@ impl RunCommand {
         let python_executable =
             cfg.bin_dirs_only && crate::cli::python_command::is_python_executable(target_name);
         let explicit_path = target_name.starts_with(b".") || paths::is_absolute(target_name);
-        let python_file = crate::cli::python_command::is_python_source(target_name)
-            && (cfg.allow_fast_run_for_extensions || explicit_path);
+        let python_file = (crate::cli::python_command::is_python_source(target_name)
+            && (cfg.allow_fast_run_for_extensions || explicit_path))
+            || (explicit_path
+                && paths::extension(target_name).is_empty()
+                && crate::cli::python_command::has_python_shebang(target_name));
         if python_executable || python_file {
             let python_positionals = if python_executable {
                 &positionals[1..]
@@ -2636,7 +2639,10 @@ impl RunCommand {
         match resolution {
             Ok(mut resolved) => {
                 let path = resolved.path().expect("resolved primary path");
-                if crate::cli::python_command::is_python_source(path.text) {
+                if crate::cli::python_command::is_python_source(path.text)
+                    || (paths::extension(path.text).is_empty()
+                        && crate::cli::python_command::has_python_shebang(path.text))
+                {
                     let mut python_args = vec![path.text];
                     let skip = if ctx
                         .positionals
@@ -2708,6 +2714,29 @@ impl RunCommand {
                         Some(Loader::Html),
                     ));
                 }
+            }
+        }
+
+        // ── console script of the project's Python environment ───────────────
+        {
+            let skip = if ctx
+                .positionals
+                .first()
+                .is_some_and(|arg| arg.as_ref() == b"run")
+            {
+                2
+            } else {
+                1
+            };
+            let args: Vec<&[u8]> = ctx
+                .positionals
+                .iter()
+                .skip(skip)
+                .chain(ctx.passthrough.iter())
+                .map(Box::as_ref)
+                .collect();
+            if crate::cli::python_command::run_environment_script_if_present(target_name, &args) {
+                return Ok(true);
             }
         }
 
