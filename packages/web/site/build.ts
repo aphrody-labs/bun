@@ -542,7 +542,7 @@ export async function build(o: BuildOptions) {
               .filter((i): i is string => typeof i === "string" && i !== "guides/index" && bySlug.has(i))
               .map(
                 i =>
-                  `<div class="card"><p class="card-title"><a href="${pageUrl(i)}">${escapeHtml(bySlug.get(i)!.title)}</a></p><p class="muted">${escapeHtml(bySlug.get(i)!.description)}</p></div>`,
+                  `<div class="card"><p class="card-title"><a href="${pageUrl(i)}">${escapeHtml(bySlug.get(i)!.title)}</a></p><p class="muted">${inlineCode(bySlug.get(i)!.description)}</p></div>`,
               )
               .join("")}</div>`,
         )

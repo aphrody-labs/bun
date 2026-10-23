@@ -58,7 +58,8 @@ const server = Bun.serve({
         if (stat?.isFile()) return new Response(file);
       }
     }
-    return new Response("Not found", { status: 404 });
+    // Like the host: a missing path answers with the 404 page.
+    return new Response(Bun.file(join(out, "404.html")), { status: 404, headers: { "content-type": "text/html" } });
   },
 });
 const base = `http://127.0.0.1:${server.port}`;

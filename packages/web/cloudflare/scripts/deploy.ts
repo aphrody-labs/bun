@@ -30,7 +30,7 @@ export function envFile(): string {
   return process.env.APHRODY_CLOUDFLARE_ENV ?? join(homedir(), ".aphrody", "config", "cloudflare.env");
 }
 
-// Static asset headers: installers never cached, /assets 1 h, pages 5 min.
+// Static asset headers: installers never cached, hashed /_assets for a year, /assets 1 h, pages 5 min.
 const csp = [
   "default-src 'self'",
   "script-src 'self'",
@@ -53,6 +53,10 @@ export const headersFile = `/*
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=(), interest-cohort=()
   Cache-Control: public, max-age=300
+
+/_assets/*
+  ! Cache-Control
+  Cache-Control: public, max-age=31536000, immutable
 
 /assets/*
   ! Cache-Control
