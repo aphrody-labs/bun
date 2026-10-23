@@ -2,6 +2,8 @@
 name = "bun_yarr"
 version.workspace = true
 edition.workspace = true
+# FFI to the Yarr interpreter compiled into Bun (src/jsc/bindings/RegularExpression.cpp); unusable outside Bun.
+publish = false
 
 [lib]
 path = "lib.rs"
