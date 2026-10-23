@@ -6,6 +6,8 @@ members = [
   "src/media/filmcraft/crates/vp9",
   "src/media/filmcraft/crates/vp8",
   "src/media/filmcraft/crates/ui-egui",
+  "src/media/filmcraft/crates/craft-ui",
+  "src/media/filmcraft/crates/craft-docpath",
   "src/media/filmcraft/crates/tts",
   "src/media/filmcraft/crates/tts-text",
   "src/media/filmcraft/crates/time",
