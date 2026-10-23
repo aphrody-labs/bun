@@ -1678,6 +1678,25 @@ describe("minimum-release-age", () => {
         expect(exitCode).toBe(0);
       });
 
+      test.concurrent("a scope pattern exempts every package of the scope", async () => {
+        using dir = project("scope-pattern", { "@scope/scoped-package": "*", "regular-package": "*" }, 5, ["@scope/*"]);
+        const { stderr, exitCode, resolved } = await install(String(dir));
+        expect(stderr).not.toContain("error:");
+        expect(resolved).toEqual({
+          "@scope/scoped-package": "@scope/scoped-package@2.0.0",
+          "regular-package": "regular-package@2.1.0",
+        });
+        expect(exitCode).toBe(0);
+      });
+
+      test.concurrent("a pattern of another scope exempts nothing", async () => {
+        using dir = project("other-scope-pattern", { "@scope/scoped-package": "*" }, 5, ["@other/*"]);
+        const { stderr, exitCode, resolved } = await install(String(dir));
+        expect(stderr).not.toContain("error:");
+        expect(resolved).toEqual({ "@scope/scoped-package": "@scope/scoped-package@1.5.0" });
+        expect(exitCode).toBe(0);
+      });
+
       // With a 1.8 day gate and no exemption, bugfix-package resolves to 1.0.0:
       // 1.0.3 and 1.0.2 are too recent, 1.0.1 passes the gate but was released
       // only 1 day after 1.0.2 so the stability check walks on to 1.0.0.

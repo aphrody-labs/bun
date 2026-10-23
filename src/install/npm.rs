@@ -1775,7 +1775,8 @@ impl FindResult<'_> {
     }
 }
 
-/// pnpm's grammar: `name` exempts a package, `name@1.2.3 || 1.2.4` only those versions.
+/// pnpm's grammar: `name` exempts a package, `name@1.2.3 || 1.2.4` only those versions. A name
+/// ending in `*`, such as npm's `@scope/*`, matches every package whose name starts with the rest.
 pub struct MinimumReleaseAgeExcludes(Vec<(&'static [u8], Option<Semver::Version>)>);
 
 impl MinimumReleaseAgeExcludes {
@@ -1822,10 +1823,21 @@ impl MinimumReleaseAgeExcludes {
         MinimumReleaseAgeExcludes(list)
     }
 
+    fn matches(pattern: &[u8], name: &[u8]) -> bool {
+        match pattern.strip_suffix(b"*") {
+            Some(prefix) => name.starts_with(prefix),
+            None => pattern == name,
+        }
+    }
+
+    fn excludes_name(&self, name: &[u8]) -> bool {
+        (self.0.iter()).any(|&(p, v)| v.is_none() && Self::matches(p, name))
+    }
+
     fn excludes_version(&self, name: &[u8], version: Semver::Version) -> bool {
         self.0
             .iter()
-            .any(|&(p, v)| p == name && v.is_some_and(|v| v.eql(version)))
+            .any(|&(p, v)| Self::matches(p, name) && v.is_some_and(|v| v.eql(version)))
     }
 }
 
@@ -1913,7 +1925,7 @@ impl PackageManifest {
         &self,
         exclusions: Option<&MinimumReleaseAgeExcludes>,
     ) -> bool {
-        exclusions.is_some_and(|e| (e.0.iter()).any(|&(p, v)| p == self.name() && v.is_none()))
+        exclusions.is_some_and(|e| e.excludes_name(self.name()))
     }
 
     /// Too recent for the gate and not listed in `exclusions`.

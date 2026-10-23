@@ -1226,7 +1226,7 @@ See [Minimum release age](/pm/cli/install#minimum-release-age).
 
 ### `install.minimumReleaseAgeExcludes`
 
-An array of packages that are exempt from the `minimumReleaseAge` check. A package name exempts every version of the package; `name@version` (or `name@1.0.0 || 1.0.1`) exempts only the listed exact versions. Default `[]`. The `--minimum-release-age-excludes` flag replaces this list.
+An array of packages that are exempt from the `minimumReleaseAge` check. A package name exempts every version of the package; `name@version` (or `name@1.0.0 || 1.0.1`) exempts only the listed exact versions. A name ending in `*`, such as `@scope/*`, matches every package whose name starts with the rest. Default `[]`. The `--minimum-release-age-excludes` flag replaces this list.
 
 ```toml title="bunfig.toml" icon="settings"
 [install]
