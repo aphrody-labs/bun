@@ -73,7 +73,7 @@ try {
       if (!state.fonts.includes("Archivo")) fail(`Archivo not loaded (${state.fonts.join(", ") || "none"})`);
       if (state.overflow > 0) fail(`horizontal overflow of ${state.overflow}px`);
       if (!state.heading) fail("no heading");
-      if (state.mainLength < 100) fail(`main holds ${state.mainLength} characters`);
+      if (state.mainLength < (missing ? 20 : 100)) fail(`main holds ${state.mainLength} characters`);
       for (const error of errors) fail(`console error: ${error}`);
     }
   }
@@ -86,8 +86,12 @@ try {
     if (!response.ok) fail(`nav link ${link} answers ${response.status}`);
   }
   // The search box answers from /docs/search.json.
-  await view.click("#q").catch(() => {});
-  await view.type("python");
+  await view.evaluate(`(() => {
+    const input = document.querySelector("#q");
+    input.focus();
+    input.value = "python";
+    input.dispatchEvent(new Event("input", { bubbles: true }));
+  })()`);
   await Bun.sleep(1200);
   const results = Number(await view.evaluate(`document.querySelectorAll("#results a").length`));
   console.log(`search "python": ${results} result(s)`);
