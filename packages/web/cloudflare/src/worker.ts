@@ -66,6 +66,29 @@ function r2Files(env: Env): FileStore {
   };
 }
 
+/** Range-aware read of a published Bun Video file; the versioned prefix makes every file immutable. */
+async function videoFile(env: Env, request: Request, path: string): Promise<Response | null> {
+  const object = await env.VIDEO.get(`${env.VIDEO_PREFIX}/${path}`, {
+    range: request.headers,
+    onlyIf: request.headers,
+  });
+  if (!object) return null;
+  const headers = new Headers();
+  object.writeHttpMetadata(headers);
+  headers.set("ETag", object.httpEtag);
+  headers.set("Accept-Ranges", "bytes");
+  headers.set("Cache-Control", "public, max-age=31536000, immutable");
+  if (!("body" in object)) return new Response(null, { status: 304, headers });
+  if (object.range && "offset" in object.range) {
+    const { offset = 0, length = object.size - offset } = object.range;
+    headers.set("Content-Range", `bytes ${offset}-${offset + length - 1}/${object.size}`);
+    headers.set("Content-Length", String(length));
+    return new Response(request.method === "HEAD" ? null : object.body, { status: 206, headers });
+  }
+  headers.set("Content-Length", String(object.size));
+  return new Response(request.method === "HEAD" ? null : object.body, { headers });
+}
+
 function platform(env: Env, ctx: ExecutionContext): AphrodyPlatform {
   const site = () =>
     env.NEON_DATABASE_URL
@@ -82,6 +105,7 @@ function platform(env: Env, ctx: ExecutionContext): AphrodyPlatform {
       put: (key, value, ttl) => env.CACHE.put(key, value, { expirationTtl: ttl }),
     },
     files: r2Files(env),
+    video: (request, path) => videoFile(env, request, path),
     site,
     rag: () => siteRag(env),
     async bunSearch(q, k, kind) {

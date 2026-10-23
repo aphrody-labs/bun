@@ -33,6 +33,8 @@ export type AphrodyPlatform = {
     put(key: string, value: string, ttlSeconds: number): Promise<void>;
   };
   files: FileStore;
+  /** Published Bun Video files by path below the render prefix (range requests included); null without a store. */
+  video: ((request: Request, path: string) => Promise<Response | null>) | null;
   /** Postgres-flavoured public site database (Neon); null when unconfigured. */
   site(): SiteQuery | null;
   rag(): Pick<RagOptions, "client" | "generate">;
@@ -189,8 +191,16 @@ export function createAphrodyHandler(p: AphrodyPlatform) {
     }
   }
 
+  async function video(request: Request, path: string): Promise<Response> {
+    if (request.method !== "GET" && request.method !== "HEAD") return error(405, "method not allowed");
+    if (!/^(?:videos|posters|captions)\/[\w.-]+\.(?:mp4|webp|vtt)$/.test(path)) return error(404, "not found");
+    return (p.video && (await p.video(request, path))) ?? error(404, "not found");
+  }
+
   return async function fetch(request: Request): Promise<Response> {
     try {
+      const { pathname } = new URL(request.url);
+      if (pathname.startsWith("/video/media/")) return await video(request, pathname.slice("/video/media/".length));
       const decision = await yoloAPI(request, p.yolo, {
         authorized: (req, secret) => authorized(req, secret),
         async siteRead(query) {

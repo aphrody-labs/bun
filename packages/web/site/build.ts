@@ -43,6 +43,7 @@ import {
   type GeneratedPage,
 } from "./pages.ts";
 import { loadRuntimeHomeFacts, RUNTIME_TARGETS, type HomeGraphFact, type RuntimeHomeFact } from "./runtime-facts.ts";
+import { renderVideoPage, VIDEO_CSS, videoFigure, videoWorks, type Showcase, type VideoWork } from "./video.ts";
 
 export { formatBytes };
 
@@ -324,6 +325,8 @@ export type BuildOptions = {
   now?: Date;
   /** Measured receipts; no runtime inference from the build executable. */
   home?: HomeBuildOptions;
+  /** Bun Video showcase (showcase.json of the published render); its distinct works make the /video page. */
+  video?: Showcase | null;
 };
 
 /** Measured runtime receipts and the source graph receipt; both optional. */
@@ -418,6 +421,7 @@ async function prepareHome(o: BuildOptions) {
 const TOP_TABS: [label: string, href: string, needsData: boolean][] = [
   ["Components", "/components", true],
   ["Docs", "/docs", false],
+  ["Video", "/video", true],
   ["Downloads", "/downloads", false],
   ["Release notes", "/release-notes", false],
   ["Benchmarks", "/benchmarks", false],
@@ -474,6 +478,8 @@ export async function build(o: BuildOptions) {
   const ctx = { origin: o.origin, releases: runtimeReleases };
   const generated = data ? generatedPages(data, ctx) : [];
   const generatedPaths = new Set(generated.map(g => g.path));
+  const works = o.video ? videoWorks(o.video) : [];
+  if (works.length) generatedPaths.add("/video");
 
   // Onglets du haut, et onglets de la doc dans la barre latérale (sans Feedback ni le blog : /release-notes est en haut)
   const tabHref = (t: NavTab) => {
@@ -614,6 +620,7 @@ ${pager}`;
           : renderRuntimeHero(data!, o, {
               facts: home.facts,
               docs: bySlug,
+              ...(works[0] ? { video: { work: works[0], commit: o.video!.sourceRevision } } : {}),
               modules: moduleCatalog(
                 existsSync(join(docs, "runtime/fork-features.mdx"))
                   ? readFileSync(join(docs, "runtime/fork-features.mdx"), "utf8")
@@ -782,6 +789,22 @@ ${g.description ? `<p class="lead">${escapeHtml(g.description)}</p>` : ""}
     }),
   );
 
+  if (works.length)
+    write(
+      join(o.out, "video", "index.html"),
+      page({
+        path: "/video",
+        title: titled("Video"),
+        description: `${works.length} videos rendered by Bun Video: Chromium frame capture and FilmCraft H.264 encoding, with the measurements of each render.`,
+        body: highlightHtml(renderVideoPage(o.video!, works, o.repo)),
+        tabs: topTabs("Video"),
+        toc: [
+          { level: 2, id: "read", text: "Read these files with Bun.Video" },
+          { level: 2, id: "works", text: "Works" },
+        ],
+      }),
+    );
+
   // Scripts d'installation du runtime et de build depuis les sources
   const scripts: [string, string][] = [
     ["scripts/aphrody/install.sh", "install"],
@@ -865,7 +888,7 @@ ${runtimeInstallCommands(o.origin)}
       .map(u => `<url><loc>${escapeHtml(o.origin + u)}</loc><lastmod>${now.slice(0, 10)}</lastmod></url>`)
       .join("\n")}\n</urlset>\n`,
   );
-  write(join(o.out, "assets", "site.css"), M3_SCHEME_CSS + CSS + HIGHLIGHT_CSS);
+  write(join(o.out, "assets", "site.css"), M3_SCHEME_CSS + CSS + HIGHLIGHT_CSS + VIDEO_CSS);
   write(join(o.out, "assets", "site.js"), JS + PUBLIC_WEBMCP_JS);
   write(
     join(o.out, "site.json"),
@@ -1009,6 +1032,8 @@ export function renderRuntimeHero(
     docs?: { has(slug: string): boolean; get?(slug: string): { description: string } | undefined };
     /** Modules without a page of their own are described from the feature catalogue. */
     modules?: Map<string, { purpose: string; slug?: string }>;
+    /** A Bun Video render shown in the Bun.Video section, with the commit it was rendered from. */
+    video?: { work: VideoWork; commit: string };
   } = {},
 ): string {
   const rt = d.runtime!;
@@ -1089,6 +1114,12 @@ ${
 <pre tabindex="0"><code class="language-typescript">const video = new Bun.Video("clip.mp4");
 const metadata = await video.metadata();
 await video.frame(1).resize(320, 180).webp().write("preview.webp");</code></pre>
+${
+  extra.video
+    ? `<div class="home-video">${videoFigure(extra.video.work, rt.repo, extra.video.commit)}</div>
+<p>This clip and the others on the <a href="/video">video page</a> were rendered by Bun Video, frame by frame in Chromium and encoded to H.264 by FilmCraft, without FFmpeg.</p>`
+    : ""
+}
 <p>Read the <a href="${doc("runtime/video")}">Bun.Video reference</a> and the <a href="${doc("runtime/image")}">Bun.Image transforms</a>.</p>
 </section>
 ${measured}

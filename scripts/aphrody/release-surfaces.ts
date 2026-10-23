@@ -18,6 +18,7 @@ import {
   type Release,
 } from "../../packages/web/site/build.ts";
 import { collect, GitTree } from "../../packages/web/site/collect.ts";
+import type { Showcase } from "../../packages/web/site/video.ts";
 import { generateSourceMarkdown } from "./source-markdown.ts";
 
 export function releaseReadme(version: string, sha: string, repo: string, modules: string[]): string {
@@ -304,6 +305,21 @@ export async function regenerate(
       perf = { dir, url: latestRun.url };
     }
   }
+  // The published Bun Video render that the Worker serves under /video/media/; the prefix is the Worker's own setting.
+  let video: Showcase | null = null;
+  if (!offline) {
+    const worker = Bun.JSONC.parse(sourceText("packages/web/cloudflare/wrangler.jsonc")) as {
+      vars: { VIDEO_PREFIX?: string };
+    };
+    const prefix = worker.vars.VIDEO_PREFIX;
+    if (prefix) {
+      const response = await fetch(`https://video.aphrody.app/${prefix}/showcase.json`, {
+        signal: AbortSignal.timeout(30000),
+      });
+      if (!response.ok) throw new Error(`${prefix}/showcase.json: HTTP ${response.status}`);
+      video = (await response.json()) as Showcase;
+    }
+  }
   const now = new Date(tree.date);
   const data = await collect({
     runtime: { repo: root, ref: tree.sha },
@@ -330,6 +346,7 @@ export async function regenerate(
     data,
     now,
     ...(perf ? { perf: perf.dir, perfRun: perf.url } : {}),
+    video,
     home: {
       runtimeFactFiles: home?.runtimeFactFiles ?? [],
       graphFile: home?.graphFile ?? join(out, "graph-summary.json"),

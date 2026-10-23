@@ -24,7 +24,7 @@
     "binding": "ASSETS",
     "html_handling": "drop-trailing-slash",
     "not_found_handling": "404-page",
-    "run_worker_first": ["/api/*", "/v1/*", "/mcp", "/a2a", "/message:send"],
+    "run_worker_first": ["/api/*", "/v1/*", "/mcp", "/a2a", "/message:send", "/video/media/*"],
   },
   "placement": { "mode": "smart" },
   "observability": {
@@ -35,6 +35,8 @@
   "upload_source_maps": true,
   "vars": {
     "PUBLIC_ORIGIN": "https://aphrody.app",
+    // Published Bun Video render served under /video/media/ (packages/bun-video/scripts/publish-showcase.ts).
+    "VIDEO_PREFIX": "showcase/20261022-v3",
     "AI_MODEL": "@cf/qwen/qwen3-30b-a3b-fp8",
     "AI_GATEWAY": "aphrody",
     "EMBEDDING_MODEL": "@cf/baai/bge-m3",
@@ -48,7 +50,10 @@
     // Inference credentials are checked by the enabled provider; public source reads do not use them.
     "required": ["APP_SECRET", "NEON_DATABASE_URL", "TYPESAFE_API_KEY"],
   },
-  "r2_buckets": [{ "binding": "APHRODY", "bucket_name": "aphrody-assets" }],
+  "r2_buckets": [
+    { "binding": "APHRODY", "bucket_name": "aphrody-assets" },
+    { "binding": "VIDEO", "bucket_name": "aphrody-video" },
+  ],
   "d1_databases": [{ "binding": "DB", "database_name": "aphrody-app", "migrations_dir": "migrations" }],
   "kv_namespaces": [{ "binding": "CACHE" }],
   "queues": {
