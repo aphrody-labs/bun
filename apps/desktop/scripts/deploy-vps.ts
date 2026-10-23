@@ -143,8 +143,13 @@ if (!args.includes("--skip-build")) {
 step("archive");
 const work = await mkdtemp(join(tmpdir(), "aphrody-deploy-"));
 const local = join(work, archive);
-const packed = await run(["tar", "-czf", local, "-C", join(desktop, "dist"), "."]);
-if (packed.code !== 0) fail("could not create the archive", packed.stderr);
+// Bun.Archive builds the tarball in process, so the platform tar (GNU, BSD, or Git's) is not involved.
+const entries: Record<string, Blob> = {};
+for await (const path of new Bun.Glob("**/*").scan({ cwd: join(desktop, "dist"), onlyFiles: true }))
+  entries[path.replaceAll("\\", "/")] = Bun.file(join(desktop, "dist", path));
+if (!entries["server.js"]) fail("dist/server.js is missing: the build produced nothing to ship");
+await Bun.write(local, new Bun.Archive(entries, { compress: "gzip", mtime: Date.now() }));
+console.log(`${Object.keys(entries).length} files`);
 const bytes = new Uint8Array(await Bun.file(local).arrayBuffer());
 const sha256 = new Bun.CryptoHasher("sha256").update(bytes).digest("hex");
 console.log(`${archive}: ${bytes.byteLength} bytes, sha256 ${sha256}`);
