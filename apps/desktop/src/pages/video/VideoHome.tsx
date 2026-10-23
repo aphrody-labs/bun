@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: Apache-2.0
 import React, { useEffect, useRef, useState } from "react";
 import { Link, getRouteApi, useNavigate } from "@tanstack/react-router";
-import { useSuspenseQuery } from "@tanstack/react-query";
+import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
 import { MdFilterChip } from "@aphrody/m3-react/wrappers/chips";
 import { MdIconButton } from "@aphrody/m3-react/wrappers/iconbutton";
-import { ENGINE_LABEL, clock, seconds, worksQuery, type VideoWork } from "../../lib/api";
+import { ENGINE_LABEL, clock, hostAccessQuery, seconds, worksQuery, type VideoWork } from "../../lib/api";
 import { useProgress, useSaved } from "../../lib/store";
 import { Icon } from "../../shell/icons";
 import { Card, Poster, SaveButton, Shelf, buildShelves, mediaUrl, useReducedMotion } from "./parts";
@@ -73,6 +73,7 @@ export function VideoHome() {
   const navigate = useNavigate();
   const progress = useProgress();
   const saved = useSaved();
+  const hostAccess = useQuery(hostAccessQuery).data?.hostAccess ?? true;
   const needle = q?.trim().toLowerCase() ?? "";
   const engines = [...new Set(works.map(work => work.engine))];
   if (!works.length)
@@ -81,10 +82,16 @@ export function VideoHome() {
         <h1>Vidéo</h1>
         <div className="empty-state">
           <h2>Aucun film pour l’instant</h2>
-          <p>Déposez des fichiers .mp4, .webm, .mov ou .mkv dans le dossier Vidéos du bureau pour les voir ici.</p>
-          <Link to="/os" className="btn filled">
-            Ouvrir le bureau
-          </Link>
+          <p>
+            {hostAccess
+              ? "Déposez des fichiers .mp4, .webm, .mov ou .mkv dans le dossier Vidéos du bureau pour les voir ici."
+              : "Ce serveur n’a publié aucun film : ceux du dossier Vidéos de son opérateur apparaîtront ici."}
+          </p>
+          {hostAccess && (
+            <Link to="/os" className="btn filled">
+              Ouvrir le bureau
+            </Link>
+          )}
         </div>
       </section>
     );

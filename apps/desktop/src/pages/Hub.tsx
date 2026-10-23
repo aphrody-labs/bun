@@ -2,7 +2,7 @@
 import React from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { capabilitiesQuery, worksQuery } from "../lib/api";
+import { capabilitiesQuery, hostAccessQuery, worksQuery } from "../lib/api";
 import { Icon, type IconName } from "../shell/icons";
 import { Shelf } from "./video/parts";
 
@@ -23,6 +23,7 @@ const SURFACES: readonly Surface[] = [
 export function Hub() {
   const capabilities = useQuery(capabilitiesQuery);
   const works = useQuery(worksQuery);
+  const hostAccess = useQuery(hostAccessQuery).data?.hostAccess ?? true;
   const caps = capabilities.data;
   const stats: [string, string][] = [
     ["Runtime Bun", caps?.runtime?.version ?? "—"],
@@ -55,7 +56,7 @@ export function Hub() {
       </section>
       <section className="surfaces" aria-label="Espaces">
         <ul>
-          {SURFACES.map(surface => (
+          {SURFACES.filter(surface => surface.to !== "/os" || hostAccess).map(surface => (
             <li key={surface.to}>
               <Link to={surface.to} className="surface-card">
                 <Icon name={surface.icon} size={32} />

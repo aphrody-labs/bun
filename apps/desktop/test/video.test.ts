@@ -148,6 +148,11 @@ describe.skipIf(!nativeVideo?.available)("public deployment (hostAccess: false)"
     expect((await fetch(origin + works[0]!.video, { headers: { range: `bytes=${size + 10}-` } })).status).toBe(416);
   });
 
+  test("tells the page that the desktop is off, so the app can hide it", async () => {
+    const body = (await (await fetch(`${origin}/api/webos/capabilities`)).json()) as { hostAccess: boolean; terminal: unknown };
+    expect(body).toMatchObject({ hostAccess: false, terminal: null });
+  });
+
   test("keeps media paths inside the library and limits what is served", async () => {
     expect((await fetch(`${origin}/media/..%2F..%2Fserver.ts`)).status).toBe(400);
     expect((await fetch(`${origin}/media/Mon%20Film.exe`)).status).toBe(400);

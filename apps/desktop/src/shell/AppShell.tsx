@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: Apache-2.0
 import React, { useEffect, useRef, useState } from "react";
 import { Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { hostAccessQuery } from "../lib/api";
 import { classifyWidth, navigationFor } from "@aphrody/m3-tokens/breakpoints";
 import { useM3Theme, type SchemeVariant, type ThemeMode } from "@aphrody/m3-theme/react";
 import { useWindowSizeClass } from "@aphrody/m3-react/adaptive";
@@ -108,10 +110,12 @@ export function AppShell() {
   const navigate = useNavigate();
   const main = useRef<HTMLElement>(null);
   const [query, setQuery] = useState("");
+  const hostAccess = useQuery(hostAccessQuery).data?.hostAccess ?? true;
+  const destinations = DESTINATIONS.filter(item => item.to !== "/os" || hostAccess);
   const current = activeDestination(pathname);
   const index = Math.max(
     0,
-    DESTINATIONS.findIndex(item => item.to === current),
+    destinations.findIndex(item => item.to === current),
   );
 
   // After a route change, put focus on the content so keyboard and screen-reader users land on it.
@@ -134,7 +138,7 @@ export function AppShell() {
   };
   const go = (to: string) => {
     if (!intent.current) return;
-    const destination = DESTINATIONS.find(item => item.to === to);
+    const destination = destinations.find(item => item.to === to);
     if (!destination) return;
     if (destination.external) location.assign(to);
     else void navigate({ to });
@@ -171,7 +175,7 @@ export function AppShell() {
       </header>
       {navigation !== "bar" && (
         <MdNavigationRail className="rail" onPointerDown={markIntent} onKeyDown={markIntent} expanded={navigation === "rail-expanded"} value={current} onChange={(event: Event) => go((event as CustomEvent<{ value: string }>).detail.value)}>
-          {DESTINATIONS.map(item => (
+          {destinations.map(item => (
             <MdNavigationRailItem key={item.to} value={item.to} label={item.label} aria-label={item.label}>
               <Icon name={item.icon} />
             </MdNavigationRailItem>
@@ -187,9 +191,9 @@ export function AppShell() {
           onPointerDown={markIntent}
           onKeyDown={markIntent}
           activeIndex={index}
-          onActivated={(event: Event) => go(DESTINATIONS[(event as CustomEvent<{ activeIndex: number }>).detail.activeIndex]?.to ?? "/")}
+          onActivated={(event: Event) => go(destinations[(event as CustomEvent<{ activeIndex: number }>).detail.activeIndex]?.to ?? "/")}
         >
-          {DESTINATIONS.slice(0, 5).map(item => (
+          {destinations.slice(0, 5).map(item => (
             <MdNavigationTab key={item.to} label={item.label}>
               <Icon name={item.icon} />
             </MdNavigationTab>

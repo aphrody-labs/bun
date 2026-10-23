@@ -68,6 +68,14 @@ export const capabilitiesQuery = queryOptions({
   retry: false,
 });
 
+/** Whether this server lets the page use the desktop: false on a public deployment (no terminal, files or eval). */
+export const hostAccessQuery = queryOptions({
+  queryKey: ["webos", "capabilities"],
+  queryFn: ({ signal }) => getJson<{ hostAccess: boolean }>("/api/webos/capabilities", signal),
+  staleTime: 60_000,
+  retry: false,
+});
+
 export const seconds = (work: VideoWork) => (work.durationFrames * work.fps.den) / work.fps.num;
 
 export function clock(value: number): string {
