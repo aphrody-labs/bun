@@ -5,6 +5,7 @@
  * platform and merge the results.
  *
  *   bun scripts/fork-runs.ts --out runs-win32.json
+ *   bun scripts/fork-runs.ts --only fork-linux --out runs-linux.json
  *   bun scripts/fork-runs.ts --merge runs-win32.json runs-linux.json --out fork-runs.json
  */
 import { mkdtemp, rm } from "node:fs/promises";
@@ -34,8 +35,10 @@ if (args[0] === "--merge") {
 }
 
 const runs: ForkRun[] = [];
+const onlyIndex = args.indexOf("--only");
+const only = onlyIndex >= 0 ? new Set(args[onlyIndex + 1]?.split(",")) : null;
 for (const scene of forkScenes) {
-  if (!scene.platforms.includes(process.platform)) continue;
+  if (!scene.platforms.includes(process.platform) || (only && !only.has(scene.id))) continue;
   const directory = await mkdtemp(join(tmpdir(), "bun-fork-scene-"));
   try {
     for (const [name, content] of Object.entries(scene.files)) await Bun.write(join(directory, name), content);
