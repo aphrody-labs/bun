@@ -279,5 +279,3 @@ export function highlightHtml(html: string): string {
   );
 }
 
-export const HIGHLIGHT_CSS = `.hl-c{color:var(--on-sv);font-style:italic}.hl-s{color:#2e6b30}.hl-n,.hl-l{color:#9a4a12}.hl-k{color:var(--primary);font-weight:500}.hl-t{color:#1d5f8a}.hl-f{color:#5b3fa0}.hl-p{color:#8a2846}.hl-v{color:#9a4a12}.hl-a{color:#1d5f8a}.hl-d{color:#2e6b30;background:#2e6b3014}.hl-r{color:#ba1a1a;background:#ba1a1a14}
-@media (prefers-color-scheme:dark){.hl-s{color:#a8db9a}.hl-n,.hl-l,.hl-v{color:#f4b8a0}.hl-t,.hl-a{color:#9ccaf3}.hl-f{color:#cdbdff}.hl-p{color:#ffb1c4}.hl-d{color:#8fd88a;background:#8fd88a14}.hl-r{color:#ffb4ab;background:#ffb4ab14}}`;

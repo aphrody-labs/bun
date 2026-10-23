@@ -13,6 +13,8 @@ jobs:
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup-bun
+      - name: Install the site build dependencies (React, Tailwind, fonts)
+        run: bun install --frozen-lockfile --filter @aphrody/web
       - name: Generate immutable release artifacts
         env:
           GH_TOKEN: ${{ github.token }}

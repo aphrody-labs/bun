@@ -9,7 +9,7 @@ import {
   navigationSymbol,
   symbol,
 } from "../../../packages/web/site/icons.ts";
-import { docsSearchScript } from "../../../packages/web/site/layout.ts";
+import { docsSearchScript } from "../../../packages/web/site/docs-search.ts";
 import { externalizeInlineScripts, localReferences } from "./mirror.ts";
 
 const sha256 = (value: string | Uint8Array) => new Bun.CryptoHasher("sha256").update(value).digest("hex");
@@ -363,7 +363,7 @@ export function buildFusion(options: FusionOptions) {
         path: options.searchIndex,
         sha256: sha256(searchBytes),
         scriptSha256: sha256(docsSearchScript()),
-        owner: "packages/web/site/layout.ts and build.ts",
+        owner: "packages/web/site/docs-search.ts",
       },
       bunHome: { sha256: sha256(input), coverageSha256: sha256(readFileSync(coverageFile)) },
       aphrodyLogo: { path: "docs/logo/icon.svg", sha256: sha256(logo) },

@@ -18,9 +18,9 @@ import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, statSync, wri
 import { dirname, join, relative, resolve } from "node:path";
 import { SITE_ROOT_FILES } from "./brand.ts";
 import type { SiteData } from "./collect.ts";
-import { HIGHLIGHT_CSS, highlightHtml } from "./highlight.ts";
-import { M3_SCHEME_CSS } from "./m3-scheme.ts";
-import { CSS, JS, PUBLIC_WEBMCP_JS, shell, type NavLink, type Shell } from "./layout.ts";
+import { highlightHtml } from "./highlight.ts";
+import { createRenderer } from "../www/render.tsx";
+import type { HomeInput, NavLink, SidebarItem } from "../www/src/lib.ts";
 import { APHRODY_DOMAINS } from "../src/domains.ts";
 import {
   absolutizeMarkdownLinks,
@@ -490,46 +490,46 @@ export async function build(o: BuildOptions) {
       if (s) return s;
     }
   };
-  const topTabs = (active?: string): NavLink[] =>
-    TOP_TABS.filter(([, href, needsData]) => !needsData || generatedPaths.has(href)).map(([label, href]) => {
-      const shown = href === "/runtime" && data?.distribution ? "Runtime" : label;
-      return { label: shown, href, active: shown === active || label === active };
-    });
+  const topTabs = (): NavLink[] =>
+    TOP_TABS.filter(([, href, needsData]) => !needsData || generatedPaths.has(href)).map(([label, href]) => ({
+      label: href === "/runtime" && data?.distribution ? "Runtime" : label,
+      href,
+    }));
   const docTabs = tabs.filter(t => t.tab !== "Feedback" && !(t.href ?? "").endsWith("/blog"));
 
+  /** Section tabs and the page tree of the docs sidebar. */
   const sidebarFor = (tabName: string, current: string) => {
-    const switcher = `<nav class="doc-tabs" aria-label="Documentation sections">${docTabs
-      .map(
-        t =>
-          `<a href="${escapeHtml(tabHref(t))}"${t.tab === tabName ? ' aria-current="true"' : ""}>${escapeHtml(t.tab)}</a>`,
-      )
-      .join("")}</nav>`;
-    const tab = tabs.find(t => t.tab === tabName);
-    if (!tab) return switcher;
-    const items = (list: (string | NavGroup)[]): string =>
-      list
-        .map(item => {
-          if (typeof item === "string") {
-            if (!bySlug.has(item)) return "";
-            return `<li><a href="${pageUrl(item)}"${item === current ? ' aria-current="page"' : ""}>${escapeHtml(titles.get(item) ?? item)}</a></li>`;
-          }
-          return `<li><span class="muted">${escapeHtml(item.group)}</span><ul>${items(item.items)}</ul></li>`;
-        })
-        .join("");
-    return switcher + tab.groups.map(g => `<p>${escapeHtml(g.group)}</p><ul>${items(g.items)}</ul>`).join("");
+    const items = (list: (string | NavGroup)[]): SidebarItem[] =>
+      list.flatMap((item): SidebarItem[] => {
+        if (typeof item === "string")
+          return bySlug.has(item)
+            ? [{ title: titles.get(item) ?? item, href: pageUrl(item), current: item === current }]
+            : [];
+        return [{ group: item.group, items: items(item.items) }];
+      });
+    return {
+      tabs: docTabs.map(t => ({ label: t.tab, href: tabHref(t), current: t.tab === tabName })),
+      groups: (tabs.find(t => t.tab === tabName)?.groups ?? []).map(g => ({ title: g.group, items: items(g.items) })),
+    };
   };
 
-  // Gabarit commun : marque, lien GitHub et pied de page viennent des données quand elles existent.
-  const footer = siteFooter(data, o);
-  const page = (s: Omit<Shell, "origin" | "footer" | "github">) =>
-    shell({
-      ...s,
+  // The look of the site: marque, lien GitHub et pied de page viennent des données quand elles existent.
+  const latest = latestRuntimeRelease(runtimeReleases);
+  const renderer = createRenderer({
+    site: {
       origin: o.origin,
-      footer,
-      github: data?.distribution && data.org ? `https://github.com/${data.org.login}` : `https://github.com/${o.repo}`,
       brand,
-    });
-  const titled = (title: string) => (title === brand ? title : `${title} - ${brand}`);
+      github: data?.distribution && data.org ? `https://github.com/${data.org.login}` : `https://github.com/${o.repo}`,
+      repo: o.repo,
+      commit: o.commit,
+      upstream: data?.runtime?.upstream ?? { name: "Bun", version: "", url: "https://github.com/oven-sh/bun" },
+    },
+    nav: topTabs(),
+    note: siteFooter(data, o),
+    release: latest ? { name: latest.name, tag: latest.tag, date: latest.publishedAt.slice(0, 10) } : undefined,
+  });
+  await renderer.prepare(o.out);
+  const page = renderer.page;
 
   // Liste des guides (remplace <GuidesList />)
   const guidesTab = tabs.find(t => t.tab === "Guides");
@@ -564,24 +564,21 @@ export async function build(o: BuildOptions) {
     const sibling = (q?: Rendered) => (q && !!q.unlisted === !!p.unlisted ? q : undefined);
     const prev = sibling(ordered[i - 1]);
     const next = sibling(ordered[i + 1]);
-    const pager = `<nav class="pager">${prev ? `<a href="${pageUrl(prev.slug)}"><small>Previous</small>${escapeHtml(prev.title)}</a>` : ""}${next ? `<a class="next" href="${pageUrl(next.slug)}"><small>Next</small>${escapeHtml(next.title)}</a>` : ""}</nav>`;
-    const body = `<p class="muted">Runtime docs · ${escapeHtml(p.tab)} · ${escapeHtml(p.group)}</p>
-<h1>${escapeHtml(p.title)}</h1>
-${p.description ? `<p class="lead">${inlineCode(p.description)}</p>` : ""}
-<div class="page-actions"><button type="button" data-copy-url="${mdUrl}">Copy page</button><a href="${mdUrl}">View as Markdown</a><a href="https://github.com/${o.repo}/edit/main/${p.file}">Edit on GitHub</a></div>
-<article>${html}</article>
-${pager}`;
     write(
       join(o.out, "docs", p.slug + ".html"),
-      page({
+      renderer.doc({
         path: url,
-        title: titled(p.title),
+        title: p.title,
         description: p.description,
-        body,
-        tabs: topTabs("Docs"),
-        sidebar: sidebarFor(p.tab, p.slug),
+        tab: p.tab,
+        group: p.group,
+        html,
         toc,
-        alternateMarkdown: mdUrl,
+        markdownUrl: mdUrl,
+        editUrl: `https://github.com/${o.repo}/edit/main/${p.file}`,
+        previous: prev && { title: prev.title, href: pageUrl(prev.slug) },
+        next: next && { title: next.title, href: pageUrl(next.slug) },
+        ...sidebarFor(p.tab, p.slug),
       }),
     );
     const markdown = pageMarkdown(p, o.origin);
@@ -607,35 +604,41 @@ ${pager}`;
   for (const g of generated) {
     const html = renderMarkdown(g.markdown);
     const mdUrl = g.path === "/" ? "/index.md" : `${g.path}.md`;
-    const body =
-      g.path === "/"
-        ? data?.distribution
-          ? `${renderHero(data)}\n<article>${html}</article>`
-          : renderRuntimeHero(data!, o, {
-              facts: home.facts,
-              docs: bySlug,
-              modules: moduleCatalog(
-                existsSync(join(docs, "runtime/fork-features.mdx"))
-                  ? readFileSync(join(docs, "runtime/fork-features.mdx"), "utf8")
-                  : "",
-              ),
-            })
-        : `<h1>${escapeHtml(g.title)}</h1>
+    const file = g.path === "/" ? join(o.out, "index.html") : join(o.out, g.path.slice(1), "index.html");
+    if (g.path === "/" && !data?.distribution)
+      write(
+        file,
+        renderer.home(
+          runtimeHome(data!, o, {
+            facts: home.facts,
+            docs: bySlug,
+            latest,
+            pages: ordered.filter(p => !p.unlisted).length,
+            modules: moduleCatalog(
+              existsSync(join(docs, "runtime/fork-features.mdx"))
+                ? readFileSync(join(docs, "runtime/fork-features.mdx"), "utf8")
+                : "",
+            ),
+          }),
+        ),
+      );
+    else
+      write(
+        file,
+        page({
+          path: g.path,
+          title: g.title,
+          description: g.description,
+          body:
+            g.path === "/"
+              ? `${renderHero(data!)}\n<article>${html}</article>`
+              : `<h1>${escapeHtml(g.title)}</h1>
 ${g.description ? `<p class="lead">${escapeHtml(g.description)}</p>` : ""}
-<div class="page-actions"><button type="button" data-copy-url="${mdUrl}">Copy page</button><a href="${mdUrl}">View as Markdown</a></div>
-<article>${html}</article>`;
-    write(
-      g.path === "/" ? join(o.out, "index.html") : join(o.out, g.path.slice(1), "index.html"),
-      page({
-        path: g.path,
-        title: titled(g.title),
-        description: g.description,
-        body,
-        tabs: topTabs(g.tab),
-        ...(g.path === "/" ? { bodyClass: "home" } : { toc: extractToc(html) }),
-        alternateMarkdown: mdUrl,
-      }),
-    );
+<article>${html}</article>`,
+          ...(g.path === "/" ? {} : { toc: extractToc(html) }),
+          alternateMarkdown: mdUrl,
+        }),
+      );
     write(generatedFile(g.path, ".md"), generatedMarkdown(g));
     search.push({
       t: g.title,
@@ -731,16 +734,14 @@ ${g.description ? `<p class="lead">${escapeHtml(g.description)}</p>` : ""}
 
   // Téléchargements et notes de version : la distribution (données), puis le runtime (releases GitHub)
   const releases = runtimeReleases;
-  const latest = latestRuntimeRelease(releases);
   const distDownloads = data?.distribution ? renderMarkdown(distributionDownloads(data)) : "";
   write(
     join(o.out, "downloads", "index.html"),
     page({
       path: "/downloads",
-      title: titled("Downloads"),
+      title: "Downloads",
       description: "Aphrody distribution artifacts and runtime builds, with SHA-256 checksums.",
       body: `<h1>Downloads</h1>${distDownloads}${highlightHtml(renderDownloads(releases, latest, o, data))}`,
-      tabs: topTabs("Downloads"),
       toc: extractToc(distDownloads),
     }),
   );
@@ -749,10 +750,9 @@ ${g.description ? `<p class="lead">${escapeHtml(g.description)}</p>` : ""}
     join(o.out, "release-notes", "index.html"),
     page({
       path: "/release-notes",
-      title: titled("Release notes"),
+      title: "Release notes",
       description: "Releases of the Aphrody distribution and of its runtime.",
       body: `<h1>Release notes</h1>${distNotes}${renderRuntimeNotes(o.releases, o)}`,
-      tabs: topTabs("Release notes"),
     }),
   );
 
@@ -770,14 +770,13 @@ ${g.description ? `<p class="lead">${escapeHtml(g.description)}</p>` : ""}
     join(o.out, "benchmarks", "index.html"),
     page({
       path: "/benchmarks",
-      title: titled("Benchmarks"),
+      title: "Benchmarks",
       description: existsSync(join(productsDirectory, "product-benchmarks.json"))
         ? "Measured Bun, Python, .NET, Tailwind CSS and Next.js workloads, raw samples and reproducible methodology."
         : reports.length
           ? `Performance gate of the Aphrody runtime against upstream Bun (${reports.map(r => r.platform).join(", ")}), with the commands to reproduce it.`
           : "The benchmark cases of the Aphrody runtime and the commands to run them.",
       body: highlightHtml(renderBenchmarks(reports, o, latest)),
-      tabs: topTabs("Benchmarks"),
       toc: reports.map(r => ({ level: 2, id: r.platform, text: r.platform })),
     }),
   );
@@ -805,12 +804,10 @@ ${g.description ? `<p class="lead">${escapeHtml(g.description)}</p>` : ""}
       page({
         path: "/",
         title: brand,
-        body: `<section class="hero"><img class="hero-mark" src="/icon.svg" alt="" width="72" height="72"><h1>${brand}</h1>
+        body: `<h1>${brand}</h1>
 <p class="lead">Runtime ${link(o.repo, `https://github.com/${o.repo}`)}${latest ? `, release ${link(latest.tag, latest.url)}` : ""}.</p>
 ${runtimeInstallCommands(o.origin)}
-<div class="btns"><a class="btn" href="/docs">Runtime docs</a><a class="btn tonal" href="/downloads">Downloads</a></div></section>`,
-        tabs: topTabs(),
-        bodyClass: "home",
+<p><a href="/docs">Runtime docs</a> · <a href="/downloads">Downloads</a></p>`,
       }),
     );
 
@@ -822,8 +819,7 @@ ${runtimeInstallCommands(o.origin)}
         join(o.out, "graph", "index.html"),
         page({
           path: "/graph",
-          title: titled("Source graph"),
-          tabs: topTabs(),
+          title: "Source graph",
           body: `<h1>Source graph</h1><p>Source <a href="https://github.com/${o.repo}/tree/${fact.source}">${fact.source}</a>. Graph receipt SHA-256 <code>${receipt.sha256}</code>.</p><p>${catalog.files === undefined ? "" : `${catalog.files} tracked catalog entries. `}${catalog.domains === undefined ? "" : `${catalog.domains} source domains. `}${catalog.links === undefined ? "" : `${catalog.links} resolved source relationships. `}Counts describe the extracted source snapshot.</p>`,
         }),
       );
@@ -833,9 +829,9 @@ ${runtimeInstallCommands(o.origin)}
     join(o.out, "404.html"),
     page({
       path: "/404",
-      title: titled("Not found"),
-      body: `<div class="hero"><h1>404</h1><p class="lead">This page does not exist. Try the <a href="/">home page</a>, the <a href="/docs">runtime docs</a> or the search box.</p></div>`,
-      tabs: topTabs(),
+      title: "Not found",
+      noindex: true,
+      body: `<h1>404</h1><p class="lead">This page does not exist. Try the <a href="/">home page</a>, the <a href="/docs">runtime docs</a> or the search box.</p>`,
     }),
   );
   const owner = APHRODY_DOMAINS.find(domain => domain.canonical === o.origin);
@@ -865,8 +861,6 @@ ${runtimeInstallCommands(o.origin)}
       .map(u => `<url><loc>${escapeHtml(o.origin + u)}</loc><lastmod>${now.slice(0, 10)}</lastmod></url>`)
       .join("\n")}\n</urlset>\n`,
   );
-  write(join(o.out, "assets", "site.css"), M3_SCHEME_CSS + CSS + HIGHLIGHT_CSS);
-  write(join(o.out, "assets", "site.js"), JS + PUBLIC_WEBMCP_JS);
   write(
     join(o.out, "site.json"),
     JSON.stringify(
@@ -977,7 +971,7 @@ export function moduleCatalog(markdown: string): Map<string, { purpose: string; 
 }
 
 /** Built-in modules inherited from upstream Bun; the home page lists the other registry entries. */
-const UPSTREAM_MODULES = new Set([
+export const UPSTREAM_MODULES = new Set([
   "bun:ffi",
   "bun:jsc",
   "bun:main",
@@ -1000,102 +994,60 @@ export function releasePlatforms(release: Release): string[] {
   return [...seen].sort();
 }
 
-/** Accueil du site du runtime : présentation, installation, outils, modules, dernière release, mesures. */
-export function renderRuntimeHero(
+/** What the home page of the runtime site states: the modules, the latest release and the measured builds. */
+export function runtimeHome(
   d: SiteData,
   o: BuildOptions,
   extra: {
-    facts?: readonly RuntimeHomeFact[];
-    docs?: { has(slug: string): boolean; get?(slug: string): { description: string } | undefined };
+    facts: readonly RuntimeHomeFact[];
+    docs: { has(slug: string): boolean; get?(slug: string): { description: string } | undefined };
+    latest: Release | undefined;
+    pages: number;
     /** Modules without a page of their own are described from the feature catalogue. */
     modules?: Map<string, { purpose: string; slug?: string }>;
-  } = {},
-): string {
+  },
+): HomeInput {
   const rt = d.runtime!;
-  const releases = o.releases?.filter(isRuntimeRelease) ?? null;
-  const latest = latestRuntimeRelease(releases);
-  const host = new URL(o.origin).host;
-  const doc = (slug: string, fallback = "/docs") => (!extra.docs || extra.docs.has(slug) ? pageUrl(slug) : fallback);
-  const commands = [
-    cmd(unixInstallLabel(latest), `curl -fsSL ${o.origin}/install | bash`),
-    cmd("Windows (PowerShell)", `powershell -c "irm ${host}/install.ps1|iex"`),
-  ];
-  const platforms = latest ? releasePlatforms(latest) : [];
-  const release = latest
-    ? `<p class="release-chip"><a href="/release-notes#${escapeHtml(latest.tag)}">${escapeHtml(latest.name)}</a> <span class="muted">released ${escapeHtml(latest.publishedAt.slice(0, 10))}${platforms.length ? ` for ${escapeHtml(platforms.join(", "))}` : ""}.</span></p>`
-    : "";
-  const modules = rt.modules.filter(name => !UPSTREAM_MODULES.has(name));
-  const moduleDoc = (name: string) => {
+  const { latest, docs } = extra;
+  const doc = (slug: string) => (docs.has(slug) ? pageUrl(slug) : "/docs");
+  const catalog = extra.modules ?? new Map();
+  const modules: HomeInput["modules"] = [];
+  for (const name of rt.modules.filter(name => !UPSTREAM_MODULES.has(name))) {
     const slug = `runtime/${name.slice(4)}`;
-    if (extra.docs?.has(slug)) return { href: pageUrl(slug), description: extra.docs.get?.(slug)?.description ?? "" };
-    const entry = extra.modules?.get(name);
-    if (!entry) return null;
-    const page = entry.slug && extra.docs?.has(entry.slug) ? entry.slug : "runtime/fork-features";
-    return { href: pageUrl(page), description: entry.purpose };
+    const entry = catalog.get(name);
+    const own = docs.has(slug);
+    const page = own ? slug : entry?.slug && docs.has(entry.slug) ? entry.slug : "runtime/fork-features";
+    const description = own ? (docs.get?.(slug)?.description ?? "") : (entry?.purpose ?? "");
+    if (description) modules.push({ name, href: pageUrl(page), description: rowDescription(name, description) });
+  }
+  // The headline changes of the notes: the "Features" list of the release body.
+  const features = latest ? (/### Features\n\n((?:- .+\n?)+)/.exec(latest.body)?.[1] ?? "") : "";
+  return {
+    upstream: rt.upstream,
+    modules,
+    release: latest && {
+      tag: latest.tag,
+      name: latest.name,
+      date: latest.publishedAt.slice(0, 10),
+      platforms: releasePlatforms(latest),
+      highlights: features
+        .split("\n")
+        .filter(line => line.startsWith("- "))
+        .map(line => line.slice(2).replace(/^./, c => c.toUpperCase()))
+        .slice(0, 6),
+      commits: Number(/^(\d+) commits/.exec(latest.body)?.[1]) || undefined,
+    },
+    measured: extra.facts.map(fact => ({
+      target: RUNTIME_TARGETS[fact.target] ?? fact.target,
+      version: fact.version,
+      source: fact.source.slice(0, 10),
+      sourceUrl: `https://github.com/${rt.repo}/commit/${fact.source}`,
+      passed: fact.gates.reduce((sum, gate) => sum + gate.passed, 0),
+      failed: fact.gates.reduce((sum, gate) => sum + gate.failed, 0),
+    })),
+    docsPages: extra.pages,
+    doc,
   };
-  // The specifier is code: the shared bun: namespace is set lighter than the module name.
-  const specifier = (name: string) => `<span class="ns">bun:</span>${escapeHtml(name.slice(4))}`;
-  const registry = modules
-    .map(name => {
-      const page = moduleDoc(name);
-      return page ? `<li><a href="${page.href}">${specifier(name)}</a></li>` : `<li>${specifier(name)}</li>`;
-    })
-    .join("");
-  const moduleRows = modules
-    .map(name => ({ name, page: moduleDoc(name) }))
-    .filter(m => m.page?.description)
-    .map(
-      m =>
-        `<div><dt><a href="${m.page!.href}"><code>${escapeHtml(m.name)}</code></a></dt><dd>${escapeHtml(rowDescription(m.name, m.page!.description))}</dd></div>`,
-    )
-    .join("");
-  const facts = extra.facts ?? [];
-  const measured = facts.length
-    ? `<section aria-labelledby="measured-builds"><h2 id="measured-builds">Measured builds</h2>
-<p>Receipts recorded for published executables.</p>
-<table><thead><tr><th scope="col">Target</th><th scope="col">Version</th><th scope="col">Source</th><th scope="col" class="num">Tests passed</th><th scope="col" class="num">Failed</th></tr></thead><tbody>${facts
-        .map(fact => {
-          const passed = fact.gates.reduce((sum, gate) => sum + gate.passed, 0);
-          const failed = fact.gates.reduce((sum, gate) => sum + gate.failed, 0);
-          return `<tr><td>${escapeHtml(RUNTIME_TARGETS[fact.target] ?? fact.target)}</td><td><code>${escapeHtml(fact.version)}</code></td><td><a href="https://github.com/${escapeHtml(rt.repo)}/commit/${fact.source}"><code>${fact.source.slice(0, 10)}</code></a></td><td class="num">${passed}</td><td class="num">${failed}</td></tr>`;
-        })
-        .join("")}</tbody></table></section>`
-    : "";
-  return `<section class="hero registry-hero">
-<h1>Bun, with native modules for Windows, Linux, Python, .NET, media and source graphs built in.</h1>
-${modules.length ? `<ul class="registry" aria-label="Modules this Bun adds">${registry}</ul>` : ""}
-<p class="lead">One executable runs, installs, tests and bundles JavaScript and TypeScript. It is built from ${link("Bun", rt.upstream.url)} ${escapeHtml(rt.upstream.version)} and keeps its APIs.</p>
-${release}
-<div class="cmds">${commands.join("")}</div>
-<p class="hero-actions"><a class="btn" href="${doc("quickstart")}">Read the quickstart</a> <a href="/downloads">Downloads</a> <a href="https://github.com/${escapeHtml(rt.repo)}">Source on GitHub</a></p>
-</section>
-${
-  moduleRows
-    ? `<section aria-labelledby="native-modules"><h2 id="native-modules">What each module does</h2>
-<p>Each page lists the platforms the module supports.</p>
-<dl class="rows">${moduleRows}</dl></section>`
-    : ""
-}
-<section aria-labelledby="runtime-toolkit"><h2 id="runtime-toolkit">The tools Bun already has</h2>
-<p>Use each one on its own in an existing Node.js project, or all of them together.</p>
-<dl class="rows">
-<div><dt><a href="${doc("runtime/index")}"><code>bun run index.tsx</code></a></dt><dd>Run JavaScript, TypeScript and JSX on JavaScriptCore, with Node.js and Web APIs.</dd></div>
-<div><dt><a href="${doc("pm/cli/install")}"><code>bun install</code></a></dt><dd>Install npm packages, manage workspaces and keep a text lockfile.</dd></div>
-<div><dt><a href="${doc("test/index")}"><code>bun test</code></a></dt><dd>Run Jest-compatible tests with mocks, snapshots and watch mode.</dd></div>
-<div><dt><a href="${doc("bundler/index")}"><code>bun build ./app.tsx</code></a></dt><dd>Bundle JavaScript, TypeScript, JSX and CSS for browsers or servers.</dd></div>
-</dl></section>
-<section aria-labelledby="bun-video"><h2 id="bun-video">Bun.Video</h2>
-<p>Read media metadata, extract frames and create thumbnails in TypeScript. Native Rust decoding feeds the same resize, crop and encode pipeline as <code>Bun.Image</code>.</p>
-<pre tabindex="0"><code class="language-typescript">const video = new Bun.Video("clip.mp4");
-const metadata = await video.metadata();
-await video.frame(1).resize(320, 180).webp().write("preview.webp");</code></pre>
-<p>Read the <a href="${doc("runtime/video")}">Bun.Video reference</a> and the <a href="${doc("runtime/image")}">Bun.Image transforms</a>.</p>
-</section>
-${measured}
-<section aria-labelledby="open-source"><h2 id="open-source">Open source</h2>
-<p>Bun OS is developed by Aphrody Labs at ${link(rt.repo, `https://github.com/${rt.repo}`)} and includes code from ${link(rt.upstream.name, rt.upstream.url)} under its original licences. Packages are published under the <code>@aphrody</code> npm scope.</p>
-<p>See the <a href="/release-notes">release notes</a>, the <a href="/benchmarks">benchmarks</a> and the <a href="/runtime">source inventory</a>.</p>
-</section>`;
 }
 
 /** Pied de page : sources du build et licences, tirées des données. */

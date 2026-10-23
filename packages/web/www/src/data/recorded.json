@@ -1,0 +1,61 @@
+[
+  {
+    "id": "video",
+    "tab": "Bun.Video",
+    "file": "video.ts",
+    "code": "const video = new Bun.Video(\"clip.mp4\");\nconst { width, height, duration } = await video.metadata();\nconsole.log(`${width}x${height}, ${duration} s`);\n\nawait video.frame(1).resize(320, 180).webp().write(\"f.webp\");\nconsole.log(Bun.file(\"f.webp\").size, \"bytes\");\n",
+    "args": ["video.ts"],
+    "platforms": ["win32", "linux", "darwin"],
+    "fixtures": {
+      "clip.mp4": "packages/bun-video/hyperframes/player/tests/perf/fixtures/10-video-grid/sample.mp4"
+    },
+    "docs": "/docs/runtime/video",
+    "platform": "win32",
+    "os": "Windows 11 Home",
+    "bun": "1.4.6",
+    "output": "480x270, 10 s\n3738 bytes",
+    "durationMs": 152
+  },
+  {
+    "id": "python",
+    "tab": "bun:python",
+    "file": "python.ts",
+    "code": "import { Python } from \"bun:python\";\n\nusing py = Python.open();\npy.exec`import math`;\nconsole.log(py.eval(\"math.sqrt(2)\"));\nconsole.log(py.version().split(\" \")[0]);\n",
+    "args": ["python.ts"],
+    "platforms": ["win32", "linux"],
+    "docs": "/docs/runtime/python",
+    "platform": "win32",
+    "os": "Windows 11 Home",
+    "bun": "1.4.6",
+    "output": "1.4142135623730951\n3.12.15",
+    "durationMs": 141
+  },
+  {
+    "id": "windows",
+    "tab": "bun:windows",
+    "file": "windows.ts",
+    "code": "import windows from \"bun:windows\";\n\nconst { productName, build } = windows.version();\nconsole.log(productName, build);\nconsole.log(\"elevated:\", windows.isElevated());\n",
+    "args": ["windows.ts"],
+    "platforms": ["win32"],
+    "docs": "/docs/runtime/windows",
+    "platform": "win32",
+    "os": "Windows 11 Home",
+    "bun": "1.4.6",
+    "output": "Windows 11 Home 28120\nelevated: false",
+    "durationMs": 58
+  },
+  {
+    "id": "linux",
+    "tab": "bun:linux",
+    "file": "linux.ts",
+    "code": "import linux from \"bun:linux\";\n\nconsole.log(linux.sysctl.get(\"kernel.osrelease\"));\nconsole.log(linux.cgroup.current());\nconsole.log(linux.ioUring.probe().ops.length, \"io_uring ops\");\n",
+    "args": ["linux.ts"],
+    "platforms": ["linux"],
+    "docs": "/docs/runtime/linux",
+    "platform": "linux",
+    "os": "Linux 7.3.0-9-generic",
+    "bun": "1.4.6",
+    "output": "7.3.0-9-generic\n/user.slice/user-1000.slice/session-26826.scope\n65 io_uring ops",
+    "durationMs": 13
+  }
+]

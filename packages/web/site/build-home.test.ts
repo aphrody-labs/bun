@@ -145,7 +145,8 @@ test("every page shares one shell; the home, release notes and downloads use onl
     }),
     "docs/index.mdx": "---\ntitle: Welcome\ndescription: Intro\n---\n\nHello.\n",
     "docs/quickstart.mdx": "---\ntitle: Quickstart\n---\n\nStart.\n",
-    "docs/runtime/python.mdx": "---\ntitle: Python\n---\n\nbun:python.\n",
+    "docs/runtime/python.mdx":
+      "---\ntitle: Python\ndescription: Run Python files and embed CPython with bun:python\n---\n\nbun:python.\n",
     "receipts/linux.json": JSON.stringify(fact),
   });
   const out = join(String(dir), "out");
@@ -164,13 +165,13 @@ test("every page shares one shell; the home, release notes and downloads use onl
   const read = (path: string) => readFileSync(join(out, path), "utf8");
   const home = read("index.html");
   // Keyboard users skip the header, tabs and documentation sidebar (WCAG 2.4.1).
-  expect(home).toContain('<a class="skip" href="#content">Skip to content</a>');
-  expect(home).toContain('<main id="content" tabindex="-1">');
-  // The M3 scheme ships in site.css: no page depends on cdn.aphrody.com for its colours.
+  expect(home).toContain('<a href="#main"');
+  expect(home).toContain('<main id="main"');
+  // The tokens ship in the one hashed stylesheet: no page depends on cdn.aphrody.com.
   expect(home).not.toContain("cdn.aphrody.com");
-  expect(read("assets/site.css")).toStartWith(":root{color-scheme:light dark;--md-sys-color-background:#fef9eb;");
-  const header = (html: string) =>
-    /<header class="top">[\s\S]*?<\/header>/.exec(html)![0].replace(/ aria-current="page"/g, "");
+  const stylesheet = /<link rel="stylesheet" href="(\/_assets\/site-[a-z0-9]+\.css)"/.exec(home)?.[1];
+  expect(read(stylesheet!.slice(1))).toContain("--color-canvas:#0d0a0c");
+  const header = (html: string) => /<header [\s\S]*?<\/header>/.exec(html)![0].replace(/ aria-current="page"/g, "");
   for (const path of [
     "docs/index.html",
     "release-notes/index.html",
@@ -180,19 +181,19 @@ test("every page shares one shell; the home, release notes and downloads use onl
     "404.html",
   ])
     expect(header(read(path))).toBe(header(home));
-  expect(header(home)).toContain('class="menu-btn"');
-  expect(home).toContain(
-    "<h1>Bun, with native modules for Windows, Linux, Python, .NET, media and source graphs built in.</h1>",
-  );
-  expect(home).toContain('href="/release-notes#bun-v1.4.5">Bun OS 1.4.5</a>');
-  expect(home).toContain("Linux x64, Windows x64");
-  expect(home).toContain('<a href="/docs/runtime/python"><span class="ns">bun:</span>python</a>');
-  expect(home).toContain('<li><span class="ns">bun:</span>windows</li>');
+  expect(header(home)).toContain('aria-label="Menu"');
+  expect(home).toContain('One runtime for the <span class="text-accent">whole machine.</span>');
+  expect(home).toContain('href="/release-notes#bun-v1.4.5"');
+  expect(home).toContain("<strong");
+  expect(home).toContain("Files and checksums for Linux x64 and Windows x64.");
+  // A module is listed with the sentence of its docs page; modules without one are not listed.
+  expect(home).toContain('href="/docs/runtime/python"');
+  expect(home).toContain("Run Python files and embed CPython.");
   expect(home).not.toContain("bun:sqlite");
   expect(home).toContain("Measured builds");
-  expect(home).toContain('<td class="num">161</td>');
-  expect(home).toContain('<meta property="og:url" content="https://bun.aphrody.app/">');
-  expect(home).toContain('<meta property="og:image" content="https://bun.aphrody.app/icon-512.png">');
+  expect(home).toContain(">161<");
+  expect(home).toContain('<meta property="og:url" content="https://bun.aphrody.app/"/>');
+  expect(home).toContain('<meta property="og:image" content="https://bun.aphrody.app/icon-512.png"/>');
   expect(home).not.toMatch(/bun\.com|bun\.sh|bunjavascript|Anthropic|Unrelated generated README|google-chromium-sdk/);
   const notes = read("release-notes/index.html");
   expect(notes).toContain('<h3 id="bun-v1.4.5">');

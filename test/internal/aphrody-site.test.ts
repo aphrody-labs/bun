@@ -30,7 +30,6 @@ import {
   type SiteData,
 } from "../../packages/web/site/collect.ts";
 import { highlight, highlightHtml } from "../../packages/web/site/highlight.ts";
-import { brandHtml } from "../../packages/web/site/layout.ts";
 import {
   absolutizeMarkdownLinks,
   mdxToHtmlMarkdown,
@@ -338,24 +337,18 @@ describe("site build helpers", () => {
     expect(read("docs/logo/logo-wordmark-light.svg")).toBe("<svg/>");
     const head = read("docs/index.html");
     for (const tag of [
-      '<link rel="icon" href="/favicon.ico" sizes="any">',
-      '<link rel="apple-touch-icon" href="/apple-touch-icon.png">',
-      '<link rel="manifest" href="/site.webmanifest">',
-      `<meta name="theme-color" media="(prefers-color-scheme: dark)" content="${BRAND.themeColor.dark}">`,
+      '<link rel="icon" href="/favicon.ico" sizes="any"/>',
+      '<link rel="apple-touch-icon" href="/apple-touch-icon.png"/>',
+      '<link rel="manifest" href="/site.webmanifest"/>',
+      '<meta name="theme-color" content="#0d0a0c"/>',
     ])
       expect(head).toContain(tag);
-    expect(read("assets/site.css")).toContain("--bg:var(--md-sys-color-surface)");
-    // The colour scheme ships in site.css (m3-scheme.ts), not as a cdn.aphrody.com stylesheet.
+    // One hashed stylesheet carries the tokens of the Bun site; nothing is fetched from cdn.aphrody.com.
+    const stylesheet = /<link rel="stylesheet" href="(\/_assets\/site-[a-z0-9]+\.css)"/.exec(head)?.[1];
+    expect(stylesheet).toBeDefined();
+    expect(read(stylesheet!.slice(1))).toContain("--color-canvas:#0d0a0c");
     expect(head).not.toContain(BRAND.tokensCss);
-    expect(read("assets/site.css")).toContain("--md-sys-color-surface:#fef9eb");
-    for (const p of [
-      "index.html",
-      "404.html",
-      "downloads/index.html",
-      "release-notes/index.html",
-      "assets/site.css",
-      "site.json",
-    ])
+    for (const p of ["index.html", "404.html", "downloads/index.html", "release-notes/index.html", "site.json"])
       expect(existsSync(join(out, p))).toBe(true);
   });
 });
@@ -603,8 +596,8 @@ describe("site pages", () => {
     expect(result.generated).toEqual(["/", "/components", "/runtime", "/m3", "/security", "/contributing"]);
     const read = (p: string) => readFileSync(join(out, p), "utf8");
     expect(read("index.html")).toContain("curl -fsSL https://downloads.aphrody.test/install.sh | sh");
-    expect(read("index.html")).toContain('<a href="/components">Components</a>');
-    expect(read("components/index.html")).toContain('<a href="/components" aria-current="page">Components</a>');
+    expect(read("index.html")).toContain('href="/components"');
+    expect(read("components/index.html")).toContain('href="/components" aria-current="page"');
     expect(read("components/index.html")).toContain("<table>");
     expect(read("components.md")).toContain("(https://aphrody.test/m3)");
     expect(JSON.parse(read("components.json")).distribution.crates).toHaveLength(2);
@@ -622,9 +615,7 @@ describe("site pages", () => {
 describe("runtime site", () => {
   const runtimeData = (): SiteData => ({ ...fixtureData(), distribution: null, downloads: null });
 
-  test("brand mark and fork links", () => {
-    expect(brandHtml("Aphrody Bun")).toBe('<span>Aphrody</span><span class="mark">Bun</span>');
-    expect(brandHtml("Aphrody")).toBe("<span>Aphrody</span>");
+  test("fork links", () => {
     expect(
       forkLinks(
         "[i](docs/installation.mdx) [r](docs/runtime/index.mdx#a) [p](docs/aphrody/x.md) [s](src/a.rs) ![l](docs/logo/x.svg) [w](https://x.test) [h](#top)",
@@ -677,17 +668,15 @@ describe("runtime site", () => {
     const read = (p: string) => readFileSync(join(out, p), "utf8");
     const index = read("index.html");
     expect(index).toContain("<title>Aphrody Bun</title>");
-    expect(index).toContain('<span class="mark">Bun</span>');
-    expect(index).toContain(
-      "<h1>Bun, with native modules for Windows, Linux, Python, .NET, media and source graphs built in.</h1>",
-    );
+    expect(index).toContain('aria-label="Aphrody Bun, home"');
+    expect(index).toContain('One runtime for the <span class="text-accent">whole machine.</span>');
     expect(index).toContain("curl -fsSL https://bun.aphrody.test/install | bash");
-    expect(index).toContain('<a href="/runtime">Source</a>');
-    expect(index).toContain('<meta property="og:url" content="https://bun.aphrody.test/">');
+    expect(index).toContain('href="/runtime"');
+    expect(index).toContain('<meta property="og:url" content="https://bun.aphrody.test/"/>');
     expect(index).not.toMatch(/bun\.com|bunjavascript/);
     expect(index).not.toContain('href="/components"');
     expect(index).toContain('href="https://github.com/aphrody-labs/bun"');
-    expect(index).toContain('aria-labelledby="bun-video"');
+    expect(index).toContain('aria-labelledby="toolkit"');
     expect(index).toContain('href="/docs/runtime/video"');
     expect(read("docs/runtime/video.html")).toContain("Bun.Video");
     expect(read("docs/runtime/image.html")).toContain("Native image transforms");
