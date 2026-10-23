@@ -1,4 +1,4 @@
-export type AphrodySurface = "site" | "runtime" | "os" | "api" | "ai" | "static" | "reserved";
+export type AphrodySurface = "site" | "runtime" | "api" | "ai" | "static" | "reserved";
 
 export type AphrodyDomain = {
   host: string;
@@ -35,10 +35,11 @@ export const APHRODY_DOMAINS = Object.freeze([
   },
   {
     host: "os.aphrody.com",
-    canonical: "https://os.aphrody.com",
-    surface: "os",
-    routes: ["/", "/desktop/*", "/api/webos/*"],
-    indexable: true,
+    canonical: "https://bun.aphrody.app",
+    surface: "runtime",
+    redirects: ["https://bun.aphrody.com"],
+    routes: ["/*"],
+    indexable: false,
   },
   {
     host: "bun.aphrody.com",
