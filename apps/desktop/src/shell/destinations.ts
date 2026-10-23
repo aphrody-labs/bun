@@ -16,7 +16,7 @@ export const DESTINATIONS: readonly Destination[] = [
   { to: "/os", label: "Bureau", icon: "os" },
   { to: "/tools", label: "Outils", icon: "tools" },
   { to: "/m3", label: "Material 3", icon: "m3" },
-  { to: "/docs", label: "Docs", icon: "docs", external: true },
+  { to: "https://aphrody.app/docs", label: "Docs", icon: "docs", external: true },
 ];
 
 /** The destination a path belongs to ("/video/watch" belongs to "/video"). */

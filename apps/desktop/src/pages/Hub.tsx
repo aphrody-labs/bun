@@ -66,7 +66,7 @@ export function Hub() {
             </li>
           ))}
           <li>
-            <a href="/docs" className="surface-card">
+            <a href="https://aphrody.app/docs" className="surface-card" rel="noopener">
               <Icon name="docs" size={32} />
               <h2>Docs</h2>
               <p>La documentation du runtime, des guides et des notes de version.</p>
