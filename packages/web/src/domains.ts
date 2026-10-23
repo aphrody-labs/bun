@@ -50,6 +50,14 @@ export const APHRODY_DOMAINS = Object.freeze([
     indexable: false,
   },
   {
+    host: "video.aphrody.com",
+    canonical: "https://bun.aphrody.app/video",
+    surface: "runtime",
+    redirects: ["https://bun.aphrody.com/video"],
+    routes: ["/*"],
+    indexable: false,
+  },
+  {
     host: "ai.aphrody.com",
     canonical: "https://aphrody.com/ai",
     surface: "ai",

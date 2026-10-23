@@ -4,6 +4,7 @@
 import { escapeHtml } from "./mdx.ts";
 
 export const VIDEO_MEDIA = "/video/media";
+const PLATFORM: Record<string, string> = { win32: "Windows", linux: "Linux", darwin: "macOS" };
 
 type Asset = { file: string; bytes: number; sha256: string; mime: string };
 export type Showcase = {
@@ -103,7 +104,7 @@ export function renderVideoPage(showcase: Showcase, works: VideoWork[], repo: st
 <p class="lead">Every video on this page was rendered by Bun Video, the media toolkit of this runtime.</p>
 <p>The first clips present the runtime with its own programs: each one types a program from the docs and plays, line by line, the output the runtime printed when it ran that program, on the platform named in the captions.</p>
 <p>Each composition runs in Chromium and is captured one frame at a time. FilmCraft, the pure-Rust media stack built into the runtime, encodes the frames to H.264 and writes the MP4, without FFmpeg. The posters are WebP stills made with <code>Bun.Image</code>. Under each video are the measurements recorded when it was rendered: frame count, frame rate, size and the bytes of the file the player streams.</p>
-<p class="muted">Rendered from <a href="https://github.com/${escapeHtml(repo)}/tree/${escapeHtml(commit)}"><code>${escapeHtml(commit.slice(0, 12))}</code></a> with Bun ${escapeHtml(showcase.runtime.version)} on ${escapeHtml(showcase.runtime.platform)}, ${escapeHtml(showcase.generatedAt.slice(0, 10))}. Build script: <a href="https://github.com/${escapeHtml(repo)}/blob/${escapeHtml(commit)}/packages/bun-video/scripts/build-showcase.ts"><code>packages/bun-video/scripts/build-showcase.ts</code></a>.</p>
+<p class="muted">Rendered from <a href="https://github.com/${escapeHtml(repo)}/tree/${escapeHtml(commit)}"><code>${escapeHtml(commit.slice(0, 12))}</code></a> with Bun ${escapeHtml(showcase.runtime.version)} on ${escapeHtml(PLATFORM[showcase.runtime.platform] ?? showcase.runtime.platform)}, ${escapeHtml(showcase.generatedAt.slice(0, 10))}. Build script: <a href="https://github.com/${escapeHtml(repo)}/blob/${escapeHtml(commit)}/packages/bun-video/scripts/build-showcase.ts"><code>packages/bun-video/scripts/build-showcase.ts</code></a>.</p>
 <h2 id="read">Read these files with Bun.Video</h2>
 <pre tabindex="0"><code class="language-typescript">const video = new Bun.Video(await fetch("https://bun.aphrody.com${escapeHtml(media(works[0]!.video))}").then(r => r.bytes()));
 const { width, height, duration, codec } = await video.metadata();
