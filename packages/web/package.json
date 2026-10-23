@@ -6,7 +6,6 @@
     "./domains": "./src/domains.ts",
     "./site": "./src/site.ts"
   },
-  "private": true,
   "scripts": {
     "server": "bun server/main.ts",
     "server:build": "bun server/build.ts"

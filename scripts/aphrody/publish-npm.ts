@@ -380,6 +380,13 @@ export const PACKAGES: PackageSpec[] = [
   // REST services and explicit credential adapters over the qualified bun:google builtin.
   { dir: "bun-google", bunVersion: true },
   { dir: "bun-chromium", bunVersion: true },
+  { dir: "bun-fuzzy", name: "fuzzy" },
+  { dir: "bun-qr", name: "qr" },
+  { dir: "bun-timeline", name: "timeline" },
+  { dir: "bun-x", name: "x" },
+  { dir: "web" },
+  { dir: "bun-m3" },
+  { dir: "bun-web" },
   {
     dir: "bun-agent-plugin",
     sourceInputs: root => inputFiles(root),
