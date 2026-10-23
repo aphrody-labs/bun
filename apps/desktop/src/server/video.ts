@@ -9,6 +9,7 @@ import { readdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { dirname, extname, join, relative, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
+import apiFamilies from "./api-families.json";
 
 export interface VideoWork {
   id: string;
@@ -42,6 +43,12 @@ export interface VideoApi {
   handle(request: Request): Promise<Response>;
   /** Serves a file of the showcase directory for /showcase/<path>. */
   showcase(request: Request): Promise<Response>;
+  /** Serves /media/<name> from the library with byte ranges; only video files and .vtt captions. */
+  media(request: Request): Promise<Response>;
+  /** A 640-pixel JPEG of one frame of a library file, decoded natively. */
+  frame(request: Request): Promise<Response>;
+  /** The module inventory: live from bun-video when its sources are present, else the committed snapshot. */
+  capabilities(request: Request): Promise<Response>;
 }
 
 const MEDIA = new Set([".mp4", ".m4v", ".mov", ".mkv", ".webm"]);
@@ -179,9 +186,69 @@ export function createVideoApi(options: VideoApiOptions): VideoApi {
       const path = decodeURIComponent(new URL(request.url).pathname.slice("/showcase/".length));
       const target = inside(showcaseRoot, path);
       if (!target) return json({ error: "invalid_showcase_path" }, 400);
-      const file = Bun.file(target);
-      if (!(await file.exists())) return json({ error: "not_found" }, 404);
-      return new Response(file, { headers: { "cache-control": "public, max-age=300", "x-content-type-options": "nosniff" } });
+      return serveFile(request, Bun.file(target));
+    },
+    async media(request) {
+      let name: string;
+      try {
+        name = decodeURIComponent(new URL(request.url).pathname.slice("/media/".length));
+      } catch {
+        return json({ error: "invalid_media_path" }, 400);
+      }
+      const target = inside(mediaRoot, name);
+      if (!target || !(MEDIA.has(extname(target).toLowerCase()) || extname(target).toLowerCase() === ".vtt"))
+        return json({ error: "invalid_media_path" }, 400);
+      return serveFile(request, Bun.file(target));
+    },
+    async frame(request) {
+      const params = new URL(request.url).searchParams;
+      const target = inside(mediaRoot, params.get("src") ?? "");
+      const seconds = Number(params.get("t") ?? "0");
+      if (!target || !MEDIA.has(extname(target).toLowerCase())) return json({ error: "invalid_media_path" }, 400);
+      if (!Number.isFinite(seconds) || seconds < 0 || seconds > 86400) return json({ error: "invalid_time" }, 400);
+      const Video = (Bun as unknown as { Video?: NativeFrameVideo }).Video;
+      if (!Video?.available) return json({ error: "video_provider_unavailable" }, 503);
+      try {
+        const bytes = await new Video(target).frame(seconds).resize(640).jpeg({ quality: 85 }).bytes();
+        return new Response(Uint8Array.from(bytes), { headers: { "content-type": "image/jpeg", "cache-control": "public, max-age=300" } });
+      } catch {
+        return json({ error: "frame_unavailable" }, 422);
+      }
+    },
+    async capabilities(request) {
+      const live = await this.handle(request);
+      if (live.status !== 503) return live;
+      return json({ ...apiFamilies, source: "snapshot" });
     },
   };
+}
+
+interface NativeFrameVideo {
+  readonly available: boolean;
+  new (path: string): {
+    frame(seconds: number): { resize(width: number): { jpeg(options: { quality: number }): { bytes(): Promise<Uint8Array> } } };
+  };
+}
+
+/** A whole file, or the byte range the browser asked for: video seeking and resuming depend on 206 answers. */
+async function serveFile(request: Request, file: ReturnType<typeof Bun.file>): Promise<Response> {
+  if (!(await file.exists())) return json({ error: "not_found" }, 404);
+  const size = file.size;
+  const headers: Record<string, string> = {
+    "content-type": file.type || "application/octet-stream",
+    "accept-ranges": "bytes",
+    "cache-control": "public, max-age=300",
+    "x-content-type-options": "nosniff",
+  };
+  const range = /^bytes=(\d*)-(\d*)$/.exec(request.headers.get("range") ?? "");
+  if (range && (range[1] || range[2])) {
+    const start = range[1] ? Number(range[1]) : Math.max(0, size - Number(range[2]));
+    const end = range[1] && range[2] ? Math.min(size - 1, Number(range[2])) : size - 1;
+    if (start > end || start >= size) return new Response(null, { status: 416, headers: { ...headers, "content-range": `bytes */${size}` } });
+    return new Response(request.method === "HEAD" ? null : file.slice(start, end + 1), {
+      status: 206,
+      headers: { ...headers, "content-range": `bytes ${start}-${end}/${size}`, "content-length": String(end - start + 1) },
+    });
+  }
+  return new Response(request.method === "HEAD" ? null : file, { headers: { ...headers, "content-length": String(size) } });
 }

@@ -70,7 +70,7 @@ describe.skipIf(!nativeVideo?.available)("video API", () => {
 
   test("refuses media paths outside the library and cross-site callers", async () => {
     expect((await get("/api/video/metadata?src=..%2F..%2Fsecret.mp4")).status).toBe(400);
-    const cross = await get("/api/video/works", { headers: { "sec-fetch-site": "cross-site" } });
+    const cross = await get("/api/video/watch?src=Mon%20Film.mp4", { headers: { "sec-fetch-site": "cross-site" } });
     expect(cross.status).toBe(403);
   });
 
@@ -107,6 +107,73 @@ describe("published showcase", () => {
       expect((await fetch(`${origin}/showcase/..%2F..%2Fserver.ts`)).status).toBe(400);
     } finally {
       await other.stop(true);
+    }
+  });
+});
+
+describe.skipIf(!nativeVideo?.available)("public deployment (hostAccess: false)", () => {
+  let publicServer: WebOSServer;
+  let origin: string;
+  beforeAll(async () => {
+    publicServer = await startWebOS({
+      port: 0,
+      hostname: "127.0.0.1",
+      dataDir: join(dataDir, "public"),
+      distDir: join(dataDir, "dist"),
+      mediaRoot: join(dataDir, "Videos"),
+      hostAccess: false,
+      development: false,
+    });
+    origin = publicServer.url.href.replace(/\/$/, "");
+  });
+  afterAll(async () => {
+    await publicServer?.stop(true);
+  });
+
+  test("publishes the catalogue, posters and playback with byte ranges", async () => {
+    const { works } = (await (await fetch(`${origin}/api/video/works`)).json()) as { works: { video: string; poster: string }[] };
+    expect(works).toHaveLength(1);
+    const poster = await fetch(origin + works[0]!.poster);
+    expect([poster.status, poster.headers.get("content-type")]).toEqual([200, "image/jpeg"]);
+    const full = await fetch(origin + works[0]!.video);
+    expect(full.status).toBe(200);
+    expect(full.headers.get("accept-ranges")).toBe("bytes");
+    const size = Number(full.headers.get("content-length"));
+    const part = await fetch(origin + works[0]!.video, { headers: { range: "bytes=10-19" } });
+    expect(part.status).toBe(206);
+    expect(part.headers.get("content-range")).toBe(`bytes 10-19/${size}`);
+    expect((await part.arrayBuffer()).byteLength).toBe(10);
+    const tail = await fetch(origin + works[0]!.video, { headers: { range: "bytes=-5" } });
+    expect([tail.status, (await tail.arrayBuffer()).byteLength]).toEqual([206, 5]);
+    expect((await fetch(origin + works[0]!.video, { headers: { range: `bytes=${size + 10}-` } })).status).toBe(416);
+  });
+
+  test("keeps media paths inside the library and limits what is served", async () => {
+    expect((await fetch(`${origin}/media/..%2F..%2Fserver.ts`)).status).toBe(400);
+    expect((await fetch(`${origin}/media/Mon%20Film.exe`)).status).toBe(400);
+    expect((await fetch(`${origin}/api/video/frame?src=..%2Fx.mp4`)).status).toBe(400);
+    expect((await fetch(`${origin}/api/video/frame?src=Mon%20Film.mp4&t=-1`)).status).toBe(400);
+  });
+
+  test("refuses everything that fetches URLs, decodes on demand or touches the host", async () => {
+    for (const path of ["/api/video/watch?src=Mon%20Film.mp4", "/api/video/extract?src=https%3A%2F%2Fexample.com%2Fa", "/api/video/metadata?src=Mon%20Film.mp4", "/api/video/library", "/api/probe?url=https%3A%2F%2Fexample.com", "/api/discover?seed=https%3A%2F%2Fexample.com", "/api/compositions", "/api/webgpu/probe", "/api/webos/system"])
+      expect([path, (await fetch(origin + path)).status]).toEqual([path, 403]);
+  });
+
+  test("lists the modules from the snapshot when the bun-video sources are absent", async () => {
+    const previous = process.env.BUN_VIDEO_ROOT;
+    process.env.BUN_VIDEO_ROOT = join(dataDir, "no-such-checkout");
+    const bare = await startWebOS({ port: 0, hostname: "127.0.0.1", dataDir: join(dataDir, "bare"), distDir: join(dataDir, "dist"), hostAccess: false, development: false });
+    try {
+      const body = (await (await fetch(`${bare.url.href}api/capabilities`)).json()) as { source: string; apiFamilies: { id: string }[] };
+      expect(body.source).toBe("snapshot");
+      expect(body.apiFamilies.length).toBeGreaterThan(60);
+      expect(body.apiFamilies.map(family => family.id)).toEqual(expect.arrayContaining(["watch", "remotion", "hyperframes", "media"]));
+      expect((await fetch(`${bare.url.href}api/video/works`)).status).toBe(200);
+    } finally {
+      await bare.stop(true);
+      if (previous === undefined) delete process.env.BUN_VIDEO_ROOT;
+      else process.env.BUN_VIDEO_ROOT = previous;
     }
   });
 });

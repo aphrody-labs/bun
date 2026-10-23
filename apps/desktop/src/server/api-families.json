@@ -1,0 +1,407 @@
+{
+  "schema": "bun-video/api-snapshot/v1",
+  "apiFamilies": [
+    {
+      "id": "api",
+      "module": "@aphrody/bun-video/api",
+      "description": "Bun Video API ownership registry",
+      "scope": "catalog"
+    },
+    {
+      "id": "catalog",
+      "module": "@aphrody/bun-video/catalog",
+      "description": "Private SQLite source, asset and qualification catalog",
+      "scope": "catalog"
+    },
+    {
+      "id": "workers",
+      "module": "@aphrody/bun-video/workers",
+      "description": "Bounded native Bun process job pool",
+      "scope": "render"
+    },
+    {
+      "id": "workflow",
+      "module": "@aphrody/bun-video/workflow",
+      "description": "Unified capture, acquisition and rendering workflow",
+      "scope": "render"
+    },
+    {
+      "id": "pixel-verify",
+      "module": "@aphrody/bun-video/pixel-verify",
+      "description": "Exact decoded RGBA reference frame comparison",
+      "scope": "render"
+    },
+    {
+      "id": "video-capture",
+      "module": "@aphrody/bun-video/video-capture",
+      "description": "Complete private HAR resource and request indexing",
+      "scope": "acquisition"
+    },
+    {
+      "id": "archive-capture",
+      "module": "@aphrody/bun-video/archive-capture",
+      "description": "Bounded public Internet Archive HTTP HAR capture",
+      "scope": "acquisition"
+    },
+    {
+      "id": "video-dataset",
+      "module": "@aphrody/bun-video/video-dataset",
+      "description": "Curated SQLite queries and JSON, JSONL, SQL or wiki exports",
+      "scope": "catalog"
+    },
+    {
+      "id": "video-cookies",
+      "module": "@aphrody/bun-video/video-cookies",
+      "description": "Private authorized Crunchyroll cookie selection and HTTP inspection",
+      "scope": "acquisition"
+    },
+    {
+      "id": "data-site",
+      "module": "@aphrody/bun-video/data-site",
+      "description": "Native Bun full-stack curated source and dataset application",
+      "scope": "service"
+    },
+    {
+      "id": "publish",
+      "module": "@aphrody/bun-video/publish",
+      "description": "Curated dataset and portable catalog publication through Bun Cloudflare R2",
+      "scope": "service"
+    },
+    {
+      "id": "hls",
+      "module": "@aphrody/bun-video/hls",
+      "description": "HLS manifests, variants and browser playback",
+      "scope": "protocol"
+    },
+    {
+      "id": "playback",
+      "module": "@aphrody/bun-video/playback",
+      "description": "Browser video lifecycle, bounded recovery and track selection",
+      "scope": "protocol"
+    },
+    {
+      "id": "dash",
+      "module": "@aphrody/bun-video/dash",
+      "description": "DASH/MPD manifests and browser playback",
+      "scope": "protocol"
+    },
+    {
+      "id": "har",
+      "module": "@aphrody/bun-video/har",
+      "description": "Network archive stream discovery",
+      "scope": "acquisition"
+    },
+    {
+      "id": "bitmovin",
+      "module": "@aphrody/bun-video/bitmovin",
+      "description": "Licensed Bitmovin browser player integration",
+      "scope": "protocol"
+    },
+    {
+      "id": "crunchyroll",
+      "module": "@aphrody/bun-video/crunchyroll",
+      "description": "Isolated Crunchyroll acquisition client",
+      "scope": "acquisition"
+    },
+    {
+      "id": "crunchyroll-api",
+      "module": "@aphrody/bun-video/crunchyroll/api",
+      "description": "Crunchyroll HTTP API owner",
+      "scope": "acquisition"
+    },
+    {
+      "id": "crunchyroll-service",
+      "module": "@aphrody/bun-video/crunchyroll/service",
+      "description": "Crunchyroll service composition owner",
+      "scope": "service"
+    },
+    {
+      "id": "crunchyroll-cli",
+      "module": "@aphrody/bun-video/crunchyroll/cli",
+      "description": "Crunchyroll CLI owner",
+      "scope": "service"
+    },
+    {
+      "id": "crunchyroll-watchlist",
+      "module": "@aphrody/bun-video/crunchyroll/watchlist",
+      "description": "Authorized Crunchyroll watchlist owner",
+      "scope": "acquisition"
+    },
+    {
+      "id": "frame-theme",
+      "module": "@aphrody/bun-video/frame-theme",
+      "description": "Frame-derived semantic color roles",
+      "scope": "render"
+    },
+    {
+      "id": "frame-analysis",
+      "module": "@aphrody/bun-video/frame-analysis",
+      "description": "Native frame measurements",
+      "scope": "native"
+    },
+    {
+      "id": "episode-assets",
+      "module": "@aphrody/bun-video/episode-assets",
+      "description": "Episode asset inspection",
+      "scope": "acquisition"
+    },
+    {
+      "id": "episode-unpack",
+      "module": "@aphrody/bun-video/episode-unpack",
+      "description": "Validated episode archive extraction",
+      "scope": "acquisition"
+    },
+    {
+      "id": "episode-dataset",
+      "module": "@aphrody/bun-video/episode-dataset",
+      "description": "Episode dataset contracts",
+      "scope": "catalog"
+    },
+    {
+      "id": "pixel-svg",
+      "module": "@aphrody/bun-video/pixel-svg",
+      "description": "Measured SVG generation",
+      "scope": "render"
+    },
+    {
+      "id": "shenron-episode",
+      "module": "@aphrody/bun-video/shenron-episode",
+      "description": "Shenron episode asset contracts",
+      "scope": "catalog"
+    },
+    {
+      "id": "oauth",
+      "module": "@aphrody/bun-video/oauth",
+      "description": "OAuth PKCE session flows",
+      "scope": "service"
+    },
+    {
+      "id": "secrets",
+      "module": "@aphrody/bun-video/secrets",
+      "description": "Native protected secret storage",
+      "scope": "native"
+    },
+    {
+      "id": "webgpu",
+      "module": "@aphrody/bun-video/webgpu",
+      "description": "Bounded GPU compute and browser probes",
+      "scope": "native"
+    },
+    {
+      "id": "mediabunny",
+      "module": "@aphrody/bun-video/mediabunny",
+      "description": "Media demuxing, muxing and WebCodecs",
+      "scope": "protocol"
+    },
+    {
+      "id": "ytdlp",
+      "module": "@aphrody/bun-video/ytdlp",
+      "description": "Vendored site extractors through Bun Python",
+      "scope": "acquisition"
+    },
+    {
+      "id": "pipeline",
+      "module": "@aphrody/bun-video/pipeline",
+      "description": "Native video ingestion and media pipeline",
+      "scope": "native"
+    },
+    {
+      "id": "image",
+      "module": "@aphrody/bun-video/image",
+      "description": "Native frame image transforms",
+      "scope": "native"
+    },
+    {
+      "id": "formats",
+      "module": "@aphrody/bun-video/formats",
+      "description": "Media format descriptions",
+      "scope": "catalog"
+    },
+    {
+      "id": "source",
+      "module": "@aphrody/bun-video/source",
+      "description": "Source normalization and bounded materialization",
+      "scope": "acquisition"
+    },
+    {
+      "id": "cache",
+      "module": "@aphrody/bun-video/cache",
+      "description": "Crawler source cache",
+      "scope": "catalog"
+    },
+    {
+      "id": "archive",
+      "module": "@aphrody/bun-video/archive",
+      "description": "Source archive owner",
+      "scope": "catalog"
+    },
+    {
+      "id": "studio",
+      "module": "@aphrody/bun-video/studio",
+      "description": "React source player and asset library",
+      "scope": "render"
+    },
+    {
+      "id": "studio-remotion",
+      "module": "@aphrody/bun-video/studio-remotion",
+      "description": "React Remotion video composition",
+      "scope": "render"
+    },
+    {
+      "id": "encode",
+      "module": "@aphrody/bun-video/encode",
+      "description": "Ordered native frame encoding",
+      "scope": "render"
+    },
+    {
+      "id": "computer",
+      "module": "@aphrody/bun-video/computer",
+      "description": "Browser automation tasks",
+      "scope": "service"
+    },
+    {
+      "id": "ffmpeg",
+      "module": "@aphrody/bun-video/ffmpeg",
+      "description": "Native FFmpeg media owner",
+      "scope": "native"
+    },
+    {
+      "id": "mpv",
+      "module": "@aphrody/bun-video/mpv",
+      "description": "Native libmpv playback owner",
+      "scope": "native"
+    },
+    {
+      "id": "sdk",
+      "module": "./src/sdk.ts",
+      "description": "Pinned optional media SDK acquisition owner",
+      "scope": "native"
+    },
+    {
+      "id": "remotion",
+      "module": "@aphrody/bun-video/remotion",
+      "description": "Absorbed Remotion React core",
+      "scope": "render"
+    },
+    {
+      "id": "remotion-renderer",
+      "module": "@aphrody/bun-video/remotion/renderer",
+      "description": "Official Remotion renderer",
+      "scope": "render"
+    },
+    {
+      "id": "hyperframes",
+      "module": "@aphrody/bun-video/hyperframes",
+      "description": "Absorbed HyperFrames composition core",
+      "scope": "render"
+    },
+    {
+      "id": "hyperframes-engine",
+      "module": "@aphrody/bun-video/hyperframes/engine",
+      "description": "Official HyperFrames rendering engine",
+      "scope": "render"
+    },
+    {
+      "id": "capabilities",
+      "module": "@aphrody/bun-video/capabilities",
+      "description": "Explicit provider availability probes",
+      "scope": "native"
+    },
+    {
+      "id": "mcp",
+      "module": "@aphrody/bun-video/mcp",
+      "description": "Bun Video MCP service",
+      "scope": "service"
+    },
+    {
+      "id": "render-runtime",
+      "module": "./src/render-runtime.ts",
+      "description": "Lazy upstream rendering library loaders",
+      "scope": "render"
+    },
+    {
+      "id": "render-frame",
+      "module": "./src/render-frame.ts",
+      "description": "Served composition frame capture",
+      "scope": "render"
+    },
+    {
+      "id": "parallel-capture",
+      "module": "./src/parallel-capture.ts",
+      "description": "Bounded ordered frame worker pool",
+      "scope": "render"
+    },
+    {
+      "id": "frame-plan",
+      "module": "./src/frame-plan.ts",
+      "description": "Validated rational-FPS frame plans",
+      "scope": "render"
+    },
+    {
+      "id": "remotion-frame",
+      "module": "./src/remotion-frame.ts",
+      "description": "Native served Remotion frame capture",
+      "scope": "render"
+    },
+    {
+      "id": "hyperframes-native",
+      "module": "./src/hyperframes-native.ts",
+      "description": "Native served HyperFrames frame capture",
+      "scope": "render"
+    },
+    {
+      "id": "media",
+      "module": "@aphrody/bun-video/media",
+      "description": "FilmCraft media jobs: inspect, download, frames, audio, GIF, remux and cuts",
+      "scope": "native"
+    },
+    {
+      "id": "x-source",
+      "module": "@aphrody/bun-video/x-source",
+      "description": "Public X status video source normalization",
+      "scope": "acquisition"
+    },
+    {
+      "id": "photocraft",
+      "module": "@aphrody/bun-video/photocraft",
+      "description": "Native image transformation operations shared with frame output",
+      "scope": "native"
+    },
+    {
+      "id": "m3-video",
+      "module": "@aphrody/bun-video/m3-video",
+      "description": "Material 3 video: deterministic typography, logo icons and native export",
+      "scope": "render"
+    },
+    {
+      "id": "watch",
+      "module": "@aphrody/bun-video/watch",
+      "description": "Timestamped frames and transcript of a video, decoded natively without FFmpeg",
+      "scope": "native"
+    },
+    {
+      "id": "watch-catalogue",
+      "module": "./src/watch-catalogue.ts",
+      "description": "Episode catalogue runs with bounded concurrency and a resumable cache",
+      "scope": "catalog"
+    },
+    {
+      "id": "watch-shenron",
+      "module": "./src/watch-shenron.ts",
+      "description": "Original-size PNG frames and the Shenron episode delivery manifest",
+      "scope": "catalog"
+    },
+    {
+      "id": "video-watch",
+      "module": "./src/video-watch.ts",
+      "description": "Watch jobs recorded as catalog frames, transcripts and job state",
+      "scope": "catalog"
+    },
+    {
+      "id": "video-verify",
+      "module": "./src/video-verify.ts",
+      "description": "Native render verification against watch reference frames",
+      "scope": "render"
+    }
+  ]
+}

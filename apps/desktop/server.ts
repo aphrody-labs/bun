@@ -207,11 +207,19 @@ export async function startWebOS(options: WebOSOptions = {}): Promise<WebOSServe
     routes: {
       ...pageRoutes(index, import.meta.dir, SHELL_PATHS),
       ...assetRoutes(),
-      "/api/video/works": { GET: host(async () => json({ works: await video.works() })) },
+      // The catalogue, playback and posters read only the video library the operator chose to publish, so they
+      // answer on a public deployment. Everything else under /api/video can fetch URLs or decode on demand and
+      // stays behind the host guard.
+      "/api/video/works": { GET: async () => json({ works: await video.works() }) },
+      "/api/video/frame": { GET: (req: Request) => video.frame(req) },
+      "/media/*": { GET: (req: Request) => video.media(req), HEAD: (req: Request) => video.media(req) },
+      "/showcase/*": { GET: (req: Request) => video.showcase(req), HEAD: (req: Request) => video.showcase(req) },
+      "/api/capabilities": { GET: (req: Request) => video.capabilities(req) },
       "/api/video/*": host(req => video.handle(req)),
-      "/media/*": host(req => video.handle(req)),
-      "/api/capabilities": { GET: host(req => video.handle(req)) },
-      "/showcase/*": { GET: host(req => video.showcase(req)) },
+      "/api/probe": { GET: host(req => video.handle(req)) },
+      "/api/discover": { GET: host(req => video.handle(req)) },
+      "/api/compositions": { GET: host(req => video.handle(req)) },
+      "/api/webgpu/probe": { GET: host(req => video.handle(req)) },
       "/api/explorer/:action": {
         GET: host(req => explorer.handle(new URL(req.url).pathname.split("/").at(-1)!, req)),
       },
@@ -526,6 +534,10 @@ if (import.meta.main) {
     dataDir: flag("--data"),
     distDir: flag("--dist"),
     explorer: flag("--index") ? { databasePath: flag("--index"), volume: flag("--volume") } : undefined,
+    mediaRoot: flag("--media"),
+    showcaseRoot: flag("--showcase"),
+    // A public deployment: no terminal, files, processes or eval, whatever the listener address.
+    hostAccess: args.includes("--no-host-access") || process.env.APHRODY_HOST_ACCESS === "0" ? false : undefined,
   });
   console.log(`Bun WebOS on ${server.url} (Bun ${Bun.version})`);
 }
