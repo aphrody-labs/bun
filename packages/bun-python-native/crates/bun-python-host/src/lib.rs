@@ -245,6 +245,50 @@ fn has_utf8_option(arguments: &[String]) -> bool {
     false
 }
 
+/// CPython's universal CRT is loaded into this process by `aphrody_py_load`, not started by an
+/// executable, so it does not know it serves a console program and never updates the Win32 standard
+/// handles when a script redirects descriptors 0 to 2 with `os.dup2` (pytest's capture does). The
+/// next `subprocess` call then inherits a handle the redirection already closed.
+#[cfg(windows)]
+fn declare_console_app() {
+    use windows_sys::Win32::System::LibraryLoader::{GetModuleHandleW, GetProcAddress};
+    const CRT_CONSOLE_APP: c_int = 1;
+    let module: Vec<u16> = "ucrtbase.dll ".encode_utf16().collect();
+    // SAFETY: valid NUL-terminated names; the symbol has the `void(int)` signature of the CRT.
+    unsafe {
+        let handle = GetModuleHandleW(module.as_ptr());
+        if handle.is_null() {
+            return;
+        }
+        if let Some(function) = GetProcAddress(handle, c"_set_app_type".as_ptr().cast()) {
+            let set_app_type: unsafe extern "C" fn(c_int) = std::mem::transmute(function);
+            set_app_type(CRT_CONSOLE_APP);
+        }
+    }
+}
+
+/// The CLI keeps CPython's own text defaults: only the standard streams are UTF-8, so a script
+/// that prints Unicode to a pipe works while `open()` and `subprocess` keep the locale encoding
+/// that stock Windows CPython gives them. A choice made by the user always wins.
+#[cfg(windows)]
+fn prepare_cli_stdio(arguments: &[String]) {
+    if ["PYTHONIOENCODING", "PYTHONUTF8", "PYTHONLEGACYWINDOWSSTDIO"]
+        .iter()
+        .any(|name| std::env::var_os(name).is_some())
+        || has_utf8_option(arguments)
+    {
+        return;
+    }
+    unsafe extern "C" {
+        fn _wputenv_s(name: *const u16, value: *const u16) -> c_int;
+    }
+    let name: Vec<u16> = "PYTHONIOENCODING ".encode_utf16().collect();
+    let value: Vec<u16> = "utf-8 ".encode_utf16().collect();
+    // SAFETY: both strings are NUL-terminated UTF-16. The CLI starts before CPython reads its
+    // environment, and `_wputenv_s` updates the CRT table CPython consults as well as the process.
+    unsafe { _wputenv_s(name.as_ptr(), value.as_ptr()) };
+}
+
 #[cfg(windows)]
 fn prepare_stdio(api: &Api, arguments: &[String]) -> Result<(), String> {
     if ["PYTHONIOENCODING", "PYTHONUTF8", "PYTHONLEGACYWINDOWSSTDIO"]
@@ -935,9 +979,9 @@ pub unsafe extern "C" fn bun_py_main(
         let _lease = ExclusiveCall;
         set_error("");
         #[cfg(windows)]
-        if let Err(message) = prepare_stdio(&api, &arguments) {
-            set_error(message);
-            return APHRODY_PY_ERR_PYTHON;
+        {
+            declare_console_app();
+            prepare_cli_stdio(&arguments);
         }
         #[cfg(windows)]
         let result = {

@@ -437,6 +437,37 @@ nativeTest.concurrent("Python honors explicit UTF-8 mode flags", async () => {
   success(await run(["python", "-X", "utf8=0", "-c", "import sys; print(sys.flags.utf8_mode)"]), "0");
   success(await run(["python", "-Xutf8=1", "-c", "import sys; print(sys.flags.utf8_mode)"]), "1");
 });
+// The CLI makes the standard streams UTF-8 but leaves CPython's other text defaults alone, so
+// open() and subprocess keep the locale encoding that stock CPython uses on Windows.
+nativeTest
+  .skipIf(process.platform !== "win32")
+  .concurrent("Python keeps the locale text encoding while its standard streams are UTF-8", async () => {
+    success(
+      await run([
+        "python",
+        "-c",
+        "import io,sys; print(sys.flags.utf8_mode, io.text_encoding(None), sys.stdout.encoding)",
+      ]),
+      "0 locale utf-8",
+    );
+  });
+// pytest's descriptor capture redirects 0 to 2 with os.dup2; a child started afterwards must still
+// get valid standard handles.
+nativeTest
+  .skipIf(process.platform !== "win32")
+  .concurrent("Python subprocess works after descriptor 0 is redirected with os.dup2", async () => {
+    const code = [
+      "import os, subprocess, sys",
+      "saved = os.dup(0)",
+      "null = os.open(os.devnull, os.O_RDONLY)",
+      "os.dup2(null, 0)",
+      "os.close(null)",
+      "child = subprocess.run([sys.executable, '-c', 'print(42)'], capture_output=True, text=True)",
+      "os.dup2(saved, 0)",
+      "print(child.stdout.strip())",
+    ].join("\n");
+    success(await run(["python", "-c", code]), "42");
+  });
 nativeTest.concurrent("Python imports the standard native extensions", async () => {
   success(
     await run(["python", "-c", executableCheck + "import ctypes,ssl,sqlite3,json; print('IMPORTS_OK')"]),
