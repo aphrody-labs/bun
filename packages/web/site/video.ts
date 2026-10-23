@@ -45,8 +45,9 @@ export type VideoWork = {
 };
 
 /**
- * The distinct works of a showcase: only works whose render evidence passed and lists the video file, and one work
- * per video file, since two works with the same SHA-256 are the same render under two names.
+ * The distinct works of a showcase: only works whose render evidence passed and lists the video file (the poster is
+ * a still and need not be listed), and one work per video file, since two works with the same SHA-256 are the same
+ * render under two names.
  */
 export function videoWorks(showcase: Showcase): VideoWork[] {
   const evidence = new Map(showcase.evidence.map(entry => [entry.id, entry]));
@@ -57,7 +58,7 @@ export function videoWorks(showcase: Showcase): VideoWork[] {
     const passed = work.evidence.map(id => evidence.get(id)).filter(entry => entry?.status === "passed");
     const assets = passed.flatMap(entry => entry!.assets);
     const video = assets.find(asset => asset.file === work.video);
-    if (!video || !assets.some(asset => asset.file === work.poster) || seen.has(video.sha256)) continue;
+    if (!video || seen.has(video.sha256)) continue;
     seen.add(video.sha256);
     works.push({
       id: work.id,
