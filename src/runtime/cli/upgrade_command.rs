@@ -71,6 +71,8 @@ const DEFAULT_REPO: &str = "aphrody-labs/bun";
 /// (`n2b-v0.7.1`, …) belong to other packages.
 const RELEASE_TAG_PREFIX: &[u8] = b"aphrody-v";
 const UPSTREAM_TAG_PREFIX: &[u8] = b"bun-v";
+const RELEASES_PER_PAGE: usize = 100;
+const MAX_RELEASE_PAGES: usize = 10;
 pub(crate) const CURRENT_RELEASE_PREFIX: &str =
     if Global::display_version.len() == Global::package_json_version.len() {
         "bun-v"
@@ -361,7 +363,7 @@ impl UpgradeCommand {
             && !flag(b"prerelease")
     }
 
-    /// Stable: the newest `aphrody-v*` release of the repository. Canary: the release tagged
+    /// Stable: the newest `bun-v*` or `aphrody-v*` release of the repository. Canary: the release tagged
     /// `canary` (the latest build of main), which may not exist.
     fn fetch_release(
         env_loader: &DotEnv::Loader,
@@ -371,100 +373,106 @@ impl UpgradeCommand {
         use_profile: bool,
     ) -> crate::Result<Version> {
         let repo = Self::repo(env_loader);
-        let url_buf: &'static mut Vec<u8> = crate::cli::cli_arena().alloc(Vec::new());
-        write!(
-            url_buf,
-            "https://{}/repos/{}/releases{}",
-            bstr::BStr::new(Self::api_domain(env_loader)),
-            bstr::BStr::new(repo),
-            if use_canary {
-                "/tags/canary"
-            } else {
-                "?per_page=20"
-            },
-        )
-        .expect("oom");
-
-        let metadata_body: &'static mut MutableString =
-            crate::cli::cli_arena().alloc(MutableString::init(2048)?);
-        let status = Self::http_get(
-            env_loader,
-            &url_buf[..],
-            true,
-            Some(NonNull::from(&mut *progress)),
-            metadata_body,
-        )?;
-
         let fail = |progress: &mut Progress::Node, refresher: &mut Progress::Progress| {
             progress.end();
             refresher.refresh();
         };
+        // Per-commit prereleases can fill whole pages, so the stable lookup pages through them.
+        let mut page = 1;
+        let (release, metadata_body) = loop {
+            let url_buf: &'static mut Vec<u8> = crate::cli::cli_arena().alloc(Vec::new());
+            if use_canary {
+                write!(
+                    url_buf,
+                    "https://{}/repos/{}/releases/tags/canary",
+                    bstr::BStr::new(Self::api_domain(env_loader)),
+                    bstr::BStr::new(repo),
+                )
+            } else {
+                write!(
+                    url_buf,
+                    "https://{}/repos/{}/releases?per_page={}&page={}",
+                    bstr::BStr::new(Self::api_domain(env_loader)),
+                    bstr::BStr::new(repo),
+                    RELEASES_PER_PAGE,
+                    page,
+                )
+            }
+            .expect("oom");
 
-        if status == 404 && use_canary {
-            fail(progress, refresher);
-            bun_core::pretty_errorln!(
-                "<r><red>error:<r> {} has no canary build of Bun (no release tagged <b>canary<r> built from main)\n\nInstall the latest release instead: <b><cyan>bun upgrade --stable<r>",
-                bstr::BStr::new(repo)
-            );
-            Global::exit(1);
-        }
-        Self::check_status(status)?;
+            let metadata_body: &'static mut MutableString =
+                crate::cli::cli_arena().alloc(MutableString::init(2048)?);
+            let status = Self::http_get(
+                env_loader,
+                &url_buf[..],
+                true,
+                Some(NonNull::from(&mut *progress)),
+                metadata_body,
+            )?;
 
-        let mut log = bun_ast::Log::init();
-        let source =
-            bun_ast::Source::init_path_string(b"releases.json", metadata_body.list.as_slice());
-        bun_ast::initialize_store();
-        // `JSON::parse_utf8` needs a bump arena; this is a one-shot
-        // CLI path so use the process-lifetime CLI arena.
-        let bump: &'static Bump = crate::cli::cli_arena();
-        let expr = match JSON::parse_utf8(&source, &mut log, bump) {
-            Ok(e) if log.errors == 0 => e,
-            Ok(_) => {
+            if status == 404 && use_canary {
                 fail(progress, refresher);
-                let _ = log.print(std::ptr::from_mut(Output::error_writer()));
+                bun_core::pretty_errorln!(
+                    "<r><red>error:<r> {} has no canary build of Bun (no release tagged <b>canary<r> built from main)\n\nInstall the latest release instead: <b><cyan>bun upgrade --stable<r>",
+                    bstr::BStr::new(repo)
+                );
                 Global::exit(1);
             }
-            Err(err) => {
-                fail(progress, refresher);
-                if log.errors > 0 {
+            Self::check_status(status)?;
+            let metadata_body: &'static MutableString = metadata_body;
+
+            let mut log = bun_ast::Log::init();
+            let source =
+                bun_ast::Source::init_path_string(b"releases.json", metadata_body.list.as_slice());
+            bun_ast::initialize_store();
+            // `JSON::parse_utf8` needs a bump arena; this is a one-shot
+            // CLI path so use the process-lifetime CLI arena.
+            let bump: &'static Bump = crate::cli::cli_arena();
+            let expr = match JSON::parse_utf8(&source, &mut log, bump) {
+                Ok(e) if log.errors == 0 => e,
+                Ok(_) => {
+                    fail(progress, refresher);
                     let _ = log.print(std::ptr::from_mut(Output::error_writer()));
-                } else {
-                    bun_core::pretty_errorln!(
-                        "Error parsing releases from GitHub: <r><red>{}<r>",
-                        err.name()
-                    );
+                    Global::exit(1);
                 }
-                Global::exit(1);
-            }
-        };
+                Err(err) => {
+                    fail(progress, refresher);
+                    if log.errors > 0 {
+                        let _ = log.print(std::ptr::from_mut(Output::error_writer()));
+                    } else {
+                        bun_core::pretty_errorln!(
+                            "Error parsing releases from GitHub: <r><red>{}<r>",
+                            err.name()
+                        );
+                    }
+                    Global::exit(1);
+                }
+            };
 
-        let release = if let Some(list) = expr.data.e_array() {
-            match list
-                .items
-                .slice()
-                .iter()
-                .copied()
-                .find(Self::is_runtime_release)
-            {
-                Some(release) => release,
-                None => {
+            if let Some(list) = expr.data.e_array() {
+                let items = list.items.slice();
+                if let Some(release) = items.iter().copied().find(Self::is_runtime_release) {
+                    break (release, metadata_body);
+                }
+                if items.len() < RELEASES_PER_PAGE || page == MAX_RELEASE_PAGES {
                     fail(progress, refresher);
                     bun_core::pretty_errorln!(
-                        "<r><red>error:<r> {} has no published Bun release (tag <b>aphrody-v*<r>)",
+                        "<r><red>error:<r> {} has no published Bun release (tag <b>bun-v*<r> or <b>aphrody-v*<r>)",
                         bstr::BStr::new(repo)
                     );
                     Global::exit(1);
                 }
+                page += 1;
+            } else if expr.is_object() {
+                break (expr, metadata_body);
+            } else {
+                fail(progress, refresher);
+                bun_core::pretty_errorln!(
+                    "JSON error - expected an object but received {:?}",
+                    core::mem::discriminant(&expr.data)
+                );
+                Global::exit(1);
             }
-        } else if expr.is_object() {
-            expr
-        } else {
-            fail(progress, refresher);
-            bun_core::pretty_errorln!(
-                "JSON error - expected an object but received {:?}",
-                core::mem::discriminant(&expr.data)
-            );
-            Global::exit(1);
         };
 
         let mut version = Version {
@@ -1637,7 +1645,13 @@ pub(crate) mod upgrade_js_bindings {
     static TEMPDIR_FD: bun_core::RacyCell<Option<sys::Fd>> = bun_core::RacyCell::new(None);
 
     pub(crate) fn generate(global: &JSGlobalObject) -> JSValue {
-        let obj = JSValue::create_empty_object(global, 2);
+        use bun_jsc::EncodedSliceJsc as _;
+        let obj = JSValue::create_empty_object(global, 3);
+        obj.put(
+            global,
+            b"zipFilename",
+            bun_core::EncodedSlice::latin1(Version::ZIP_FILENAME.as_bytes()).to_js(global),
+        );
         obj.put(
             global,
             b"openTempDirWithoutSharingDelete",

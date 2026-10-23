@@ -12,7 +12,7 @@ import {
   tls,
   tmpdirSync,
 } from "harness";
-import { readdirSync, statSync } from "node:fs";
+import { existsSync, readdirSync, statSync } from "node:fs";
 import { copyFile, link, realpath, writeFile } from "node:fs/promises";
 import { basename, join } from "path";
 describe.skipIf(!isWindows)("Aphrody bootstrap integrity", () => {
@@ -199,12 +199,10 @@ $SelectedTag = if ($Mode -eq "wrong-version") { "bun-v1.4.5" } else { $ReleaseTa
 
 const { openTempDirWithoutSharingDelete, closeTempDirHandle } = upgrade_test_helpers;
 
-// The asset `bun upgrade` picks for the target this test runs on, and the
-// folder inside it.
-const releaseOs = process.platform === "win32" ? "windows" : process.platform === "darwin" ? "darwin" : "linux";
-const releaseArch = process.arch === "arm64" ? "aarch64" : "x64";
-const releaseFolder = `bun-${releaseOs}-${releaseArch}${isMusl ? "-musl" : ""}`;
-const releaseAsset = `${releaseFolder}.zip`;
+// The asset `bun upgrade` picks for the build this test runs (target, ABI and
+// feature flavor), and the folder inside it.
+const releaseAsset = upgrade_test_helpers.zipFilename;
+const releaseFolder = releaseAsset.slice(0, -".zip".length);
 
 // Last line `bun upgrade` prints when the downloaded archive is not a zip. On
 // POSIX `unzip` rejects it; on Windows Expand-Archive's failure is only noticed
@@ -260,8 +258,8 @@ function allAssetNames(profile = false) {
   for (const os of ["windows", "linux", "darwin"]) {
     for (const arch of ["x64", "aarch64"]) {
       for (const abi of ["", "-musl"]) {
-        for (const cpu of ["", "-baseline"]) {
-          names.push(`bun-${os}-${arch}${abi}${cpu}${profile ? "-profile" : ""}.zip`);
+        for (const flavor of ["", "-full", "-baseline"]) {
+          names.push(`bun-${os}-${arch}${abi}${flavor}${profile ? "-profile" : ""}.zip`);
         }
       }
     }
@@ -669,7 +667,8 @@ it.concurrent("verifies the downloaded release archive against the digest report
 });
 
 // Fork releases (aphrody-labs/bun): `GET /repos/<repo>/releases` lists every release of the
-// repository, newest first; only non-draft, non-prerelease `aphrody-v*` tags are runtime releases.
+// repository, newest first, paged by `per_page`/`page`; only non-draft, non-prerelease `bun-v*` and
+// `aphrody-v*` tags are runtime releases.
 function startForkServer(opts: {
   releases?: (origin: string) => unknown[];
   canary?: (origin: string) => unknown;
@@ -692,7 +691,11 @@ function startForkServer(opts: {
       if (url.pathname.endsWith("/releases/tags/canary")) {
         return opts.canary ? Response.json(opts.canary(origin)) : new Response("Not Found", { status: 404 });
       }
-      if (url.pathname.endsWith("/releases")) return Response.json(opts.releases?.(origin) ?? []);
+      if (url.pathname.endsWith("/releases")) {
+        const perPage = Number(url.searchParams.get("per_page") ?? 30);
+        const page = Number(url.searchParams.get("page") ?? 1);
+        return Response.json((opts.releases?.(origin) ?? []).slice((page - 1) * perPage, page * perPage));
+      }
       return new Response("Not Found", { status: 404 });
     },
   });
@@ -739,15 +742,12 @@ function forkRelease(origin: string, tag: string, extra: Record<string, unknown>
 }
 
 function currentZipName() {
-  const os = process.platform === "win32" ? "windows" : process.platform === "darwin" ? "darwin" : "linux";
-  const arch = process.arch === "arm64" ? "aarch64" : "x64";
-  return `bun-${os}-${arch}${isMusl ? "-musl" : ""}.zip`;
+  return releaseAsset;
 }
 
 async function runForkUpgrade(args: string[], upgradeEnv: Record<string, string>) {
   const cwd = tmpdirSync();
-  const execPath = join(cwd, basename(bunExe()));
-  await copyFile(bunExe(), execPath);
+  const execPath = await installStandIn(cwd);
   await using proc = Bun.spawn({
     cmd: [execPath, "upgrade", ...args],
     cwd,
@@ -778,12 +778,44 @@ describe.concurrent("aphrody-labs/bun releases", () => {
     });
     const { stderr, exitCode } = await runForkUpgrade(["--stable"], fork.env);
     const paths = fork.requests.map(r => r.path);
-    expect(paths[0]).toBe("/repos/aphrody-labs/bun/releases?per_page=20");
+    expect(paths[0]).toBe("/repos/aphrody-labs/bun/releases?per_page=100&page=1");
     expect(paths).toContain(`/download/bun-v9.9.8/${currentZipName()}`);
     expect(paths).toContain("/download/bun-v9.9.8/SHA256SUMS.txt");
     expect(stderr).toContain("9.9.8");
     expect(stderr).not.toContain("SHA256SUMS");
     // The served archive is not a real zip: the upgrade gets past the checksum and fails to unpack.
+    expect(exitCode).toBe(1);
+  });
+
+  it("pages past per-commit prereleases to the stable release", async () => {
+    using fork = startForkServer({
+      zipBody,
+      sums: `${zipSha}  ${currentZipName()}\n`,
+      releases: origin => [
+        ...Array.from({ length: 105 }, (_, i) =>
+          forkRelease(origin, `main-runtime-${i.toString(16).padStart(12, "0")}`, { prerelease: true }),
+        ),
+        forkRelease(origin, "bun-v9.9.8"),
+      ],
+    });
+    const { stderr, exitCode } = await runForkUpgrade(["--stable"], fork.env);
+    const paths = fork.requests.map(r => r.path);
+    expect(paths.slice(0, 2)).toEqual([
+      "/repos/aphrody-labs/bun/releases?per_page=100&page=1",
+      "/repos/aphrody-labs/bun/releases?per_page=100&page=2",
+    ]);
+    expect(paths).toContain(`/download/bun-v9.9.8/${currentZipName()}`);
+    expect(stderr).toContain("9.9.8");
+    expect(exitCode).toBe(1);
+  });
+
+  it("reports a repository without a runtime release after its last page", async () => {
+    using fork = startForkServer({
+      releases: origin => [forkRelease(origin, "main-runtime-000000000000", { prerelease: true })],
+    });
+    const { stderr, exitCode } = await runForkUpgrade(["--stable"], fork.env);
+    expect(fork.requests.map(r => r.path)).toEqual(["/repos/aphrody-labs/bun/releases?per_page=100&page=1"]);
+    expect(stderr).toContain("has no published Bun release (tag bun-v* or aphrody-v*)");
     expect(exitCode).toBe(1);
   });
 
@@ -822,7 +854,7 @@ describe.concurrent("aphrody-labs/bun releases", () => {
       GH_TOKEN: token,
     });
     expect(fork.requests[0]).toEqual({
-      path: "/repos/someone/bun-fork/releases?per_page=20",
+      path: "/repos/someone/bun-fork/releases?per_page=100&page=1",
       authorization: `Bearer ${token}`,
     });
     expect(fork.requests.length).toBeGreaterThan(1);
