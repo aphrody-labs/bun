@@ -71,7 +71,7 @@ non archivés ; utiliser alors l'URL d'origine du catalogue.
 
 ## Retrouver et actualiser
 
-Recherche locale, sans réseau ni serveur :
+Les sources archivées ne sont plus suivies par Git (`docs/chromium/sources/`, ignoré) ; la collecte ci-dessous les recrée. Recherche locale, sans réseau ni serveur :
 
 ```powershell
 rg -n "Mojo|Oilpan|Graphite|native messaging" C:/bun/docs/chromium/sources

@@ -57,7 +57,6 @@ src/quality/lint_cli/test/
 packages/bun-video/yt-dlp/.github/ISSUE_TEMPLATE_tmpl/
 packages/bun-video/mediabunny/
 packages/bun-video/hyperframes/
-docs/chromium/sources/
 packages/bun-video/remotion/
 packages/bun-video/yt-dlp/
 packages/bun-oxc/adapters/

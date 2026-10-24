@@ -262,3 +262,5 @@ src/runtime/hawk_root.rs
 # Native command receipts of nested checkouts.
 **/var/runs/
 *.har
+
+/docs/chromium/sources/
