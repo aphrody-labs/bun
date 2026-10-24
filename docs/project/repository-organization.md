@@ -40,7 +40,7 @@ every crate in `members` and keeps the only `Cargo.lock`, `rust-toolchain.toml`,
 The former nested workspaces (`packages/bun-winsvc`, `bun-webview-core`,
 `bun-nginx/native`, `bun-python-native`, `bun-runtime-sdk`, `bun-native-plugin-rs`,
 `bun-dotnet-native`, `bun-video/native`, `bun-build-mdx-rs`, `bun-cosmic`,
-`src/rio`, `src/browser/cef-rs`, the `wgpu-probe` example, `bench/aphrody/interop`
+`src/rio`, the `wgpu-probe` example, `bench/aphrody/interop`
 and the `test/js/bun/ffi/cosmic-window` fixture) are members now. Only `vendor/` and
 `scripts/verify-baseline-static` stay in `exclude`.
 
