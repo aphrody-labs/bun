@@ -1097,7 +1097,7 @@ export async function collectDependencies(checkout: string): Promise<Dependency[
     const inTree = text.match(/kind:\s*"in-tree",\s*path:\s*"([^"]+)"/)?.[1];
     if (inTree) add({ repo: inTree, kind: "in-tree", ref: "checkout", usedBy: ["build", rel] });
   }
-  for (const dir of ["vendor/find-msvc-tools", "vendor/windows-rs"]) {
+  for (const dir of ["vendor/find-msvc-tools"]) {
     if (existsSync(join(checkout, dir))) add({ repo: dir, kind: "in-tree", ref: "checkout", usedBy: ["build"] });
   }
   for (const source of WINFW_SOURCE_ARCHIVES) {

@@ -8,7 +8,6 @@ patches without a prebuilt. Everything else is fetched at a pinned revision.
 | Path                     | Consumer                                                       | Why in-tree                            |
 | ------------------------ | -------------------------------------------------------------- | -------------------------------------- |
 | `vendor/uv`              | `scripts/build/deps/uv.ts` (in-tree build dependency)          | uv 0.12.24 with Bun Python patches     |
-| `vendor/windows-rs`      | `scripts/build/deps/windows-toolchain.ts`, `bun winmd`         | patched winmd/bindgen sources          |
 | `vendor/find-msvc-tools` | `bun msvc`, `src/runtime/windows/sys/toolchain.rs`             | MSVC sysroot/cross patches             |
 | `vendor/russh-sftp`      | `src/ssh` (Cargo path dependency)                              | patched crate                          |
 | `vendor/mullvad`         | `src/bun_vpn` (Cargo path deps), `scripts/build/deps/winfw.ts` | `embedded` daemon feature, winfw build |

@@ -5516,7 +5516,6 @@ version = "1.4.7"
 dependencies = [
  "find-msvc-tools 0.1.14",
  "windows-bindgen",
- "zstd 0.13.3",
 ]
 
 [[package]]
@@ -32468,9 +32467,12 @@ dependencies = [
 [[package]]
 name = "windows-bindgen"
 version = "0.100.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c6bb7c22ca81c6dc1554fd328c12697b4b0ad5c45081df2c3c9a3f89cc467da2"
 dependencies = [
  "proc-macro2",
  "quote",
+ "windows-default",
  "windows-metadata",
 ]
 
@@ -32527,6 +32529,12 @@ dependencies = [
  "windows-result 0.4.1",
  "windows-strings 0.5.1",
 ]
+
+[[package]]
+name = "windows-default"
+version = "0.100.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d4882bb065b03115aa8891d44d076bbe843d286d8bfd0b55caaa4b049141a712"
 
 [[package]]
 name = "windows-future"
@@ -32593,6 +32601,8 @@ checksum = "9b39de7c7fe78858b0144c50c3fc000bab3be17d5e9b85b1053871693c7f7415"
 [[package]]
 name = "windows-metadata"
 version = "0.100.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1d3a758dc1da4ae61aa7f93afbb505d564c72dd6431e513ed581377857896a72"
 
 [[package]]
 name = "windows-numerics"

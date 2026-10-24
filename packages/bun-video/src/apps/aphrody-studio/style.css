@@ -1,4 +1,4 @@
-@import url("../../../../../../aphrody-migrated/m3/aphrody-m3/packages/m3-tokens/src/tokens.css");
+@import "@aphrody/m3-tokens/m3-tokens.css";
 
 :root {
   color-scheme: dark;

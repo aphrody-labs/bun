@@ -15,9 +15,7 @@ name = "bun-winmd"
 path = "src/main.rs"
 
 [dependencies]
-windows-bindgen = { path = "../../../vendor/windows-rs/crates/libs/bindgen" }
-
-zstd = { version = "0.13.3", default-features = false }
+windows-bindgen = "0.100.0"
 
 [target.'cfg(windows)'.dependencies]
 find-msvc-tools = { path = "../../../vendor/find-msvc-tools" }

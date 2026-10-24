@@ -1,10 +1,9 @@
-//! `bun-winmd`, the `winmd` plugin: windows-bindgen (`vendor/windows-rs/crates/libs/bindgen`) behind `bun winmd`.
+//! `bun-winmd`, the `winmd` plugin: windows-bindgen behind `bun winmd`.
 //! Generates Rust bindings (`--lang rust`, the windows-rs projection) or `bun:ffi` declarations
 //! (`--lang ts` / `--lang json`) from `.winmd` metadata.
 //!
 //! Inputs: `--in <file.winmd|dir>`, `--in sdk` (the installed SDK's `UnionMetadata\Windows.winmd`)
-//! or `--in default` / no `--in` (the `Windows.Win32.winmd` + `Windows.winmd` embedded on Windows,
-//! zstd-compressed, from `vendor/windows-rs/crates/libs/default`).
+//! or `--in default` / no `--in` (the `windows-default` crate's `Windows.Win32.winmd` + `Windows.winmd`).
 
 use std::io::Write as _;
 use std::process::exit;
@@ -31,7 +30,7 @@ Options:
   --in <path|sdk|win32|default>...
                               .winmd files or directories; sdk = the SDK's Windows.winmd (WinRT),
                               win32 = the Microsoft.Windows.SDK.Win32Metadata NuGet package,
-                              default = embedded windows-rs metadata (flattened Windows.Win32 + WinRT)
+                              default = the windows-default crate's metadata (flattened Windows.Win32 + WinRT)
   --lang <rust|ts|json>       Output language
   --arch <x64|arm64|x86>      Struct layouts for --lang ts|json (default: host)
   --dll <name.dll>...         Keep only functions imported from these DLLs (--lang ts|json)
@@ -40,21 +39,6 @@ Options:
 Rust only: --sys --extern --flat --package --minimal --derive --implement --compose
            --dead-code --rustfmt
 ";
-
-#[cfg(windows)]
-static EMBEDDED: [(&str, &[u8]); 2] = [
-    (
-        "Windows.Win32.winmd",
-        include_bytes!("../../../../vendor/windows-rs/crates/libs/default/Windows.Win32.winmd.zst"),
-    ),
-    (
-        "Windows.winmd",
-        include_bytes!("../../../../vendor/windows-rs/crates/libs/default/Windows.winmd.zst"),
-    ),
-];
-
-#[cfg(not(windows))]
-static EMBEDDED: [(&str, &[u8]); 0] = [];
 
 fn sdk_winmd() -> Option<std::path::PathBuf> {
     #[cfg(windows)]
@@ -101,28 +85,13 @@ fn inputs(json: bool) -> ! {
     let win32 = win32_winmd();
     let mut text = String::new();
     if json {
-        text.push_str("{\"embedded\":[");
-        for (i, (name, bytes)) in EMBEDDED.iter().enumerate() {
-            if i > 0 {
-                text.push(',');
-            }
-            text.push_str(&format!(
-                "{{\"name\":\"{name}\",\"compressedSize\":{}}}",
-                bytes.len()
-            ));
-        }
         text.push_str(&format!(
-            "],\"sdk\":{},\"win32\":{}}}\n",
+            "{{\"default\":\"windows-default\",\"sdk\":{},\"win32\":{}}}\n",
             path_json(sdk.as_deref()),
             path_json(win32.as_deref())
         ));
     } else {
-        for (name, bytes) in EMBEDDED {
-            text.push_str(&format!(
-                "default  {name} (embedded, {} bytes compressed)\n",
-                bytes.len()
-            ));
-        }
+        text.push_str("default  windows-default crate\n");
         match &sdk {
             Some(path) => text.push_str(&format!("sdk      {}\n", path.display())),
             None => text.push_str("sdk      (no Windows SDK with UnionMetadata)\n"),
@@ -170,7 +139,6 @@ fn main() {
     let mut args = Vec::with_capacity(raw.len() + 2);
     let mut has_lang = false;
     let mut out_path = None::<String>;
-    let mut needs_default = true;
     let mut previous = "";
     for arg in &raw {
         let option = if arg.starts_with('-') {
@@ -182,7 +150,6 @@ fn main() {
             ("--lang", "--lang") => has_lang = true,
             ("--in", "sdk") => match sdk_winmd() {
                 Some(path) => {
-                    needs_default = false;
                     args.push(path.to_string_lossy().into_owned());
                     continue;
                 }
@@ -192,7 +159,6 @@ fn main() {
             },
             ("--in", "win32") => match win32_winmd() {
                 Some(path) => {
-                    needs_default = false;
                     args.push(path.to_string_lossy().into_owned());
                     continue;
                 }
@@ -202,7 +168,6 @@ fn main() {
                 )),
             },
             ("--in", "default") => {}
-            ("--in", value) if value != "--in" => needs_default = false,
             ("--out", value) if value != "--out" => out_path = Some(value.to_owned()),
             _ => {}
         }
@@ -211,24 +176,11 @@ fn main() {
         }
         args.push(arg.clone());
     }
-    if raw.iter().any(|arg| arg == "--etc" || arg == "default") {
-        needs_default = true;
-    }
     if !has_lang {
         if let Some(lang) = out_path.as_deref().and_then(lang_for) {
             args.push("--lang".into());
             args.push(lang.into());
         }
-    }
-    if needs_default && !EMBEDDED.is_empty() {
-        let mut decoded = Vec::with_capacity(EMBEDDED.len());
-        for (name, bytes) in EMBEDDED {
-            match zstd::stream::decode_all(bytes) {
-                Ok(winmd) => decoded.push(winmd),
-                Err(err) => fail(format_args!("embedded {name}: {err:?}")),
-            }
-        }
-        windows_bindgen::set_default_input(decoded);
     }
 
     // windows-bindgen reports invalid arguments and metadata errors by panicking.

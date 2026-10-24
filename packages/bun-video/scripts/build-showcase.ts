@@ -1,5 +1,5 @@
 import { mkdir, realpath } from "node:fs/promises";
-import { isAbsolute, join, relative, resolve } from "node:path";
+import { dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { createUnifiedVideoPipeline } from "../src/video-workflow";
 import { captureCompositionFrames } from "../src/render-frame";
 import { openChromiumFrameContext } from "../src/chromium-frame";
@@ -105,7 +105,7 @@ for (const name of ["collection.ts", "artwork.tsx", "preview.tsx", "remotion.tsx
     await Bun.file(resolve(import.meta.dir, `../src/apps/site/${name}`)).bytes(),
     "text/plain",
   );
-const fonts = resolve(import.meta.dir, "../../aphrody-migrated/m3/aphrody-m3/packages/m3-fonts/fonts");
+const fonts = dirname(Bun.fileURLToPath(import.meta.resolve("@aphrody/m3-fonts/fonts/RobotoFlex-OFL.txt")));
 await write(
   "fonts/RobotoFlex-latin.woff2",
   await Bun.file(join(fonts, "web/RobotoFlex-latin.woff2")).bytes(),

@@ -319,15 +319,6 @@
       "internal": false
     },
     {
-      "repo": "vendor/windows-rs",
-      "kind": "in-tree",
-      "ref": "checkout",
-      "usedBy": [
-        "build"
-      ],
-      "internal": false
-    },
-    {
       "repo": "mullvad/libwfp",
       "kind": "github-archive",
       "ref": "94415c7a85ea0ef728dedc6778457395185d8925",

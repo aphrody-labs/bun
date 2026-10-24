@@ -5,7 +5,7 @@ import { dirname, join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 
 const ROOT = resolve(import.meta.dir, "../..");
-export const VENDORS = ["uv", "windows-rs", "russh-sftp"] as const;
+export const VENDORS = ["uv", "russh-sftp"] as const;
 type Document = Record<string, any>;
 type Product = {
   original: string;

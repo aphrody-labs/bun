@@ -14,6 +14,7 @@
         "react-dom": "19.2.3",
       },
       "devDependencies": {
+        "@aphrody/m3-fonts": "^1.4.7",
         "@aphrody/m3-primitives": "^3.3.11",
         "@aphrody/m3-tokens": "^3.3.7",
         "@aws-sdk/client-s3": "3.1151.0",
@@ -266,6 +267,8 @@
     "@aphrody/bun-runtime-sdk": ["@aphrody/bun-runtime-sdk@1.4.6", "", {}, "sha512-/5eIK+5xIAfuOMrALOrI7XcmDK5v67/jndio6Ru/MVL1MLu3ldC7se4NbvzIHdwcMKWkeJcFgScvaFkVHFz5Bg=="],
 
     "@aphrody/bun-types": ["@aphrody/bun-types@1.4.4", "", { "dependencies": { "@types/node": "*", "undici-types": "*" } }, "sha512-DIqOZplh9uy2ywEYYMCalX3nWZO6+n2Dg7/hJubGTyDKxOzRkml7HNtf0i4sG1E/LdLlB/bUcRDtZd0ZQemW1w=="],
+
+    "@aphrody/m3-fonts": ["@aphrody/m3-fonts@1.4.7", "", {}, "sha512-ZY07A+OeXJbAR+Q0fyeC8l+IW9OOzjKmdQJUZYXinEOvXgUyNcjboVMpRd2UdinfHdZPJaDvSu2xsE3ZZLXgdw=="],
 
     "@aphrody/m3-motion": ["@aphrody/m3-motion@3.3.11", "", { "dependencies": { "motion": "^13.4.4" }, "peerDependencies": { "react": ">=18.0.0" } }, "sha512-uE47THwIT1RC7lVOgOl7+hI8DczFAZla4SapIlLOazDugMsUQMrxGyxJF3k6/aCYYxagFJXmtqTfbi40xDgNFw=="],
 

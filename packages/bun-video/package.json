@@ -5228,6 +5228,7 @@
     "url": "https://github.com/aphrody-labs/bun/issues"
   },
   "devDependencies": {
+    "@aphrody/m3-fonts": "^1.4.7",
     "@aphrody/m3-primitives": "^3.3.11",
     "@aphrody/m3-tokens": "^3.3.7",
     "@aws-sdk/client-s3": "3.1151.0",
