@@ -75,4 +75,4 @@ Use the links in the table to jump to the associated documentation.
 - `docs/runtime/n2b.mdx`: **Migrate from Node.js**. Find and rewrite Node.js APIs that have a Bun equivalent with bun n2b, and migrate a project with bun migrate
   Sections: Rewrite code; Reports; Migrate a project.
 - `docs/runtime/python.mdx`: **Python**. Run Python files and the python CLI through a CPython host, embed CPython in the JavaScript process with bun:python, and compile Python with bun compile.
-  Sections: Configure the host; Run Python files and the CLI; Embed CPython with `bun:python`; Compile Python; PyJS files.
+  Sections: Configure the host; Run a Python project; Run Python files and the CLI; Embed CPython with `bun:python`; Compile Python; PyJS files.
