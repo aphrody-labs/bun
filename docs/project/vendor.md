@@ -45,8 +45,7 @@ exact revision into the destination and applies the local patch, if any.
 | vcpkg            | aphrody-labs/vcpkg      | `e664453ac3e6a07c62c92bedeb562effe662a44b`               | `vendor/vcpkg` (or `VCPKG_ROOT`)                            | -                                                 | `bun msvc vcpkg`, windows suite                                              |
 | windows-terminal | aphrody-labs/terminal   | `2304e801074b546b4544f5cd697e98b0e4c94359`               | `vendor/windows-terminal`                                   | -                                                 | `@aphrody/bun-windows-suite`                                                 |
 
-## Submodules still present
+## Submodules
 
-`vendor/brave-core` is being absorbed into
-workspace crates; they stay pinned submodules until that migration lands
-(`git submodule update --init --depth=1 vendor/brave-core`).
+The repository has no Git submodules. `vendor/brave-core`, `vendor/photocraft`
+and `packages/aphrody-migrated/m3/aphrody-m3` were removed.
