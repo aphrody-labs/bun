@@ -2052,7 +2052,7 @@ mod spawn_process_body {
 
         if options.windows.hide_window {
             uv_process_options.flags |= uv::UV_PROCESS_WINDOWS_HIDE;
-        } else if !bun_no_window::has_console_window() {
+        } else if !bun_no_window::has_console() {
             uv_process_options.flags |= uv::UV_PROCESS_WINDOWS_HIDE_CONSOLE;
         }
 
