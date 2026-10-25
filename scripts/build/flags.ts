@@ -1196,6 +1196,20 @@ export const linkerFlags: Flag[] = [
     desc: "Release link opts + delay-load non-critical DLLs (faster startup)",
   },
   {
+    // The fork's own imports, each needed only by a command or API that may never run: AWS-LC's
+    // BCryptGenRandom entropy, Pageant's UPN lookup, uutils' WNetGetConnectionW and
+    // GetFileVersionInfoW, native curl's LDAP and IDN. Loaded at launch, each was a DLL mapped
+    // (and its own imports resolved) by every `bun` start.
+    flag: c => [
+      "/delayload:bcrypt.dll",
+      "/delayload:secur32.dll",
+      ...(c.coreutils ? ["/delayload:MPR.dll", "/delayload:version.dll"] : []),
+      ...(c.curlNative ? ["/delayload:WLDAP32.dll", "/delayload:Normaliz.dll"] : []),
+    ],
+    when: c => c.windows && c.release,
+    desc: "Delay-load the DLLs that only the fork's cold paths call",
+  },
+  {
     // A PE carries no symbol table — lld-link puts the names in the PDB — so
     // these two maps stand in for it on the order file's behalf (see
     // scripts/orderfile/windows-symbols.ts): the MSVC-style one lists every
