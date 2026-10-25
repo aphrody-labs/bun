@@ -234,7 +234,8 @@ export interface NativeCallRecord {
 export function nativeCallList(): NativeCallRecord[] {
   return nativeCalls.map(call => ({
     id: call.id,
-    type: call.type,
+    // A wrapped `$newRustFunction` is a C++ wrapper ("cpp"), but it is still one of the fork's Rust bindings.
+    type: (call.written_kind as string) === "NewRustFunction" ? "rust" : call.type,
     file: (path.isAbsolute(call.filename) ? path.relative(srcDir, call.filename) : call.filename).replaceAll(sep, "/"),
     symbol: call.symbol,
     isWrapped: call.is_wrapped,
@@ -253,7 +254,8 @@ export interface CreatedFunctionRecord {
 }
 
 export function createdFunctionList(): CreatedFunctionRecord[] {
-  return wrapperCalls.map(call => ({
+  // The fork's `$newRustFunction`s are not described to the AOT table, like its `$rust` calls.
+  return wrapperCalls.filter(call => call.type !== "rust").map(call => ({
     kind: call.written_kind,
     file: call.written_file,
     symbol: call.written_symbol,

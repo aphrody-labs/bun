@@ -78,13 +78,18 @@ export function typesOnlySchemas(argv: readonly string[]): ReadonlySet<string> {
   );
 }
 
-const nativeMacros: Record<NativeCall["macro"], { kind: "cpp" | "bind"; takesLength: boolean }> = {
+// The fork's `$rust`/`$newRustFunction` are numbered like the others, so the ids agree with the build's,
+// but are not handed to the AOT table, which has no Rust kind.
+type NumberedMacro = NativeCall["macro"] | "rust" | "newRustFunction";
+const nativeMacros: Record<NumberedMacro, { kind: "cpp" | "bind" | "rust"; takesLength: boolean }> = {
   cpp: { kind: "cpp", takesLength: false },
   newCppFunction: { kind: "cpp", takesLength: true },
   bindgen: { kind: "bind", takesLength: false },
+  rust: { kind: "rust", takesLength: false },
+  newRustFunction: { kind: "rust", takesLength: true },
 };
 const nativeCall =
-  /\$(cpp|newCppFunction|bindgen)\(\s*(["'])([^"'\n]+)\2\s*,\s*(["'])([^"'\n]+)\4\s*(?:,\s*(\d+)\s*)?,?\s*\)/g;
+  /\$(cpp|newCppFunction|bindgen|rust|newRustFunction)\(\s*(["'])([^"'\n]+)\2\s*,\s*(["'])([^"'\n]+)\4\s*(?:,\s*(\d+)\s*)?,?\s*\)/g;
 const keyOf = (match: RegExpMatchArray) => `${match[1]}\t${match[3]}\t${match[5]}`;
 
 /** generate-js2native.ts keeps one numbering per process: only a process's first call returns the ids of a build. */
@@ -99,7 +104,7 @@ export function nativeCalls(typesOnly: ReadonlySet<string>): NativeCall[] {
       const key = keyOf(match);
       if (!calls.has(key)) continue;
       const [, , , nativeFile, , symbol, length] = match;
-      const macro = match[1] as NativeCall["macro"];
+      const macro = match[1] as NumberedMacro;
       const { kind, takesLength } = nativeMacros[macro];
       if (takesLength !== (length !== undefined)) {
         throw new Error(`${file}: $${macro} takes ${takesLength ? "three" : "two"} arguments, but got '${match[0]}'`);
@@ -110,6 +115,7 @@ export function nativeCalls(typesOnly: ReadonlySet<string>): NativeCall[] {
         : registerNativeCall(kind, nativeFile, symbol, length === undefined ? null : Number(length));
       if (seen.has(key)) continue;
       seen.add(key);
+      if (macro === "rust" || macro === "newRustFunction") continue;
       list.push({ id, macro, file: nativeFile, symbol });
     }
   }

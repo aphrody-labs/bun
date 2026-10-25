@@ -40,8 +40,9 @@ function checkNativeCallNumbers(calls: readonly NativeCall[], problems: Problems
     }
     seen.add(id);
   }
-  for (const { id } of registered) {
-    if (!seen.has(id)) reportDisagreement(id);
+  for (const { id, type } of registered) {
+    // The fork's `$rust` calls are numbered but not described to the AOT table.
+    if (type !== "rust" && !seen.has(id)) reportDisagreement(id);
   }
 }
 
