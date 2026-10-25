@@ -131,9 +131,6 @@ private:
         int64_t expires, bool secure, CookieSameSite sameSite,
         bool httpOnly, double maxAge, bool partitioned);
 
-    // `builder` must use OverflowPolicy::RecordOverflow, and the caller must check hasOverflowed().
-    void appendTo(JSC::VM& vm, StringBuilder& builder) const;
-
     String m_name;
     String m_value;
     String m_domain;
