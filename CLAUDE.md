@@ -95,6 +95,8 @@ test runner and package manager.
 - `vendor`: native dependency sources; build recipes in `scripts/build/deps`.
 - `src/codegen`: generated classes, sinks, modules and functions. Edit inputs,
   not generated output; the build regenerates bindings.
+- `plugins/<name>`, `packages/bun-video`: optional add-on submodules; state in
+  `docs/project/fork-inventory.json`, guide in `docs/project/add-ons.mdx`.
 
 ## Implementation
 
