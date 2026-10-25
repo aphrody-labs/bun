@@ -664,9 +664,6 @@ panic = "abort"
 # `dsymutil` already expects.
 split-debuginfo = "unpacked"
 
-# `bun winmd` parses and emits whole Windows metadata files: unoptimized, it takes several seconds.
-[profile.dev.package.windows-bindgen]
-opt-level = 2
 
 # OPAQUE key stretching (Argon2id, 19 MiB) is unusably slow unoptimized.
 [profile.dev.package.argon2]
