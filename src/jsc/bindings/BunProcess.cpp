@@ -292,7 +292,6 @@ static JSValue constructVersions(VM& vm, JSObject* processObject)
         { "lolhtml", BUN_VERSION_LOLHTML },
         { "ares", BUN_VERSION_C_ARES },
         { "usockets", BUN_VERSION_USOCKETS },
-        { "lshpack", BUN_VERSION_LSHPACK },
         // Use commit hash for zstd (semantic version extraction not working yet)
         { "zstd", BUN_VERSION_ZSTD_HASH },
         { "v8", REPORTED_NODEJS_V8_VERSION },

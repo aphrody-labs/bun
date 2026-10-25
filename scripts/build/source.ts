@@ -408,8 +408,7 @@ export interface NestedCmakeBuild {
   extraCFlags?: string[];
   extraCxxFlags?: string[];
   /**
-   * Build type for this dep. Defaults to cfg.buildType. Some deps force
-   * Release (lshpack — its debug build exposes asan symbols we can't link).
+   * Build type for this dep. Defaults to cfg.buildType.
    */
   buildType?: BuildType;
   /**
@@ -554,7 +553,6 @@ export type DepName =
   | "libuv"
   | "libwebp"
   | "lolhtml"
-  | "lshpack"
   | "lsqpack"
   | "lsquic"
   | "mimalloc"

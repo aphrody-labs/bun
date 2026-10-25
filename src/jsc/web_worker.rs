@@ -175,7 +175,6 @@ unsafe extern "C" {
         err: JSValue,
     );
     safe fn WebWorker__postOutOfMemoryError(proxy: *mut c_void);
-    safe fn Bun__freeSharedHeaderBufferForThreadExit();
     // Raw FFI (no RAII guard) so `thread_main` can take the API lock and abandon
     // it with the VM — see the note there.
     safe fn JSC__VM__getAPILock(vm: &jsc::VM);
@@ -1084,10 +1083,6 @@ impl WebWorker {
             // gone so its raw `transpiler.env` borrow is dead.
             drop(unsafe { bun_core::heap::take(env_loader) });
         }
-        // This thread's C++ thread_local destructors are not guaranteed to run
-        // before the process exits, so free the HPACK scratch buffer that any
-        // http2 session on this thread allocated.
-        Bun__freeSharedHeaderBufferForThreadExit();
         drop(arena.take());
         log!(
             "[{}] shutdown: thread state freed",
