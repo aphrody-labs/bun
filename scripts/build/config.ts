@@ -1419,7 +1419,13 @@ export function resolveConfig(partial: PartialConfig, toolchain: Toolchain): Con
     codeGenerationFromStrings: partial.codeGenerationFromStrings ?? true,
     webAssembly: partial.webAssembly ?? true,
     coreutils: partial.coreutils ?? true,
-    videoNative: partial.videoNative ?? true,
+    videoNative: (() => {
+      if (partial.videoNative)
+        throw new BuildError("Native Bun.Video (filmcraft) left the runtime with aphrody-labs/bun-video", {
+          hint: "Use the bun-video executable of packages/bun-video (an optional submodule); see docs/project/fork-layout.md",
+        });
+      return false;
+    })(),
     curlNative: partial.curlNative ?? false,
     browserCrawl: partial.browserCrawl ?? true,
     browserIndex: partial.browserIndex ?? true,

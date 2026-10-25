@@ -3,68 +3,10 @@
 # toolchain can build); feature unification is unchanged.
 resolver = "3"
 members = [
-  "src/media/filmcraft/crates/vp9",
-  "src/media/filmcraft/crates/vp8",
-  "src/media/filmcraft/crates/ui-egui",
-  "src/media/filmcraft/crates/craft-ui",
-  "src/media/filmcraft/crates/craft-docpath",
-  "src/media/filmcraft/crates/tts",
-  "src/media/filmcraft/crates/tts-text",
-  "src/media/filmcraft/crates/time",
-  "src/media/filmcraft/crates/text",
-  "src/media/filmcraft/crates/testkit",
-  "src/media/filmcraft/crates/speech",
-  "src/media/filmcraft/crates/scopes",
-  "src/media/filmcraft/crates/render",
-  "src/media/filmcraft/crates/prores",
-  "src/media/filmcraft/crates/project",
-  "src/media/filmcraft/crates/platform",
-  "src/media/filmcraft/crates/opus",
-  "src/media/filmcraft/crates/ogg",
-  "src/media/filmcraft/crates/mxf",
-  "src/media/filmcraft/crates/mpegts",
-  "src/media/filmcraft/crates/mpeg2v",
-  "src/media/filmcraft/crates/mpa",
-  "src/media/filmcraft/crates/media",
-  "src/media/filmcraft/crates/matroska",
-  "src/media/filmcraft/crates/lib",
-  "src/media/filmcraft/crates/isobmff",
-  "src/media/filmcraft/crates/interchange",
-  "src/media/filmcraft/crates/hevc",
-  "src/media/filmcraft/crates/h264enc",
-  "src/media/filmcraft/crates/h264",
-  "src/media/filmcraft/crates/gpu",
-  "src/media/filmcraft/crates/golden",
-  "src/media/filmcraft/crates/geom",
-  "src/media/filmcraft/crates/frame",
-  "src/media/filmcraft/crates/format",
-  "src/media/filmcraft/crates/flac",
-  "src/media/filmcraft/crates/export",
-  "src/media/filmcraft/crates/engine",
-  "src/media/filmcraft/crates/edit",
-  "src/media/filmcraft/crates/dnx",
-  "src/media/filmcraft/crates/dng",
-  "src/media/filmcraft/crates/color",
-  "src/media/filmcraft/crates/codecs",
-  "src/media/filmcraft/crates/cfb",
-  "src/media/filmcraft/crates/captions",
-  "src/media/filmcraft/crates/bitstream",
-  "src/media/filmcraft/crates/avi",
-  "src/media/filmcraft/crates/av1",
-  "src/media/filmcraft/crates/automation",
-  "src/media/filmcraft/crates/audio-dsp",
-  "src/media/filmcraft/crates/apv",
-  "src/media/filmcraft/crates/ac3",
-  "src/media/filmcraft/crates/aac",
-  "src/media/filmcraft/apps/filmcraft",
-  "src/media/filmcraft/apps/filmcraft-web",
-  "src/media/filmcraft/apps/filmcraft-cli",
-  "src/media/filmcraft/xtask",
   "test/js/bun/ffi/cosmic-window",
   "bench/aphrody/interop",
   "packages/bun-cosmic",
   "scripts/aphrody/alpine/wsl/examples/wgpu-probe",
-  "packages/bun-video/native",
   "packages/bun-build-mdx-rs",
   "packages/bun-build-mdx-rs/swc_common",
   "packages/bun-dotnet-native/crates/bun-dotnet-host",
@@ -609,7 +551,7 @@ default-members = [
 # heavy dev-dependencies (criterion, html5ever) never enter `Cargo.lock`.
 # `packages/bun-cosmic` is the libcosmic window helper of `bun:cosmic`: its own
 # workspace and lockfile, because libcosmic is a git dependency.
-exclude = ["plugins", "scripts/verify-baseline-static", "vendor"]
+exclude = ["packages/bun-video", "plugins", "scripts/verify-baseline-static", "vendor"]
 
 [workspace.package]
 "repository" = "https://github.com/aphrody-labs/bun"
@@ -767,7 +709,7 @@ warnings = { level = "deny", priority = -1 }
 # (`--cfg=...` + `--check-cfg=cfg(...)`) by scripts/build/rust.ts; register
 # them here so a plain `cargo build` / `cargo check` (without those flags)
 # doesn't warn.
-unexpected_cfgs = { level = "warn", check-cfg = ['cfg(bun_asan)', 'cfg(bun_debug)', 'cfg(socket_fault_injection)', 'cfg(bun_disallow_code_generation_from_strings)', 'cfg(bun_sema_mimalloc)'] }
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(bun_asan)', 'cfg(bun_debug)', 'cfg(socket_fault_injection)', 'cfg(bun_disallow_code_generation_from_strings)', 'cfg(bun_sema_mimalloc)', 'cfg(feature, values("video_native"))'] }
 # link.exe unconditionally prints "Creating library X.dll.lib and object
 # X.dll.exp" to stdout when linking each proc-macro DLL on Windows hosts;
 # there is no linker flag to suppress it. The lint already exempts itself
@@ -1310,14 +1252,4 @@ pyo3-macros = { git = "https://github.com/aphrody-labs/pyo3", rev = "451d99fdcdc
 pyo3-macros-backend = { git = "https://github.com/aphrody-labs/pyo3", rev = "451d99fdcdcddf159e8e0a1186960b332cdb5d7c" }
 swc_common = { path = "packages/bun-build-mdx-rs/swc_common" }
 
-[profile.filmcraft]
-lto = "thin"
-codegen-units = 1
-inherits = "runtime"
-panic = "unwind"
 
-[profile.filmcraft-dev]
-package = { "*" = { opt-level = 2 }, filmcraft-h264 = { opt-level = 3 }, filmcraft-h264enc = { opt-level = 3 }, filmcraft-hevc = { opt-level = 3 }, filmcraft-prores = { opt-level = 3 }, filmcraft-dnx = { opt-level = 3 }, filmcraft-apv = { opt-level = 3 }, filmcraft-dng = { opt-level = 3 }, filmcraft-av1 = { opt-level = 3 }, filmcraft-aac = { opt-level = 3 }, filmcraft-flac = { opt-level = 3 }, filmcraft-audio-dsp = { opt-level = 3 }, filmcraft-mxf = { opt-level = 3 }, filmcraft-opus = { opt-level = 3 }, filmcraft-vp8 = { opt-level = 3 }, filmcraft-vp9 = { opt-level = 3 } }
-opt-level = 1
-inherits = "dev"
-panic = "unwind"

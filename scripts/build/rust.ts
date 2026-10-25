@@ -288,7 +288,6 @@ export function cargoBuildInvocation(cfg: Config): CargoInvocation {
   ];
   const features = [
     cfg.coreutils && "coreutils",
-    cfg.videoNative && "video_native",
     cfg.curlNative && "curl_native",
     cfg.browserCrawl && "browser_crawl",
     cfg.browserIndex && "browser_index",

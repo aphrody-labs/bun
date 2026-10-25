@@ -1,8 +1,0 @@
-dist/test/**
-src
-tsconfig.tsbuildinfo
-*.tgz
-.turbo
-tsconfig.json
-.prettierrc.js
-eslint.config.mjs

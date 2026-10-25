@@ -123,17 +123,33 @@
     {
       "component": "bun-video",
       "path": [
-        "packages/bun-video",
+        "packages/bun-video"
+      ],
+      "type": "package+rust-workspace",
+      "kind": "package",
+      "destinationRepo": "https://github.com/aphrody-labs/bun-video",
+      "forkMount": "packages/bun-video",
+      "forkMountUpdate": "none",
+      "bunOsPath": "vendor/bun-video",
+      "submoduleRevision": "c560e546ab239a0c5fe4c8b32849947567158c94",
+      "upstream": "remotion, hyperframes, mediabunny, yt-dlp (vendored in-tree)",
+      "migrationState": "moved",
+      "notes": "First commit 03189dc525c holds HEAD:packages/bun-video of c538f052908 minus 19 dangling Git LFS pointers (objects missing locally and on the aphrody-labs/bun LFS server; GitHub refuses pushes that reference them), listed in its message. The runtime media release (release-native-worker, media-release, media-sdk-*, the avio SDK component, bun-nginx scripts) still reads packages/bun-video, so it is an optional submodule mounted by aphrody-release.yml, the publish workflows and bun-video-release.yml. 19 of 23 Git LFS objects of hyperframes test media were already missing in aphrody-labs/bun (local and LFS server); pushed as dangling pointers. bun_video_native, the video_native cargo feature and the Windows BUN_VIDEO_NATIVE define are gone; videoNative: true is a configure error; the cfg(feature = \"video_native\") code in src/runtime/image/Image.rs is dormant (registered in check-cfg) and can be deleted."
+    },
+    {
+      "component": "filmcraft",
+      "path": [
         "src/media/filmcraft"
       ],
-      "type": "tree",
+      "type": "rust-workspace",
       "kind": "package",
-      "destinationRepo": null,
-      "bunOsPath": null,
-      "submoduleRevision": null,
-      "upstream": null,
-      "migrationState": "pending",
-      "notes": "Next batch. bun_video_native is an optional path dependency of bun_runtime; scripts/aphrody media-sdk-*, media-release and release-* import packages/bun-video/src (Bun OS runtime-heavy-migration B4)."
+      "destinationRepo": "https://github.com/aphrody-labs/filmcraft",
+      "forkMount": null,
+      "bunOsPath": "crates/filmcraft-*, apps/filmcraft*",
+      "submoduleRevision": "e1ebbf4c1acbc267c2af65fb8b32842beecc50a5",
+      "upstream": "https://github.com/aphrody-labs/filmcraft (branch bun-runtime-0.9.0)",
+      "migrationState": "moved",
+      "notes": "Deduplicated: the runtime copy equals aphrody-labs/filmcraft bun-runtime-0.9.0 except the standalone root Cargo.toml/Cargo.lock and one [lib] name. Bun OS already owns FilmCraft (reconciled in f7dcf26d0f); bun-video mounts the branch as vendor/filmcraft."
     },
     {
       "component": "pyjs",

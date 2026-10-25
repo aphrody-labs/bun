@@ -1,8 +1,0 @@
-src
-dist/test
-bundle.ts
-tsconfig.tsbuildinfo
-.turbo
-tsconfig.json
-vitest.config.ts
-eslint.config.mjs

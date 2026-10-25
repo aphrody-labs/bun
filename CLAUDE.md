@@ -113,7 +113,9 @@ test runner and package manager.
 
 ## Bun Video
 
-- Package: `packages/bun-video`; guidance: `.claude/skills/bun-video/SKILL.md`.
+- Package: `packages/bun-video`, the optional submodule aphrody-labs/bun-video
+  (`git submodule update --init --checkout --recursive packages/bun-video`); guidance:
+  `.claude/skills/bun-video/SKILL.md`. The runtime links no native video (`videoNative` is off).
 - WebGPU compute: `packages/bun-video/docs/webgpu.md`, `bun-video-webgpu` CLI.
 - Qualify compute, browser probing, native providers, encoding and DRM playback
   separately; one working layer does not prove the others.
