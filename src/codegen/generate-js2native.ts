@@ -44,13 +44,12 @@ const sourceFiles = readdirRecursiveWithExclusionsAndExtensionsSync(
 // and the Rust crate path (rustTarget). Adding a new $rust() call site
 // requires adding its entry below.
 const rustIdentifierPaths: Record<string, string> = {
-  "bun.rs": "bun.rs",
+  "bake/config/plugins.rs": "runtime/bake/config/plugins.rs",
   "ipc.rs": "runtime/ipc_host.rs",
   "graph_native.rs": "runtime/graph_native.rs",
   "Counters.rs": "jsc/Counters.rs",
   "FrameworkRouter.rs": "runtime/bake/router/js.rs",
   "JSBundler.rs": "runtime/api/JSBundler.rs",
-  "Listener.rs": "runtime/socket/Listener.rs",
   "MarkdownObject.rs": "runtime/api/MarkdownObject.rs",
   "SecureContext.rs": "runtime/api/bun/SecureContext.rs",
   "SemverObject.rs": "semver_jsc/SemverObject.rs",
@@ -70,7 +69,6 @@ const rustIdentifierPaths: Record<string, string> = {
   "http/H3Client.rs": "http/H3Client.rs",
   "ini.rs": "ini/ini.rs",
   "install_binding.rs": "install_jsc/install_binding.rs",
-  "jest.rs": "runtime/test_runner/jest.rs",
   "linux/bpf.rs": "runtime/linux/bpf.rs",
   "linux/caps.rs": "runtime/linux/caps.rs",
   "linux/cgroup.rs": "runtime/linux/cgroup.rs",
@@ -90,7 +88,6 @@ const rustIdentifierPaths: Record<string, string> = {
   "windows/com.rs": "runtime/windows/com.rs",
   "windows/host.rs": "runtime/windows/host.rs",
   "dotnet/host.rs": "runtime/dotnet/host.rs",
-  "jsc_hooks.rs": "runtime/jsc_hooks.rs",
   "memory_pressure.rs": "runtime/node/memory_pressure.rs",
   "mysql.rs": "sql_jsc/mysql.rs",
   "adblock.rs": "runtime/adblock/mod.rs",
@@ -98,14 +95,12 @@ const rustIdentifierPaths: Record<string, string> = {
   "yolo.rs": "runtime/yolo/bindings.rs",
   "privacy.rs": "runtime/privacy.rs",
   "napi_body.rs": "runtime/napi/napi_body.rs",
-  "node_assert_binding.rs": "runtime/node/node_assert_binding.rs",
   "node_cluster_binding.rs": "runtime/node/node_cluster_binding.rs",
   "node_crypto_binding.rs": "runtime/node/node_crypto_binding.rs",
   "node_fs_binding.rs": "runtime/node/node_fs_binding.rs",
   "node_http_binding.rs": "runtime/node/node_http_binding.rs",
   "node_net_binding.rs": "runtime/node/node_net_binding.rs",
   "node_quic_binding.rs": "runtime/node/node_quic_binding.rs",
-  "node_util_binding.rs": "runtime/node/node_util_binding.rs",
   "node_zlib_binding.rs": "runtime/node/node_zlib_binding.rs",
   "npm.rs": "install/npm.rs",
   "pack_command.rs": "runtime/cli/pack_command.rs",
@@ -113,7 +108,6 @@ const rustIdentifierPaths: Record<string, string> = {
   "patch.rs": "patch/patch.rs",
   "postgres.rs": "sql_jsc/postgres.rs",
   "runtime/dns_jsc/dns.rs": "runtime/dns_jsc/dns.rs",
-  "runtime/node/types.rs": "runtime/node/types.rs",
   "runtime/socket/socket.rs": "runtime/socket/socket.rs",
   "runtime/timer/Timer.rs": "runtime/timer/Timer.rs",
   "runtime/webcore/ByteStream.rs": "runtime/webcore/ByteStream.rs",
@@ -124,7 +118,6 @@ const rustIdentifierPaths: Record<string, string> = {
   "string/immutable/unicode.rs": "bun_core/string/immutable/unicode.rs",
   "subprocess.rs": "runtime/api/bun/subprocess.rs",
   "sys.rs": "sys/sys.rs",
-  "udp_socket.rs": "runtime/socket/udp_socket.rs",
   "upgrade_command.rs": "runtime/cli/upgrade_command.rs",
   "virtual_machine_exports.rs": "jsc/virtual_machine_exports.rs",
 };
@@ -325,7 +318,6 @@ export function getJS2NativeRust() {
   // `#[unsafe(export_name = "JS2Rust__…")]`) — skip emitting a thunk for these
   // so the linker doesn't see two definitions.
   const handExported = new Set<string>([
-    "JS2Rust___src_runtime_dns_jsc_dns_rs__Resolver_getRuntimeDefaultResultOrderOption",
     "JS2Rust___src_runtime_dns_jsc_dns_rs__Resolver_newResolver",
     "JS2Rust___src_runtime_dns_jsc_dns_rs__internal_seedCacheForTesting",
     "JS2Rust___src_runtime_dns_jsc_dns_rs__internal_isLocalhostNameForTesting",
@@ -341,8 +333,7 @@ export function getJS2NativeRust() {
       .replace(/[.-]/g, "_")
       .toLowerCase();
 
-  // `src/runtime/node/node_util_binding.rs` + `parseEnv`
-  //   → `crate::node::node_util_binding::parse_env`
+  // `src/runtime/node/util/parse_args.rs` + `parseArgs` → `crate::node::util::parse_args::parse_args`
   // `src/ini/ini.rs` + `IniTestingAPIs.parse` (outside bun_runtime)
   //   → `crate::dispatch::js2native::ini_ini_testing_apis_parse` (single
   //   landing pad; still a compile error if missing).

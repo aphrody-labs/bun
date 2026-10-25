@@ -95,6 +95,7 @@ namespace uWS {
 #include <zlib.h>
 #include <string>
 #include <string_view>
+#include "ReceiveBuffer.h"
 
 namespace uWS {
 
@@ -105,7 +106,7 @@ struct ZlibContext {
      * We need to have two classes to allow inflation followed
      * by many deflations without modifying the inflation */
     std::string dynamicDeflationBuffer;
-    std::string dynamicInflationBuffer;
+    ReceiveBuffer dynamicInflationBuffer;
     char *deflationBuffer;
     char *inflationBuffer;
 
@@ -187,7 +188,8 @@ struct DeflationStream {
 
 struct InflateResult {
     std::string_view data;
-    /* 0 on success, else the WebSocket close code: 1007 corrupt stream, 1009 over maxPayloadLength */
+    /* 0 on success, otherwise a WebSocket close code: 1007 (corrupt stream), 1009 (over maxPayloadLength)
+     * or 1011 (out of memory) */
     int closeCode;
 };
 
@@ -214,13 +216,14 @@ struct InflationStream {
         memcpy(tailLocation, tail, 4);
         compressed = {compressed.data(), compressed.length() + 4};
 
-        /* We clear this one here, could be done better */
+        /* We clear this one here, could be done better. clear() keeps the allocation for the next message. */
         zlibContext->dynamicInflationBuffer.clear();
 
         inflationStream.next_in = (Bytef *) compressed.data();
         inflationStream.avail_in = (unsigned int) compressed.length();
 
         int err;
+        bool outOfMemory = false;
         do {
             inflationStream.next_out = (Bytef *) zlibContext->inflationBuffer;
             inflationStream.avail_out = LARGE_BUFFER_SIZE;
@@ -236,8 +239,11 @@ struct InflationStream {
                 break;
             }
 
-            zlibContext->dynamicInflationBuffer.append(zlibContext->inflationBuffer, LARGE_BUFFER_SIZE - inflationStream.avail_out);
-
+            /* Don't return here. The shared stream still has to be reset below. */
+            if (!zlibContext->dynamicInflationBuffer.tryAppend(zlibContext->inflationBuffer, LARGE_BUFFER_SIZE - inflationStream.avail_out)) {
+                outOfMemory = true;
+                break;
+            }
 
         } while (inflationStream.avail_out == 0 && zlibContext->dynamicInflationBuffer.length() <= maxPayloadLength);
 
@@ -247,6 +253,12 @@ struct InflationStream {
 
         /* Restore the bytes we used for the tail */
         memcpy(tailLocation, preTailBytes, 4);
+
+        if (outOfMemory) {
+            /* Every connection on this loop shares this buffer, so free it. */
+            zlibContext->dynamicInflationBuffer.release();
+            return {{}, 1011};
+        }
 
         if (err != Z_BUF_ERROR && err != Z_OK) {
             return {{}, 1007};
@@ -258,8 +270,11 @@ struct InflationStream {
 
         std::string_view inflated(zlibContext->inflationBuffer, LARGE_BUFFER_SIZE - inflationStream.avail_out);
         if (zlibContext->dynamicInflationBuffer.length()) {
-            zlibContext->dynamicInflationBuffer.append(inflated);
-            inflated = zlibContext->dynamicInflationBuffer;
+            if (!zlibContext->dynamicInflationBuffer.tryAppend(inflated.data(), inflated.length())) {
+                zlibContext->dynamicInflationBuffer.release();
+                return {{}, 1011};
+            }
+            inflated = {zlibContext->dynamicInflationBuffer.data(), zlibContext->dynamicInflationBuffer.length()};
         }
 
         if (inflated.length() > maxPayloadLength) {

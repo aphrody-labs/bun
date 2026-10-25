@@ -105,7 +105,7 @@ test("Error inside minified file (no color) ", () => {
       error: error inside long minified file!
             at <anonymous> ([dir]/inspect-error-fixture.min.js:26:2850)
             at <anonymous> ([dir]/inspect-error-fixture.min.js:26:2890)
-            at <anonymous> ([dir]/inspect-error.test.js:86:7)"
+            at <anonymous> ([dir]/inspect-error.test.js:87:5)"
     `);
   }
 });
@@ -134,7 +134,7 @@ test("Error inside minified file (color) ", () => {
       error: error inside long minified file!
             at <anonymous> ([dir]/inspect-error-fixture.min.js:26:2850)
             at <anonymous> ([dir]/inspect-error-fixture.min.js:26:2890)
-            at <anonymous> ([dir]/inspect-error.test.js:114:7)"
+            at <anonymous> ([dir]/inspect-error.test.js:115:5)"
     `);
   }
 });
@@ -235,6 +235,25 @@ test("error.stack throwing an error doesn't lead to a crash", () => {
   expect(() => {
     throw err;
   }).toThrow();
+});
+
+test("an uncaught error whose message getter throws exits with code 1", async () => {
+  await using proc = Bun.spawn({
+    cmd: [
+      bunExe(),
+      "-e",
+      `class E extends Error { get message() { throw new RangeError("from the getter"); } }
+      setTimeout(() => { setImmediate(() => console.log("immediate")); throw new E(); }, 0);
+      console.log("after");`,
+    ],
+    env: bunEnv,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  expect(stderr).toContain("throw new E()");
+  expect(stdout).toBe("after\nimmediate\n");
+  expect(exitCode).toBe(1);
 });
 
 describe("source map remapping of the printed stack", () => {
@@ -511,127 +530,88 @@ describe.concurrent("AggregateError whose errors cannot be walked", () => {
   });
 });
 
-// Imported here: the snapshots at the top of this file print its first lines.
-import { bunEnvWithoutTerminal } from "harness";
-import { realpathSync } from "node:fs";
-import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
-
-// The OSC 8 links in `output`, each as its text with `cwd` replaced by [dir], marked `link` when its URL is the
-// file the text names and `bad link <url>` otherwise.
-function terminalLinks(output, cwd) {
-  const found = [];
-  for (const [, url, text] of output.matchAll(/\x1b\]8;;([^\x1b]*)\x1b\\(.*?)\x1b\]8;;\x1b\\/g)) {
-    const plain = Bun.stripANSI(text);
-    const ok = url.startsWith("file:") && fileURLToPath(url) === resolve(cwd, plain.replace(/(:\d+)+$/, ""));
-    found.push(`${ok ? "link" : `bad link ${url}`} ${plain.replaceAll(cwd, "[dir]").replaceAll("\\", "/")}`);
+describe("an error with a circular reference to itself", () => {
+  // Drops the source preview, stack frames, blank lines and the version line.
+  function rendered(text) {
+    return text
+      .split("\n")
+      .filter(line => !/^\s*\d+ \| /.test(line) && !/^\s*\^\s*$/.test(line) && !/^\s+at /.test(line))
+      .filter(line => line.trim() !== "" && !line.startsWith("Bun v"));
   }
-  return found;
-}
 
-// Some sandboxes have no pseudo-terminals.
-const hasTerminal = (() => {
-  try {
-    new Bun.Terminal({}).close();
-    return true;
-  } catch {
-    return false;
-  }
-})();
+  test("prints [Circular] under the key that closes the cycle", () => {
+    const self = new Error("x");
+    self.self = self;
+    expect(rendered(Bun.inspect(self))).toEqual(["error: x", " self: [Circular],"]);
 
-describe.concurrent("OSC 8 links to the files of printed errors", () => {
-  const files = {
-    "main.js": `function f() {\n  throw new Error("boom");\n}\nconsole.log(Bun.inspect(new Error("x")).includes("\\x1b]8;"));\nf();\n`,
-    "syntax.js": "const x = );\n",
-  };
+    const a = new Error("a");
+    a.cause = new Error("b", { cause: a });
+    expect(rendered(Bun.inspect(a))).toEqual(["error: a", "error: b", " cause: [Circular],"]);
 
-  async function run(file, env) {
-    using dir = tempDir("terminal-links", files);
-    const cwd = realpathSync(String(dir));
+    const outer = new Error("a");
+    const inner = new Error("b");
+    outer.x = [inner];
+    inner.y = inner;
+    expect(rendered(Bun.inspect(outer))).toEqual(["error: a", " x: [", "error: b", " y: [Circular],", "],"]);
+  });
+
+  test("is printed once when thrown", async () => {
     await using proc = Bun.spawn({
-      cmd: [bunExe(), file],
-      cwd,
-      env: { ...bunEnvWithoutTerminal, ...env },
+      cmd: [bunExe(), "-e", 'const e = new Error("cyc"); e.cause = e; e.errors = [e]; throw e;'],
+      env: bunEnv,
       stdout: "pipe",
       stderr: "pipe",
     });
-    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
-    return { stdout, links: terminalLinks(stderr, cwd), exitCode };
-  }
-
-  test("FORCE_HYPERLINK=1 links the stack trace, not Bun.inspect", async () => {
-    const { stdout, links, exitCode } = await run("main.js", { FORCE_HYPERLINK: "1" });
-    expect(links).toMatchInlineSnapshot(`
-      [
-        "link [dir]/main.js:2:13",
-        "link [dir]/main.js:5:1",
-      ]
-    `);
-    expect(stdout).toBe("false\n");
-    expect(exitCode).toBe(1);
+    const [stderr, exitCode] = await Promise.all([proc.stderr.text(), proc.exited]);
+    expect({ lines: rendered(stderr), exitCode }).toEqual({
+      lines: ["error: cyc", "  cause: [Circular],", " errors: [", "  [Circular]", "],"],
+      exitCode: 1,
+    });
   });
 
-  test("FORCE_HYPERLINK=1 links the location of a syntax error", async () => {
-    const { links, exitCode } = await run("syntax.js", { FORCE_HYPERLINK: "1" });
-    expect(links).toMatchInlineSnapshot(`
-      [
-        "link [dir]/syntax.js:1:11",
-      ]
-    `);
-    expect(exitCode).toBe(1);
+  test("an error that appears twice without a cycle is printed in full each time", () => {
+    const e = new Error("twice");
+    e.meta = {};
+    const lines = rendered(Bun.inspect([e, { a: e, b: { c: e } }]));
+    expect(lines.filter(line => line.trim() === "error: twice").length).toBe(3);
+    expect(lines.filter(line => line.includes("[Circular]"))).toEqual([]);
   });
+});
 
-  test.each([
-    ["in CI", {}],
-    ["on a pipe", { CI: undefined, TERM_PROGRAM: "ghostty", TERM_PROGRAM_VERSION: "1.2.0" }],
-    ["with BUN_TERMINAL_FEATURES=0", { BUN_TERMINAL_FEATURES: "0", FORCE_HYPERLINK: "1" }],
-    ["with FORCE_HYPERLINK=0", { BUN_TERMINAL_FEATURES: "1", FORCE_HYPERLINK: "0" }],
-  ])("no links %s", async (_, env) => {
-    const { links, exitCode } = await run("main.js", env);
-    expect(links).toEqual([]);
-    expect(exitCode).toBe(1);
+// `Malloc=1` lets ASAN catch a read past the end of the source.
+test.concurrent("prints the source preview for an error positioned at the end of the source text", async () => {
+  await using proc = Bun.spawn({
+    cmd: [bunExe(), "-e", `(0, eval)("xyz");`],
+    env: { ...bunEnv, NO_COLOR: "1", Malloc: "1" },
+    stdout: "pipe",
+    stderr: "pipe",
   });
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  expect({ stdout, excerpt: stderr.split("\n").slice(0, 3) }).toEqual({
+    stdout: "",
+    excerpt: ["1 | xyz", "       ^", "ReferenceError: xyz is not defined"],
+  });
+  expect(exitCode).toBe(1);
+});
 
-  describe.skipIf(!hasTerminal)("in a terminal", () => {
-    async function inTerminal(env) {
-      using dir = tempDir("terminal-links", files);
-      const cwd = realpathSync(String(dir));
-      const decoder = new TextDecoder();
-      let output = "";
-      await using proc = Bun.spawn({
-        cmd: [bunExe(), "main.js"],
-        cwd,
-        env: { ...bunEnvWithoutTerminal, CI: undefined, NO_COLOR: undefined, TERM: "xterm-256color", ...env },
-        terminal: {
-          cols: 200,
-          rows: 24,
-          data(_terminal, chunk) {
-            output += decoder.decode(chunk, { stream: true });
-          },
-        },
-      });
-      await proc.exited;
-      // Windows' pseudo-console redraws the screen: it adds an id to each link and may break its text across lines.
-      return [...output.matchAll(/\x1b\]8;[^;\x1b]*;(file:[^\x1b]+)\x1b\\/g)].map(([, url]) =>
-        fileURLToPath(url).replace(cwd, "[dir]").replaceAll("\\", "/"),
-      );
+test.concurrent("reports the right position for a multi-line `new` expression in a 16-bit source", async () => {
+  const source = `/* 中 */
+function code() {
+  throw new (class Boom extends Error {
+    constructor(message) {
+      super(message);
     }
-
-    test("links on a terminal known to support them", async () => {
-      expect(await inTerminal({ TERM_PROGRAM: "ghostty", TERM_PROGRAM_VERSION: "1.2.0" })).toMatchInlineSnapshot(`
-        [
-          "[dir]/main.js",
-          "[dir]/main.js",
-        ]
-      `);
-    });
-
-    test.each([
-      ["on an unknown terminal", {}],
-      ["in CI", { TERM_PROGRAM: "ghostty", CI: "1" }],
-      ["inside tmux", { TERM_PROGRAM: "ghostty", TMUX: "/tmp/tmux-0/default,1,0" }],
-    ])("no links %s", async (_, env) => {
-      expect(await inTerminal(env)).toEqual([]);
-    });
+  })("boom");
+}
+code();`;
+  await using proc = Bun.spawn({
+    cmd: [bunExe(), "-e", `(0, eval)(${JSON.stringify(source)});`],
+    env: { ...bunEnv, NO_COLOR: "1" },
+    stdout: "pipe",
+    stderr: "pipe",
   });
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  expect(stdout).toBe("");
+  expect(stderr).toMatch(/error: boom\n +at code \(.*:3:9\)\n/);
+  expect(exitCode).toBe(1);
 });

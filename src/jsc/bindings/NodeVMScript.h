@@ -13,6 +13,7 @@ public:
     WTF::Vector<uint8_t> cachedData;
     std::optional<int64_t> timeout = std::nullopt;
     bool produceCachedData = false;
+    bool cachedDataProvided = false;
 
     using BaseVMOptions::BaseVMOptions;
 
@@ -62,8 +63,6 @@ public:
 
     static JSObject* createPrototype(VM& vm, JSGlobalObject* globalObject);
 
-    // Decodes options().cachedData into m_unlinkedCodeBlock and sets cachedDataRejected accordingly.
-    bool adoptCachedData(JSC::JSGlobalObject*);
     void cacheBytecode();
     JSC::JSUint8Array* getBytecodeBuffer();
 

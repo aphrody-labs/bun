@@ -1,16 +1,7 @@
 import { spawnSync } from "bun";
 import { beforeAll, describe, expect, it, test } from "bun:test";
-import {
-  bunEnv,
-  bunEnvWithoutTerminal,
-  bunExe,
-  isLinux,
-  isWindows,
-  tempDir,
-  tempDirWithFiles,
-  tmpdirSync,
-} from "harness";
-import { mkdirSync, realpathSync, rmSync, writeFileSync } from "node:fs";
+import { bunEnv, bunExe, isASAN, isLinux, isWindows, tempDir, tempDirWithFiles, tmpdirSync } from "harness";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { basename, dirname, join, resolve, sep } from "node:path";
 import { pathToFileURL } from "node:url";
 
@@ -393,6 +384,40 @@ describe("bun test", () => {
       });
       expect(stderr).toContain("Bailed out after 3 failures");
       expect(stderr).not.toContain("test #4");
+    });
+
+    // The failure is reported from a promise reaction, so the exit starts inside a JS frame.
+    test.skipIf(!isASAN)("tears down the VM without leaks", async () => {
+      using dir = tempDir("bun-test-bail-leak-check", {
+        "a.test.ts": `
+          import { test, expect } from "bun:test";
+          test("fails", async () => {
+            setTimeout(() => console.log("ran: timer"), 60_000);
+            await Bun.sleep(1);
+            console.log("ran: fails");
+            expect(1).toBe(2);
+          });
+          test("unreachable", () => {
+            console.log("ran: unreachable");
+          });
+        `,
+      });
+      await using proc = Bun.spawn({
+        cmd: [bunExe(), "test", "--bail"],
+        env: {
+          ...bunEnv,
+          BUN_DESTRUCT_VM_ON_EXIT: "1",
+          ASAN_OPTIONS: "allow_user_segv_handler=1:detect_leaks=1:abort_on_error=1",
+          LSAN_OPTIONS: `print_suppressions=0:suppressions=${join(import.meta.dir, "../../leaksan.supp")}`,
+        },
+        cwd: String(dir),
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+      expect(stdout.split("\n").filter(line => line.startsWith("ran: "))).toEqual(["ran: fails"]);
+      expect(stderr).toContain("Bailed out after 1 failure");
+      expect(exitCode, stderr).toBe(1);
     });
   });
   describe("--timeout", () => {
@@ -818,6 +843,42 @@ describe("bun test", () => {
       expect(testFile).toStartWith(`::error file=${basename(cwd)}${sep}workspace.test.ts,line=4,col=`);
       expect(sourceUrl).toStartWith("::error file=webpack%3A//app/./src/x.ts,line=1,col=");
       expect(sourceUrl).toContain("%0A      at fromSourceUrl (webpack://app/./src/x.ts:1:");
+    });
+    // The reporters reuse the buffer that stored the file's title while its tests ran.
+    test("should print the test file's name in the group for each --rerun-each run", () => {
+      const cwd = createTest([
+        {
+          filename: "helper.ts",
+          contents: `
+            import { expect } from "bun:test";
+            export function failing() {
+              expect(1).toBe(2);
+            }
+          `,
+        },
+        {
+          filename: "rerun.test.ts",
+          contents: `
+            import { test } from "bun:test";
+            import { failing } from "./helper";
+            test("fails", failing);
+          `,
+        },
+      ]);
+      const stderr = runTest({
+        cwd,
+        args: ["--rerun-each", "3"],
+        env: {
+          GITHUB_ACTIONS: "true",
+          GITHUB_WORKSPACE: undefined,
+        },
+        expectExitCode: 1,
+      });
+      expect(stderr.split("\n").filter(line => line.startsWith("::group::"))).toEqual([
+        "::group::rerun.test.ts: (run #1)",
+        "::group::rerun.test.ts: (run #2)",
+        "::group::rerun.test.ts: (run #3)",
+      ]);
     });
   });
   describe(".each", () => {
@@ -1808,6 +1869,24 @@ describe("bun test", () => {
       expect(exitCode).toBe(1);
     });
 
+    test("run when --bail stops a file that registered a node:test test", async () => {
+      const { stdout, stderr, exitCode } = await runFiles(
+        {
+          "node-bail.test.ts": `
+            import { test } from "node:test";
+            import assert from "node:assert";
+            process.on("exit", code => console.log("exit listener ran with", code));
+            test("fails", () => assert.strictEqual(1, 2));
+          `,
+        },
+        "--bail",
+        "node-bail.test.ts",
+      );
+      expect(stdout).toContain("exit listener ran with 1");
+      expect(stderr).toContain("Bailed out after 1 failure");
+      expect(exitCode).toBe(1);
+    });
+
     test("run for a bun:test file under BUN_TEST_DRAIN_EVENT_LOOP, which the vendored node tests set", async () => {
       using dir = tempDir("bun-test-exit-listener", { "drain.test.ts": bunTestFile(1) });
       await using proc = Bun.spawn({
@@ -2131,229 +2210,58 @@ describe.concurrent("test file discovery (scanner)", () => {
   });
 });
 
-describe.concurrent("@jest-environment docblock", () => {
-  // A minimal stand-in for jsdom and happy-dom: what the test runner reads from a window.
-  const fakeWindow = (title: string) => /* js */ `
-    class FakeEvent { constructor(type) { this.type = type; } }
-    class Window {
-      constructor(options) {
-        this.document = { title: ${JSON.stringify(title)} };
-        this.HTMLElement = class HTMLElement {};
-        this.Event = FakeEvent;
-        this.Array = function FakeArray() {};
-        this.location = { href: options.url };
-        this._internal = true;
-        this.window = this;
-      }
-      addEventListener(type, listener) { (this.listeners ??= []).push(listener); }
-      dispatchEvent(event) { for (const listener of this.listeners ?? []) listener(event); return true; }
-      close() { globalThis.closedWindows = (globalThis.closedWindows ?? 0) + 1; }
-    }
-  `;
-
-  test("installs the window of jsdom or happy-dom for the file and removes it after", async () => {
-    using dir = tempDir("jest-environment-docblock", {
-      "node_modules/jsdom/package.json": `{ "name": "jsdom", "main": "index.js" }`,
-      "node_modules/jsdom/index.js": `${fakeWindow("jsdom")}
-        exports.JSDOM = class JSDOM { constructor(html, options) { this.window = new Window(options); } };`,
-      "node_modules/happy-dom/package.json": `{ "name": "happy-dom", "main": "index.js" }`,
-      "node_modules/happy-dom/index.js": `${fakeWindow("happy-dom")}
-        exports.Window = Window;`,
-      "1-jsdom.test.js": `/**
-         * @jest-environment jsdom
-         */
-        import { expect, test } from "bun:test";
-        test("jsdom window", () => {
-          expect(document.title).toBe("jsdom");
-          expect(window.document).toBe(document);
-          expect(location.href).toBe("http://localhost/");
-          expect(new HTMLElement()).toBeInstanceOf(window.HTMLElement);
-          expect(Event).toBe(window.Event);
-          expect(Array).toBe([].constructor);
-          expect(typeof _internal).toBe("undefined");
-          let dispatched;
-          addEventListener("resize", event => (dispatched = event.type));
-          dispatchEvent(new Event("resize"));
-          expect(dispatched).toBe("resize");
-        });`,
-      "2-node.test.js": `import { expect, test } from "bun:test";
-        test("no window", () => {
-          expect(typeof document).toBe("undefined");
-          expect(typeof window).toBe("undefined");
-          expect(typeof location).toBe("undefined");
-          expect(Event.name).toBe("Event");
-          expect(globalThis.closedWindows).toBe(1);
-        });`,
-      "3-happy-dom.test.js": `// @vitest-environment happy-dom
-        import { expect, test } from "bun:test";
-        test("happy-dom window", () => {
-          expect(document.title).toBe("happy-dom");
-          expect(window.document).toBe(document);
-        });`,
-    });
-
-    await using proc = Bun.spawn({
-      cmd: [bunExe(), "test", "./1-jsdom.test.js", "./2-node.test.js", "./3-happy-dom.test.js"],
-      env: bunEnv,
-      cwd: String(dir),
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-    const [stderr, exitCode] = await Promise.all([proc.stderr.text(), proc.exited]);
-
-    expect(stderr).toContain(" 3 pass");
-    expect(stderr).toContain(" 0 fail");
-    expect(exitCode).toBe(0);
+test("reports a bunfig [test] root longer than the path buffer like a missing directory", async () => {
+  const root = Buffer.alloc(100_000, "r").toString();
+  using dir = tempDir("bunfig-root-too-long", {
+    "bunfig.toml": `[test]\nroot = "${root}"\n`,
+    "top.test.ts": `import { test } from "bun:test"; test("top", () => {});`,
   });
-
-  test("finds jsdom through jest-environment-jsdom, and fails the file when the package is missing", async () => {
-    using dir = tempDir("jest-environment-docblock-nested", {
-      "node_modules/jest-environment-jsdom/package.json": `{ "name": "jest-environment-jsdom", "main": "index.js" }`,
-      "node_modules/jest-environment-jsdom/index.js": `module.exports = {};`,
-      "node_modules/jest-environment-jsdom/node_modules/jsdom/package.json": `{ "name": "jsdom", "main": "index.js" }`,
-      "node_modules/jest-environment-jsdom/node_modules/jsdom/index.js": `${fakeWindow("nested jsdom")}
-        exports.JSDOM = class JSDOM { constructor(html, options) { this.window = new Window(options); } };`,
-      "jsdom.test.js": `/** @jest-environment jsdom */
-        import { expect, test } from "bun:test";
-        test("nested jsdom window", () => {
-          expect(document.title).toBe("nested jsdom");
-        });`,
-      "happy-dom.test.js": `/** @jest-environment happy-dom */
-        import { test } from "bun:test";
-        test("never runs", () => {});`,
-    });
-
-    await using proc = Bun.spawn({
-      cmd: [bunExe(), "test", "./jsdom.test.js", "./happy-dom.test.js"],
-      env: bunEnv,
-      cwd: String(dir),
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-    const [stderr, exitCode] = await Promise.all([proc.stderr.text(), proc.exited]);
-
-    expect(stderr).toContain(
-      `Test environment "happy-dom" needs "happy-dom" or "@happy-dom/jest-environment" installed`,
-    );
-    expect(stderr).toContain(" 1 pass");
-    expect(stderr).toContain(" 1 fail");
-    expect(exitCode).toBe(1);
+  await using proc = Bun.spawn({
+    cmd: [bunExe(), "test"],
+    env: bunEnv,
+    cwd: String(dir),
+    stderr: "pipe",
   });
+  const [stderr, exitCode] = await Promise.all([proc.stderr.text(), proc.exited]);
+
+  expect(stderr).toContain("Failed to scan non-existent root directory for tests:");
+  expect(stderr).toContain(root);
+  expect(exitCode).toBe(1);
 });
 
-describe.concurrent("terminal progress (OSC 9;4)", () => {
-  const pass = `import { test } from "bun:test";\ntest("pass", () => {});\n`;
-  const fail = `import { expect, test } from "bun:test";\ntest("fail", () => {\n  expect(1).toBe(2);\n});\n`;
-
-  async function bunTest(files: Record<string, string>, env: NodeJS.Dict<string>) {
-    using dir = tempDir("bun-test-progress", files);
-    const cwd = realpathSync(String(dir));
-    await using proc = Bun.spawn({
-      cmd: [bunExe(), "test", ...Object.keys(files).map(file => `./${file}`)],
-      env: { ...bunEnvWithoutTerminal, ...env },
-      cwd,
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-    const [stderr, exitCode] = await Promise.all([proc.stderr.text(), proc.exited]);
-    const progress = [...stderr.matchAll(/\x1b\]9;4;(\d);(\d+)\x1b\\/g)].map(
-      ([, state, percent]) => `${state};${percent}`,
-    );
-    return { cwd, stderr, progress, exitCode };
-  }
-
-  test("reports the share of files run, then clears it", async () => {
-    const { progress, exitCode } = await bunTest(
-      { "a.test.ts": pass, "b.test.ts": pass },
-      { BUN_TERMINAL_FEATURES: "1" },
-    );
-    expect(progress).toMatchInlineSnapshot(`
-      [
-        "1;0",
-        "1;50",
-        "0;0",
-      ]
-    `);
-    expect(exitCode).toBe(0);
+test("hooks throw in a Worker", async () => {
+  using dir = tempDir("bun-test-hooks-in-worker", {
+    "hooks.test.ts": `
+      import { afterAll, afterEach, onTestFinished, test } from "bun:test";
+      import { isMainThread, parentPort, Worker } from "node:worker_threads";
+      if (isMainThread) {
+        test("starts a Worker", async () => {
+          const worker = new Worker(import.meta.filename);
+          worker.on("message", console.log);
+          await new Promise(resolve => worker.once("exit", resolve));
+        });
+      } else {
+        for (const hook of [afterEach, afterAll, onTestFinished]) {
+          try {
+            hook(() => {});
+          } catch (e) {
+            parentPort.postMessage(e.message);
+          }
+        }
+      }
+    `,
   });
-
-  test("turns to the error state once a test failed, and links the failure", async () => {
-    const { cwd, stderr, progress, exitCode } = await bunTest(
-      { "a.test.ts": fail, "b.test.ts": fail },
-      { BUN_TERMINAL_FEATURES: "1" },
-    );
-    expect(progress).toMatchInlineSnapshot(`
-      [
-        "1;0",
-        "2;50",
-        "0;0",
-      ]
-    `);
-    expect(stderr).toContain(`\x1b]8;;${pathToFileURL(join(cwd, "a.test.ts")).href}\x1b\\`);
-    expect(exitCode).toBe(1);
+  await using proc = Bun.spawn({
+    cmd: [bunExe(), "test", "hooks.test.ts"],
+    env: bunEnv,
+    cwd: String(dir),
+    stdout: "pipe",
+    stderr: "pipe",
   });
-
-  test.each([
-    ["in CI", {}],
-    ["on a pipe", { CI: undefined, TERM_PROGRAM: "ghostty", TERM_PROGRAM_VERSION: "1.2.0" }],
-    ["with BUN_TERMINAL_FEATURES=0", { BUN_TERMINAL_FEATURES: "0" }],
-  ])("is not reported %s", async (_, env) => {
-    const { stderr, progress, exitCode } = await bunTest({ "a.test.ts": pass, "b.test.ts": fail }, env);
-    expect(progress).toEqual([]);
-    expect(stderr).not.toContain("\x1b]8;");
-    expect(exitCode).toBe(1);
-  });
-
-  // Some sandboxes have no pseudo-terminals.
-  const hasTerminal = (() => {
-    try {
-      new Bun.Terminal({}).close();
-      return true;
-    } catch {
-      return false;
-    }
-  })();
-
-  describe.skipIf(!hasTerminal)("in a terminal", () => {
-    async function inTerminal(env: NodeJS.Dict<string>) {
-      using dir = tempDir("bun-test-progress", { "a.test.ts": pass, "b.test.ts": pass });
-      const decoder = new TextDecoder();
-      let output = "";
-      await using proc = Bun.spawn({
-        cmd: [bunExe(), "test", "./a.test.ts", "./b.test.ts"],
-        cwd: String(dir),
-        env: { ...bunEnvWithoutTerminal, CI: undefined, NO_COLOR: undefined, TERM: "xterm-256color", ...env },
-        terminal: {
-          cols: 120,
-          rows: 24,
-          data(_terminal, chunk) {
-            output += decoder.decode(chunk, { stream: true });
-          },
-        },
-      });
-      await proc.exited;
-      return [...output.matchAll(/\x1b\]9;4;(\d);(\d+)\x1b\\/g)].map(([, state, percent]) => `${state};${percent}`);
-    }
-
-    test("is reported by a terminal known to show it as progress", async () => {
-      expect(await inTerminal({ TERM_PROGRAM: "ghostty", TERM_PROGRAM_VERSION: "1.2.0" })).toMatchInlineSnapshot(`
-        [
-          "1;0",
-          "1;50",
-          "0;0",
-        ]
-      `);
-    });
-
-    test.each([
-      ["on an unknown terminal", {}],
-      [
-        "on a terminal that would show it as a notification",
-        { TERM_PROGRAM: "ghostty", TERM_PROGRAM_VERSION: "1.1.3" },
-      ],
-      ["inside tmux", { TERM_PROGRAM: "ghostty", TERM_PROGRAM_VERSION: "1.2.0", TMUX: "/tmp/tmux-0/default,1,0" }],
-    ])("is not reported %s", async (_, env) => {
-      expect(await inTerminal(env)).toEqual([]);
-    });
-  });
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  expect(stdout).toContain(
+    "Cannot use afterEach() in a Worker.\nCannot use afterAll() in a Worker.\nCannot use onTestFinished() in a Worker.\n",
+  );
+  expect(stderr).toContain(" 1 pass");
+  expect(exitCode).toBe(0);
 });

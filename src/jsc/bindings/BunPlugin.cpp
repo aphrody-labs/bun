@@ -22,7 +22,6 @@
 #include <JavaScriptCore/JavaScript.h>
 #include <JavaScriptCore/ObjectConstructor.h>
 #include <JavaScriptCore/RegExpObject.h>
-#include <JavaScriptCore/RegularExpression.h>
 #include <JavaScriptCore/SourceOrigin.h>
 #include <JavaScriptCore/Structure.h>
 #include <JavaScriptCore/SubspaceInlines.h>
@@ -43,13 +42,14 @@ BUN_DECLARE_HOST_FUNCTION(JSMock__jsMockFn);
 
 namespace Zig {
 
+static bool isValidNamespaceCharacter(char16_t c)
+{
+    return isASCIIAlphanumeric(c) || c == '_' || c == '-' || c == '/' || c == '@';
+}
+
 static bool isValidNamespaceString(String& namespaceString)
 {
-    static JSC::Yarr::RegularExpression* namespaceRegex = nullptr;
-    if (!namespaceRegex) {
-        namespaceRegex = new JSC::Yarr::RegularExpression("^([/@a-zA-Z0-9_\\-]+)$"_s);
-    }
-    return namespaceRegex->match(namespaceString) > -1;
+    return !namespaceString.isEmpty() && namespaceString.containsOnly<isValidNamespaceCharacter>();
 }
 
 static JSC::EncodedJSValue jsFunctionAppendOnLoadPluginBody(JSC::JSGlobalObject* globalObject, JSC::CallFrame* callframe, BunPluginTarget target, BunPlugin::Base& plugin)
@@ -100,7 +100,7 @@ static JSC::EncodedJSValue jsFunctionAppendOnLoadPluginBody(JSC::JSGlobalObject*
 
     plugin.append(vm, filter->regExp(), func.getObject(), namespaceString);
 
-    return JSValue::encode(callframe->thisValue());
+    return JSValue::encode(callframe->thisValue().toThis(globalObject, JSC::ECMAMode::strict()));
 }
 
 static EncodedJSValue jsFunctionAppendVirtualModulePluginBody(JSC::JSGlobalObject* globalObject, JSC::CallFrame* callframe)
@@ -164,7 +164,7 @@ static EncodedJSValue jsFunctionAppendVirtualModulePluginBody(JSC::JSGlobalObjec
         global->moduleLoader()->removeEntry(idIdent); // takes the loader's cellLock itself
     }
 
-    return JSValue::encode(callframe->thisValue());
+    return JSValue::encode(callframe->thisValue().toThis(globalObject, JSC::ECMAMode::strict()));
 }
 
 static JSC::EncodedJSValue jsFunctionAppendOnResolvePluginBody(JSC::JSGlobalObject* globalObject, JSC::CallFrame* callframe, BunPluginTarget target, BunPlugin::Base& plugin)
@@ -215,7 +215,7 @@ static JSC::EncodedJSValue jsFunctionAppendOnResolvePluginBody(JSC::JSGlobalObje
 
     plugin.append(vm, filter->regExp(), uncheckedDowncast<JSObject>(func), namespaceString);
 
-    return JSValue::encode(callframe->thisValue());
+    return JSValue::encode(callframe->thisValue().toThis(globalObject, JSC::ECMAMode::strict()));
 }
 
 static JSC::EncodedJSValue jsFunctionAppendOnResolvePluginGlobal(JSC::JSGlobalObject* globalObject, JSC::CallFrame* callframe, BunPluginTarget target)
@@ -387,6 +387,15 @@ JSC::JSObject* BunPlugin::Group::find(JSC::JSGlobalObject* globalObject, String&
     }
 
     return nullptr;
+}
+
+// fileSystemPath() returns null if a percent escape in the specifier doesn't decode to UTF-8. Retry with every "%" escaped.
+static String relativeSpecifierToFileSystemPath(const URL& base, const String& specifier)
+{
+    String path = URL(base, specifier).fileSystemPath();
+    if (path.isNull()) [[unlikely]]
+        path = URL(base, makeStringByReplacingAll(specifier, "%"_s, "%25"_s)).fileSystemPath();
+    return path;
 }
 
 void BunPlugin::OnLoad::addModuleMock(JSC::VM& vm, const String& path, JSC::JSObject* mockObject)
@@ -687,9 +696,10 @@ static void resolveMockSpecifier(Zig::GlobalObject* globalObject, JSC::CallFrame
     const URL& url = sourceOrigin.url();
 
     if (specifier.startsWith("file:"_s)) {
-        URL fileURL = URL(url, specifier);
-        if (fileURL.isValid()) {
-            specifier = fileURL.fileSystemPath();
+        // fileSystemPath() returns null if the percent-decoded path isn't valid UTF-8.
+        String path = URL(url, specifier).fileSystemPath();
+        if (!path.isNull()) {
+            specifier = WTF::move(path);
             specifierString = jsString(vm, specifier);
             globalObject->onLoadPlugins.mustDoExpensiveRelativeLookup = true;
             return;
@@ -721,7 +731,7 @@ static void resolveMockSpecifier(Zig::GlobalObject* globalObject, JSC::CallFrame
                 globalObject->onLoadPlugins.mustDoExpensiveRelativeLookup = true;
 
                 if (relativeURL.protocolIsFile())
-                    specifier = relativeURL.fileSystemPath();
+                    specifier = relativeSpecifierToFileSystemPath(url, specifier);
                 else
                     specifier = relativeURL.string();
 
@@ -1608,9 +1618,12 @@ EncodedJSValue BunPlugin::OnLoad::run(JSC::JSGlobalObject* globalObject, const B
 
     JSC::JSObject* paramsObject = JSC::constructEmptyObject(globalObject, globalObject->objectPrototype(), 1);
     const auto& builtinNames = WebCore::builtinNames(vm);
+    // `pathString` can borrow the caller's bytes, and `args.path` outlives this call, so give it a copy.
+    auto* pathJS = Bun::toJS(globalObject, *path);
+    RETURN_IF_EXCEPTION(scope, {});
     paramsObject->putDirect(
         vm, builtinNames.pathPublicName(),
-        jsString(vm, pathString));
+        pathJS);
     arguments.append(paramsObject);
 
     auto result = AsyncContextFrame::call(globalObject, function, JSC::jsUndefined(), arguments);
@@ -1641,13 +1654,16 @@ std::optional<String> BunPlugin::OnLoad::resolveVirtualModule(const String& path
 {
     ASSERT(virtualModules);
 
+    if (path.isNull()) [[unlikely]]
+        return std::nullopt;
+
     if (this->mustDoExpensiveRelativeLookup) {
         String joinedPath = path;
 
         if (path.startsWith("./"_s) || path.startsWith(".."_s)) {
             auto url = WTF::URL::fileURLWithFileSystemPath(from);
             ASSERT(url.isValid());
-            joinedPath = URL(url, path).fileSystemPath();
+            joinedPath = relativeSpecifierToFileSystemPath(url, path);
         }
 
         return virtualModules->contains(joinedPath) && !actualModuleRequests.contains(joinedPath) ? std::optional<String> { joinedPath } : std::nullopt;

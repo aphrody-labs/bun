@@ -34,7 +34,7 @@ extern "C" bool Bun__NodeCompileCache__fetchInternalModule(uint32_t id, const ui
 namespace Bun {
 
 extern "C" bool BunTest__shouldGenerateCodeCoverage(const BunString* sourceURL);
-extern "C" void ByteRangeMapping__generate(const BunString* sourceURL, const BunString* code, int sourceID);
+extern "C" void ByteRangeMapping__generate(const BunString* sourceURL, const BunString* code, int sourceID, bool alreadyBundled);
 
 static void maybeAddCodeCoverage(JSC::VM& vm, const JSC::SourceCode& code)
 {
@@ -45,7 +45,7 @@ static void maybeAddCodeCoverage(JSC::VM& vm, const JSC::SourceCode& code)
     if (shouldGenerateCodeCoverage) {
         WTF::String sourceString = code.provider()->source().toStringWithoutCopying();
         BunString source = Bun::toString(sourceString);
-        ByteRangeMapping__generate(&sourceURL, &source, code.provider()->asID());
+        ByteRangeMapping__generate(&sourceURL, &source, code.provider()->asID(), false);
     }
 #endif
 }

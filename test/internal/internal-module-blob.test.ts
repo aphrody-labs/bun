@@ -4,73 +4,9 @@
 // offsets. A wrong offset or length here surfaces as a SyntaxError when JSC
 // parses a module or a @-intrinsic builtin function from the blob.
 import { expect, test } from "bun:test";
-import { bunEnv, bunExe, tempDir } from "harness";
+import { bunEnv, bunExe, isWindows, tempDir } from "harness";
+import { chmodSync, closeSync, cpSync, fstatSync, openSync, readSync, writeSync } from "node:fs";
 import { join } from "node:path";
-import { sliceSourceCode } from "../../src/codegen/builtin-parser.ts";
-import { createInternalModuleRegistry } from "../../src/codegen/internal-module-registry-scanner.ts";
-
-test("builtin requires resolve the module at registry index zero", () => {
-  using dir = tempDir("internal-module-zero", {
-    "src/js/bun/a.ts": "export default {};",
-    "src/js/node/a.ts": "export default {};",
-    "src/js/internal/a.ts": "export default {};",
-    "src/js/thirdparty/a.ts": "export default {};",
-    "src/jsc/modules/NativeModuleList.h": 'macro("node:buffer"_s, Buffer)',
-  });
-  const registry = createInternalModuleRegistry(join(String(dir), "src/js"));
-  expect(registry.moduleList[0]).toBe("bun/a.ts");
-  expect(registry.requireTransformer("bun:a", "bun/consumer.ts")).toBe(
-    "(__intrinsic__getInternalField(__intrinsic__internalModuleRegistry, 0/*bun:a*/) || __intrinsic__createInternalModuleById(0/*bun:a*/))",
-  );
-});
-
-test("module preprocessing extracts declarations without changing embedded worker sources", () => {
-  const declarations = [
-    'import type { WorkerOptions } from "worker-types";',
-    'import value, { named as alias } from "values";',
-    'import * as namespace from "namespace";',
-    'import "side-effects";',
-  ];
-  const body = [
-    'const worker = `import { parentPort } from "node:worker_threads"; export {};`;',
-    "const quoted = \"import { value } from 'strings'; export {};\";",
-    "const expression = /import { value } from 'regex'; export {};/;",
-    '// import { value } from "line-comment"; export {};',
-    '/* import { value } from "block-comment"; export {}; */',
-    'const escaped = `\\` import { value } from "escaped"; \\${notAnInterpolation}`;',
-    'const nested = `outer ${`import { value } from "nested"; export {};`}`;',
-    'const dynamic = import("dynamic-module");',
-    "export default worker;",
-  ].join("\n");
-  const imports: string[] = [];
-  const { result, rest } = sliceSourceCode(
-    "{" + declarations.join("\n") + "\n" + body + "\nexport {};\n}",
-    false,
-    undefined,
-    false,
-    imports,
-  );
-  expect(imports).toEqual(declarations);
-  expect(result).toBe("{" + "\n".repeat(declarations.length) + body + "\n\n}");
-  expect(rest).toBe("");
-});
-
-test("module preprocessing retains import attributes and rewrites executable requires", () => {
-  const declaration = 'import /* type owner */ type { Options }\nfrom /* source */ "types";';
-  const attributed = 'import data from "data.json" with { type: "json", note: "export {};" };';
-  const imports: string[] = [];
-  const { result, rest } = sliceSourceCode(
-    "{" + declaration + "\n" + attributed + '\nconst value = `${require("node:path")}`;\nexport default value;\n}',
-    true,
-    specifier => `load(${JSON.stringify(specifier)})`,
-    false,
-    imports,
-  );
-  expect(imports).toEqual([declaration, attributed]);
-  expect(result).toContain('const value = `${load("node:path")}`;');
-  expect(result).toContain("__intrinsic__exports = value;");
-  expect(rest).toBe("");
-});
 
 test("internal JS builtin function and module sources parse from the linked blob", async () => {
   await using proc = Bun.spawn({
@@ -103,3 +39,72 @@ test("internal JS builtin function and module sources parse from the linked blob
   const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
   expect({ stdout: stdout.trim(), stderr, exitCode }).toEqual({ stdout: "blob-ok", stderr: "", exitCode: 0 });
 });
+
+// Returns the builtins section header's offset in a bun executable. Reads in chunks because a debug build is 800 MB.
+function findBuiltinsHeader(fd: number) {
+  const magic = "BUNBLTNS";
+  const chunk = Buffer.alloc(16 * 1024 * 1024 + 48);
+  const size = fstatSync(fd).size;
+  for (let start = 0; start < size; start += chunk.length - 48) {
+    const bytes = chunk.subarray(0, readSync(fd, chunk, 0, chunk.length, start));
+    for (let at = bytes.indexOf(magic); at !== -1 && at + 48 <= bytes.length; at = bytes.indexOf(magic, at + 1)) {
+      // The magic also appears as a constant in the code that reads the section, so check the header's modulesOffset.
+      if (bytes.readUInt32LE(at + 20) === 48) return start + at;
+    }
+  }
+  throw new Error("no builtins section in " + bunExe());
+}
+
+// JavaScriptCore crashes on a private name (`@name`) that it doesn't define.
+test("--compile --bytecode skips internal modules when the target has a different engine stamp", async () => {
+  using dir = tempDir("builtins-engine-stamp", {
+    "app.js": `import os from "node:os";
+import { internalModulesLoadedFromBytecode } from "bun:internal-for-testing";
+console.log(JSON.stringify({ eol: os.EOL, fromBytecode: internalModulesLoadedFromBytecode() }));`,
+  });
+  const target = join(String(dir), isWindows ? "target.exe" : "target");
+  cpSync(bunExe(), target);
+  chmodSync(target, 0o755);
+  const fd = openSync(target, "r+");
+  try {
+    const engineStampAt = findBuiltinsHeader(fd) + 40;
+    const stamp = Buffer.alloc(4);
+    readSync(fd, stamp, 0, 4, engineStampAt);
+    stamp[0] ^= 1;
+    writeSync(fd, stamp, 0, 4, engineStampAt);
+  } finally {
+    closeSync(fd);
+  }
+
+  const outfile = join(String(dir), isWindows ? "out.exe" : "out");
+  await using build = Bun.spawn({
+    cmd: [
+      bunExe(),
+      "build",
+      "--compile",
+      "--bytecode",
+      "--format=esm",
+      `--compile-executable-path=${target}`,
+      "app.js",
+      "--outfile",
+      outfile,
+    ],
+    env: bunEnv,
+    cwd: String(dir),
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [, buildStderr, buildExitCode] = await Promise.all([build.stdout.text(), build.stderr.text(), build.exited]);
+  expect({ stderr: buildExitCode === 0 ? "" : buildStderr, exitCode: buildExitCode }).toEqual({
+    stderr: "",
+    exitCode: 0,
+  });
+
+  await using proc = Bun.spawn({ cmd: [outfile], env: bunEnv, stdout: "pipe", stderr: "pipe" });
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  expect({ stdout: stdout.trim(), stderr, exitCode }).toEqual({
+    stdout: JSON.stringify({ eol: isWindows ? "\r\n" : "\n", fromBytecode: 0 }),
+    stderr: "",
+    exitCode: 0,
+  });
+}, 60_000);
