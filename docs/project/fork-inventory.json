@@ -45,7 +45,7 @@
       "submoduleRevision": "aff07e145237acd9126c8a532419da7eb0d4a9d4",
       "upstream": "https://github.com/mullvad/mullvadvpn-app via aphrody-labs/mullvadvpn-app branch bun-embedded 9096ce027b8 (parent 493198790be)",
       "migrationState": "moved",
-      "notes": "GPL-3.0-or-later. WinFw (scripts/build/deps/winfw.ts) builds from plugins/vpn/vendor/mullvad and is enabled only when it is mounted. The source offer of the Linux sidecar now names aphrody-labs/bun-vpn; that repository is private, so the GPL corresponding-source offer needs it public (owner decision; not changed by the migration).",
+      "notes": "GPL-3.0-or-later. WinFw (scripts/build/deps/winfw.ts) builds from plugins/vpn/vendor/mullvad and is enabled only when it is mounted. The source offer of the Linux sidecar names aphrody-labs/bun-vpn, which is public (2026-10-25), as is aphrody-labs/mullvadvpn-app.",
       "bunOsCommit": "ba1a7c65e0"
     },
     {
