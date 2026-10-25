@@ -207,14 +207,16 @@
         "packages/bun-fluent",
         "packages/bun-icons"
       ],
-      "type": "tree",
+      "type": "packages",
       "kind": "package",
       "destinationRepo": "https://github.com/aphrody-labs/bun-ui",
-      "bunOsPath": null,
-      "submoduleRevision": null,
+      "bunOsPath": "vendor/bun-ui (mounted by the bun-ui owner session)",
+      "submoduleRevision": "3a8e05beaf9a7eaedf8b1208227afd161aba4020",
       "upstream": null,
-      "migrationState": "pending",
-      "notes": "Destination aphrody-labs/bun-ui packages/<name>, imported by its owner session; Bun OS mounts bun-ui as one submodule. Create templates keep the npm bun-plugin-tailwind references."
+      "migrationState": "moved",
+      "notes": "Imported by the bun-ui owner as packages/<name> with Git trees identical to aphrody-labs/bun c538f052908 (bun-m3 fe6b0a3b8b9a, bun-plugin-tailwind 55baed902989, bun-next 20b8acebc9ba, web 471c7cde9a82, bun-web b03d69cd537d, bun-webview-page fe2d71524217, bun-fluent 4cc8a5d18bbb, bun-icons 2a922d933bbc). Removed from the root workspaces, bun.lock, the typecheck script and the npm publish list (bun-ui publishes them). The fork mounts bun-ui as packages/bun-ui because release and site tooling (release-surfaces, release-mirror, release-graph, monorepo-delivery, source-markdown, site-mirror, brand-sync, dataset publish, rio-material-icon) imports packages/web/site and bun-icons; those scripts need the mount and its own bun install. Package tests moved with the packages (test/integration/bun-plugin-tailwind, test/integration/next-bun, test/internal/aphrody-site*.test.ts, test/internal/m3-document.d.ts) and were handed to the bun-ui owner; the WinUI Fluent token step left winui.yml. Create templates keep the npm bun-plugin-tailwind references.",
+      "forkMount": "packages/bun-ui",
+      "forkMountUpdate": "none"
     },
     {
       "component": "packages-misc",

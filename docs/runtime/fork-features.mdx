@@ -139,8 +139,8 @@ Fork crates under `src/`: `adblock`, `agent_tools`, `browser`, `bun-os`, `coreut
 ## Apps and deliverables
 
 - `aphrody-server`: one executable serving the bun.aphrody.app site and API with the same handler as the Cloudflare Worker ([aphrody-server](/project/aphrody-server)).
-- Static site, `llms.txt` and `llms-full.txt`: generated from `docs/` by `packages/web/site/build.ts`, so this page appears in both.
+- Static site, `llms.txt` and `llms-full.txt`: generated from `docs/` by `packages/bun-ui/packages/web/site/build.ts`, so this page appears in both.
 
 ## Keeping this page true
 
-When a command, module, package, tool or skill is added or removed, update this page, the `bun-fork-features` skill (`src/agent_tools/sections/bun-fork-features.md`) and the plugin memory note in the same change. Do not edit `llms.txt`, `llms-full.txt`, `README.md` or `.claude/skills/*` generated files by hand; their generators are `packages/web/site/build.ts`, `scripts/aphrody/release-surfaces.ts` and `src/codegen/generate-agent-tools.ts`.
+When a command, module, package, tool or skill is added or removed, update this page, the `bun-fork-features` skill (`src/agent_tools/sections/bun-fork-features.md`) and the plugin memory note in the same change. Do not edit `llms.txt`, `llms-full.txt`, `README.md` or `.claude/skills/*` generated files by hand; their generators are `packages/bun-ui/packages/web/site/build.ts`, `scripts/aphrody/release-surfaces.ts` and `src/codegen/generate-agent-tools.ts`.

@@ -3,15 +3,15 @@ title: Aphrody self-hosted server
 description: One executable that serves the bun.aphrody.app site and its API, with the same request handler as the Cloudflare Worker.
 ---
 
-`packages/web/server` compiles the bun.aphrody.app site (static pages, `/install*`, `/llms.txt`) and its routes into a single executable. The Cloudflare Worker (`packages/web/cloudflare/src/worker.ts`) and the binary share one handler, `createAphrodyHandler` in `packages/web/cloudflare/src/core.ts`; each only supplies an `AphrodyPlatform` (storage, cache, limiters, AI).
+`packages/bun-ui/packages/web/server` compiles the bun.aphrody.app site (static pages, `/install*`, `/llms.txt`) and its routes into a single executable. The Cloudflare Worker (`packages/bun-ui/packages/web/cloudflare/src/worker.ts`) and the binary share one handler, `createAphrodyHandler` in `packages/bun-ui/packages/web/cloudflare/src/core.ts`; each only supplies an `AphrodyPlatform` (storage, cache, limiters, AI).
 
 ## Build
 
 ```bash
-bun packages/web/server/build.ts --out build/aphrody-server [--assets <built site>] [--target bun-linux-x64] [--origin https://example.org]
+bun packages/bun-ui/packages/web/server/build.ts --out build/aphrody-server [--assets <built site>] [--target bun-linux-x64] [--origin https://example.org]
 ```
 
-The script builds the site with `packages/web/site/build.ts`, embeds every file with `bun build --compile`, and writes `<out>/aphrody`.
+The script builds the site with `packages/bun-ui/packages/web/site/build.ts`, embeds every file with `bun build --compile`, and writes `<out>/aphrody`.
 
 ## Run
 

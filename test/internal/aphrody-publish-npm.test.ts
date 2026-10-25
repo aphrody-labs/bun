@@ -381,13 +381,13 @@ describe("publishManifest", () => {
 
   test("pins renamed product dependencies using their public package identity", () => {
     const out = publishManifest(
-      { dependencies: { "@aphrody/next-bun": "workspace:*" } },
+      { dependencies: { "@aphrody/fuzzy": "workspace:*" } },
       spec("bun-agent-plugin"),
       "1.4.4",
-      new Map([["bun-next", "1.4.4"]]),
+      new Map([["bun-fuzzy", "1.4.4"]]),
     );
-    expect(out.dependencies).toEqual({ "@aphrody/next-bun": "1.4.4" });
-    expect(rewriteSiblingImports('import "../bun-next/index.ts";')).toBe('import "@aphrody/next-bun";');
+    expect(out.dependencies).toEqual({ "@aphrody/fuzzy": "1.4.4" });
+    expect(rewriteSiblingImports('import "../bun-fuzzy/index.ts";')).toBe('import "@aphrody/fuzzy";');
   });
 
   test("debug adapter gains a pinned dependency on the inspector protocol", () => {
@@ -404,55 +404,6 @@ describe("publishManifest", () => {
     expect(out.dependencies).toEqual({
       semver: "^7.5.4",
       "@aphrody/bun-inspector-protocol": "0.0.2-aphrody.1",
-    });
-  });
-
-  test("a fork-only package keeps its own npm name and license", () => {
-    const out = publishManifest(
-      {
-        name: "@aphrody/next-bun",
-        version: "0.2.0",
-        license: "MIT AND Apache-2.0",
-        peerDependencies: { next: ">=16.0.0" },
-      },
-      spec("bun-next"),
-      "0.2.0-aphrody.1",
-      resolved,
-    );
-    expect(npmName(spec("bun-next"))).toBe("@aphrody/next-bun");
-    expect(out).toMatchObject({
-      name: "@aphrody/next-bun",
-      version: "0.2.0-aphrody.1",
-      license: "MIT AND Apache-2.0",
-      peerDependencies: { next: ">=16.0.0" },
-      repository: { directory: "packages/bun-next" },
-      publishConfig: { access: "public" },
-    });
-  });
-
-  test("bun-plugin-tailwind ships its Node.js build and pins the fork types", () => {
-    const out = publishManifest(
-      {
-        name: "@aphrody/bun-plugin-tailwind",
-        version: "0.1.0",
-        exports: {
-          "./postcss": { require: { bun: "./src/postcss.cjs", default: "./dist/postcss.cjs" } },
-        },
-        dependencies: { "@tailwindcss/node": "^4.3.3" },
-        devDependencies: { "@types/bun": "../bun-types" },
-      },
-      spec("bun-plugin-tailwind"),
-      "0.1.0-aphrody.1",
-      resolved,
-    );
-    expect(typeof spec("bun-plugin-tailwind").prepare).toBe("function");
-    expect(out).toMatchObject({
-      name: "@aphrody/bun-plugin-tailwind",
-      version: "0.1.0-aphrody.1",
-      exports: { "./postcss": { require: { default: "./dist/postcss.cjs" } } },
-      dependencies: { "@tailwindcss/node": "^4.3.3" },
-      devDependencies: { "@aphrody/bun-types": "1.4.3-aphrody.2" },
-      repository: { directory: "packages/bun-plugin-tailwind" },
     });
   });
 

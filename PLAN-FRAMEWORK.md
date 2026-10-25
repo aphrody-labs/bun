@@ -12,7 +12,7 @@ Statut : ✅ fait · 🔄 en cours · ⏳ à faire. Un chantier = un propriétai
 par `git pull --rebase` et ne réécris pas le travail d'un autre.
 ### C. Next sur Bun — `@aphrody/next-bun` (🔄)
 
-Fichiers : `packages/bun-next/**`, `test/integration/next-bun*/`, `test/integration/next-app/`.
+Fichiers : `packages/bun-ui/packages/bun-next/**`, `test/integration/next-bun*/`, `test/integration/next-app/`.
 
 - ✅ J0 fixture App Router ; J1 build Pages Router via Bun.build (`withBun`).
 - ✅ Couche Next d'Aphrody absorbée : runner `next-bun dev|build|start`, codemods, helpers instant-navigation.
@@ -53,7 +53,7 @@ Fichiers : `packages/bun-next/**`, `test/integration/next-bun*/`, `test/integrat
 
 ### D. Plugin Tailwind CSS — `@aphrody/bun-plugin-tailwind` (✅)
 
-Fichiers : `packages/bun-plugin-tailwind/**`, `test/integration/bun-plugin-tailwind/`, entrée dans
+Fichiers : `packages/bun-ui/packages/bun-plugin-tailwind/**`, `test/integration/bun-plugin-tailwind/`, entrée dans
 `scripts/aphrody/publish-npm.ts`.
 
 - ✅ Tailwind v4 (`@tailwindcss/node` + oxide) sans Node : Bun.build, serveur HTML (`[serve.static] plugins`),
@@ -66,7 +66,7 @@ Fichiers : `packages/bun-plugin-tailwind/**`, `test/integration/bun-plugin-tailw
   (`m3:theme.css`) (43607890888, @import à schéma laissés aux autres plugins : 4265629bb50).
 - ⏳ Aucune version publiée (.1 à .3) ne contient 4265629bb50 : `bun test m3/packages/m3-bun` a 16 échecs
   (« Can't resolve 'm3:tokens.css' ») ; avec la source du fork (`--tsconfig-override` vers
-  `packages/bun-plugin-tailwind/src`) 117 pass, 0 échec hors sous-processus, build en sous-processus vert (F2,
+  `packages/bun-ui/packages/bun-plugin-tailwind/src`) 117 pass, 0 échec hors sous-processus, build en sous-processus vert (F2,
   2026-10-09). `publish-npm.ts --dry-run --only bun-plugin-tailwind` → `0.1.0-aphrody.4` (17 fichiers, correctif inclus).
   À faire : publier, puis `@aphrody/bun-plugin-tailwind: 0.1.0-aphrody.4` dans `m3/packages/m3/package.json`
   d'aphrody, `bun install`, `bun test m3/packages/m3-bun`. Les 2 tests « sourcemap » du plugin attendent
@@ -81,7 +81,7 @@ Fichiers : `packages/bun-plugin-tailwind/**`, `test/integration/bun-plugin-tailw
 ### J. Shenron sur le fork (✅)
 
 Côté Shenron : `apps/site` (next.config.ts, scripts), `deploy/docker/**`, bun.lock ; côté fork : ajouts génériques
-dans `packages/bun-next`.
+dans `packages/bun-ui/packages/bun-next`.
 
 - ✅ Contournements génériques déplacés dans `@aphrody/next-bun` (`withBun` : racine du workspace pour Turbopack et
   le tracing, `alias`/`dedupe` pour Turbopack et webpack, `transpilePackages` détecté par les conditions de bundler,

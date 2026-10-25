@@ -25,7 +25,7 @@
  * that failed; exit 1 if any did.
  */
 
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import {
   closeSync,
   mkdtempSync,
@@ -38,7 +38,7 @@ import {
   statSync,
   writeFileSync,
 } from "node:fs";
-import { tmpdir } from "node:os";
+import { availableParallelism, tmpdir } from "node:os";
 import { dirname, isAbsolute, join } from "node:path";
 import { type BinaryExpectations, symbolList, versionScriptGlobals } from "./binary-expectations.ts";
 import { BuildError, assert } from "./error.ts";
@@ -848,17 +848,45 @@ const NM_ARGV_BUDGET = 16_000;
 /** Bytes of tool output parsed at a time: a debug JavaScriptCore.lib alone prints more than a JS string holds. */
 const OUTPUT_PIECE = 1 << 26;
 
+/** Chunks run at once: a debug link has ~2800 inputs, and one tool process per chunk in turn took minutes. */
+const CHUNK_CONCURRENCY = Math.max(1, Math.min(16, availableParallelism()));
+
+interface ChunkResult {
+  outPath: string;
+  status: number | null;
+  signal: NodeJS.Signals | null;
+  stderr: string;
+  error?: Error;
+}
+
+function runChunk(tool: string, argv: string[], outPath: string): Promise<ChunkResult> {
+  return new Promise(done => {
+    const out = openSync(outPath, "w");
+    const child = spawn(tool, argv, { stdio: ["ignore", out, "pipe"] });
+    let stderr = "";
+    child.stderr!.setEncoding("utf8").on("data", (s: string) => (stderr += s));
+    let error: Error | undefined;
+    child.on("error", e => (error = e));
+    child.on("close", (status, signal) => {
+      closeSync(out);
+      done({ outPath, status, signal, stderr, ...(error !== undefined ? { error } : {}) });
+    });
+  });
+}
+
 /**
- * Run `tool args... <inputs>` over all inputs, chunked to stay under the argv limit. The output
- * goes to a file and is yielded in pieces that end right before a line starting with `marker`
- * (or at a line end when `marker` is omitted), so no record straddles two pieces.
+ * Run `tool args... <inputs>` over all inputs, chunked to stay under the argv limit, up to
+ * CHUNK_CONCURRENCY chunks at once. Each chunk's output goes to a file and is yielded, in input
+ * order, in pieces that end right before a line starting with `marker` (or at a line end when
+ * `marker` is omitted), so no record straddles two pieces.
  */
-function* chunkedRun(
+async function* chunkedRun(
   tool: string,
   args: string[],
   inputs: string[],
   marker?: string,
-): Generator<{ stdout: string; stderr: string }> {
+): AsyncGenerator<{ stdout: string; stderr: string }> {
+  const chunks: { start: number; end: number }[] = [];
   for (let start = 0; start < inputs.length;) {
     let end = start;
     let length = 0;
@@ -866,33 +894,41 @@ function* chunkedRun(
       length += inputs[end]!.length + 1;
       end++;
     } while (end < inputs.length && length + inputs[end]!.length < NM_ARGV_BUDGET);
-    const outPath = join(tmpdir(), `verify-binary-${process.pid}-${start}.out`);
-    const out = openSync(outPath, "w");
-    let r;
-    try {
-      r = spawnSync(tool, [...args, ...inputs.slice(start, end)], {
-        stdio: ["ignore", out, "pipe"],
-        encoding: "utf8",
-        maxBuffer: 1 << 30,
-      });
-    } finally {
-      closeSync(out);
-    }
-    try {
-      if (r.error) throw new BuildError(`duplicates: failed to run ${tool}`, { cause: r.error });
-      if (r.signal) throw new BuildError(`duplicates: ${tool} died with ${r.signal}\n${r.stderr}`);
-      // A non-zero exit means some input could not be read; the caller turns
-      // the stderr lines into per-file diagnostics rather than dropping them.
-      let stderr = r.status === 0 ? "" : r.stderr || `${tool} exited ${r.status}`;
-      for (const stdout of readPieces(outPath, marker)) {
-        yield { stdout, stderr };
-        stderr = "";
-      }
-      if (stderr) yield { stdout: "", stderr };
-    } finally {
-      rmSync(outPath, { force: true });
-    }
+    chunks.push({ start, end });
     start = end;
+  }
+  const running: Promise<ChunkResult>[] = [];
+  let next = 0;
+  const launch = () => {
+    while (next < chunks.length && running.length < CHUNK_CONCURRENCY) {
+      const { start, end } = chunks[next++]!;
+      const outPath = join(tmpdir(), `verify-binary-${process.pid}-${start}.out`);
+      running.push(runChunk(tool, [...args, ...inputs.slice(start, end)], outPath));
+    }
+  };
+  launch();
+  try {
+    while (running.length > 0) {
+      const r = await running.shift()!;
+      launch();
+      try {
+        if (r.error) throw new BuildError(`duplicates: failed to run ${tool}`, { cause: r.error });
+        if (r.signal) throw new BuildError(`duplicates: ${tool} died with ${r.signal}\n${r.stderr}`);
+        // A non-zero exit means some input could not be read; the caller turns
+        // the stderr lines into per-file diagnostics rather than dropping them.
+        let stderr = r.status === 0 ? "" : r.stderr || `${tool} exited ${r.status}`;
+        for (const stdout of readPieces(r.outPath, marker)) {
+          yield { stdout, stderr };
+          stderr = "";
+        }
+        if (stderr) yield { stdout: "", stderr };
+      } finally {
+        rmSync(r.outPath, { force: true });
+      }
+    }
+  } finally {
+    // A failure above leaves chunks in flight: wait for them and remove their output.
+    for (const r of await Promise.all(running)) rmSync(r.outPath, { force: true });
   }
 }
 
@@ -955,18 +991,18 @@ interface Definition {
  * objects it covered (nm's lines for those are then ignored). Bitcode
  * members are skipped by objdump and stay with nm.
  */
-function coffDefinitions(
+async function coffDefinitions(
   objdump: string,
   allInputs: string[],
   errors: string[],
-): { defs: Definition[]; objects: Set<string> } {
+): Promise<{ defs: Definition[]; objects: Set<string> }> {
   const defs: Definition[] = [];
   const objects = new Set<string>();
   const IMAGE_COMDAT_SELECT_NODUPLICATES = 1;
   // A standalone bitcode .obj makes objdump stop at it ("not a valid object
   // file"), so those go to nm only; inside archives objdump skips them itself.
   const inputs = allInputs.filter(f => !isBitcode(f));
-  for (const { stdout: out, stderr } of chunkedRun(objdump, ["-t"], inputs, ":\tfile format ")) {
+  for await (const { stdout: out, stderr } of chunkedRun(objdump, ["-t"], inputs, ":\tfile format ")) {
     errors.push(...toolErrors(stderr));
     // One block per object: `<path>:\tfile format coff-…` or `<archive>(<member>):…`.
     for (const block of out.split(/^(?=\S.*:\tfile format )/m)) {
@@ -1005,7 +1041,12 @@ function coffDefinitions(
   return { defs, objects };
 }
 
-function verifyDuplicates(nm: string, objdump: string | undefined, rspfile: string, reportPath: string): number {
+async function verifyDuplicates(
+  nm: string,
+  objdump: string | undefined,
+  rspfile: string,
+  reportPath: string,
+): Promise<number> {
   // .res (compiled Windows resources) is a link input with no symbols and
   // no object format nm reads; everything else on the line must scan.
   const inputs = readFileSync(rspfile, "utf8")
@@ -1020,7 +1061,7 @@ function verifyDuplicates(nm: string, objdump: string | undefined, rspfile: stri
   // with RTTI on clang models the vftable as an external *alias* into that
   // COMDAT, which nm reports as a plain external definition.
   const errors: string[] = []; // inputs a tool could not read — reported, never skipped silently
-  const coff = objdump !== undefined ? coffDefinitions(objdump, inputs, errors) : undefined;
+  const coff = objdump !== undefined ? await coffDefinitions(objdump, inputs, errors) : undefined;
   for (const d of coff?.defs ?? []) defs.push(d); // not push(...): more entries than an argument list holds
   const msAbiComdat = (name: string): boolean => coff !== undefined && /^\?\?_[78R]/.test(name);
   // -A: prefix each line with the object (archive:member for archives).
@@ -1029,7 +1070,7 @@ function verifyDuplicates(nm: string, objdump: string | undefined, rspfile: stri
   // only one that says whether a definition is weak ("weak external"); ELF
   // objects ignore it and print the BSD form, whose type letter (W/V/C)
   // carries the same bit.
-  for (const { stdout: out, stderr } of chunkedRun(
+  for await (const { stdout: out, stderr } of chunkedRun(
     nm,
     ["-A", "-S", "-m", "--extern-only", "--defined-only", "--no-demangle"],
     inputs,
@@ -1105,15 +1146,15 @@ function verifyDuplicates(nm: string, objdump: string | undefined, rspfile: stri
  * build and for ASan and debug builds in CI (see binaryChecksWarnOnly there);
  * release builds in CI fail on a finding.
  */
-function main(argv: string[]): number {
+async function main(argv: string[]): Promise<number> {
   if (argv[0] !== "--warn-only") return scan(argv);
-  const status = scan(argv.slice(1));
+  const status = await scan(argv.slice(1));
   if (status !== 1) return status;
   console.log("warning: findings above do not fail this build (local, ASan or debug); they fail release builds in CI.");
   return 0;
 }
 
-function scan(argv: string[]): number {
+function scan(argv: string[]): number | Promise<number> {
   const [mode, ...args] = argv;
   if (mode === "binary" || mode === "stripped-elf") {
     const [specPath] = args;
@@ -1197,7 +1238,7 @@ function scan(argv: string[]): number {
 
 if (import.meta.main ?? process.argv[1] === import.meta.filename) {
   try {
-    process.exit(main(process.argv.slice(2)));
+    process.exit(await main(process.argv.slice(2)));
   } catch (err) {
     console.error(err instanceof BuildError ? err.format() : err);
     // A scan that could not run is a finding like any other.

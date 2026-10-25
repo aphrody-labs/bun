@@ -16,8 +16,8 @@ import {
   parseSums,
   type HomeBuildOptions,
   type Release,
-} from "../../packages/web/site/build.ts";
-import { collect, GitTree } from "../../packages/web/site/collect.ts";
+} from "../../packages/bun-ui/packages/web/site/build.ts";
+import { collect, GitTree } from "../../packages/bun-ui/packages/web/site/collect.ts";
 import { generateSourceMarkdown } from "./source-markdown.ts";
 
 export function releaseReadme(version: string, sha: string, repo: string, modules: string[]): string {

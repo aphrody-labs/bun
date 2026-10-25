@@ -85,7 +85,7 @@ for (const variant of ["node", "bun-native", "bun-turbopack"]) {
         JSON.stringify({ experimental: { cpus: 1 } }) +
         '; module.exports.generateBuildId=async()=>"benchmark-fixed";\n'
       : "const {withBun}=require(" +
-        JSON.stringify(join(ROOT, "packages/bun-next")) +
+        JSON.stringify(join(ROOT, "packages/bun-ui/packages/bun-next")) +
         ');module.exports=withBun({experimental:{cpus:1},generateBuildId:async()=>"benchmark-fixed"},{projectDir:__dirname,bundler:' +
         JSON.stringify(variant === "bun-native" ? "bun" : "turbopack") +
         "});\n";
@@ -94,7 +94,7 @@ for (const variant of ["node", "bun-native", "bun-turbopack"]) {
   if (!values["skip-install"]) {
     run([bun, "install", "--no-save"], project);
     if (variant === "bun-native")
-      run([bun, join(ROOT, "packages/bun-next/bin/next-bun.js"), "patch", project], project);
+      run([bun, join(ROOT, "packages/bun-ui/packages/bun-next/bin/next-bun.js"), "patch", project], project);
   }
 }
 const host = resolve(

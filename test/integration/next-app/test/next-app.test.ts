@@ -11,7 +11,7 @@ import { installFixture, nextBuild, nextEnv, nextStart, withoutNode } from "./ne
 // A last variant (J2) bundles the App Router with Bun.build through @aphrody/next-bun.
 
 const fixture = join(import.meta.dir, "..");
-const nextBunPackage = join(import.meta.dir, "..", "..", "..", "..", "packages", "bun-next");
+const nextBunPackage = join(import.meta.dir, "..", "..", "..", "..", "packages", "bun-ui", "packages", "bun-next");
 let dir: Awaited<ReturnType<typeof installFixture>>;
 
 /**

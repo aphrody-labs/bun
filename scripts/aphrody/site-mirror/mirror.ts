@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { watch } from "node:fs/promises";
-import { BRAND } from "../../../packages/web/site/brand.ts";
+import { BRAND } from "../../../packages/bun-ui/packages/web/site/brand.ts";
 
 export const CAPTURE_LIMITS = {
   pages: 2500,

@@ -17,7 +17,7 @@ crates, and .NET, C and C++ interop. The product consumes this layer; it does no
 | Container image            | `ghcr.io/aphrody-labs/bun` (private), from [`scripts/aphrody/deploy/docker/`](scripts/aphrody/deploy/docker)                                                   | build and production hosts ([docs/project/auto-deploy.mdx](docs/project/auto-deploy.mdx)) |
 | Types and tooling packages | npm `@aphrody/bun-types`, `@aphrody/bun-inspector-protocol`, … ([`scripts/aphrody/publish-npm.ts`](scripts/aphrody/publish-npm.ts))                            | workspaces                                                                                |
 | Rust crates                | crates.io `aphrody-bun-native-plugin`, `aphrody-bun-macro` ([`scripts/aphrody/publish-crates.ts`](scripts/aphrody/publish-crates.ts))                          | native plugins                                                                            |
-| Documentation              | [`docs/`](docs), published at [bun.aphrody.app](https://bun.aphrody.app) by [`packages/web/site/`](packages/web/site) | `docs/reference/upstream-bun` (`bun run docs:bun:update`), MCP `bun_docs_*`               |
+| Documentation              | [`docs/`](docs), published at [bun.aphrody.app](https://bun.aphrody.app) by [`packages/bun-ui/packages/web/site/`](packages/bun-ui/packages/web/site) | `docs/reference/upstream-bun` (`bun run docs:bun:update`), MCP `bun_docs_*`               |
 | Source checkout            | `APHRODY_BUN_CHECKOUT`, else the `bun/` child of the selected workspace                                                                                         | MCP `bun_docs_*`, training corpora                                                        |
 
 ## Patches

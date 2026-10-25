@@ -29,8 +29,8 @@ Full catalog with owners and docs: `docs/runtime/fork-features.mdx` (site: /docs
 
 ## Packages and apps
 
-Add-ons (own repositories, optional submodules, skill `bun-add-ons`): plugins uv, vpn, ssh, docker, just, winmd (`plugins/<name>`, fetched on first use) and Bun Video (`packages/bun-video`, aphrody-labs/bun-video). `packages/`: bun-types, bun-agent-plugin, bun-web (+webview-core/page), bun-chromium, bun-google, bun-cloudflare, bun-next, bun-plugin-{tailwind,svelte,yaml,neon,supabase}, bun-oxc, bun-n2b, bun-dotnet, bun-python-*, buv, bun-runtime-sdk, bun-llama, bun-nginx, bun-supervisor, bun-tools, bun-timeline, bun-x, bun-qr, bun-fuzzy, bun-fluent, bun-icons, bun-m3, web. Apps: self-hosted `aphrody` server (`packages/web/server`).
+Add-ons (own repositories, optional submodules, skill `bun-add-ons`): plugins uv, vpn, ssh, docker, just, winmd (`plugins/<name>`, fetched on first use) and Bun Video (`packages/bun-video`, aphrody-labs/bun-video). `packages/`: bun-types, bun-agent-plugin, bun-web (+webview-core/page), bun-chromium, bun-google, bun-cloudflare, bun-next, bun-plugin-{tailwind,svelte,yaml,neon,supabase}, bun-oxc, bun-n2b, bun-dotnet, bun-python-*, buv, bun-runtime-sdk, bun-llama, bun-nginx, bun-supervisor, bun-tools, bun-timeline, bun-x, bun-qr, bun-fuzzy, bun-fluent, bun-icons, bun-m3, web. Apps: self-hosted `aphrody` server (`packages/bun-ui/packages/web/server`).
 
 ## Generated surfaces
 
-README.md: `scripts/aphrody/release-surfaces.ts`. llms.txt and llms-full.txt: `packages/web/site/build.ts` from `docs/` and `docs/docs.json`. Edit the sources, never the outputs.
+README.md: `scripts/aphrody/release-surfaces.ts`. llms.txt and llms-full.txt: `packages/bun-ui/packages/web/site/build.ts` from `docs/` and `docs/docs.json`. Edit the sources, never the outputs.

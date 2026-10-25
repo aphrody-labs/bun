@@ -13,6 +13,14 @@ jobs:
         with:
           fetch-depth: 0
       - uses: ./.github/actions/setup-bun
+      - name: Mount bun-ui (optional submodule of aphrody-labs/bun-ui)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.APHRODY_SYNC_TOKEN || github.token }}
+        run: |
+          gh auth setup-git
+          git submodule update --init --checkout packages/bun-ui
+          bun install --frozen-lockfile --cwd packages/bun-ui
       - name: Install the site build dependencies (React, Tailwind, fonts)
         run: bun install --frozen-lockfile --filter @aphrody/web
       - name: Generate immutable release artifacts

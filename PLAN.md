@@ -165,7 +165,7 @@ introduced. See [comparison and qualification limits](docs/project/fullstack-rus
 
 ## Material source ownership — 2026-10-13
 
-`packages/web/rust/crates/site` consumes `aphrody-m3-tokens` from the Material
+`packages/bun-ui/packages/web/rust/crates/site` consumes `aphrody-m3-tokens` from the Material
 workspace at revision `229a767493818a5dd9f92451b4a99699894a1865`. Its nested
 `Cargo.lock` resolves exactly one token package at that revision. The Bun
 Google workspace no longer patches this package to `aphrody/crates/ui`.
@@ -265,7 +265,7 @@ built-ins; Linux artifact delivery and native JSC backend qualification remain o
 Plan commun à tous les agents qui travaillent sur ce fork (C:\bun), sur le monorepo Aphrody (C:\aphrody) et sur
 Shenron (C:\shenron). Lis-le en entier avant de commencer, puis mets à jour ta section (statut, commits) à la fin de
 chaque lot. Contexte permanent : [APHRODY.md](APHRODY.md) (ce que le fork fournit à Aphrody),
-[CLAUDE.md](CLAUDE.md) (build et tests Bun), [packages/bun-next/docs/PLAN.md](packages/bun-next/docs/PLAN.md)
+[CLAUDE.md](CLAUDE.md) (build et tests Bun), [packages/bun-ui/packages/bun-next/docs/PLAN.md](packages/bun-ui/packages/bun-next/docs/PLAN.md)
 (plan détaillé Next sur Bun).
 
 ## 1. Cible

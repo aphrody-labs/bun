@@ -10,8 +10,9 @@ foreach ($line in [IO.File]::ReadLines($cloudflareEnv)) {
     }
 }
 
-$env:SCCACHE_DIR = Join-Path $env:LOCALAPPDATA 'Mozilla\sccache\cache'
-$env:SCCACHE_CACHE_SIZE = '50G'
+# Like sccache-env.sh: the machine's own SCCACHE_DIR and size win, so one local cache serves every shell.
+if (!$env:SCCACHE_DIR) { $env:SCCACHE_DIR = Join-Path $HOME '.cache\sccache' }
+if (!$env:SCCACHE_CACHE_SIZE) { $env:SCCACHE_CACHE_SIZE = '30G' }
 $env:SCCACHE_BASEDIRS = 'C:\bun;C:\src'
 $env:SCCACHE_IDLE_TIMEOUT = '0'
 $env:SCCACHE_CLIENT_SIDE = '1'

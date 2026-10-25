@@ -5,7 +5,7 @@ import { join, relative } from "node:path";
 const root = join(import.meta.dir, "../..");
 const vendor = join(root, "vendor/fluentui");
 const source = join(vendor, "packages/tokens/src");
-const target = join(root, "packages/bun-fluent/src/tokens");
+const target = join(root, "packages/bun-ui/packages/bun-fluent/src/tokens");
 const sync = process.argv.includes("--sync");
 const json = process.argv.includes("--json");
 
@@ -73,6 +73,6 @@ else {
 }
 
 if (drift.length && !sync) {
-  console.error(`Run ${relative(root, import.meta.path)} --sync, then bun bd fmt packages/bun-fluent/src/tokens`);
+  console.error(`Run ${relative(root, import.meta.path)} --sync, then bun bd fmt packages/bun-ui/packages/bun-fluent/src/tokens`);
   process.exitCode = 1;
 }

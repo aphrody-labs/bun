@@ -4,7 +4,7 @@
 //                                   apple-touch-icon.png, site.webmanifest (servis à la racine du site par
 //                                   site/build.ts) et logo-wordmark-{light,dark}.svg (docs.json, README)
 //   src/bun.ico                     icône de l'exécutable Windows (src/windows-app-info.rc)
-//   packages/web/site/brand.ts   URL immuables /h/ de m3-tokens.css et aphrody-fonts.css, theme-color
+//   packages/bun-ui/packages/web/site/brand.ts   URL immuables /h/ de m3-tokens.css et aphrody-fonts.css, theme-color
 //
 //   bun scripts/aphrody/brand-sync.ts [--from <dossier assets/brand>] [--cdn https://cdn.aphrody.com] [--check]
 // Sans --from, les fichiers viennent du manifeste du CDN (/s/manifest.json), sha256 vérifié. Avec --from, les URL /h/
@@ -88,7 +88,7 @@ export function plan(brand: Brand, cdn = DEFAULT_CDN): Map<string, Uint8Array> {
   const out = new Map<string, Uint8Array>();
   for (const name of DOCS_LOGO_FILES) out.set(`docs/logo/${name}`, brand.get(name)!.bytes);
   out.set("src/bun.ico", brand.get("favicon.ico")!.bytes);
-  out.set("packages/web/site/brand.ts", new TextEncoder().encode(brandModule(brand, cdn)));
+  out.set("packages/bun-ui/packages/web/site/brand.ts", new TextEncoder().encode(brandModule(brand, cdn)));
   return out;
 }
 

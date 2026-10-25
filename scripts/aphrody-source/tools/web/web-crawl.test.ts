@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 import { describe, expect, test } from "bun:test";
 import { parseCrawlArgs, summarizeCrawl } from "./web-crawl.ts";
-import type { CrawlReport } from "../../../../packages/bun-web/src/service.ts";
+import type { CrawlReport } from "../../../../packages/bun-ui/packages/bun-web/src/service.ts";
 
 describe("web-crawl CLI helpers", () => {
   test("parses seeds and options", () => {

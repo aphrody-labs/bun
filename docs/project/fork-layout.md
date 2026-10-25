@@ -78,3 +78,18 @@ turned on. `Bun.Video` extensions run the `bun-video` executable that the packag
 git submodule update --init --checkout --recursive packages/bun-video
 cd packages/bun-video && bun install --frozen-lockfile
 ```
+
+## UI and web packages
+
+`bun-m3`, `bun-plugin-tailwind`, `bun-next`, `web`, `bun-web`, `bun-webview-page`,
+`bun-fluent` and `bun-icons` live in [aphrody-labs/bun-ui](https://github.com/aphrody-labs/bun-ui)
+as `packages/<name>`; bun-ui builds, tests and publishes them, and Bun OS mounts it as one
+submodule. The fork mounts it as the optional submodule `packages/bun-ui` for the release and
+site scripts that still import `packages/web/site` and `bun-icons`:
+
+```sh
+git submodule update --init --checkout packages/bun-ui
+cd packages/bun-ui && bun install --frozen-lockfile
+```
+
+The create templates keep depending on the npm package `bun-plugin-tailwind`.

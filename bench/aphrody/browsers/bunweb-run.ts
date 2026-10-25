@@ -2,7 +2,7 @@
 import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { BrowserPage } from "../../../packages/bun-web/src/index.ts";
+import { BrowserPage } from "../../../packages/bun-ui/packages/bun-web/src/index.ts";
 
 const profile = mkdtempSync(join(tmpdir(), "bench-bunweb-"));
 const chrome = Bun.spawn(

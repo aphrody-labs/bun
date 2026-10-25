@@ -7,7 +7,6 @@ on:
       [
         "src/js/bun/winui.ts",
         "src/js/bun/winrt.ts",
-        "packages/bun-fluent/**",
         "test/js/bun/winui/**",
         "scripts/aphrody/winui-smoke.ts",
         ".github/workflows/winui.yml",
@@ -17,7 +16,6 @@ on:
       [
         "src/js/bun/winui.ts",
         "src/js/bun/winrt.ts",
-        "packages/bun-fluent/**",
         "test/js/bun/winui/**",
         "scripts/aphrody/winui-smoke.ts",
         ".github/workflows/winui.yml",
@@ -41,10 +39,6 @@ jobs:
       - uses: ./.github/actions/setup-bun
         with:
           bun-version: canary
-      - name: Fluent 2 tokens and the WinUI -> Fluent -> M3 mapping
-        run: |
-          bun install --frozen-lockfile --cwd packages/bun-plugin-tailwind
-          bun test ./packages/bun-fluent/test
       - name: Install the Windows App Runtime 1.8
         shell: pwsh
         run: |

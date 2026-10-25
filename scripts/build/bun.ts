@@ -213,17 +213,8 @@ export function emitBun(n: Ninja, cfg: Config, sources: Sources): BunOutput {
       linkInputs: [...webpDep.libs, ...webpDep.objects],
     },
     codegenOrderOnly: codegen.rustInputs,
-    rustSources: [
-      ...sources.rust,
-      ...windowsToolchainRustSources(cfg),
-      ...dotnetHostRustSources(cfg),
-    ],
-    vendorStamps: [
-      ...lolhtmlDep.outputs,
-      ...rustArgon2Dep.outputs,
-      ...ngxRustDep.outputs,
-      ...uutilsDep.outputs,
-    ],
+    rustSources: [...sources.rust, ...windowsToolchainRustSources(cfg), ...dotnetHostRustSources(cfg)],
+    vendorStamps: [...lolhtmlDep.outputs, ...rustArgon2Dep.outputs, ...ngxRustDep.outputs, ...uutilsDep.outputs],
     shimValidations: emitShimVerify(n, cfg),
   });
 
@@ -644,7 +635,7 @@ export function emitPostLink(
     ...emitSmokeTest(n, cfg, exe, exeName, strippedExe),
     ...emitBinaryVerify(n, cfg, exe, exeName, strippedExe),
     ...emitStrippedVerify(n, cfg, strippedExe),
-    ...emitDuplicateSymbolCheck(n, cfg, exeName, linkInputs, strippedExe),
+    ...emitDuplicateSymbolCheck(n, cfg, exe, exeName, linkInputs, strippedExe),
   ]);
 
   return { strippedExe, dsym };
@@ -820,6 +811,7 @@ function emitShimVerify(n: Ninja, cfg: Config): string[] {
 function emitDuplicateSymbolCheck(
   n: Ninja,
   cfg: Config,
+  exe: string,
   exeName: string,
   linkInputs: string[],
   strippedExe: string | undefined,
@@ -842,7 +834,9 @@ function emitDuplicateSymbolCheck(
     rule: "duplicate_symbols",
     inputs: linkInputs,
     implicitInputs: [verifyBinaryPath],
-    ...(strippedExe !== undefined ? { orderOnlyInputs: [strippedExe] } : {}),
+    // After the link, not beside it: the scan reads every input the link reads, and the two at once took
+    // minutes each on a Windows debug build where each alone takes about thirty seconds.
+    orderOnlyInputs: [strippedExe ?? exe],
   });
   return [stamp];
 }

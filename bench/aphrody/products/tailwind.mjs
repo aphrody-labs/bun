@@ -10,7 +10,7 @@ const { compile } = require("@tailwindcss/node");
 const { Scanner } = require("@tailwindcss/oxide");
 let operation;
 if (process.env.BENCH_VARIANT === "bun-plugin") {
-  const { TailwindRoot } = await import(new URL("../../../packages/bun-plugin-tailwind/src/core.ts", import.meta.url));
+  const { TailwindRoot } = await import(new URL("../../../packages/bun-ui/packages/bun-plugin-tailwind/src/core.ts", import.meta.url));
   operation = async () => (await new TailwindRoot(cssPath, project, { optimize: false }).generate(css)).css;
 } else {
   operation = async () => {

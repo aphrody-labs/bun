@@ -1,7 +1,7 @@
 import { mkdir } from "node:fs/promises";
 import { resolve, join } from "node:path";
 import { parseArgs } from "node:util";
-import { GitTree } from "../../packages/web/site/collect.ts";
+import { GitTree } from "../../packages/bun-ui/packages/web/site/collect.ts";
 import { moduleNames } from "./fork-capabilities.ts";
 
 export const digest = (text: string) => new Bun.CryptoHasher("sha256").update(text).digest("hex");

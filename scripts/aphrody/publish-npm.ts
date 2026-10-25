@@ -343,35 +343,6 @@ export const PACKAGES: PackageSpec[] = [
     dir: "bun-plugin-yaml",
     fields: { description: "YAML plugin for Bun (Aphrody runtime, based on Bun)" },
   },
-  {
-    // Fork-only: Next.js on Bun (runner, withBun + next patch, codemods, testing helpers).
-    dir: "bun-next",
-    name: "next-bun",
-  },
-  {
-    // Fork-only: Playwright-shaped page over Bun.WebView (moved from the aphrody monorepo).
-    dir: "bun-webview-page",
-    fields: {
-      description: "Playwright-shaped page, locators and routing over Bun.WebView (Aphrody runtime, based on Bun)",
-    },
-  },
-  {
-    // Fork-only: Tailwind CSS v4 for Bun.build, the HTML dev server and PostCSS.
-    dir: "bun-plugin-tailwind",
-    buildOutputs: ["dist/"],
-    requiresBuild: true,
-    fields: {
-      description: "Tailwind CSS v4 plugin for Bun and PostCSS (Aphrody runtime, based on Bun)",
-    },
-    // dist/ holds the Node.js build (ES modules and the CommonJS PostCSS plugin).
-    prepare: staging => {
-      const dir = join(ROOT, "packages", "bun-plugin-tailwind");
-      run([process.execPath, "install", "--frozen-lockfile"], dir);
-      run([process.execPath, "scripts/build.ts", join(staging, "dist")], dir);
-    },
-  },
-  { dir: "bun-fluent" },
-  { dir: "bun-icons" },
   { dir: "bun-sql" },
   { dir: "bun-runtime-sdk" },
   { dir: "bun-supervisor", name: "supervisor", sourcePaths: ["src", "systemd"] },
@@ -384,9 +355,6 @@ export const PACKAGES: PackageSpec[] = [
   { dir: "bun-qr", name: "qr" },
   { dir: "bun-timeline", name: "timeline" },
   { dir: "bun-x", name: "x" },
-  { dir: "web" },
-  { dir: "bun-m3" },
-  { dir: "bun-web" },
   {
     dir: "bun-agent-plugin",
     sourceInputs: root => inputFiles(root),

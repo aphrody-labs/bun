@@ -8,7 +8,7 @@ import type { IndexResult } from "bun:graph-index";
 import { exportForkCapabilities } from "./fork-capabilities";
 import { writeGraphDocs } from "./graph-docs";
 
-export const DOMAINS = ["packages/bun-google", "packages/bun-chromium", "packages/bun-m3", "src/browser"];
+export const DOMAINS = ["packages/bun-google", "packages/bun-chromium", "src/browser"];
 export const SURFACE_FILES = [
   "src/js/bun/google.ts",
   "src/js/bun/chromium.ts",
