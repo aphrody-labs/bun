@@ -98,7 +98,7 @@ for (const variant of ["node", "bun-native", "bun-turbopack"]) {
   }
 }
 const host = resolve(
-  values["python-host"] ?? join(ROOT, "packages/bun-python-native/target/release/libbun_python_host.so"),
+  values["python-host"] ?? join(ROOT, "packages/bun-python/bun-python-native/target/release/libbun_python_host.so"),
 );
 const env = {
   BUN_PYTHON_HOST_LIBRARY: host,

@@ -15,7 +15,6 @@ members = [
   "packages/bun-runtime-sdk/crates/yolo-core",
   "packages/bun-runtime-sdk/crates/yolo-runtime",
   "packages/bun-runtime-sdk/crates/yolo-pyo3",
-  "packages/bun-python-native/crates/bun-python-host",
   "packages/bun-nginx/native",
   "packages/bun-webview-core",
   "packages/bun-winsvc",
@@ -298,7 +297,6 @@ default-members = [
   "packages/bun-native-plugin-rs",
   "packages/bun-runtime-sdk/crates/yolo-core",
   "packages/bun-runtime-sdk/crates/yolo-runtime",
-  "packages/bun-python-native/crates/bun-python-host",
   "packages/bun-winsvc",
   "src/rio/teletypewriter",
   "src/rio/corcovado",
@@ -559,7 +557,7 @@ default-members = [
 # heavy dev-dependencies (criterion, html5ever) never enter `Cargo.lock`.
 # `packages/bun-cosmic` is the libcosmic window helper of `bun:cosmic`: its own
 # workspace and lockfile, because libcosmic is a git dependency.
-exclude = ["packages/bun-video", "plugins", "scripts/verify-baseline-static", "vendor"]
+exclude = ["packages/bun-python", "packages/bun-video", "plugins", "scripts/verify-baseline-static", "vendor"]
 
 [workspace.package]
 "repository" = "https://github.com/aphrody-labs/bun"
@@ -1256,7 +1254,7 @@ opt-level = "z"
 [patch.crates-io]
 # zlib-rs is absorbed in src/zlib_rs; every crate shares it.
 zlib-rs = { path = "src/zlib_rs" }
-# PyO3 comes from the aphrody-labs fork, same pin as packages/buv/vendor.json.
+# PyO3 comes from the aphrody-labs fork, same pin as packages/bun-python/buv/vendor.json.
 pyo3 = { git = "https://github.com/aphrody-labs/pyo3", rev = "451d99fdcdcddf159e8e0a1186960b332cdb5d7c" }
 pyo3-build-config = { git = "https://github.com/aphrody-labs/pyo3", rev = "451d99fdcdcddf159e8e0a1186960b332cdb5d7c" }
 pyo3-ffi = { git = "https://github.com/aphrody-labs/pyo3", rev = "451d99fdcdcddf159e8e0a1186960b332cdb5d7c" }

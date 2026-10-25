@@ -181,19 +181,18 @@
         "packages/buv",
         "packages/bun-python-native",
         "packages/bun-python-toolchain",
-        "packages/bun-python-conformance",
-        "bun_python.json",
-        "bun_python.sqlite",
-        "packages/bun-runtime-sdk"
+        "packages/bun-python-conformance"
       ],
-      "type": "tree",
+      "type": "packages+rust-workspace",
       "kind": "package",
-      "destinationRepo": null,
-      "bunOsPath": null,
-      "submoduleRevision": null,
+      "destinationRepo": "https://github.com/aphrody-labs/bun-python",
+      "bunOsPath": "vendor/bun-python",
+      "submoduleRevision": "4d709fd3c166b83c1893686bafc5423070e99cd8",
       "upstream": null,
-      "migrationState": "pending",
-      "notes": "Pending."
+      "migrationState": "moved",
+      "notes": "First commit a5c75721ca2 holds the four package trees of 46005c0adbd verbatim as top-level directories. bun-python-host left the root Cargo workspace (its own workspace, cargo check passes on Windows); bun:python loads the host library at run time, so the runtime does not link it. Stays in the fork: packages/bun-runtime-sdk (the runtime release scripts and the yolo-* crates use it; the PyO3 patch stays for yolo-pyo3). bun_python.json and bun_python.sqlite are untracked local evidence databases written by buv (gitignored), not tracked sources.",
+      "forkMount": "packages/bun-python",
+      "forkMountUpdate": "none"
     },
     {
       "component": "ui-web",

@@ -3,7 +3,7 @@
 Python CLI loading retains host ABI v1 and the explicitly selected shared
 library. The loader is a safe private function; each symbol conversion and call
 keeps its local unsafe contract. Function signatures match the producer-owned
-`packages/bun-python-native/crates/bun-python-host/include/bun_python_host.h`.
+`packages/bun-python/bun-python-native/crates/bun-python-host/include/bun_python_host.h`.
 The library stays owned by the static host API while its function pointers are
 used. The CLI exit-code output now uses an explicit raw pointer.
 

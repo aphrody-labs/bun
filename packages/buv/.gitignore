@@ -1,8 +1,0 @@
-# Generated artifacts; never commit these trees.
-/target/
-/build/
-/dist/
-/var/
-*.tar.zst
-*.partial
-/generated/

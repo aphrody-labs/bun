@@ -266,7 +266,7 @@ finally:
       throw new Error("CUDA readback mismatch");
     if (process.env.BUN_TEST_BUV_GPU === "1") {
       if (!process.env.BUV_RUNTIME_LIB) throw new Error("GPU qualification requires the canonical provider path");
-      const { GpuRuntime } = await import(${JSON.stringify(new URL("../../../../packages/buv/gpu.ts", import.meta.url).href)});
+      const { GpuRuntime } = await import(${JSON.stringify(new URL("../../../../packages/bun-python/buv/gpu.ts", import.meta.url).href)});
       using gpu = GpuRuntime.load({ libraryPath: process.env.BUV_RUNTIME_LIB });
       const report = await gpu.info();
       if (!report.selected?.nvidia || !report.cuda?.nvrtcLoaded) throw new Error("NVIDIA GPU/NVRTC unavailable");

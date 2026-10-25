@@ -38,3 +38,8 @@
 	url = https://github.com/aphrody-labs/bun-ui.git
 	update = none
 	branch = main
+[submodule "packages/bun-python"]
+	path = packages/bun-python
+	url = https://github.com/aphrody-labs/bun-python.git
+	update = none
+	branch = main

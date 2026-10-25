@@ -102,10 +102,10 @@
     "src/browser/crates/render/render-repros/*.json",
     "packages/bun-google/aphrody/crates/google/src/*.json",
     "src/migrate/schema/*.json",
-    "packages/bun-python-native/patches/*.json",
+    "packages/bun-python/bun-python-native/patches/*.json",
     "packages/bun-cloudflare/app/worker-configuration.d.ts",
-    "packages/buv/**",
-    "packages/bun-python-toolchain/**"
+    "packages/bun-python/buv/**",
+    "packages/bun-python/bun-python-toolchain/**"
   ],
   "overrides": [
     {
