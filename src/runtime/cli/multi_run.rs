@@ -615,6 +615,11 @@ impl<'a> State<'a> {
 struct AbortHandler;
 
 static SHOULD_ABORT: AtomicBool = AtomicBool::new(false);
+/// The loop the run waits in. Windows runs console handlers on a thread of their own, and
+/// nothing else wakes 	ick_once there: the abort would wait for the next child event.
+#[cfg(windows)]
+static ABORT_WAKES: core::sync::atomic::AtomicPtr<bun_uws_sys::Loop> =
+    core::sync::atomic::AtomicPtr::new(core::ptr::null_mut());
 
 impl AbortHandler {
     #[cfg(unix)]
@@ -632,12 +637,22 @@ impl AbortHandler {
     ) -> bun_sys::windows::BOOL {
         if dw_ctrl_type == bun_sys::windows::CTRL_C_EVENT {
             SHOULD_ABORT.store(true, Ordering::SeqCst);
+            let wake = ABORT_WAKES.load(Ordering::SeqCst);
+            if !wake.is_null() {
+                // SAFETY: the run's loop lives for the process; us_wakeup_loop is thread-safe
+                // (uv_async_send) and forms no &mut Loop.
+                unsafe { bun_uws_sys::loop_::us_wakeup_loop(wake) };
+            }
             return bun_sys::windows::TRUE;
         }
         bun_sys::windows::FALSE
     }
 
-    fn install() {
+    fn install(wake: *mut bun_uws_sys::Loop) {
+        #[cfg(windows)]
+        ABORT_WAKES.store(wake, Ordering::SeqCst);
+        #[cfg(not(windows))]
+        let _ = wake;
         #[cfg(unix)]
         {
             // bun_sys::posix::Sigaction is a re-export of libc::sigaction; construct
@@ -1178,8 +1193,12 @@ pub(crate) fn run(ctx: &mut Command::ContextData) -> Result<core::convert::Infal
                 ))),
                 cwd: config.cwd.clone(),
                 #[cfg(windows)]
+                // The scripts share our console, as under a POSIX terminal: Ctrl+C reaches
+                // them too, and Windows starts no console host for each (CREATE_NO_WINDOW
+                // only when we have no console, see bun_no_window).
                 windows: spawn::WindowsOptions {
                     loop_: EventLoopHandle::init_mini(event_loop),
+                    hide_window: false,
                     ..Default::default()
                 },
                 stream: true,
@@ -1239,7 +1258,8 @@ pub(crate) fn run(ctx: &mut Command::ContextData) -> Result<core::convert::Infal
         }
     }
 
-    AbortHandler::install();
+    // SAFETY: event_loop points at the thread-lifetime MiniEventLoop singleton.
+    AbortHandler::install(unsafe { (*event_loop).loop_ptr() }.cast());
 
     while !state.is_done() {
         if SHOULD_ABORT.load(Ordering::SeqCst) && !state.aborted {

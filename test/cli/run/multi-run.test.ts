@@ -1306,6 +1306,69 @@ describe("abort: failure kills long-running processes", () => {
     expect(r.stderr).toMatch(/suicide\s+\| Signaled/);
     expect(r.exitCode).not.toBe(0);
   });
+
+  // #46328: the console handler runs on a thread of its own, and the run waited in its loop for
+  // an event that never came; `a` ignores Ctrl+C, so only the run's own abort can end it.
+  test.skipIf(!isWindows)("parallel: Ctrl+C stops the run on Windows", async () => {
+    using dir = tempDir("mr-ctrl-c", {
+      "package.json": JSON.stringify({
+        scripts: {
+          a: `${bunExe()} -e "process.on('SIGINT', () => {}); console.log('ready-a'); setInterval(() => {}, 1000)"`,
+          b: `${bunExe()} -e "console.log('ready-b'); setInterval(() => {}, 1000)"`,
+        },
+      }),
+      // Runs on a console of its own (a hidden one), so the Ctrl+C it sends reaches the run and
+      // not this test.
+      "driver.js": `
+          import { dlopen } from "bun:ffi";
+          const { symbols: k32 } = dlopen("kernel32.dll", {
+            GenerateConsoleCtrlEvent: { args: ["u32", "u32"], returns: "i32" },
+            SetConsoleCtrlHandler: { args: ["ptr", "i32"], returns: "i32" },
+          });
+          const run = Bun.spawn({
+            cmd: [process.execPath, "run", "--parallel", "a", "b"],
+            stdin: "ignore",
+            stdout: "pipe",
+            stderr: "pipe",
+          });
+          const reader = run.stdout.getReader();
+          const decoder = new TextDecoder();
+          let out = "";
+          while (!(out.includes("ready-a") && out.includes("ready-b"))) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            out += decoder.decode(value, { stream: true });
+          }
+          (async () => { while (!(await reader.read()).done); })();
+          run.stderr.text();
+          // Every process of this console gets the event; this one ignores it.
+          k32.SetConsoleCtrlHandler(null, 1);
+          k32.GenerateConsoleCtrlEvent(0, 0);
+          const deadline = setTimeout(() => {
+            console.log(JSON.stringify({ stopped: false }));
+            run.kill();
+            process.exit(0);
+          }, 3_000);
+          const exitCode = await run.exited;
+          clearTimeout(deadline);
+          console.log(JSON.stringify({ stopped: true, exitCode }));
+        `,
+    });
+    await using driver = Bun.spawn({
+      cmd: [bunExe(), "driver.js"],
+      env: { ...bunEnv, NO_COLOR: "1" },
+      cwd: String(dir),
+      stdin: "ignore",
+      stdout: "pipe",
+      stderr: "pipe",
+      windowsHide: true,
+    });
+    const [stdout, stderr, exitCode] = await Promise.all([driver.stdout.text(), driver.stderr.text(), driver.exited]);
+    const result = JSON.parse(stdout.trim().split("\n").pop() || "{}");
+    expect({ result, stderr }).toEqual({ result: { stopped: true, exitCode: expect.any(Number) }, stderr: "" });
+    expect(result.exitCode).not.toBe(0);
+    expect(exitCode).toBe(0);
+  });
 });
 
 // ─── PARTIAL LINE BUFFERING ─────────────────────────────────────────────────
