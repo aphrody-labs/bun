@@ -189,6 +189,61 @@ pile avec fichiers/lignes Rust (`FFIObject.rs @ 304`, `ffi/mod.rs @ 54`) et C++ 
   (`_RDATA` revenu à 500 o).
 - Autre voie : `cdb -g -G` sur l'exe avec `sxe av` s'arrête sur la 1re chance avant le VEH de bun.
 
+## Measuring without ETW
+
+_From `docs/project/windows-performance.md`._
+
+Kernel ETW (`wpr -start CPU`, `xperf`) needs an elevated shell and fails otherwise with "Failed to
+enable the policy to profile system performance"; the Windows Performance Toolkit (xperf,
+wpaexporter) is not installed. Without elevation:
+
+- **Wall time:** `hyperfine -N --warmup 10 --runs 100 "<exe> -e 0"`. With `-N`, write paths with
+  forward slashes: hyperfine splits the command like a POSIX shell and eats backslashes.
+- **Where a short process spends its time:** `scripts/aphrody/win-profile.ts` starts the exe
+  suspended, then suspends and reads the main thread every 100 us until it exits, and symbolizes with
+  llvm-symbolizer and the PDB beside the exe. Compare shares between builds, not sample counts (the
+  sampling rate depends on the load):
+
+  ```sh
+  bun scripts/aphrody/win-profile.ts sample --runs 100 --out fork.json -- build/release/bun-profile.exe -e 0
+  bun scripts/aphrody/win-profile.ts report fork.json --top 30
+  ```
+
+  Upstream's `bun-windows-x64-profile.zip` has `bun-profile.exe` with its PDB and linker map, for
+  the same report on upstream. In both, `JSC::VM::updateStackLimits` (13 to 15% of all samples) and mimalloc's
+  `mi_page_free_list_extend` lead the samples inside the exe.
+
+- **Who loads a DLL:** `cdb -y build\release -c "sxe ld:<dll>; g; kn 30; q" build\release\bun-profile.exe -e 0`.
+- **DLLs of a running process:** `windows.dll.loaded(pid)` from `bun:windows`; imports of a file:
+  `llvm-objdump -p <exe>` (the "DLL Name" lines; the delay-import table follows).
+- **Handles:** `GetProcessHandleCount` through `bun:ffi`.
+
+## Spawn and console hosts
+
+_From `docs/project/windows-performance.md`._
+
+`Bun.spawnSync`/`Bun.spawn` of `hostname.exe` took twice as long as upstream, all of it in the parent.
+Neither the environment block, the PATH search, the Job Object nor the DLL diagnosis was the cause:
+the time was a console host. The fork's `bun_no_window` crate (and the libuv patch
+`win-hide-console-without-console.patch`) passed `CREATE_NO_WINDOW` whenever `GetConsoleWindow()`
+returned NULL, to keep a console child of a GUI or service from opening a window. But a process
+attached to a pseudoconsole (ConPTY: Windows Terminal, VS Code, every agent shell), or to a console
+created hidden, also has no console window. For those parents every child got `CREATE_NO_WINDOW`,
+and Windows starts a new `conhost.exe` for a console process created with it: 6 to 9 ms per spawn
+here. Upstream pays the same with `windowsHide: true`, which sets the flag when no stdio is
+inherited: in one run of the same loop, upstream took 13.3 ms per `spawnSync` with
+`stdout: "pipe"` and 23.5 ms with `windowsHide: true` added; the fork took 21.7 and 22.6 ms, the
+flag being set in both cases.
+
+The test is now whether this process is attached to a console at all (`GetConsoleProcessList`
+returns 0 without one): a child of a process with a console shares it and opens no window, whether
+or not the console has one. `bun run --parallel` scripts also share the console now (they were
+spawned hidden, each with its own console host), so a Ctrl+C reaches them as it does under a POSIX
+terminal.
+
+Not the cause, measured: handles (one per 300 spawns either way, see Supervision), the
+`spawn_with_job` libuv patch (only with a job), `elevate` (only when requested).
+
 ## Related skills
 
 - `rust-system-calls`: Guides using bun_sys for system calls and file I/O in Rust. Use when implementing file operations, opening fds, or any syscall path instead of std::fs or libc.

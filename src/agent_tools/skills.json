@@ -229,6 +229,16 @@
           "heading": "7. Débogueurs, symboles, procédure crash → cause"
         },
         {
+          "kind": "markdown",
+          "file": "docs/project/windows-performance.md",
+          "heading": "Measuring without ETW"
+        },
+        {
+          "kind": "markdown",
+          "file": "docs/project/windows-performance.md",
+          "heading": "Spawn and console hosts"
+        },
+        {
           "kind": "skills",
           "names": ["rust-system-calls", "verify"]
         },
