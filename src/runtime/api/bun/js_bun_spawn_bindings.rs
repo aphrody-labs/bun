@@ -354,7 +354,7 @@ pub(crate) fn spawn(
 pub(crate) fn spawn_with_job(
     cx: &bun_jsc::JsThread<'_>,
     args: JSValue,
-    options: Option<JSValue>,
+    options: JSValue,
     job: u32,
 ) -> JsResult<JSValue> {
     spawn_maybe_sync(false, cx, args, options, &mut None, Some(job))

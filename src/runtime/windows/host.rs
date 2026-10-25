@@ -462,10 +462,11 @@ win_host_fn! {
 win_host_fn! {
     /// `jobSpawn(id, argvOrOptions, options)` uses the standard Bun subprocess owner.
     js_job_spawn(global, frame) {
-        let vm = global.bun_vm();
         crate::api::js_bun_spawn_bindings::spawn_with_job(
-            &global.js_thread(vm.context_of_caller(frame)), frame.argument(1),
-            Some(frame.argument(2)), u32_arg(frame, 0),
+            &global.js_thread_of_caller(),
+            frame.argument(1),
+            frame.argument(2),
+            u32_arg(frame, 0),
         )
     }
 }
