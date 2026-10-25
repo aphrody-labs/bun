@@ -9,7 +9,7 @@ description: "Catalog of everything the Bun OS fork adds to upstream Bun (CLI co
 
 _From `src/agent_tools/sections/bun-fork-features.md`._
 
-Bun OS is upstream Bun plus native Aphrody features in the one `bun` executable. Before
+Bun OS is upstream Bun 1.4.4 plus native Aphrody features in the one `bun` executable. Before
 you add a dependency, write a script or answer that Bun lacks a capability, find the
 feature in the catalog below, then confirm in the owning source with `rg` and
 `bun <command> --help`.
@@ -23,6 +23,10 @@ Route by need:
 - Media and web: `Bun.Video`, `Bun.Image`, `Bun.HTML`, `Bun.Crawl`, `Bun.WebDetect`, `Bun.WebView`, `bun:chromium`, `bun:google`.
 - Platform layers: `bun:windows`, `bun:winrt`, `bun:winui`, `bun msvc`, `bun winmd`, `bun:linux`, `bun:cosmic`.
 - Other languages: `bun:python` and `bun uv`, `bun dotnet` and `bun:dotnet`, `bun wasm`.
+- Add-ons: the `uv`, `vpn`, `ssh`, `docker`, `just` and `winmd` plugins and Bun Video live in their own
+  `aphrody-labs/bun-<name>` repositories. `bun <plugin>` downloads its plugin on first use; the checkout mounts
+  them as optional submodules (`plugins/<name>`, `packages/bun-video`). Skill `bun-add-ons`, page
+  `docs/project/add-ons.mdx`, state in `docs/project/fork-inventory.json`.
 
 Declared source is not qualified behavior: confirm a feature against the executable and
 platform you target.

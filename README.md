@@ -29,7 +29,9 @@ Bun OS declares native system, Python, .NET, graph and desktop integration surfa
 
 ## Features beyond upstream Bun
 
-The [feature catalog](https://bun.aphrody.app/docs/runtime/fork-features) lists every command, `Bun.*` API, `bun:*` module, package, agent tool and skill that Bun OS adds, with the source that owns each. Highlights: native `bun check`, `bun lint`, `bun fmt` and `bun n2b`; `bun mcp`, `bun lsp` and `bun agent-plugin` for coding agents; `bun ssh`, `bun docker`, `bun vpn` and `bun host`; `bun:python`, `bun:dotnet`, `bun:windows`, `bun:winrt`, `bun:winui` and `bun:linux`; `Bun.Video`, `Bun.HTML`, `Bun.Crawl` and `bun:chromium`; `bun wasm`; and the Bun WebOS desktop with the self-hosted `aphrody` server.
+This source is upstream [oven-sh/bun](https://github.com/oven-sh/bun) 1.4.4 (`bun-v1.4.4`) plus the fork features the `bun` executable links. The [feature catalog](https://bun.aphrody.app/docs/runtime/fork-features) lists every command, `Bun.*` API, `bun:*` module, package, agent tool and skill that Bun OS adds, with the source that owns each. Highlights: native `bun check`, `bun lint`, `bun fmt` and `bun n2b`; `bun mcp`, `bun lsp` and `bun agent-plugin` for coding agents; `bun ssh`, `bun docker`, `bun vpn` and `bun host`; `bun:python`, `bun:dotnet`, `bun:windows`, `bun:winrt`, `bun:winui` and `bun:linux`; `Bun.Video`, `Bun.HTML`, `Bun.Crawl` and `bun:chromium`; `bun wasm`; and the Bun WebOS desktop with the self-hosted `aphrody` server.
+
+The add-ons live in their own repositories: the `uv`, `vpn`, `ssh`, `docker`, `just` and `winmd` plugins, which `bun` downloads on first use, and Bun Video. This checkout mounts them as optional submodules, so a clone stays light. [Add-ons](https://bun.aphrody.app/docs/project/add-ons) covers installing them, building them from source and where their issues go.
 
 ## Bun.Video
 
@@ -41,7 +43,7 @@ const metadata = await video.metadata();
 await video.frame(1).resize(320, 180).webp().write("preview.webp");
 ```
 
-Read the [Bun.Video reference](https://bun.aphrody.app/docs/runtime/video) for codec support, resource limits and platform requirements. The optional [Bun Video package](packages/bun-video/README.md) adds composition engines, HLS/DASH and FFmpeg/mpv adapters.
+Read the [Bun.Video reference](https://bun.aphrody.app/docs/runtime/video) for codec support, resource limits and platform requirements. The optional [Bun Video package](https://github.com/aphrody-labs/bun-video) adds composition engines, HLS/DASH and FFmpeg/mpv adapters.
 
 Source version: **1.4.4**. Immutable release source: [852e68acc5d64a6f688961e91ea150d67dceb254](https://github.com/aphrody-labs/bun/tree/852e68acc5d64a6f688961e91ea150d67dceb254). Published downloads and checksums identify available executables. This source revision requires its own native factory and runtime qualification.
 

@@ -1,9 +1,10 @@
 # FilmCraft → Aphrody Video
 
 The complete FilmCraft fork at `9cfaa22b408a73b2b374dda0c81a6a1d06284f8b`
-is owned by `src/media/filmcraft`. Its 55 components are optional members of Bun's
-root Cargo workspace, outside the default runtime build. `bun-video-native`
-uses these same source paths, including its optional pure Rust H.264 encoder.
+was owned by `src/media/filmcraft` until 2026-10-25. It now lives in Bun OS
+(`crates/filmcraft-*`, `apps/filmcraft*`) and in aphrody-labs/filmcraft branch
+`bun-runtime-0.9.0`, which `bun-video-native` (aphrody-labs/bun-video) mounts as
+`vendor/filmcraft`. See [fork layout](fork-layout.md).
 The upstream manifest is retained under `docs/bun-source` for provenance.
 
 The browser editor remains the existing egui/Rust application compiled to WASM.
@@ -31,7 +32,8 @@ updating unrelated runtime dependencies or suppressing the fold diagnostic.
 Build and qualify on the VPS through `bun factory run`, using the existing
 FilmCraft target cache. The named `filmcraft` and `filmcraft-dev` profiles
 preserve FilmCraft's unwind contract without changing Bun's default profiles.
-Run the `xtask` package's `web` command from `src/media/filmcraft`.
+Run the `xtask` package's `web` command from the FilmCraft workspace (Bun OS, or
+aphrody-labs/filmcraft `bun-runtime-0.9.0`); `src/media/filmcraft` is gone.
 
 `packages/bun-video/src/apps/filmcraft/server.ts` serves only a configured web
 artifact directory using Bun.serve. It binds loopback and exposes `/health`.

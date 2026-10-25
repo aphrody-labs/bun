@@ -3,7 +3,7 @@
 # Bun : moteur et surfaces unifiés
 
 Directive du propriétaire, 2026-10-11. Branche de livraison : `obscura` dans
-`aphrody-labs/bun-os`. Objectif : un moteur natif partagé pour JavaScript, HTML,
+`aphrody-labs/bun-os` (miroir archivé depuis sous `aphrody-labs/bun-os-legacy`). Objectif : un moteur natif partagé pour JavaScript, HTML,
 CSS, réseau, layout et automatisation; Aphrody consomme ses capacités et garde
 les comportements produit. Les divergences avec les upstreams sont autorisées.
 Les licences et notices restent attachées à leurs sources.

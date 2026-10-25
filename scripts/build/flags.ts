@@ -962,11 +962,6 @@ export const defines: Flag[] = [
 
   // ─── Feature toggles ───
   {
-    flag: "BUN_VIDEO_NATIVE=1",
-    when: c => c.windows && c.videoNative,
-    desc: "Native video DLL delay-load hook",
-  },
-  {
     flag: "LAZY_LOAD_SQLITE=0",
     when: c => c.staticSqlite,
     desc: "SQLite statically linked",

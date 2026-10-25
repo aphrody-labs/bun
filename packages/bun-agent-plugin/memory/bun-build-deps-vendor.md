@@ -50,6 +50,10 @@ Patches live in `patches/<dep>/`.
 
 `bun_dependency_versions.h` (`depVersionsHeader.ts`) from each dep's `versionMacro` → `process.versions`.
 
+## Moved out of vendor/
+
+uv, Mullvad and russh-sftp left `vendor/` with the plugins that use them: `plugins/uv/vendor/uv` (aphrody-labs/uv `bun-0.12.24`), `plugins/vpn/vendor/mullvad` (aphrody-labs/mullvadvpn-app `bun-embedded`) and `plugins/ssh/vendor/russh-sftp`, each inside an optional submodule (skill `bun-add-ons`). `scripts/build/deps/winfw.ts` builds the Windows firewall library from `plugins/vpn/vendor/mullvad` only when `plugins/vpn` is mounted. `vendor/find-msvc-tools` stays: `bun_runtime` and the winmd plugin path-depend on it. `scripts/aphrody/publish-vendors.ts` stages uv and russh-sftp from the plugin submodules.
+
 ## Other vendor libs
 
 boringssl (TLS/crypto; skill `upgrade-boringssl`), brotli, cares, hdrhistogram, highway (SIMD; used by `bun_core::strings`), libarchive, libdeflate, libuv (Windows event loop only), lolhtml (HTMLRewriter), lshpack (HPACK), lsqpack+lsquic (HTTP/3), mimalloc (allocator), nodejs headers, picohttpparser, rust-argon2 (`Bun.password`), tinycc (bun:ffi cc; off on android/freebsd), zlib (zlib-ng), zstd, sqlite (in-tree amalgamation; `scripts/update-sqlite-amalgamation.sh`), libjpeg-turbo/libspng/libwebp (Bun.Image codecs).

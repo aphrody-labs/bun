@@ -61,3 +61,20 @@ packages, `factory/`, Chromium patches and docs, distribution scripts) move to
 their own repositories or to Bun OS owners; UI and M3 packages go to
 aphrody-labs/bun-ui, mounted by Bun OS as one submodule. Their state, and the
 reason when one has not moved, is in the inventory.
+
+## Bun Video
+
+`packages/bun-video` is [aphrody-labs/bun-video](https://github.com/aphrody-labs/bun-video),
+an optional submodule (`update = none`) because the runtime's media release scripts
+(`scripts/aphrody/release-native-worker.ts`, `media-release.ts`, `media-sdk-*`,
+`packages/bun-nginx/scripts`) read it; the release and publish workflows mount it.
+FilmCraft is not in this tree any more: Bun OS owns it, and bun-video pins
+aphrody-labs/filmcraft `bun-runtime-0.9.0` as `vendor/filmcraft`.
+
+The `bun` executable links no native video: `videoNative` is off and refuses to be
+turned on. `Bun.Video` extensions run the `bun-video` executable that the package builds.
+
+```sh
+git submodule update --init --checkout --recursive packages/bun-video
+cd packages/bun-video && bun install --frozen-lockfile
+```

@@ -23,4 +23,6 @@ For synchronous ownership use `using py = Python.open()` and ``py.run(String.raw
 
 Check actual backend availability and versions before enabling a capability. Report missing native backends and keep unsupported language features explicit. Keep stdio reserved for framed protocol bytes; diagnostics belong on stderr. Honor cancellation and close child processes when the editor or session exits. Codex uses this skill and bundled scripts; Claude's LSP manifest is a separate client declaration, not a Codex LSP feature.
 
+UV is not in this tree: `bun uv`, `uv`, `uvx` and Python compilation run the `uv` plugin ([aphrody-labs/bun-uv](https://github.com/aphrody-labs/bun-uv), downloaded on first use; build it from the optional submodule `plugins/uv`, whose `vendor/uv` is aphrody-labs/uv `bun-0.12.24`). PyJS itself (`packages/buv`, the `bun-python-*` packages, `bun_python.sqlite`) has not moved yet; see `docs/project/fork-inventory.json` and `docs/project/add-ons.mdx`.
+
 Read [the source and protocol references](references/sources.md) for version and provenance boundaries. Use the repository factory for builds and the coordinator's single final test pass.

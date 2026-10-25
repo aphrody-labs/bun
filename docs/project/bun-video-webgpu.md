@@ -29,4 +29,4 @@ Use `backend: "chromium"` for Bun-launched Chromium WebGPU, or the default
 
 This API performs compute and readback. It does not claim DRM access, replace the
 official Crunchyroll player, or automatically encode WebGPU composition output.
-See the package guide at [`packages/bun-video/docs/webgpu.md`](../../packages/bun-video/docs/webgpu.md).
+See the package guide at [`packages/bun-video/docs/webgpu.md`](https://github.com/aphrody-labs/bun-video/blob/main/docs/webgpu.md).

@@ -23,7 +23,7 @@ One entry point: `bun scripts/aphrody/work.ts <command>`. The queue is `scripts/
 - Hosts (VPS, dbfr), `C:\aphrody` and `C:\shenron` belong to the aphrody session: ask it over A2A, do not edit them from here.
 - Windows: no code or script may open a console window (`bun_no_window`).
 - Fix pre-existing failures met in touched files; remove what is useless.
-- Rust: one flat Cargo workspace at the root (one `Cargo.lock`, one `[patch.crates-io]`). A new crate joins the root `members`, and `default-members` unless it needs a system SDK or downloads in a build script. Standalone artifacts use the root's named profiles (`cargo build --profile winsvc -p bun-winsvc`). Never add a nested `[workspace]`: fold one with `bun scripts/aphrody/flatten-workspace.ts <dir> [--heavy] [--migrate-tables]`; `--check` must print nothing.
+- Rust: one flat Cargo workspace at the root (one `Cargo.lock`, one `[patch.crates-io]`). A new crate joins the root `members`, and `default-members` unless it needs a system SDK or downloads in a build script. Standalone artifacts use the root's named profiles (`cargo build --profile winsvc -p bun-winsvc`). Never add a nested `[workspace]`: fold one with `bun scripts/aphrody/flatten-workspace.ts <dir> [--heavy] [--migrate-tables]`; `--check` must print nothing. Exception: the add-on submodules (`plugins/<name>`, `packages/bun-video`) are separate repositories, each with its own workspace and lockfile; change them in their repository and bump the pin here (skill `bun-add-ons`). `git add` of a submodule path stages only its pin.
 
 ## Infinite goal
 

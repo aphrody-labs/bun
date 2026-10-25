@@ -5,6 +5,11 @@ multilingual PWA and MV3 extension are consolidated in `packages/bun-video`.
 Legacy scripts forward to that package. The artifact preserves package-local
 worker and browser assets and uses pinned official upstream dependencies.
 
+Note (2026-10-25): `packages/bun-video` is now the optional submodule
+[aphrody-labs/bun-video](https://github.com/aphrody-labs/bun-video); mount it with
+`git submodule update --init --checkout --recursive packages/bun-video`
+([Add-ons](../project/add-ons.mdx)).
+
 Source: [703305158ae29b3d99a354e74bba6b7866a94e35](https://github.com/aphrody-labs/bun/commit/703305158ae29b3d99a354e74bba6b7866a94e35).
 Version: `@aphrody/bun-video@1.4.4-video.0`, requested npm tag `next`.
 The source-pinned archive contains 72 public files and has SHA-256

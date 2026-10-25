@@ -61,6 +61,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Mount Bun Video (optional submodule of aphrody-labs/bun-video)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.APHRODY_SYNC_TOKEN || github.token }}
+        run: |
+          gh auth setup-git
+          git submodule update --init --checkout --recursive packages/bun-video
       - uses: ./.github/actions/setup-bun
         with:
           bun-version: ${{ env.BUN_HOST_VERSION }}
@@ -144,7 +151,7 @@ jobs:
         # plugins/* are optional submodules (update = none) of private aphrody-labs/bun-<name> repositories.
         run: |
           gh auth setup-git
-          git submodule update --init --checkout --recursive plugins
+          git submodule update --init --checkout --recursive plugins packages/bun-video
       - uses: ./.github/actions/setup-bun
         with:
           bun-version: ${{ matrix.controlBootstrap.tag }}
@@ -250,6 +257,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Mount Bun Video (optional submodule of aphrody-labs/bun-video)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.APHRODY_SYNC_TOKEN || github.token }}
+        run: |
+          gh auth setup-git
+          git submodule update --init --checkout --recursive packages/bun-video
       - uses: ./.github/actions/setup-bun
         with:
           bun-version: ${{ env.BUN_HOST_VERSION }}
@@ -293,6 +307,13 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Mount Bun Video (optional submodule of aphrody-labs/bun-video)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.APHRODY_SYNC_TOKEN || github.token }}
+        run: |
+          gh auth setup-git
+          git submodule update --init --checkout --recursive packages/bun-video
       - uses: ./.github/actions/setup-bun
         with:
           bun-version: ${{ env.BUN_HOST_VERSION }}

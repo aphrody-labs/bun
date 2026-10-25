@@ -34,7 +34,7 @@ Source : [usage CEF](https://chromiumembedded.github.io/cef/general_usage).
 Le projet local dispose déjà de `aphrody-tauri-runtime-cef`.
 Réutiliser ce propriétaire avant d'introduire un deuxième stack desktop.
 Le manifeste fixe `cef` et `cef-dll-sys` à `152.3.0`.
-Référence : [manifeste CEF local](https://github.com/aphrody-labs/bun-distribution/blob/os/packages/bun-tauri/crates/aphrody-tauri-runtime-cef/Cargo.toml).
+Référence : [manifeste CEF local](https://github.com/aphrody-labs/bun-os/blob/os/packages/bun-tauri/crates/aphrody-tauri-runtime-cef/Cargo.toml).
 
 ## Branches et binaires CEF
 
@@ -106,7 +106,7 @@ Référence : [preuves Obscura](../../src/browser/PLAN.md).
 Le sandbox CEF Windows local reste une limite de packaging documentée.
 Ne pas perdre cette réserve lors d'un changement de version.
 Les autres plateformes exigent leurs propres preuves.
-Référence : [sandbox CEF local](https://github.com/aphrody-labs/bun-distribution/blob/os/packages/bun-tauri/crates/aphrody-tauri-runtime-cef/src/sandbox.rs).
+Référence : [sandbox CEF local](https://github.com/aphrody-labs/bun-os/blob/os/packages/bun-tauri/crates/aphrody-tauri-runtime-cef/src/sandbox.rs).
 
 ## Corpus primaire à conserver
 

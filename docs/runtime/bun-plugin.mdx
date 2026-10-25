@@ -10,7 +10,7 @@ A plugin is looked up, in order:
 1. next to the `bun` executable (`bun-uv`, `bun-uv.exe`), where a build of the checkout puts it;
 2. in `$BUN_PLUGINS_DIR`, or `$BUN_INSTALL/plugins` (default `~/.bun/plugins`), under `<name>/<version>/`.
 
-When it is missing, the first command that needs it downloads it from the GitHub release of the running Bun (`aphrody-v<version>`, then `main-runtime-<revision>`), checks it against the release's `SHA256SUMS.txt`, and installs it in the plugin directory. Plugins of an older Bun are removed when the new one is installed, so `bun upgrade` needs no extra step.
+When it is missing, the first command that needs it downloads it from the GitHub release of the running Bun (`bun-v<version>`, or `aphrody-v<version>` for a build with a version tag, then `main-runtime-<revision>`), checks it against the release's `SHA256SUMS.txt`, and installs it in the plugin directory. Plugins of an older Bun are removed when the new one is installed, so `bun upgrade` needs no extra step.
 
 ```sh
 bun plugin list            # every plugin and where it is
@@ -33,13 +33,13 @@ Release assets are named `bun-<name>-<os>-<arch>[-musl][.exe]`, for example `bun
 
 Each plugin is its own repository, mounted in the Bun checkout as an optional submodule under `plugins/` (`update = none`, so a plain clone or `git submodule update` leaves it out):
 
-| Plugin   | Repository                                                         | Bundles                                                     |
-| -------- | ------------------------------------------------------------------ | ----------------------------------------------------------- |
-| `uv`     | [aphrody-labs/bun-uv](https://github.com/aphrody-labs/bun-uv)         | uv 0.12.24 (`vendor/uv`, aphrody-labs/uv `bun-0.12.24`)      |
-| `vpn`    | [aphrody-labs/bun-vpn](https://github.com/aphrody-labs/bun-vpn)       | `bun_vpn`, Mullvad (`vendor/mullvad`, GPL-3.0-or-later)     |
-| `ssh`    | [aphrody-labs/bun-ssh](https://github.com/aphrody-labs/bun-ssh)       | `bun_ssh`, patched `russh-sftp`                             |
-| `docker` | [aphrody-labs/bun-docker](https://github.com/aphrody-labs/bun-docker) | `bun_docker`; needs `plugins/ssh` mounted too               |
-| `just`   | [aphrody-labs/bun-just](https://github.com/aphrody-labs/bun-just)     | `bun_just` (`vendor/just`, aphrody-labs/just `bun`)         |
+| Plugin   | Repository                                                            | Bundles                                                       |
+| -------- | --------------------------------------------------------------------- | ------------------------------------------------------------- |
+| `uv`     | [aphrody-labs/bun-uv](https://github.com/aphrody-labs/bun-uv)         | uv 0.12.24 (`vendor/uv`, aphrody-labs/uv `bun-0.12.24`)       |
+| `vpn`    | [aphrody-labs/bun-vpn](https://github.com/aphrody-labs/bun-vpn)       | `bun_vpn`, Mullvad (`vendor/mullvad`, GPL-3.0-or-later)       |
+| `ssh`    | [aphrody-labs/bun-ssh](https://github.com/aphrody-labs/bun-ssh)       | `bun_ssh`, patched `russh-sftp`                               |
+| `docker` | [aphrody-labs/bun-docker](https://github.com/aphrody-labs/bun-docker) | `bun_docker`; needs `plugins/ssh` mounted too                 |
+| `just`   | [aphrody-labs/bun-just](https://github.com/aphrody-labs/bun-just)     | `bun_just` (`vendor/just`, aphrody-labs/just `bun`)           |
 | `winmd`  | [aphrody-labs/bun-winmd](https://github.com/aphrody-labs/bun-winmd)   | windows-bindgen; uses the checkout's `vendor/find-msvc-tools` |
 
 ```sh
@@ -48,3 +48,5 @@ bun bd --target=plugins                                         # bun-<name> nex
 ```
 
 `bun bd` builds only the plugins whose submodule is checked out. Each plugin is a Cargo workspace of its own, with its own `Cargo.lock`, that path-depends on crates of the checkout.
+
+[Add-ons](/project/add-ons) covers the fresh-checkout path, Bun Video, releases, the Bun OS mounts and where each add-on's source and issues live.

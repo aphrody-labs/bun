@@ -4,6 +4,10 @@ Audit du 18 octobre 2026, sur les sources effectivement présentes. Ce document
 décrit des frontières et des obligations d'extraction ; il ne qualifie aucune
 fonction Rust, aucun build WASM et aucune parité fonctionnelle par exécution.
 
+> Note (2026-10-25) : `packages/bun-video` est depuis le sous-module optionnel
+> aphrody-labs/bun-video, et FilmCraft a quitté `src/media/filmcraft` pour Bun OS
+> (voir [FilmCraft](filmcraft-migration.md)). Les chemins ci-dessous sont ceux du 18 octobre.
+
 ## Sources et résultat REA
 
 - FilmCraft : `vendor/filmcraft`, HEAD initial

@@ -28,3 +28,8 @@
 	url = https://github.com/aphrody-labs/bun-winmd.git
 	update = none
 	branch = main
+[submodule "packages/bun-video"]
+	path = packages/bun-video
+	url = https://github.com/aphrody-labs/bun-video.git
+	update = none
+	branch = main

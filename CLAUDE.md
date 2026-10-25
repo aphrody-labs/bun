@@ -95,6 +95,8 @@ test runner and package manager.
 - `vendor`: native dependency sources; build recipes in `scripts/build/deps`.
 - `src/codegen`: generated classes, sinks, modules and functions. Edit inputs,
   not generated output; the build regenerates bindings.
+- `plugins/<name>`, `packages/bun-video`: optional add-on submodules; state in
+  `docs/project/fork-inventory.json`, guide in `docs/project/add-ons.mdx`.
 
 ## Implementation
 
@@ -113,7 +115,9 @@ test runner and package manager.
 
 ## Bun Video
 
-- Package: `packages/bun-video`; guidance: `.claude/skills/bun-video/SKILL.md`.
+- Package: `packages/bun-video`, the optional submodule aphrody-labs/bun-video
+  (`git submodule update --init --checkout --recursive packages/bun-video`); guidance:
+  `.claude/skills/bun-video/SKILL.md`. The runtime links no native video (`videoNative` is off).
 - WebGPU compute: `packages/bun-video/docs/webgpu.md`, `bun-video-webgpu` CLI.
 - Qualify compute, browser probing, native providers, encoding and DRM playback
   separately; one working layer does not prove the others.

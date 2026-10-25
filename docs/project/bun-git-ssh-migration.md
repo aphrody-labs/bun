@@ -9,6 +9,10 @@ aphrody carried its own SSH client (russh, russh-sftp, fast_rsync in `crates/inf
 
 The in-process code only runs when the tool is missing, or when a structured (JSON) result is needed. aphrody keeps what talks to its hosts and services (inventories, deploy, probes, sysctl tuning, monitors). It calls `bun ssh` / `bun git` instead of its own transport.
 
+> Note (2026-10-25): `src/ssh` (crate `bun_ssh`) and `vendor/russh-sftp` moved to the `ssh` plugin,
+> [aphrody-labs/bun-ssh](https://github.com/aphrody-labs/bun-ssh), mounted here as `plugins/ssh`
+> ([Add-ons](add-ons.mdx)). The paths below are the ones of the import.
+
 ## Origin of the code
 
 The aphrody sources come from `aphrody-labs/aphrody` revision `55fdf5e127`, Apache-2.0. The license is recorded in `[package.metadata.aphrody-source]` of `src/ssh/Cargo.toml`.

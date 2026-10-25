@@ -19,6 +19,13 @@ Use the global `Bun.Video` class; there is no module to import. The separate
 `@aphrody/bun-video` package adds composition engines, HLS/DASH, browser capture
 and optional FFmpeg/mpv adapters on top of it.
 
+<Note>
+  Bun Video moved to [aphrody-labs/bun-video](https://github.com/aphrody-labs/bun-video) on 2026-10-25. Since then the
+  `bun` executable of this fork links no native decoder: `Bun.Video.available` is `false`, and native `Bun.Video` is no
+  longer a build option (`videoNative` is a configure error). Use the `bun-video` executable that the package builds;
+  see [Add-ons](/project/add-ons#bun-video).
+</Note>
+
 `Bun.Video.available` reports whether this build of Bun includes the native
 decoder; it does not guarantee support for every codec. MP4 and QuickTime input
 keeps the budgeted sample-table path. Other containers (WebM, Matroska, AVI, MPEG-TS and the

@@ -151,19 +151,15 @@ describe("native coreutils feature", () => {
   });
 });
 
-test("native video is enabled by default and supports an explicit opt out", () => {
+test("native video is not part of the runtime build", () => {
   const base = { os: "linux", arch: "x64", linuxSysroot: "/fake" } as const;
   const standard = resolve(base);
-  expect(standard.videoNative).toBe(true);
+  expect(standard.videoNative).toBe(false);
   const standardArgs = cargoBuildInvocation(standard).args;
   expect(standardArgs[standardArgs.indexOf("--features") + 1]).toBe(
-    "coreutils,video_native,browser_crawl,browser_index,google_search",
+    "coreutils,browser_crawl,browser_index,google_search",
   );
-  const only = { browserCrawl: false, browserIndex: false, googleSearch: false } as const;
-  const disabled = cargoBuildInvocation(resolve({ ...base, ...only, videoNative: false })).args;
-  expect(disabled[disabled.indexOf("--features") + 1]).toBe("coreutils");
-  const videoOnly = cargoBuildInvocation(resolve({ ...base, ...only, videoNative: true, coreutils: false })).args;
-  expect(videoOnly[videoOnly.indexOf("--features") + 1]).toBe("video_native");
+  expect(() => resolve({ ...base, videoNative: true })).toThrow("aphrody-labs/bun-video");
 });
 
 test.each(["x64", "aarch64"] as const)("Windows %s C build scripts use the configured SDK", arch => {

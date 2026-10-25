@@ -123,17 +123,57 @@
     {
       "component": "bun-video",
       "path": [
-        "packages/bun-video",
+        "packages/bun-video"
+      ],
+      "type": "package+rust-workspace",
+      "kind": "package",
+      "destinationRepo": "https://github.com/aphrody-labs/bun-video",
+      "forkMount": "packages/bun-video",
+      "forkMountUpdate": "none",
+      "bunOsPath": "vendor/bun-video",
+      "submoduleRevision": "c560e546ab239a0c5fe4c8b32849947567158c94",
+      "upstream": "remotion, hyperframes, mediabunny, yt-dlp (vendored in-tree)",
+      "migrationState": "moved",
+      "notes": "First commit 03189dc525c holds HEAD:packages/bun-video of c538f052908 minus 19 dangling Git LFS pointers (objects missing locally and on the aphrody-labs/bun LFS server; GitHub refuses pushes that reference them), listed in its message. The runtime media release (release-native-worker, media-release, media-sdk-*, the avio SDK component, bun-nginx scripts) still reads packages/bun-video, so it is an optional submodule mounted by aphrody-release.yml, the publish workflows and bun-video-release.yml. 19 of 23 Git LFS objects of hyperframes test media were already missing in aphrody-labs/bun (local and LFS server); pushed as dangling pointers. bun_video_native, the video_native cargo feature and the Windows BUN_VIDEO_NATIVE define are gone; videoNative: true is a configure error; the cfg(feature = \"video_native\") code in src/runtime/image/Image.rs is dormant (registered in check-cfg) and can be deleted.",
+      "dataLoss": {
+        "summary": "19 Git LFS pointers under packages/bun-video/hyperframes/producer/tests had no object in aphrody-labs/bun (neither the local LFS store nor the LFS server returned them: 404), so their content was already lost before the move and they are absent from aphrody-labs/bun-video. Recovery would need the original hyperframes repository or another clone that fetched them.",
+        "files": [
+          "packages/bun-video/hyperframes/producer/tests/distributed/plan-v2-partial-color/src/partial-color.mp4",
+          "packages/bun-video/hyperframes/producer/tests/hdr-hlg-regression/src/hdr-hlg-clip.mp4",
+          "packages/bun-video/hyperframes/producer/tests/hdr-regression/src/hdr-clip.mp4",
+          "packages/bun-video/hyperframes/producer/tests/hdr-regression/src/hdr-photo-pq.png",
+          "packages/bun-video/hyperframes/producer/tests/heygen-promo-preview-assets/src/feature-strip.png",
+          "packages/bun-video/hyperframes/producer/tests/heygen-promo-preview-assets/src/hero-prism.png",
+          "packages/bun-video/hyperframes/producer/tests/heygen-promo-preview-assets/src/heygen-homepage.png",
+          "packages/bun-video/hyperframes/producer/tests/heygen-promo-preview-assets/src/heygen-logo.png",
+          "packages/bun-video/hyperframes/producer/tests/heygen-promo-preview-assets/src/heygen-superpower.png",
+          "packages/bun-video/hyperframes/producer/tests/hf2550-video-subcomposition-ghost/src/index.html",
+          "packages/bun-video/hyperframes/producer/tests/hf2550-video-subcomposition-ghost/src/staged_bea3803b37370134.mp4",
+          "packages/bun-video/hyperframes/producer/tests/nested-sequential-video-local-start/src/media/source.mp4",
+          "packages/bun-video/hyperframes/producer/tests/portrait-edge-bleed/src/sample.mp4",
+          "packages/bun-video/hyperframes/producer/tests/render-video-overlay-stretch/src/clip.mp4",
+          "packages/bun-video/hyperframes/producer/tests/render-video-overlay-stretch/src/transition-overlay.png",
+          "packages/bun-video/hyperframes/producer/tests/speed-ramp/src/assets/counter.mp4",
+          "packages/bun-video/hyperframes/producer/tests/vfr-screen-recording/src/clip.mp4",
+          "packages/bun-video/hyperframes/producer/tests/video-hfid-no-id/src/clip.mp4",
+          "packages/bun-video/hyperframes/producer/tests/webgl-video-texture-render-compat/src/clip.mp4"
+        ]
+      }
+    },
+    {
+      "component": "filmcraft",
+      "path": [
         "src/media/filmcraft"
       ],
-      "type": "tree",
+      "type": "rust-workspace",
       "kind": "package",
-      "destinationRepo": null,
-      "bunOsPath": null,
-      "submoduleRevision": null,
-      "upstream": null,
-      "migrationState": "pending",
-      "notes": "Next batch. bun_video_native is an optional path dependency of bun_runtime; scripts/aphrody media-sdk-*, media-release and release-* import packages/bun-video/src (Bun OS runtime-heavy-migration B4)."
+      "destinationRepo": "https://github.com/aphrody-labs/filmcraft",
+      "forkMount": null,
+      "bunOsPath": "crates/filmcraft-*, apps/filmcraft*",
+      "submoduleRevision": "e1ebbf4c1acbc267c2af65fb8b32842beecc50a5",
+      "upstream": "https://github.com/aphrody-labs/filmcraft (branch bun-runtime-0.9.0)",
+      "migrationState": "moved",
+      "notes": "Deduplicated: the runtime copy equals aphrody-labs/filmcraft bun-runtime-0.9.0 except the standalone root Cargo.toml/Cargo.lock and one [lib] name. Bun OS already owns FilmCraft (reconciled in f7dcf26d0f); bun-video mounts the branch as vendor/filmcraft."
     },
     {
       "component": "pyjs",

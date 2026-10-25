@@ -1,8 +1,0 @@
-dist/test
-tsconfig.json
-tsconfig.tsbuildinfo
-.env
-.turbo
-src
-eslint.config.mjs
-bundle.ts

@@ -16,7 +16,6 @@ workspace = true
 [dependencies]
 bun_google = { workspace = true, optional = true }
 aphrody-jev.workspace = true
-bun_video_native = { package = "bun-video-native", path = "../../packages/bun-video/native", optional = true, default-features = false }
 bun_browser_dom.workspace = true
 bun_readability.workspace = true
 bun_browser_crawl = { workspace = true, optional = true }
@@ -161,7 +160,6 @@ find-msvc-tools = { path = "../../vendor/find-msvc-tools" }
 
 [features]
 default = []
-video_native = ["dep:bun_video_native", "bun_video_native/filmcraft"]
 curl_native = []
 browser_crawl = ["dep:bun_browser_crawl"]
 browser_index = ["dep:bun_browser_index"]

@@ -4,6 +4,10 @@ Périmètre : `aphrody-labs/bun`, son historique Bun-OS et les checkouts de ce
 fork identifiés sur Windows, VPS et DBFR. Les dépôts distincts `bun-libraries`
 et `bun-distribution` restent sous leurs propriétaires respectifs.
 
+> Note (2026-10-25) : le miroir Bun-OS de ce document est archivé sous
+> `aphrody-labs/bun-os-legacy` ; `bun-distribution` a été renommé `aphrody-labs/bun-os`.
+> Le reste du texte garde les noms du 13 octobre.
+
 ## Source et fusions locales
 
 | Commit        | Résultat                                                                                                                  |
@@ -36,7 +40,7 @@ gardent leur whitespace upstream.
 
 ## Publication GitHub
 
-La [PR Bun-OS #3](https://github.com/aphrody-labs/bun-os/pull/3) est fusionnée
+La [PR Bun-OS #3](https://github.com/aphrody-labs/bun-os-legacy/pull/3) est fusionnée
 par `827b8953dd4`. Les tags officiels des deux actions et la syntaxe des deux
 workflows ont été vérifiés. Les checks GitHub n'avaient pas démarré : GitHub
 signale une limite de dépenses ou un problème de facturation Actions.

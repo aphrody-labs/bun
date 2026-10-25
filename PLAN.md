@@ -512,7 +512,7 @@ Owner lockfile iterator lot (2026-10-10): pooled RAII scratch removes four runti
 
 Owner launch/shell pointer lot (2026-10-10): four runtime Windows diagnostics removed (18 to14), GNU strict both targets zero, MSVC owned zero. Changed engine44 pass/14 inherited skips/0 fail,27 snapshots/121 assertions. See docs/project/launch-shell-pointer-qualification.md. Interactive console and full delivery gates remain open.
 
-Owner directive (2026-10-11): Obscura engine source moves from Aphrody into `packages/bun-obscura`, a standalone workspace on the `obscura` branch of `aphrody-labs/bun-os`. Product adapters remain in Aphrody and consume exact provider revisions. See [current integration plan](src/browser/PLAN.md). V8, local patches and permission boundaries stay intact; no native Bun binding is implied by the source transfer.
+Owner directive (2026-10-11): Obscura engine source moves from Aphrody into `packages/bun-obscura`, a standalone workspace on the `obscura` branch of `aphrody-labs/bun-os` (the mirror archived since as `aphrody-labs/bun-os-legacy`). Product adapters remain in Aphrody and consume exact provider revisions. See [current integration plan](src/browser/PLAN.md). V8, local patches and permission boundaries stay intact; no native Bun binding is implied by the source transfer.
 
 ## Rio wrap cells — 2026-10-13
 

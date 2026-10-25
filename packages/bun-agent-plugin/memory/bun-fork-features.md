@@ -12,7 +12,7 @@ Full catalog with owners and docs: `docs/runtime/fork-features.mdx` (site: /docs
 - Quality: `bun check` (typescript-go port, `src/sema`), `bun lint` (`src/quality`, `src/lint`), `bun fmt`, `bun n2b` and `bun migrate` (`src/migrate`), `bun wasm build`, `bun rename`, `bun docs`, `bun parse`, `bun bench`.
 - Agents: `bun mcp` (`src/mcp`), `bun agent-plugin`, `bun lsp` (`src/lsp`), `bun just`, `bun video`.
 - Configuration and sessions: `bun env` (`.env` files: list/get/set/unset/check/files, secrets masked), `bun cookie` (cookie jars: import/list/get/header/rm/check), both in `src/env_cookie`.
-- Hosts and network: `bun ssh` (plugin, aphrody-labs/bun-ssh), `bun docker`, `bun vpn` (embedded Mullvad), `bun host` (resource registry), `bun git|rclone|rsync` (pinned tools, `rsync --native`), `bun search` (Google).
+- Hosts and network: `bun ssh` (plugin, aphrody-labs/bun-ssh), `bun docker` (plugin, aphrody-labs/bun-docker), `bun vpn` (plugin, aphrody-labs/bun-vpn, embedded Mullvad), `bun host` (resource registry), `bun git|rclone|rsync` (pinned tools, `rsync --native`), `bun search` (Google).
 - Platform: `bun msvc`, `bun winmd`, `bun dotnet`, `bun python`, `bun uv`, `bunsh` (Bun Shell as system shell), coreutils applets (`src/coreutils`).
 - Config: `bun env`, `bun cookie` (`src/env_cookie`).
 - Build: `bun bd` (`scripts/build.ts`), `bun factory` (`scripts/factory/factory.ts`, VPS slots).
@@ -29,7 +29,7 @@ Full catalog with owners and docs: `docs/runtime/fork-features.mdx` (site: /docs
 
 ## Packages and apps
 
-`packages/`: bun-types, bun-agent-plugin, bun-video, bun-web (+webview-core/page), bun-chromium, bun-google, bun-cloudflare, bun-next, bun-plugin-{tailwind,svelte,yaml,neon,supabase}, bun-oxc, bun-n2b, bun-dotnet, bun-python-*, buv, bun-runtime-sdk, bun-llama, bun-nginx, bun-supervisor, bun-tools, bun-timeline, bun-x, bun-qr, bun-fuzzy, bun-fluent, bun-icons, bun-m3, web. Apps: self-hosted `aphrody` server (`packages/web/server`).
+Add-ons (own repositories, optional submodules, skill `bun-add-ons`): plugins uv, vpn, ssh, docker, just, winmd (`plugins/<name>`, fetched on first use) and Bun Video (`packages/bun-video`, aphrody-labs/bun-video). `packages/`: bun-types, bun-agent-plugin, bun-web (+webview-core/page), bun-chromium, bun-google, bun-cloudflare, bun-next, bun-plugin-{tailwind,svelte,yaml,neon,supabase}, bun-oxc, bun-n2b, bun-dotnet, bun-python-*, buv, bun-runtime-sdk, bun-llama, bun-nginx, bun-supervisor, bun-tools, bun-timeline, bun-x, bun-qr, bun-fuzzy, bun-fluent, bun-icons, bun-m3, web. Apps: self-hosted `aphrody` server (`packages/web/server`).
 
 ## Generated surfaces
 

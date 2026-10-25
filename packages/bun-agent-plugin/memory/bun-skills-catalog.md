@@ -15,6 +15,7 @@ Updated 2026-10-13. Claude, Codex, Antigravity, Gemini, OpenCode and local-model
 | Native Rust/Bun design, minimal dependencies and distribution | bun-rust-first                      |
 | Bun application APIs and package replacement                  | bun-native, bun-apis                |
 | Runtime build and toolchain                                   | bun-build                           |
+| Add-ons: plugins, Bun Video, submodule pins, Bun OS mounts    | bun-add-ons                         |
 | Rust crate ownership and interop                              | bun-crates                          |
 | Runtime APIs                                                  | bun-runtime                         |
 | Native video metadata, Image frame transforms and MP4 remux   | bun-video                           |

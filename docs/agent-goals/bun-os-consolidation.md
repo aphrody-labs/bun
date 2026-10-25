@@ -2,7 +2,12 @@
 
 Status: active owner execution goal, 2026-10-14.
 
-Canonical execution repository: `aphrody-labs/bun-distribution`, branch `os`.
+Canonical execution repository: `aphrody-labs/bun-os`, branch `os`.
+
+> Note (2026-10-25): `aphrody-labs/bun-distribution` was renamed `aphrody-labs/bun-os`;
+> the earlier `aphrody-labs/bun-os` mirror is archived as `aphrody-labs/bun-os-legacy`.
+> The rest of this goal, written on 2026-10-14, keeps the old name `bun-distribution`
+> for that repository and its checkout directory.
 
 This file is intentionally mirrored into `aphrody-labs/bun` and
 `aphrody-labs/aphrody` so repository-local Codex sessions discover the same
