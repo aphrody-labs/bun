@@ -15,8 +15,7 @@ macro_rules! pretty {
     };
 }
 
-pub(crate) const NO_FILES: &[u8] =
-    b"No files found to lint. Please check your paths and ignore patterns.";
+const NO_FILES: &[u8] = b"No files found to lint. Please check your paths and ignore patterns.";
 
 pub(crate) fn write_error(out: &mut Vec<u8>, colors: bool, text: &[u8]) {
     pretty!(out, colors, "<red>error<r><d>:<r> {}\n", BStr::new(text));
@@ -101,22 +100,23 @@ pub(super) fn write_default(out: &mut Vec<u8>, results: &[FileResult], meta: &Me
     );
 }
 
-/// Empty-target output. Machine documents remain parseable; the caller reports their error on stderr.
-/// `is_error`: not `--no-error-on-unmatched-pattern`.
+/// Everything oxlint prints when it finds no files to lint. It never asks the format to print problems then, so there's
+/// no empty document, only what the format prints at the very end of a run. `is_error` is false with
+/// `--no-error-on-unmatched-pattern`.
 pub(crate) fn without_files(format: Format, meta: &Meta, is_error: bool) -> Vec<u8> {
-    if format.is_document() {
-        return super::format(format, &[], meta);
-    }
     let mut out = Vec::new();
     if is_error && format == Format::OxlintDefault {
         write_error(&mut out, meta.color, NO_FILES);
         return out;
     }
-    if is_error && (format.is_for_people() || matches!(format, Format::Unix | Format::OxlintUnix)) {
+    if is_error {
         out.extend_from_slice(NO_FILES);
         out.push(b'\n');
     }
-    if matches!(format, Format::OxlintDefault | Format::OxlintGithub) {
+    if matches!(
+        format,
+        Format::OxlintDefault | Format::OxlintGithub | Format::OxlintJson
+    ) {
         out.append(&mut super::format(format, &[], meta));
     }
     out

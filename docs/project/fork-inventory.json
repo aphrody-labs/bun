@@ -26,7 +26,8 @@
       "submoduleRevision": "c1c32fce6c2593873617e870bd52faae564737f7",
       "upstream": "https://github.com/astral-sh/uv (0.12.24) via aphrody-labs/uv branch bun-0.12.24 c3c36e2a7b3",
       "migrationState": "moved",
-      "notes": "vendor/uv is aphrody-labs/uv bun-0.12.24: upstream tag 0.12.24 plus the fork's tree verbatim. The vestigial uv build dependency (scripts/build/deps/uv.ts) was removed: no runtime crate reads it. packages/buv still points at plugins/uv/vendor/uv until PyJS moves."
+      "notes": "vendor/uv is aphrody-labs/uv bun-0.12.24: upstream tag 0.12.24 plus the fork's tree verbatim. The vestigial uv build dependency (scripts/build/deps/uv.ts) was removed: no runtime crate reads it. packages/buv still points at plugins/uv/vendor/uv until PyJS moves.",
+      "bunOsCommit": "ba1a7c65e0"
     },
     {
       "component": "vpn",
@@ -44,7 +45,8 @@
       "submoduleRevision": "aff07e145237acd9126c8a532419da7eb0d4a9d4",
       "upstream": "https://github.com/mullvad/mullvadvpn-app via aphrody-labs/mullvadvpn-app branch bun-embedded 9096ce027b8 (parent 493198790be)",
       "migrationState": "moved",
-      "notes": "GPL-3.0-or-later. WinFw (scripts/build/deps/winfw.ts) builds from plugins/vpn/vendor/mullvad and is enabled only when it is mounted. The source offer of the Linux sidecar now names aphrody-labs/bun-vpn; that repository is private, so the GPL corresponding-source offer needs it public (owner decision)."
+      "notes": "GPL-3.0-or-later. WinFw (scripts/build/deps/winfw.ts) builds from plugins/vpn/vendor/mullvad and is enabled only when it is mounted. The source offer of the Linux sidecar now names aphrody-labs/bun-vpn; that repository is private, so the GPL corresponding-source offer needs it public (owner decision; not changed by the migration).",
+      "bunOsCommit": "ba1a7c65e0"
     },
     {
       "component": "ssh",
@@ -62,7 +64,8 @@
       "submoduleRevision": "964aaa1063223b4b6e167ad4cebb1d40a336e774",
       "upstream": "https://github.com/AspectUnk/russh-sftp 3.0.1 (patched, in-tree)",
       "migrationState": "moved",
-      "notes": "scripts/aphrody/publish-vendors.ts still stages vendor/russh-sftp and vendor/uv from this tree; it must be pointed at the plugin repositories before the next vendor crate publication."
+      "notes": "scripts/aphrody/publish-vendors.ts stages russh-sftp from plugins/ssh and uv from plugins/uv/vendor/uv (VENDOR_SOURCES).",
+      "bunOsCommit": "ba1a7c65e0"
     },
     {
       "component": "docker",
@@ -79,7 +82,8 @@
       "submoduleRevision": "24ac698c6c2108df518f5efba28b845c8750ead5",
       "upstream": null,
       "migrationState": "moved",
-      "notes": "Path-depends on plugins/ssh/bun_ssh: mount both."
+      "notes": "Path-depends on plugins/ssh/bun_ssh: mount both.",
+      "bunOsCommit": "ba1a7c65e0"
     },
     {
       "component": "just",
@@ -96,7 +100,8 @@
       "submoduleRevision": "23ef9ebdaafa1ebf708affe7bb0b341da73cf4c3",
       "upstream": "https://github.com/casey/just via aphrody-labs/just branch bun 5827d90d9ec (parent a6bc306)",
       "migrationState": "moved",
-      "notes": "bun_just tests left the native-ci rust-toolchain-test gate; they run in the plugin workspace."
+      "notes": "bun_just tests left the native-ci rust-toolchain-test gate; they run in the plugin workspace.",
+      "bunOsCommit": "ba1a7c65e0"
     },
     {
       "component": "winmd",
@@ -112,7 +117,8 @@
       "submoduleRevision": "8c1a9806a81cdae2f880f3213d7855e1b4416d36",
       "upstream": "https://crates.io/crates/windows-bindgen",
       "migrationState": "moved",
-      "notes": "Uses the checkout's vendor/find-msvc-tools, which stays (bun_runtime dependency)."
+      "notes": "Uses the checkout's vendor/find-msvc-tools, which stays (bun_runtime dependency).",
+      "bunOsCommit": "ba1a7c65e0"
     },
     {
       "component": "bun-video",

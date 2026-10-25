@@ -8,39 +8,6 @@ use bun_core::{Global, UnwrapOrOom, env_var};
 
 use super::check_command::working_directory;
 
-/// Finds the command operand without mistaking a global option value for it.
-pub(crate) fn command_index(argv: &[&[u8]], command: &[u8]) -> Option<usize> {
-    let mut at = 1;
-    while let Some(arg) = argv.get(at).copied() {
-        if arg == b"--" {
-            return argv.get(at + 1).filter(|next| **next == command).map(|_| at + 1);
-        }
-        if arg == command {
-            return Some(at);
-        }
-        if !arg.starts_with(b"-") {
-            return None;
-        }
-        if global_option_takes_value(arg) {
-            at += 1;
-        }
-        at += 1;
-    }
-    None
-}
-
-fn global_option_takes_value(arg: &[u8]) -> bool {
-    if bun_core::strings::contains_char(arg, b'=') {
-        return false;
-    }
-    let param = super::arguments::RUN_PARAMS.iter().find(|param| match arg {
-        [b'-', b'-', name @ ..] => param.names.long == Some(name) || param.names.long_aliases.contains(&name),
-        [b'-', short] => param.names.short == Some(*short),
-        _ => false,
-    });
-    param.is_some_and(|param| matches!(param.takes_value, bun_clap::Values::One | bun_clap::Values::Many))
-}
-
 /// The kind of thing `bun <command>` runs.
 #[derive(Copy, Clone, PartialEq, Eq)]
 pub(crate) enum Runs {
@@ -413,23 +380,11 @@ fn is_file_or_executable(name: &[u8], cwd: &[u8]) -> bool {
         if (suffixes.iter()).any(|it| kind(dir, &[b"node_modules/.bin/", name, it]).is_some()) {
             return true;
         }
-        let Some(parent) = parent_for_search(dir) else {
+        let Some(parent) = bun_paths::dirname(dir) else {
             return false;
         };
         dir = parent;
     }
-}
-
-/// Keep filesystem roots absolute while walking ancestors, including Windows drive and share roots.
-fn parent_for_search(dir: &[u8]) -> Option<&[u8]> {
-    let parent = bun_paths::dirname(dir)?;
-    if parent.len() >= dir.len()
-        || (cfg!(windows)
-            && parent.len() < bun_paths::resolve_path::windows_filesystem_root(dir).len())
-    {
-        return None;
-    }
-    Some(parent)
 }
 
 /// The text of the `package.json` at `path`. A link in a repository can lead to `/dev/zero`: `bun run` stops at such a file, and
@@ -464,7 +419,7 @@ fn nearest_package_json(mut dir: &[u8]) -> Option<(&[u8], Vec<u8>, Vec<u8>)> {
             let dir = bun_core::strings::without_trailing_slash(dir);
             return Some((dir, path, contents));
         }
-        dir = parent_for_search(dir)?;
+        dir = bun_paths::dirname(dir)?;
     }
 }
 
@@ -520,7 +475,7 @@ fn package_of_inherited_script(command: &[u8]) -> Option<Vec<u8>> {
     }
 }
 
-/// Makes `env` that of the script `name` of the package that has `dir`.
+/// Makes `env` that of the script `name` of the package that has `dir`. See `is_of_the_project`.
 pub(crate) fn note_package_script(env: &mut bun_dotenv::Loader, name: &[u8], dir: &[u8]) {
     use std::io::Write;
     let key = b"BUN_INTERNAL_SCRIPTS_OF_COMMANDS";

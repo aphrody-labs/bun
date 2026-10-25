@@ -6,6 +6,16 @@ import { parseArgs } from "node:util";
 
 const ROOT = resolve(import.meta.dir, "../..");
 export const VENDORS = ["uv", "russh-sftp"] as const;
+/** Each vendor tree now lives in a plugin submodule (docs/project/fork-layout.md). */
+export const VENDOR_SOURCES = {
+  uv: { plugin: "plugins/uv", checkout: "plugins/uv/vendor/uv", path: "", repository: "aphrody-labs/uv" },
+  "russh-sftp": {
+    plugin: "plugins/ssh",
+    checkout: "plugins/ssh",
+    path: "vendor/russh-sftp",
+    repository: "aphrody-labs/bun-ssh",
+  },
+} as const;
 type Document = Record<string, any>;
 type Product = {
   original: string;
@@ -94,11 +104,16 @@ function run(command: string[], cwd: string): string {
 
 export async function stageVendor(vendor: (typeof VENDORS)[number], out: string): Promise<Product[]> {
   const prefix = `vendor/${vendor}/`;
-  const paths = run(["git", "ls-files", "-z", "--", `vendor/${vendor}`], ROOT)
+  const source = VENDOR_SOURCES[vendor];
+  const checkout = join(ROOT, source.checkout);
+  if (!existsSync(join(checkout, source.path, "Cargo.toml")))
+    throw new Error(`Mount ${source.plugin}: git submodule update --init --checkout --recursive ${source.plugin}`);
+  const staged = (path: string) => prefix + (source.path ? path.slice(source.path.length + 1) : path);
+  const paths = run(["git", "ls-files", "-z", "--", source.path || "."], checkout)
     .split("\0")
-    .filter(path => path.endsWith("/Cargo.toml"));
+    .filter(path => path === "Cargo.toml" || path.endsWith("/Cargo.toml"));
   const documents = new Map(
-    paths.map(path => [path, Bun.TOML.parse(run(["git", "show", `HEAD:${path}`], ROOT)) as Document]),
+    paths.map(path => [staged(path), Bun.TOML.parse(run(["git", "show", `HEAD:${path}`], checkout)) as Document]),
   );
   const products: Product[] = [];
   const workspaceDependencies = documents.get(`${prefix}Cargo.toml`)?.workspace?.dependencies ?? {};
@@ -134,8 +149,9 @@ export async function stageVendor(vendor: (typeof VENDORS)[number], out: string)
   const names = new Map(products.map(product => [product.original, product.name]));
   if (existsSync(join(out, "vendor", vendor))) throw new Error(`Staging directory already exists: ${out}`);
   mkdirSync(out, { recursive: true });
-  const archive = Bun.spawnSync(["git", "archive", "--format=tar", "HEAD", `vendor/${vendor}`], {
-    cwd: ROOT,
+  const archiveArgs = source.path ? ["HEAD", source.path] : [`--prefix=${prefix}`, "HEAD"];
+  const archive = Bun.spawnSync(["git", "archive", "--format=tar", ...archiveArgs], {
+    cwd: checkout,
     stdout: "pipe",
     stderr: "pipe",
   });
@@ -155,7 +171,7 @@ export async function stageVendor(vendor: (typeof VENDORS)[number], out: string)
     );
   }
   const lock = join(out, prefix, "Cargo.lock");
-  if (!existsSync(lock)) writeFileSync(lock, run(["git", "show", "HEAD:Cargo.lock"], ROOT));
+  if (!existsSync(lock)) writeFileSync(lock, run(["git", "show", "HEAD:Cargo.lock"], join(ROOT, source.plugin)));
   const lockDocument = Bun.TOML.parse(readFileSync(lock, "utf8")) as Document;
   const localNames = new Set<string>(
     lockDocument.package.filter((pkg: Document) => !pkg.source && names.has(pkg.name)).map((pkg: Document) => pkg.name),
@@ -176,8 +192,8 @@ export async function stageVendor(vendor: (typeof VENDORS)[number], out: string)
     join(out, "vendor", vendor, "BUN-FORK-PROVENANCE.json"),
     JSON.stringify(
       {
-        repository: "aphrody-labs/bun",
-        commit: run(["git", "rev-parse", "HEAD"], ROOT).trim(),
+        repository: source.repository,
+        commit: run(["git", "rev-parse", "HEAD"], checkout).trim(),
         products: ordered,
       },
       null,
