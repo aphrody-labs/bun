@@ -32,7 +32,8 @@ artifacts exist. Selecting three available lanes does not qualify all platforms.
 Before applying a dispatch, the adapter checks that the remote ref matches the
 planned source SHA, the workflow is active, and repository guards allow the
 selected destination. The four owner workflows permit `aphrody-labs/bun` and
-the private `aphrody-labs/bun-os`; their qualified bootstrap is the explicit
+the private `aphrody-labs/bun-os` (the mirror archived since as
+`aphrody-labs/bun-os-legacy`); their qualified bootstrap is the explicit
 published tag `aphrody-v1.4.3-aphrody.4` from the canonical runtime repository.
 Private destination publication remains governed by the existing workflow and
 provider authentication; no credentials are copied to plans or artifacts.

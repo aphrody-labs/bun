@@ -4,6 +4,11 @@ Directive du 2026-10-16 : Bun (`aphrody-labs/bun`, `main`) est le produit unique
 Tout code utile de `aphrody-labs/aphrody` (`C:\src\aphrody`, inventaire au commit
 `ac1f1bce8b`) est absorbé dans Bun, sans shim ni chemin legacy.
 
+> Note (2026-10-25) : depuis, les add-ons ont quitté ce dépôt. `src/bun_vpn` est le plugin
+> aphrody-labs/bun-vpn (`plugins/vpn`), `packages/bun-video` le sous-module optionnel
+> aphrody-labs/bun-video, et `aphrody-labs/bun-distribution` s'appelle `aphrody-labs/bun-os`.
+> Voir [Add-ons](add-ons.mdx). Les tableaux ci-dessous gardent les chemins du 2026-10-16.
+
 ## Périmètre
 
 Deux couches **restent dans aphrody** et consomment Bun (pas d'absorption) :

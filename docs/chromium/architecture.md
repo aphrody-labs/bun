@@ -96,7 +96,7 @@ Source : [documentation générale CEF](https://chromiumembedded.github.io/cef/g
 Le fichier local `sandbox.rs` documente une limite Windows importante.
 Le runtime transmet actuellement un pointeur sandbox nul aux entrées CEF.
 Ne pas annoncer un sandbox Windows actif sans qualification du packaging bootstrap.
-Référence : [politique CEF locale](https://github.com/aphrody-labs/bun-distribution/blob/os/packages/bun-tauri/crates/aphrody-tauri-runtime-cef/src/sandbox.rs).
+Référence : [politique CEF locale](https://github.com/aphrody-labs/bun-os/blob/os/packages/bun-tauri/crates/aphrody-tauri-runtime-cef/src/sandbox.rs).
 
 ## Contrat d'intégration à qualifier
 

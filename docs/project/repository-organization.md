@@ -66,5 +66,5 @@ and the `test/js/bun/ffi/cosmic-window` fixture) are members now. Only `vendor/`
   root `exclude` that still declare a `[workspace]`; the `clippy` job of
   `rust-lints.yml` runs it and fails on any output.
 - The `aphrody-rust` PyO3 adapter of the Python SDK moved to Bun OS
-  (`aphrody-labs/bun-distribution`, `crates/aphrody-rust`), next to its
+  (`aphrody-labs/bun-distribution`, now `aphrody-labs/bun-os`, `crates/aphrody-rust`), next to its
   `aphrody-rag-core` dependency: `Cargo.lock` holds no `aphrody-labs/aphrody` source.

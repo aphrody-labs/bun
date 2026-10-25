@@ -32,7 +32,8 @@ updating unrelated runtime dependencies or suppressing the fold diagnostic.
 Build and qualify on the VPS through `bun factory run`, using the existing
 FilmCraft target cache. The named `filmcraft` and `filmcraft-dev` profiles
 preserve FilmCraft's unwind contract without changing Bun's default profiles.
-Run the `xtask` package's `web` command from `src/media/filmcraft`.
+Run the `xtask` package's `web` command from the FilmCraft workspace (Bun OS, or
+aphrody-labs/filmcraft `bun-runtime-0.9.0`); `src/media/filmcraft` is gone.
 
 `packages/bun-video/src/apps/filmcraft/server.ts` serves only a configured web
 artifact directory using Bun.serve. It binds loopback and exposes `/health`.

@@ -40,7 +40,7 @@ The native distribution selected by `CEF_PATH` must be built from these sources.
 `.bun-cef-build.json` with the binary checksum. `bun cef doctor` rejects absent
 or mismatched receipts. Source headers use `.bun-cef-headers.json`; cef-rs
 generates its bindings from these headers without downloading another CEF. The
-cef-rs fork is owned by Bun OS (`vendor/cef-rs` in `aphrody-labs/bun-distribution`, `docs/cef-rs.md`).
+cef-rs fork is owned by Bun OS (`vendor/cef-rs` in `aphrody-labs/bun-os`, `docs/cef-rs.md`).
 
 These source and API receipts do not establish a successful CEF native build.
 CEF binary compilation, cef-rs ABI qualification and browser integration remain

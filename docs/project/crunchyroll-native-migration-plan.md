@@ -8,21 +8,21 @@ successful live playback. Deterministic tests continue to use local fixtures.
 
 ## Existing implementation and evidence
 
-[`@aphrody/bun-video`](../../packages/bun-video/package.json) is version 1.4.4
+[`@aphrody/bun-video`](https://github.com/aphrody-labs/bun-video/blob/main/package.json) is version 1.4.4
 and remains private. Its explicit HLS, DASH/MPD, HAR, Bitmovin and Crunchyroll
 exports retain one package rather than a duplicate player stack. The
-[integration boundaries](../../packages/bun-video/docs/integration.md) and
-[version fact check](../../packages/bun-video/docs/fact-check.md) distinguish
+[integration boundaries](https://github.com/aphrody-labs/bun-video/blob/main/docs/integration.md) and
+[version fact check](https://github.com/aphrody-labs/bun-video/blob/main/docs/fact-check.md) distinguish
 native Bun transport, inspection and serving from browser media decoding.
 
-The [community-client migration](../../packages/bun-video/docs/crunchyroll-migration.md)
+The [community-client migration](https://github.com/aphrody-labs/bun-video/blob/main/docs/crunchyroll-migration.md)
 covers the historical `crunchyroll.js` 1.1.1 API using native fetch, isolated
 authorization, deadlines, redirect refusal and safe status snapshots. Historical
 endpoint compatibility still needs live qualification. Its locale defaults to
 `en-US`; French behavior must be selected and verified explicitly. No device
 activation API or server media decoder is implemented by this client.
 
-The [Chrome app launcher](../../packages/bun-video/docs/chrome-app.md) selects
+The [Chrome app launcher](https://github.com/aphrody-labs/bun-video/blob/main/docs/chrome-app.md) selects
 the unique active Chrome profile, opens an official site app window, and refuses
 ambiguous profile selection. A shortcut and app window do not establish a PWA
 installation. Chrome retains the account session and handles official playback.

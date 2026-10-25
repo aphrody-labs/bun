@@ -29,6 +29,11 @@ platforms that withhold those privileges cannot run a Mullvad tunnel. The
 archive includes service files but does not install or enable them; review the
 host's policy before installing the payload at filesystem root.
 
+> Note (2026-10-25): `bun_vpn` and the Mullvad tree have since left this workspace for the `vpn`
+> plugin, [aphrody-labs/bun-vpn](https://github.com/aphrody-labs/bun-vpn), mounted here as
+> `plugins/vpn` with Mullvad at `plugins/vpn/vendor/mullvad` ([Add-ons](add-ons.mdx)).
+> This inventory keeps its 2026-10-11 paths.
+
 ## Source and license pins
 
 The pinned [workspace manifest](https://github.com/mullvad/mullvadvpn-app/blob/493198790be1ec34b5cc3cfbfb50d02197264463/Cargo.toml)
