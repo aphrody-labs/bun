@@ -49,6 +49,10 @@ Architecture: `bun-build-system-internals`. Codegen: `bun-build-codegen`. Window
 
 Qualify the four native commands against checkout changes through `bun bd check`, `bun bd lint`, `bun bd fmt` and `bun bd n2b`. No subprocess backend, standalone Oxc, tsgo/tsc or external n2b fallback is permitted. Package scripts may expose the native commands but must not replace them with wrappers; `bunx` is reserved for unrelated packages. Native Windows Cargo operations use `bun scripts/build/rust/cargo-serial.ts --msvc`; the Bun build schedules Rust crates through ninja.
 
+## Plugins and add-on submodules
+
+`bun bd --target=plugins` builds every mounted plugin (`scripts/build/plugins.ts`: one `cargo build --profile plugin` per plugin workspace, then a copy of `bun-<name>` next to bun). Plugins are optional submodules (`plugins/uv|vpn|ssh|docker|just|winmd`, `update = none`, repositories aphrody-labs/bun-<name>); unmounted ones are skipped. Mount with `git submodule update --init --checkout --recursive plugins/<name>` (`plugins/ssh` too for docker). `packages/bun-video` (aphrody-labs/bun-video) is mounted the same way. Skill `bun-add-ons`, page `docs/project/add-ons.mdx`.
+
 ## Arg routing (`parseArgs` in scripts/build.ts)
 
 `bun scripts/build.ts [build-flags] [exec-args...]` — the FIRST arg that is not a recognized build/ninja flag starts exec-args; it and everything after go to the built binary.

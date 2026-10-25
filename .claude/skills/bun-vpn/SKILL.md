@@ -21,15 +21,30 @@ successful compile as proof of an active tunnel.
 
 ## Build and test
 
-Use `bun bd` for Bun runtime builds and `cargo` for the scoped Rust crate. On
-Windows, build the vendored firewall library first:
+The plugin is its own Cargo workspace (`plugins/vpn/Cargo.toml`, own `Cargo.lock`)
+that path-depends on crates of the Bun checkout, so it builds only while mounted
+there. Build the executable through the Bun graph, which also compiles the
+Windows firewall library (`scripts/build/deps/winfw.ts`, from
+`plugins/vpn/vendor/mullvad/windows`):
 
-```powershell
-msbuild vendor\mullvad\windows\winfw\winfw.sln /m /p:Configuration=Debug /p:Platform=x64
-$env:RUSTC_WRAPPER = ""
-cargo check -p bun_vpn --release
-cargo test -p bun_vpn --lib
+```sh
+git submodule update --init --checkout --recursive plugins/vpn
+bun bd --target=plugins          # bun-vpn next to bun; WinFw on Windows
 ```
+
+For the scoped crate, run cargo inside the plugin workspace. On Windows,
+`talpid-core` links the WinFw library that the build above wrote to
+`build/<profile>/deps/winfw`; point `WINFW_LIB_DIR` at it and set
+`BUN_WINFW_STATIC=1`:
+
+```sh
+cd plugins/vpn
+cargo check --locked -p bun_vpn
+cargo test --locked -p bun_vpn --lib
+```
+
+A change to the plugin is committed in aphrody-labs/bun-vpn, then reaches the
+runtime when its pin is bumped (skill `bun-add-ons`).
 
 If the shared Cargo target is locked by another authorized build, use a
 task-scoped `CARGO_TARGET_DIR` rather than interrupting it. A missing `winfw.lib`

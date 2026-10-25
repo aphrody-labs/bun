@@ -57,7 +57,12 @@
         },
         {
           "kind": "pages",
-          "files": ["docs/runtime/video.mdx", "docs/runtime/image.mdx", "packages/bun-video/docs/webgpu.md"]
+          "files": [
+            "docs/runtime/video.mdx",
+            "docs/runtime/image.mdx",
+            "docs/project/bun-video-webgpu.md",
+            "docs/project/add-ons.mdx"
+          ]
         }
       ]
     },

@@ -6,9 +6,14 @@ description: Create and measure reference-matched React Remotion or HTML HyperFr
 # Video from a reference
 
 Work in the selected Bun checkout and load its applicable guidance. The package
-owner is `packages/bun-video`; use its pinned Remotion and HyperFrames sources,
+owner is [aphrody-labs/bun-video](https://github.com/aphrody-labs/bun-video),
+mounted in the checkout as the optional submodule `packages/bun-video`
+(`git submodule update --init --checkout --recursive packages/bun-video`; see
+`docs/project/add-ons.mdx`). Use its pinned Remotion and HyperFrames sources,
 not another renderer copy. Read `packages/bun-video/docs/video-workers.md` from
-the selected checkout for acquisition, worker commands and capability routing.
+the mounted package for acquisition, worker commands and capability routing.
+The runtime links no native video since the move (`Bun.Video.available` is
+`false`); check it before relying on `Bun.Video`.
 When this skill is discovered through a home-directory junction, resolve its
 canonical repository target; do not interpret `..` relative to the home installation.
 Resolve the checkout
@@ -131,7 +136,8 @@ and independently measured audio/container duration.
 
 Use `packages/bun-video/scripts/episode-replay.ts` to preserve the original encoded
 source through `Bun.Video.remux` into MP4. It does not encode the PNG/WebP
-sequence or independently authored scenes. The selected native FilmCraft owner
+sequence or independently authored scenes, and needs a native video provider.
+The selected native FilmCraft owner
 preserves access units and timing; no external command is invoked. Keep one
 native media operation at a time and run long commands in a background task with a
 bounded deadline. Start with a tiny fixture before the full episode.

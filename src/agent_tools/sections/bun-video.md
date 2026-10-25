@@ -10,6 +10,15 @@ provider decodes media; extracted frames reuse the `Bun.Image` transformation
 and encoding pipeline. Use the global classes for metadata, thumbnails, raw
 RGBA, bounded frame batches, PCM audio, GIF and MP4 remux.
 
+The Bun Video package moved to its own repository,
+[aphrody-labs/bun-video](https://github.com/aphrody-labs/bun-video), mounted here as the
+optional submodule `packages/bun-video`
+(`git submodule update --init --checkout --recursive packages/bun-video`). Since then this
+fork's `bun` links no native provider: `Bun.Video.available` is `false` and `videoNative`
+is a configure error. Use the `bun-video` executable that the package builds, and check
+`Bun.Video.available` before relying on the native API. Install and mount details:
+`docs/project/add-ons.mdx`.
+
 ```ts
 if (!Bun.Video.available) throw new Error("Native video provider unavailable");
 const video = new Bun.Video("input.mp4");
@@ -42,12 +51,12 @@ Preserve these boundaries when choosing operations:
   `Bun.Video.backend` shares Image's transform backend, not a decoder selector.
 
 `bun-video watch <url-or-file>` (`@aphrody/bun-video/watch`) turns a video into timestamped JPEG frames and a
-transcript for an agent using only `Bun.Video`: no FFmpeg, Deno or Python. Read `packages/bun-video/docs/watch.md`.
+transcript for an agent using only `Bun.Video`: no FFmpeg, Deno or Python. Read `docs/watch.md` of the package.
 
 Use `@aphrody/bun-video` for Remotion/HyperFrames compositions, HLS/DASH/MPD,
 HAR inspection, browser capture, yt-dlp and optional FFmpeg/mpv adapters.
 Those adapters have separate media SDK, browser, Python or license requirements.
-Read the corresponding guide in `packages/bun-video/docs` before changing it.
+Read the corresponding guide in the package's `docs/` before changing it.
 WGSL analysis and browser/GPU availability do not establish hardware video
 decoding, sustained encoding performance or DRM playback.
 
@@ -61,8 +70,8 @@ bun-video webgpu run shader.wgsl input.bin output.bin --backend native
 
 Read `docs/runtime/video.mdx`, `docs/runtime/image.mdx` and the declarations in
 `packages/bun-types/bun.d.ts`. Source owners are `src/runtime/video`,
-`src/runtime/image` and `packages/bun-video/native/src/filmcraft.rs`.
-For package compute, read `packages/bun-video/docs/webgpu.md` and
+`src/runtime/image` and `native/src/filmcraft.rs` of the package.
+For package compute, read the package's `docs/webgpu.md` and
 `docs/project/bun-video-webgpu.md`. `docs_search`/`docs_read` of `bun mcp`
 provide the runtime reference; `examples_search` with `Bun.Video frame metadata`
 selects source-backed examples from the installed dataset.
