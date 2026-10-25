@@ -2472,7 +2472,9 @@ function writeCppSerializers() {
   await writeIfNotChanged(`${outBase}/ZigGeneratedClasses.h`, [
     ...GENERATED_CLASSES_HEADER,
     ...allHeaders,
-    GENERATED_CLASSES_FOOTER,
+    // Only the fork's own classes are generated here, and none is structured-cloneable: upstream owns
+    // structured clone, $inherits*() and isTransferable now.
+    "\n}\n",
   ]);
 
   const allImpls = classes.map(a => generateImpl(a.name, a));
@@ -2481,10 +2483,7 @@ function writeCppSerializers() {
     externs.trim(),
     GENERATED_CLASSES_IMPL_HEADER_POST,
     allImpls.join("\n"),
-    writeCppSerializers(classes),
     GENERATED_CLASSES_IMPL_FOOTER,
-    jsInheritsCppImpl(),
-    isTransferableCppImpl(),
   ]);
 
   await writeIfNotChanged(

@@ -19,6 +19,7 @@ public:
     // Every member is an owned `IsoSubspace*`; one loop instead of ~300 inlined unique_ptr destructors.
     ~DOMIsoSubspaces();
     /*-- BUN --*/
+    IsoSubspace* m_subspaceForBunClassConstructor { nullptr }; // the fork's generate-classes.ts constructors
     IsoSubspace* m_subspaceForFFIFunction { nullptr };
     IsoSubspace* m_subspaceForWrappingFunction { nullptr };
     IsoSubspace* m_subspaceForNapiClass { nullptr };

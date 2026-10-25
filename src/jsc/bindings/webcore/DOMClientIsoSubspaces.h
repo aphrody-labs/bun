@@ -18,6 +18,7 @@ public:
     ~DOMClientIsoSubspaces();
 
     /* --- bun --- */
+    GCClient::IsoSubspace* m_clientSubspaceForBunClassConstructor { nullptr }; // the fork's generate-classes.ts constructors
     GCClient::IsoSubspace* m_clientSubspaceForFFIFunction { nullptr };
     GCClient::IsoSubspace* m_clientSubspaceForWrappingFunction { nullptr };
     GCClient::IsoSubspace* m_clientSubspaceForNapiClass { nullptr };

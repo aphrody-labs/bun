@@ -326,6 +326,11 @@ public:
     uint8_t drainMicrotasks();
 
     void handleRejectedPromises();
+    // The fork's own *.classes.ts (generate-classes.ts); upstream's classes are bindgen.
+    ALWAYS_INLINE void initGeneratedLazyClasses();
+
+    template<typename Visitor>
+    void visitGeneratedLazyClasses(GlobalObject*, Visitor&);
     ALWAYS_INLINE void* bunVM() const { return m_bunVM; }
 #if OS(WINDOWS)
     uv_loop_t* uvLoop() const

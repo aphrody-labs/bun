@@ -56,6 +56,9 @@ define_host_numbers! {
     Json5 = 20,
     Md = 21,
     Xml = 22,
+    // The fork's own loaders, after upstream's numbers.
+    Jsonl = 23,
+    Ini = 24,
 }
 
 pub(crate) fn to_host_loader(loader: Loader, path: &[u8]) -> HostLoader {

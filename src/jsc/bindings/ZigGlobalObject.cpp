@@ -113,6 +113,7 @@
 #include "JSDOMException.h"
 #include "JSDOMGuardedObject.h"
 #include "JSDOMFile.h"
+#include "ZigGeneratedClasses.h"
 #include "JSDOMFormData.h"
 #include "JSDOMURL.h"
 #include "JSEnvironmentVariableMap.h"
@@ -3021,6 +3022,8 @@ void GlobalObject::finishCreation(VM& vm)
             init.set(Bun::createModuleGraphFrameStructure(init.vm, init.owner));
         });
 
+    this->initGeneratedLazyClasses();
+
     m_napiTypeTags.initLater([](const JSC::LazyProperty<JSC::JSGlobalObject, JSC::JSWeakMap>::Initializer& init) {
         init.set(JSC::JSWeakMap::create(init.vm, init.owner->weakMapStructure()));
     });
@@ -3705,6 +3708,7 @@ void GlobalObject::visitChildrenImpl(JSCell* cell, Visitor& visitor)
     // when downcast<> calls the virtual isWebCoreJSClientData() on garbage.
     WebCore::clientData(visitor.collector().heap().vm())->httpHeaderIdentifiers().template visit<Visitor>(visitor);
 
+    thisObject->visitGeneratedLazyClasses<Visitor>(thisObject, visitor);
     thisObject->visitAdditionalChildrenInGCThread<Visitor>(visitor);
 }
 
