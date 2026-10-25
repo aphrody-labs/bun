@@ -57,12 +57,50 @@ function linkerFor(triple: string, cfg: Config): string {
 }
 
 /**
+ * The native Windows host's entry, so `cargo check`/`cargo build`/rust-analyzer work from any shell
+ * without a developer prompt: rustc's own MSVC discovery takes the newest Visual Studio instance,
+ * which need not have the x64 libraries (`LNK1104: cannot open 'msvcrt.lib'`), and its default
+ * `link.exe` resolves through PATH, where Git Bash puts coreutils' `link`. Instead: lld-link by
+ * absolute path, searching the library directories of the toolset `bun bd` itself pinned (the LIB
+ * that `loadNativeMsvcEnv()` in scripts/build.ts, or a developer prompt, put in this process), which
+ * come before any LIB rustc sets for the linker. Build scripts' cc-rs makes the same choice of
+ * instance (`cl.exe` of the newest one), so `[env]` gives it the compilers `bun bd` passes its own
+ * edges and that toolset's INCLUDE and LIB; a variable already set (a developer prompt) wins.
+ */
+export function msvcHostEntry(
+  cfg: Pick<Config, "host" | "ld" | "cc" | "cxx" | "ar">,
+  host: string,
+  env: NodeJS.ProcessEnv = process.env,
+): string[] | undefined {
+  if (cfg.host.os !== "windows" || !host.endsWith("-pc-windows-msvc") || !/lld-link(\.exe)?$/i.test(cfg.ld))
+    return undefined;
+  const dirs = (name: string) => (env[name] ?? "").split(";").filter(dir => dir.length > 0);
+  const libs = dirs("LIB");
+  const includes = dirs("INCLUDE");
+  if (libs.length === 0 || includes.length === 0) return undefined;
+  const rustflags = libs.flatMap(dir => ["-C", `link-arg=/LIBPATH:${dir}`]);
+  const entry = (name: string, value: string) => `${name} = { value = ${JSON.stringify(value)}, force = false }`;
+  const suffix = host.replace(/-/g, "_");
+  return [
+    `[target.${host}]  # host`,
+    `linker = ${JSON.stringify(cfg.ld)}`,
+    `rustflags = [${rustflags.map(flag => JSON.stringify(flag)).join(", ")}]`,
+    "",
+    "[env]",
+    entry(`CC_${suffix}`, cfg.cc),
+    entry(`CXX_${suffix}`, cfg.cxx),
+    entry(`AR_${suffix}`, cfg.ar),
+    entry("INCLUDE", includes.join(";")),
+    entry("LIB", libs.join(";")),
+  ];
+}
+
+/**
  * Write `.cargo/config.toml` next to the workspace `Cargo.toml` (repo root).
  * Returns the absolute path written.
  *
- * Windows-msvc targets are omitted: the MSVC linker isn't a clang driver and
- * doesn't take `-fuse-ld=lld`; that path is handled entirely in `rust.ts`
- * (`-C linker=<cfg.msvcLinker>` on the rustc edges).
+ * Windows-msvc targets get only the native host's entry (`msvcHostEntry`): the MSVC linkers aren't
+ * clang drivers and don't take `-fuse-ld=lld`. `bun bd` itself passes `-C linker=` on its rustc edges.
  */
 export function generateCargoConfig(cfg: Config): string {
   const outPath = resolve(cfg.cwd, ".cargo", "config.toml");
@@ -78,6 +116,9 @@ export function generateCargoConfig(cfg: Config): string {
     "# toolchain `scripts/build/tools.ts` discovered (`cfg.hostCxx`), so this",
     "# file is correct on whatever machine ran configure.",
   ];
+
+  const msvc = msvcHostEntry(cfg, host);
+  if (msvc !== undefined) lines.push("", ...msvc);
 
   for (const triple of allRustTargets) {
     if (tripleOs(triple) === "windows") continue;
