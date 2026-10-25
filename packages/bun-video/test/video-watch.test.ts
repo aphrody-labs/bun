@@ -72,12 +72,14 @@ describe.skipIf(!nativeVideo?.available)("watch as a media job", () => {
       source: fixture,
       options: { detail: "efficient", maxFrames: 3, resolution: 64, whisper: "none" },
     });
+    if (result.action !== "watch" || !result.report) throw new Error("Watch job returned no report");
+    const report = result.report;
     try {
       expect(result.action).toBe("watch");
-      expect(result.report.frames.length).toBeGreaterThan(0);
-      expect(result.report.frames.length).toBeLessThanOrEqual(3);
+      expect(report.frames.length).toBeGreaterThan(0);
+      expect(report.frames.length).toBeLessThanOrEqual(3);
     } finally {
-      await cleanWatch(result.report);
+      await cleanWatch(report);
     }
   });
 });
