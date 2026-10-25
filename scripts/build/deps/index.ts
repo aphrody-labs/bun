@@ -14,7 +14,6 @@ import type { Dependency } from "../source.ts";
 import { boringssl } from "./boringssl.ts";
 import { brotli } from "./brotli.ts";
 import { cares } from "./cares.ts";
-import { hdrhistogram } from "./hdrhistogram.ts";
 import { highway } from "./highway.ts";
 import { libarchive } from "./libarchive.ts";
 import { curl } from "./curl.ts";
@@ -59,7 +58,6 @@ export const allDeps: readonly Dependency[] = [
   libspng,
   libwebp,
   cares,
-  hdrhistogram,
   highway,
   libuv,
   winfw,
@@ -87,7 +85,6 @@ export {
   boringssl,
   brotli,
   cares,
-  hdrhistogram,
   highway,
   libarchive,
   libjpegTurbo,

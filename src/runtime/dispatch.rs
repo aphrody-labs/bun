@@ -1366,7 +1366,7 @@ pub(crate) unsafe fn __bun_fire_timer(
                 [Histogram],
                 EventLoopDelayMonitor,
                 event_loop_timer,
-                |c, now, vm| (*c).on_fire(&mut *vm, &*now)
+                |c, now, vm| (*c).on_fire(&*now, &*vm)
             )
         }
         EventLoopTimerTag::StatWatcherScheduler => {

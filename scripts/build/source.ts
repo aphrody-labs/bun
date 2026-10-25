@@ -413,7 +413,7 @@ export interface NestedCmakeBuild {
   buildType?: BuildType;
   /**
    * Subdirectory within the build dir where libraries land.
-   * E.g. cares puts them in "lib/", hdrhistogram in "src/". Default: root.
+   * E.g. cares puts them in "lib/". Default: root.
    */
   libSubdir?: string;
   /**
@@ -545,7 +545,6 @@ export type DepName =
   | "brotli"
   | "cares"
   | "curl"
-  | "hdrhistogram"
   | "highway"
   | "libarchive"
   | "libjpeg-turbo"
