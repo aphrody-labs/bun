@@ -224,6 +224,7 @@
             "icon": "heart",
             "pages": [
               "/project/contributing",
+              "/project/add-ons",
               "/project/building-windows",
               "/project/bindgen",
               "/project/agent-plugin",

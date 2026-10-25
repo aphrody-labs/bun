@@ -1,0 +1,137 @@
+---
+title: Add-ons
+description: The optional parts of Bun OS that live in their own repositories, the plugins and Bun Video. How to install them, build them from source, and where their source and issues live.
+---
+
+This repository is upstream [oven-sh/bun](https://github.com/oven-sh/bun) 1.4.4 (tag `bun-v1.4.4`, commit `38afee6c84f`) plus the fork features that the `bun` executable links. Those features are listed in the [feature catalog](/runtime/fork-features) and in [`docs/project/fork-inventory.json`](https://github.com/aphrody-labs/bun/blob/main/docs/project/fork-inventory.json). The rest of the fork, the add-ons, has moved to separate `aphrody-labs` repositories:
+
+- This checkout mounts each add-on as an optional submodule (`update = none`), so a plain clone leaves it out.
+- [Bun OS](https://github.com/aphrody-labs/bun-os) (branch `os`) mounts each one as a pinned `vendor/bun-<name>` submodule.
+
+| Add-on   | What runs it                                         | Mount here           | Repository                                                            | Bun OS mount        |
+| -------- | ---------------------------------------------------- | -------------------- | --------------------------------------------------------------------- | ------------------- |
+| `uv`     | `bun uv`, `uv`, `uvx`, Python compilation            | `plugins/uv`         | [aphrody-labs/bun-uv](https://github.com/aphrody-labs/bun-uv)         | `vendor/bun-uv`     |
+| `vpn`    | `bun vpn`                                            | `plugins/vpn`        | [aphrody-labs/bun-vpn](https://github.com/aphrody-labs/bun-vpn)       | `vendor/bun-vpn`    |
+| `ssh`    | `bun ssh`, `bun rsync --native`                      | `plugins/ssh`        | [aphrody-labs/bun-ssh](https://github.com/aphrody-labs/bun-ssh)       | `vendor/bun-ssh`    |
+| `docker` | `bun docker`                                         | `plugins/docker`     | [aphrody-labs/bun-docker](https://github.com/aphrody-labs/bun-docker) | `vendor/bun-docker` |
+| `just`   | `bun just`                                           | `plugins/just`       | [aphrody-labs/bun-just](https://github.com/aphrody-labs/bun-just)     | `vendor/bun-just`   |
+| `winmd`  | `bun winmd`                                          | `plugins/winmd`      | [aphrody-labs/bun-winmd](https://github.com/aphrody-labs/bun-winmd)   | `vendor/bun-winmd`  |
+| Video    | `@aphrody/bun-video` package, `Bun.Video` extensions | `packages/bun-video` | [aphrody-labs/bun-video](https://github.com/aphrody-labs/bun-video)   | see the inventory   |
+
+The inventory records, for each add-on, the pinned commit, the upstream it bundles, and whether it has moved yet. It also lists what is still in this tree. PyJS/Python, the UI packages (going to aphrody-labs/bun-ui), the other packages and the distribution material have not moved yet; [fork layout](https://github.com/aphrody-labs/bun/blob/main/docs/project/fork-layout.md) explains the split.
+
+## The plugins
+
+A plugin is a cold part of Bun built as its own executable, `bun-<name>`. The `bun` executable dispatches to it. See [bun plugin](/runtime/bun-plugin) for the full reference.
+
+- **uv**: uv 0.12.24 with the Bun patches (`vendor/uv`, aphrody-labs/uv branch `bun-0.12.24`). Runs `bun uv`, the `uv` and `uvx` names, and Python compilation. See [Python](/runtime/python) and [buv](/runtime/buv).
+- **vpn**: the embedded Mullvad daemon and its management client (`vendor/mullvad`, aphrody-labs/mullvadvpn-app branch `bun-embedded`), licensed GPL-3.0-or-later. On Windows it links the WinFw firewall library, which `bun bd` compiles from `plugins/vpn/vendor/mullvad`. See [VPN](/vpn/index).
+- **ssh**: the SSH client, server, forwards and `rsync --native` delta copy. It bundles a patched `russh-sftp`. See [ssh](/runtime/ssh).
+- **docker**: the native Docker Engine client. It reaches remote engines through `bun_ssh`, so mount `plugins/ssh` too.
+- **just**: justfile recipes (`vendor/just`, aphrody-labs/just branch `bun`). See [just](/runtime/just).
+- **winmd**: Rust and `bun:ffi` bindings from Windows metadata (windows-bindgen). It uses this checkout's `vendor/find-msvc-tools`. See [msvc](/runtime/msvc).
+
+### Install a plugin
+
+There is nothing to install. The first command that needs a plugin looks for it in this order:
+
+1. next to the `bun` executable (`bun-uv`, `bun-uv.exe`), which is where a build of the checkout puts it;
+2. in `$BUN_PLUGINS_DIR`, or `$BUN_INSTALL/plugins` (default `~/.bun/plugins`), under `<name>/<version>/`. Here `<version>` is the exact version and revision of the running `bun`.
+
+If neither has it, `bun` downloads `bun-<name>-<os>-<arch>[-musl][.exe]` from the GitHub release of the running `bun`, checks it against that release's `SHA256SUMS.txt`, and installs it in the plugin directory. Installing a plugin also deletes the copies left by older `bun` versions, so `bun upgrade` needs no extra step. The release is looked up first as `bun-v<version>`, or `aphrody-v<version>` for builds with a version tag, and then as `main-runtime-<first 12 characters of the revision>`.
+
+```sh
+bun plugin list             # every plugin and where it is
+bun plugin install uv vpn   # download now, for example before going offline
+bun plugin remove uv        # delete the downloaded copy
+```
+
+| Variable                           | Effect                                                                               |
+| ---------------------------------- | ------------------------------------------------------------------------------------ |
+| `BUN_PLUGINS_DIR`                  | Plugin directory; when set, it is the only place looked at (not even next to `bun`)  |
+| `BUN_PLUGIN_RELEASE_URL`           | Directory URL holding the assets and `SHA256SUMS.txt`, instead of the GitHub release |
+| `BUN_PLUGIN_NO_DOWNLOAD=1`         | Fail instead of downloading a missing plugin                                         |
+| `APHRODY_BUN_REPO`, `GITHUB_TOKEN` | Repository (default `aphrody-labs/bun`) and token used for the release               |
+
+A `bun` built from a commit that has no release has nothing to download. That includes a local commit or a debug build. Build the plugin from source as shown below, or point `BUN_PLUGIN_RELEASE_URL` at a directory that holds the assets.
+
+## A fresh checkout
+
+A clone is lightweight by default. The only submodules in `.gitmodules` are the add-ons, and all of them have `update = none`. So `git clone --recurse-submodules` and `git submodule update --init` skip them, and `bun bd` builds `bun` without them.
+
+```sh
+git clone https://github.com/aphrody-labs/bun.git
+cd bun
+git submodule status        # a leading "-" means not mounted
+bun bd                      # builds bun; skips every add-on that is not mounted
+```
+
+To work on an add-on, opt into its submodule. `--checkout` overrides `update = none`, and `--recursive` fetches the forks nested in it (`vendor/uv`, `vendor/mullvad`, `vendor/just`). The add-on repositories can be private: run `gh auth setup-git`, or use SSH, with an account that can read them.
+
+```sh
+git submodule update --init --checkout --recursive plugins/uv                 # one plugin
+git submodule update --init --checkout --recursive plugins/ssh plugins/docker # docker needs ssh
+git submodule update --init --checkout --recursive plugins                    # every plugin
+git submodule update --init --checkout --recursive packages/bun-video         # Bun Video
+```
+
+### Build a plugin from source
+
+```sh
+bun bd --target=plugins     # builds every mounted plugin; puts bun-<name> next to bun
+```
+
+Each plugin repository is a Cargo workspace with its own `Cargo.lock`. It path-depends on crates of this checkout (`src/system_tools`, `src/no_window`, `src/zlib_rs`, `vendor/find-msvc-tools`), so it builds only while mounted here. Inside a mounted plugin, `cargo` also works directly:
+
+```sh
+cd plugins/uv
+cargo build --locked --profile plugin -p bun_plugin_uv --bin bun-uv
+```
+
+Use `bun bd --target=plugins` for `vpn` on Windows, since that build also compiles WinFw. A `bun-<name>` next to the `bun` you run takes precedence over a downloaded copy. To unmount a plugin, run `git submodule deinit plugins/<name>`.
+
+## Bun Video
+
+`@aphrody/bun-video` is the media package: composition engines (Remotion, HyperFrames), HLS and DASH, FFmpeg and mpv adapters, and WebGPU compute (`bun-video-webgpu`). The `bun` executable links no native video. `Bun.Video` and `Bun.Image` cover metadata, frames, audio, GIF and MP4 remux natively (see [Bun.Video](/runtime/video)), and their extensions run the `bun-video` executable that the package builds.
+
+```sh
+bun add @aphrody/bun-video@next
+```
+
+To work on it, mount the submodule:
+
+```sh
+git submodule update --init --checkout --recursive packages/bun-video
+cd packages/bun-video && bun install --frozen-lockfile
+```
+
+It stays mounted here, rather than living only in Bun OS, because the runtime's media release scripts read it. FilmCraft has left this tree: Bun OS owns it, and bun-video pins aphrody-labs/filmcraft `bun-runtime-0.9.0` as `vendor/filmcraft`.
+
+## Releases
+
+Plugins do not have releases of their own. Their executables are assets of the runtime release:
+
+- `aphrody-main-runtime.yml` runs on every push to `main` and publishes the release `main-runtime-<revision>`;
+- `aphrody-release.yml` runs on `bun-v*` and `aphrody-v*` tags.
+
+Both workflows mount `plugins/*`, build `bun-<name>` for every target, and upload the executables together with `SHA256SUMS.txt`. A plugin change reaches users when its submodule pin is bumped here. Bun Video is published to npm (`next`) by `bun-video-release.yml` on a `bun-video-v*` tag of this repository.
+
+## Bun OS
+
+Bun OS mounts the add-ons as shallow submodules `vendor/bun-<name>` and pins them, with their nested forks, in its `sources.lock.json`. It pins this runtime as `toolchains/bun`, and builds the plugins through that runtime checkout. The [runtime-heavy migration record](https://github.com/aphrody-labs/bun-os/blob/os/docs/runtime-heavy-migration.md) lists the pins.
+
+`aphrody-labs/bun-os` was formerly named `aphrody-labs/bun-distribution`. The earlier repository called `aphrody-labs/bun-os`, a mirror, is now the archived [aphrody-labs/bun-os-legacy](https://github.com/aphrody-labs/bun-os-legacy).
+
+## Source and issues
+
+| Add-on   | Source                                                                | Issues                                                      |
+| -------- | --------------------------------------------------------------------- | ----------------------------------------------------------- |
+| `uv`     | [aphrody-labs/bun-uv](https://github.com/aphrody-labs/bun-uv)         | [issues](https://github.com/aphrody-labs/bun-uv/issues)     |
+| `vpn`    | [aphrody-labs/bun-vpn](https://github.com/aphrody-labs/bun-vpn)       | [issues](https://github.com/aphrody-labs/bun-vpn/issues)    |
+| `ssh`    | [aphrody-labs/bun-ssh](https://github.com/aphrody-labs/bun-ssh)       | [issues](https://github.com/aphrody-labs/bun-ssh/issues)    |
+| `docker` | [aphrody-labs/bun-docker](https://github.com/aphrody-labs/bun-docker) | [issues](https://github.com/aphrody-labs/bun-docker/issues) |
+| `just`   | [aphrody-labs/bun-just](https://github.com/aphrody-labs/bun-just)     | [issues](https://github.com/aphrody-labs/bun-just/issues)   |
+| `winmd`  | [aphrody-labs/bun-winmd](https://github.com/aphrody-labs/bun-winmd)   | [issues](https://github.com/aphrody-labs/bun-winmd/issues)  |
+| Video    | [aphrody-labs/bun-video](https://github.com/aphrody-labs/bun-video)   | [issues](https://github.com/aphrody-labs/bun-video/issues)  |
+
+Report problems with downloading, checksums or dispatch (`bun <plugin>` not starting, `bun plugin`) to [aphrody-labs/bun](https://github.com/aphrody-labs/bun/issues). The dispatcher is `src/runtime/cli/plugin_command.rs`, and the plugin build is `scripts/build/plugins.ts`.

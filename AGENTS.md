@@ -16,7 +16,8 @@
 
 For work touching Bun OS distribution/workspace consolidation, read
 [`docs/agent-goals/bun-os-consolidation.md`](docs/agent-goals/bun-os-consolidation.md).
-The canonical execution owner is `aphrody-labs/bun-distribution`; this local
+The canonical execution owner is `aphrody-labs/bun-os` (formerly `aphrody-labs/bun-distribution`;
+the former `bun-os` mirror is the archived `bun-os-legacy`); this local
 copy exists so Codex discovers the cross-repository contract without duplicating
 runtime or product ownership. Repository evidence and newer explicit owner
 directives still take precedence.
@@ -97,6 +98,10 @@ test runner and package manager.
 - Declaration-only changes need no native build:
   `bun test test/integration/bun-types/bun-types.test.ts`.
 - For platform changes, use `bun run rust:check-all`; gated code needs its target built.
+- Add-ons (`plugins/<name>`, `packages/bun-video`) are optional submodules
+  (`update = none`) of their own repositories: mount one with
+  `git submodule update --init --checkout --recursive <path>`, build plugins with
+  `bun bd --target=plugins`; see `docs/project/add-ons.mdx`.
 - Debug logging: `BUN_DEBUG_QUIET_LOGS=1` or `BUN_DEBUG_<SCOPE>=1`.
 - JSC exception checks: `BUN_JSC_validateExceptionChecks=1` and
   `BUN_JSC_dumpSimulatedThrows=1`.
@@ -131,6 +136,8 @@ test runner and package manager.
   `src/bake`, `src/event_loop`: their respective runtime domains.
 - `src/js/{node,bun,thirdparty,internal,builtins}`: built-in JavaScript modules.
 - `vendor`: native dependency sources; build recipes in `scripts/build/deps`.
+- `plugins/<name>`, `packages/bun-video`: add-on submodules; state in
+  `docs/project/fork-inventory.json`, guide in `docs/project/add-ons.mdx`.
 - `src/codegen`: generated classes, sinks, modules and functions. Edit inputs,
   not generated output; the build regenerates bindings.
 
