@@ -17,6 +17,7 @@ import type { Config } from "./config.ts";
 import { WINFW_SYSTEM_LIBRARIES } from "./deps/winfw.ts";
 import type { Ninja } from "./ninja.ts";
 import { cargoBuildInvocation } from "./rust.ts";
+import { withoutMissingRustWrappers } from "./rust/environment.ts";
 import { quote, quoteArgs } from "./shell.ts";
 
 export interface Plugin {
@@ -48,6 +49,13 @@ export const plugins: Plugin[] = [
   { name: "just", package: "bun_plugin_just" },
   { name: "winmd", package: "bun_plugin_winmd" },
 ];
+
+/** `RUSTC_WRAPPER`/`CARGO_BUILD_RUSTC_WRAPPER` set to "" where this environment names a wrapper that is not installed. */
+function missingWrappersCleared(): Record<string, string> {
+  const names = ["RUSTC_WRAPPER", "CARGO_BUILD_RUSTC_WRAPPER"];
+  const kept = withoutMissingRustWrappers(process.env);
+  return Object.fromEntries(names.filter(name => process.env[name] && !kept[name]).map(name => [name, ""]));
+}
 
 /** Checkout directory of a plugin's workspace, mounted as a submodule. */
 export function pluginDir(cwd: string, plugin: Plugin): string {
@@ -94,9 +102,11 @@ export function emitPlugins(n: Ninja, cfg: Config): string[] {
       ...unitEnv,
       ...native.env,
       CARGO_TERM_COLOR: "always",
-      // As for bun's own rustc edges, no compiler wrapper.
-      RUSTC_WRAPPER: "",
-      CARGO_BUILD_RUSTC_WRAPPER: "",
+      // Unlike bun's own rustc edges (rust.ts emitRust), a plugin is a plain cargo build, so the machine's
+      // compiler wrapper (RUSTC_WRAPPER, build.rustc-wrapper: sccache) applies: a fresh build directory gets
+      // the plugins' dependency crates from its cache instead of compiling them again. One that is not
+      // installed is cleared, as for the build scripts (rust/environment.ts).
+      ...missingWrappersCleared(),
       // aws-lc-sys (russh, rustls) assembles with nasm from PATH; its prebuilt objects need none.
       ...(cfg.windows ? { AWS_LC_SYS_PREBUILT_NASM: "1" } : {}),
       [`CARGO_TARGET_${triple.toUpperCase().replace(/-/g, "_")}_LINKER`]: linker,
