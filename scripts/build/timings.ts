@@ -831,6 +831,7 @@ const ruleLane: Record<RuleName, Lane> = {
   ar: "link and checks",
   binary_verify: "link and checks",
   copy_exe: "link and checks",
+  plugin_copy: "link and checks",
   dsymutil: "link and checks",
   duplicate_symbols: "link and checks",
   link: "link and checks",
