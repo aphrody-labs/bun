@@ -11,7 +11,7 @@ One file per dep in `scripts/build/deps/<name>.ts` exporting a `Dependency` (`so
 
 ## allDeps order (`deps/index.ts`) = fetch order + static link order
 
-picohttpparser, nodejsHeaders, zlib, zstd, brotli, libdeflate, libarchive, libjpegTurbo, libspng, libwebp, cares, hdrhistogram, highway, libuv, lolhtml, rustArgon2, lshpack, lsqpack, mimalloc, sqlite, tinycc, boringssl, lsquic, webkit (LAST).
+picohttpparser, nodejsHeaders, zlib, zstd, brotli, libdeflate, libarchive, libjpegTurbo, libspng, libwebp, cares, highway, libuv, lolhtml, rustArgon2, lsqpack, mimalloc, sqlite, tinycc, boringssl, lsquic, webkit (LAST).
 Rules: a dep with `fetchDeps: ["X"]` must come after X (zlib before libarchive/libspng; boringssl before lsquic). Providers after users on the link line.
 
 ## Source kinds
@@ -26,13 +26,13 @@ Rules: a dep with `fetchDeps: ["X"]` must come after X (zlib before libarchive/l
 - `none` / `prebuilt`: no build step.
   Each dep → fetch (`vendor/<name>/.ref` = `sha256(commit+patches)[:16]`, restat) → configure (cmake only) → build; pool `dep` depth 4. Phony targets `<name>`, `clone-<name>`, `configure-<name>`.
 
-Worked examples: hdrhistogram/libdeflate (simplest direct), mimalloc (single unity TU as C++), tinycc (build-time codegen tool), zlib (per-source SIMD flags + `.h.in`), libarchive/cares (hand-written per-target config.h), boringssl (NASM on win-x64, big gen manifest, `forbidUndefined` with libuv), sqlite (in-tree), libuv (`enabled: cfg => cfg.windows`), lolhtml (cargo), webkit (nested-cmake + prebuilt).
+Worked examples: brotli/libdeflate (simplest direct), mimalloc (single unity TU as C++), tinycc (build-time codegen tool), zlib (per-source SIMD flags + `.h.in`), libarchive/cares (hand-written per-target config.h), boringssl (NASM on win-x64, big gen manifest, `forbidUndefined` with libuv), sqlite (in-tree), libuv (`enabled: cfg => cfg.windows`), lolhtml (cargo), webkit (nested-cmake + prebuilt).
 Patches live in `patches/<dep>/`.
 
 ## Add / remove / bump
 
-- Add: copy hdrhistogram.ts, fill name/repo/commit/sources/includes/provides, import + add to `allDeps` in index.ts, add to `DepName` in `../source.ts`. `name` must equal `vendor/<name>/` dir (case-sensitive; WebKit is `"WebKit"`). (README's `phase3-test.ts` step is stale: file doesn't exist — verify with `bun run build --target=<name>`.)
-- Bump: change `const <NAME>_COMMIT` / `commit`; `.ref` identity changes → refetch + rebuild downstream. `.github/workflows/update-<name>.yml` (cares, hdrhistogram, highway, libarchive, libdeflate, lolhtml, lshpack, sqlite3, zstd, vendor) sed that line. Direct deps: upstream file additions/removals need a source-list edit (CI link error is the cue).
+- Add: copy brotli.ts, fill name/repo/commit/sources/includes/provides, import + add to `allDeps` in index.ts, add to `DepName` in `../source.ts`. `name` must equal `vendor/<name>/` dir (case-sensitive; WebKit is `"WebKit"`). (README's `phase3-test.ts` step is stale: file doesn't exist — verify with `bun run build --target=<name>`.)
+- Bump: change `const <NAME>_COMMIT` / `commit`; `.ref` identity changes → refetch + rebuild downstream. `.github/workflows/update-<name>.yml` (cares, highway, libarchive, libdeflate, lolhtml, sqlite3, zstd, vendor) sed that line. Direct deps: upstream file additions/removals need a source-list edit (CI link error is the cue).
 - Never edit `vendor/<name>/` in place — wiped when pin/patches change.
 
 ## Iterate on a dep locally
@@ -56,4 +56,4 @@ uv, Mullvad and russh-sftp left `vendor/` with the plugins that use them: `plugi
 
 ## Other vendor libs
 
-boringssl (TLS/crypto; skill `upgrade-boringssl`), brotli, cares, hdrhistogram, highway (SIMD; used by `bun_core::strings`), libarchive, libdeflate, libuv (Windows event loop only), lolhtml (HTMLRewriter), lshpack (HPACK), lsqpack+lsquic (HTTP/3), mimalloc (allocator), nodejs headers, picohttpparser, rust-argon2 (`Bun.password`), tinycc (bun:ffi cc; off on android/freebsd), zlib (zlib-ng), zstd, sqlite (in-tree amalgamation; `scripts/update-sqlite-amalgamation.sh`), libjpeg-turbo/libspng/libwebp (Bun.Image codecs).
+boringssl (TLS/crypto; skill `upgrade-boringssl`), brotli, cares, highway (SIMD; used by `bun_core::strings`), libarchive, libdeflate, libuv (Windows event loop only), lolhtml (HTMLRewriter), lshpack (HPACK), lsqpack+lsquic (HTTP/3), mimalloc (allocator), nodejs headers, picohttpparser, rust-argon2 (`Bun.password`), tinycc (bun:ffi cc; off on android/freebsd), zlib (zlib-ng), zstd, sqlite (in-tree amalgamation; `scripts/update-sqlite-amalgamation.sh`), libjpeg-turbo/libspng/libwebp (Bun.Image codecs).

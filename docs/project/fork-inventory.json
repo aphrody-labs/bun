@@ -418,6 +418,20 @@
       "upstream": null,
       "migrationState": "stays",
       "notes": "Rust modules inside bun_runtime; optional would need a cargo feature around the module registration."
+    },
+    {
+      "component": "curl-upstream",
+      "path": [
+        "src/runtime/curl/upstream"
+      ],
+      "type": "tree",
+      "kind": "runtime-linked",
+      "destinationRepo": null,
+      "bunOsPath": null,
+      "submoduleRevision": null,
+      "upstream": "curl/curl 01346829096c61b372692f6dc43ffa778c6caccd",
+      "migrationState": "pending",
+      "notes": "Not in upstream Bun (1.4.4 38afee6c84f and main have no src/runtime/curl). A local, gitignored checkout (about 71 MB, nothing tracked) that scripts/aphrody/curl-source.ts bootstraps at the pinned CURL_COMMIT with a .bun-source.json receipt; only scripts/build/deps/curl.ts reads it, when curlNative is on (off by default), building it through src/runtime/curl/sdk/CMakeLists.txt for Bun.Curl and the bun curl tool. It can move to vendor/curl as a pinned fetched dependency like the others (the receipt check and the bootstrap script go), or to a submodule; not moved in this lot."
     }
   ]
 }

@@ -85,7 +85,7 @@ Goal: a developer new to Bun reads the page once and can act.
 
 Bun MIT. Statically links JavaScriptCore/WebKit (LGPL-2) -> relink via oven-sh/WebKit + `bun run build:local`. Linked libs: boringssl, brotli, libarchive, lol-html, ls-hpack
 ls-qpack, lsquic, mimalloc, picohttp, zstd, simdutf, tinycc (LGPL 2.1), uSockets, zlib-ng, c-ares, ICU 78, libbase64, libuv (Windows), libdeflate, libjpeg-turbo, libspng
-libwebp, highway, HdrHistogram_c, sqlite (Linux+Windows), uWebSockets fork, Tigerbeetle IO code. Embedded browser polyfills (acorn, buffer, *-browserify, events, process, url, util...).
+libwebp, highway, sqlite (Linux+Windows), uWebSockets fork, Tigerbeetle IO code. Embedded browser polyfills (acorn, buffer, *-browserify, events, process, url, util...).
 Credits: transpiler + resolver ported from esbuild; CSS parser from Lightning CSS/Servo; name by @kipply.
 
 ## Security / roadmap

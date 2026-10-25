@@ -18,7 +18,7 @@ metadata:
 - `ProxyTunnel.rs`: HTTPS-over-HTTP-proxy CONNECT tunnel. `HeaderBuilder.rs`, `Headers.rs`, `HeaderValueIterator.rs`, `HTTPRequestBody.rs`
   `ThreadSafeStreamBuffer.rs` (streaming upload), `SendFile.rs`, `Decompressor.rs` + `InternalState.rs` (gzip/deflate/br/zstd; libdeflate
   bounded gzip ISIZE), `compress_body.rs` (request compression), `CertificateInfo.rs`, `HTTPCertError.rs`, `InitError.rs`, `Signals.rs`
-  `lshpack.rs` (HPACK via vendor/lshpack).
+  `bun_hpack` (`src/hpack`, HPACK in safe Rust).
 - HTTP/2: `H2Client.rs` + `h2_client/{ClientSession, PendingConnect, Stream, dispatch, encode}.rs` — ClientSession owns TLS socket after
   ALPN "h2"; per-stream results reuse HTTP/1.1 picohttp response machinery (redirects, decompression shared).
 - HTTP/3: `H3Client.rs` + `h3_client/{AltSvc, ClientContext, ClientSession, PendingConnect, Stream, callbacks, encode}.rs` — lsquic via

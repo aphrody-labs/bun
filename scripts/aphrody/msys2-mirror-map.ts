@@ -328,7 +328,7 @@ const BUN: Record<string, Equivalent[]> = {
   "sqlite3": [B("src/js/bun/sqlite.ts")],
   "libsqlite": [B("src/js/bun/sqlite.ts")],
   "libffi": [B("src/js/bun/ffi.ts"), B("vendor/tinycc")],
-  "libnghttp2": [B("src/js/node/http2.ts"), B("vendor/lshpack")],
+  "libnghttp2": [B("src/js/node/http2.ts")],
   "libnghttp3": [B("vendor/lsqpack")],
   "libngtcp2": [B("vendor/lsquic")],
   "libiconv": [B("src/runtime/webcore/TextDecoder.rs")],

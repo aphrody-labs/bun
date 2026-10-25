@@ -47,17 +47,6 @@
       "visibility": "PUBLIC"
     },
     {
-      "repo": "HdrHistogram/HdrHistogram_c",
-      "kind": "github-archive",
-      "ref": "18c7a324383dded1451d15621cd018b0048057d0",
-      "usedBy": [
-        "build",
-        "scripts/build/deps/hdrhistogram.ts"
-      ],
-      "internal": false,
-      "visibility": "PUBLIC"
-    },
-    {
       "repo": "google/highway",
       "kind": "github-archive",
       "ref": "2607d3b5b0113992fe84d3848859eae13b3b52c1",
@@ -130,17 +119,6 @@
       "usedBy": [
         "build",
         "scripts/build/deps/lolhtml.ts"
-      ],
-      "internal": false,
-      "visibility": "PUBLIC"
-    },
-    {
-      "repo": "litespeedtech/ls-hpack",
-      "kind": "github-archive",
-      "ref": "cf0f70dd10b352194c97448eb5d00b4aa484f531",
-      "usedBy": [
-        "build",
-        "scripts/build/deps/lshpack.ts"
       ],
       "internal": false,
       "visibility": "PUBLIC"

@@ -51,7 +51,7 @@ Branch names must start with `claude/` for CI (repo CLAUDE.md rule).
 - `rust-lints.yml` (workflow `RUSTUP_TOOLCHAIN` pinned): `cargo clippy` (`bun run rust:clippy`), `cargo check --workspace --all-targets --keep-going`, `cargo miri test` (`bun run rust:miri`), lol-html `cargo test`, `mordant` (`cargo +$MORDANT_TOOLCHAIN install --git scarletindustries/mordant --rev $MORDANT_REV`, `bun scripts/rust-mordant.ts`).
 - `source-lints.yml`: `bun test test/internal/source-lints/`.
 - `bun-types.yml`: `bun test test/integration/bun-types/bun-types.test.ts` (no native build needed).
-- `update-<dep>.yml` (cares, hdrhistogram, highway, libarchive, libdeflate, lolhtml, lshpack, sqlite3, zstd, vendor): auto-bump dep commits.
+- `update-<dep>.yml` (cares, highway, libarchive, libdeflate, lolhtml, sqlite3, zstd, vendor): auto-bump dep commits.
 - Others: release.yml, packages-ci.yml, freebsd-smoke.yml, deploy-site.yml, vscode-release.yml, comment-cop.yml, on-slop.yml, claude-dedupe-issues.yml, claude-find-issues-for-pr.yml, auto-label-claude-prs.yml, auto-close-duplicates.yml, close-linked-issues.yml, close-stale-robobun-prs.yml, cancel-buildkite-on-pr-close.yml, stale.yaml, auto-assign-types.yml.
 
 ## Bun OS source
