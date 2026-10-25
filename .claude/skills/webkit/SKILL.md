@@ -19,11 +19,11 @@ git clone https://github.com/oven-sh/WebKit vendor/WebKit
 # (a commit sha or an autobuild-* release tag; this handles both)
 bun sync-webkit-source
 
-# Build bun with the local JSC build — this automatically configures and builds JSC
+# Build bun with JSC compiled from that checkout
 bun run build:local
 ```
 
-`bun run build:local` handles everything: configuring JSC, building JSC, and building Bun. On subsequent runs, JSC rebuilds incrementally if any WebKit sources changed.
+`bun run build:local` compiles JSC in the same build graph as Bun itself (no separate CMake build), so one command builds both, and on subsequent runs only what a changed WebKit source affects is rebuilt. JSC's code generators need `ruby`, `python3` and `perl` in your `PATH`. To keep the clone somewhere else, or share one between worktrees, set `BUN_WEBKIT_PATH` to it. `bun run build:local --target=jsc` builds the `jsc` shell at `./build/debug-local/jsc`.
 
 The build output goes to `./build/debug-local` (instead of `./build/debug`), so you'll need to update a couple of places:
 
@@ -41,45 +41,34 @@ If you make changes to Bun's [WebKit fork](https://github.com/oven-sh/WebKit), y
 
 _From `scripts/build/deps/webkit.ts`._
 
-WebKit (JavaScriptCore) — the JS engine.
+WebKit (JavaScriptCore) — the JS engine, with WTF and bmalloc.
 
 Two modes via `cfg.webkit`:
 
 **prebuilt**: Download tarball from oven-sh/WebKit releases (or from
   aphrody-labs/WebKit, see `webkitPrebuiltRepo` / `$BUN_WEBKIT_REPO`). Tarball name
   encodes {os, arch, musl, debug|lto, asan, assertions} — each is a separate
-  ABI — and coverage.
+  ABI — and coverage and hardened.
   ASAN MUST match bun's setting: WTF::Vector layout changes with ASAN
   (see WTF/Vector.h:682), so mixing → silent memory corruption.
 
 **local**: Source at `vendor/WebKit/`, or `$BUN_WEBKIT_PATH` if set. User
   clones manually (clone takes 10+ min — too slow for the build system
-  to do). Set `BUN_WEBKIT_PATH` to share one clone across worktrees. We
-  cmake it like any other dep. Headers land in the BUILD dir (generated
-  during configure), which is why `provides.includes` returns absolute
-  paths.
+  to do). Set `BUN_WEBKIT_PATH` to share one clone across worktrees. It is
+  compiled in our own ninja graph like every other dep, no cmake ("Local
+  mode: direct build" below). Generated headers land in the BUILD dir.
 
-### Implementation notes
-
-- Build dir is `buildDir/deps/webkit/` (generic path), NOT CMake's
-  `vendor/WebKit/WebKitBuild/`. Better: consistent, cleaned by `rm -rf
-  build/`, separate per-profile.
-
-- Flags: WebKit's own cmake machinery sets -O/-g/sanitizer flags. We
-  override `CMAKE_C_FLAGS` to drop the global dep flags (which would
-  conflict) but DO forward -march/-mcpu + LTO/PGO, which WebKit never
-  sets. Dep args go LAST in source.ts, so they override.
-
-- Windows local mode: ICU built from source via preBuild hook
-  (build-icu.ps1 → msbuild) before cmake configure. Output goes in
-  the per-profile build dir, not shared vendor/WebKit/WebKitBuild/icu/
-  like the old cmake — avoids debug/release mixing.
-
-- `WEBKIT_VERSION` = `"87ee10da087b63e011bd1ada64d1814a850a4395"`: WebKit commit — determines prebuilt download URL + what to checkout for local mode. Override via `--webkit-version=<hash>` to test a branch. From https://github.com/oven-sh/WebKit releases.
+- `WEBKIT_VERSION` = `"autobuild-preview-pr-757-30bbb0b0"`: WebKit commit — determines prebuilt download URL + what to checkout for local mode. Override via `--webkit-version=<hash>` to test a branch. From https://github.com/oven-sh/WebKit releases.
 - `WEBKIT_UPSTREAM_REPO` = `"oven-sh/WebKit"`: Upstream prebuilt releases; the default source.
 - `WEBKIT_APHRODY_REPO` = `"aphrody-labs/WebKit"`: The Aphrody fork (same lanes, archive names and contents; built by its `aphrody-prebuilts.yml`).
 - `APHRODY_WEBKIT_PREBUILTS`: Archives published as the release `autobuild-<sha>` on aphrody-labs/WebKit, per WebKit sha. The default source for an archive is the Aphrody fork once it is listed here, oven-sh otherwise. Add the names after the `aphrody-prebuilts` run published them (PLAN-ALPINE-BUN.md, chantier P). `BUN_WEBKIT_REPO` overrides this (see `webkitPrebuiltRepo`).
 - `webkitPrebuiltRepo`: GitHub repo whose releases hold the prebuilt. `$BUN_WEBKIT_REPO` forces it: `aphrody`, `oven` or `owner/repo`. Without it: the Aphrody fork when it published this archive for this sha (APHRODY_WEBKIT_PREBUILTS), else oven-sh.
+- `prebuiltDirPrefix`: Name prefix shared by every prebuilt extraction dir of one WebKit version, across targets and variants.
+- `webkitTestFFIPath`: JSC's testFFI executable: the prebuilt tarball ships one in bin/; local mode builds it next to bun on request (`--target=testFFI`, bun.ts).
+- `prebuiltHasProgramObjects`: Whether the unpacked tarball has the objects of `jsc` and `testaot` (`programs` in oven-sh/WebKit's lanes.mjs). False until it is fetched.
+- `webkitAotFile`: A file or folder under JavaScriptCore's aot/ that Bun's build or tests read. The prebuilt tarball has it at the checkout's path. Absolute. It need not exist yet.
+- `webkitEngineSources`: What Bun's code generators read and write in the engine (../aot.ts). With the prebuilt, one file stands for each folder: the fetch edge extracts all of the tarball.
+- `jscPrograms`: WebKit's own executables worth having beside a local build (shell/CMakeLists.txt): the `jsc` shell; `testFFI`, JSC's bun:ffi C++/ABI test program, which test/js/bun/jsc-stress/testFFI.test.ts runs; `testb3`, `testair`, `testmasm` and `testRegExp`, the tests of the B3 and Air compilers, the macro assembler and Yarr; and `testaot`, the tests of the AoT compiler. bun.ts links them, from the same dep objects bun gets, so this only says how: the sources, the flags a JSC-family TU compiles with, and what a standalone JSC executable needs at link. None is a default target: `bun run build:local --target=jsc`.
 
 ## Prebuilt flow (`scripts/aphrody/webkit-prebuilt.ts`)
 
@@ -138,9 +127,9 @@ To do that:
 - Preview mode: create a working branch (e.g. `bun/upgrade-to-<upstream-short-sha>`) instead of staying on main
 - git merge upstream/main
 - Fix the merge conflicts (preserve the fork's Bun-specific changes)
-- bun run jsc:build:debug — from the bun repo root, builds just JSC
+- bun run jsc:build:debug — from the bun repo root, builds just JSC (and its `jsc` shell), in bun's own build graph. File lists come from the checkout, but `scripts/build/deps/webkit.ts` restates WebKit's generator commands, compiler flags and option values by hand, and nothing checks them. Read `git diff $OLD_BASE upstream/main -- Source/cmake Source/JavaScriptCore/CMakeLists.txt Source/WTF/wtf/CMakeLists.txt Source/bmalloc/CMakeLists.txt` for changed `add_custom_command`s (→ `gen()`), compiler flags (→ `webkitFlags()`) and `WEBKIT_OPTION_*` / `SET_AND_EXPOSE_TO_BUILD` (→ `rows`), and carry them over in the bun PR
 - While it compiles, in another task review the JSC commits between $OLD_BASE and upstream/main (Source/JavaScriptCore, Source/WTF, Source/bmalloc). Write up a summary in a file called "webkit-changes.md"
-- bun run build:local — full Bun build against the local WebKit (reuses the JSC build above)
+- bun run build:local — full Bun build with the local WebKit (same build directory and objects as the JSC build above)
 - After it compiles, run some code to make sure things work: `bun run build:local -p '42'`
 - Publish the new WebKit:
   - Direct: cd vendor/WebKit, commit, `git push origin main`. The push triggers a release tagged `autobuild-<full-sha>`.
@@ -227,9 +216,9 @@ _From `package.json`._
 | --- | --- |
 | `bun run build:local` | `bun scripts/build.ts --profile=debug-local --build-dir=build/debug-local` |
 | `bun run build:release:local` | `bun scripts/build.ts --profile=release-local --build-dir=build/release-local` |
-| `bun run jsc:build` | `bun scripts/build.ts --profile=release-local --build-dir=build/release-local --target=WebKit` |
-| `bun run jsc:build:debug` | `bun scripts/build.ts --profile=debug-local --build-dir=build/debug-local --target=WebKit` |
-| `bun run jsc:build:lto` | `bun scripts/build.ts --profile=release-local --lto=on --build-dir=build/release-local-lto --target=WebKit` |
+| `bun run jsc:build` | `bun scripts/build.ts --profile=release-local --build-dir=build/release-local --target=jsc` |
+| `bun run jsc:build:debug` | `bun scripts/build.ts --profile=debug-local --build-dir=build/debug-local --target=jsc` |
+| `bun run jsc:build:lto` | `bun scripts/build.ts --profile=release-local --lto=on --build-dir=build/release-local-lto --target=jsc` |
 | `bun run sync-webkit-source` | `bun ./scripts/sync-webkit-source.ts` |
 | `bun run fmt:cpp` | `bun run clang-format` |
 | `bun run clang-format:check` | `./scripts/run-clang-format.sh check` |
