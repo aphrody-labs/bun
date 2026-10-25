@@ -399,6 +399,63 @@ describe("source map remapping of the printed stack", () => {
     });
     expect(exitCode).toBe(1);
   });
+
+  // A file loaded through a blob: URL keeps the relative path it was opened
+  // with as its source URL. Loading it again replaces its source map, and the
+  // printer runs the `cause` getter between remapping the frames and printing
+  // them.
+  test.concurrent("a `cause` getter that loads the throwing file again", async () => {
+    const map = {
+      version: 3,
+      sources: ["orig.ts"],
+      sourcesContent: [
+        'function thrower() { throw new Error("RELOADED"); }\nexport function caller() { thrower(); }\n',
+      ],
+      names: [],
+      // Line 2 -> orig.ts:1:5, line 3 -> orig.ts:2:5.
+      mappings: ";;AAAI;AACA",
+    };
+    const { dir, out, stderr, exitCode } = await run({
+      "rel.js": [
+        "// @bun @bun-cjs",
+        "(function(exports, require, module, __filename, __dirname) {",
+        'function thrower() { throw new Error("RELOADED"); }',
+        "module.exports = function caller() { thrower(); };",
+        "})",
+        "//# sourceMappingURL=data:application/json;base64," + Buffer.from(JSON.stringify(map)).toString("base64"),
+      ].join("\n"),
+      "main.js": [
+        'const load = () => require(URL.createObjectURL(Bun.file("rel.js")));',
+        "let reloads = 0;",
+        "function thrown() {",
+        "  let error;",
+        "  try { load()(); } catch (e) { error = e; }",
+        '  Object.defineProperty(error, "cause", { get() { reloads++; load(); } });',
+        "  return error;",
+        "}",
+        "const out = { inspect: Bun.inspect(thrown()), stack: thrown().stack };",
+        'process.on("exit", () => console.log(JSON.stringify({ ...out, reloads })));',
+        "console.error(thrown());",
+        "throw thrown();",
+      ].join("\n"),
+    });
+
+    const files = ["orig.ts", "rel.js"];
+    const expected = ["at thrower (orig.ts:1:5)", "at caller (orig.ts:2:5)"];
+    expect({
+      reloads: out.reloads,
+      inspect: frames(out.inspect, dir, files),
+      consoleErrorThenUncaught: frames(stderr, dir, files),
+      stack: frames(out.stack, dir, files),
+    }).toEqual({
+      // Bun.inspect, console.error and the uncaught error. Reading `stack` does not read `cause`.
+      reloads: 3,
+      inspect: expected,
+      consoleErrorThenUncaught: [...expected, ...expected],
+      stack: expected,
+    });
+    expect(exitCode).toBe(1);
+  });
 });
 
 // The printer replaces an AggregateError with the members of its `errors`
