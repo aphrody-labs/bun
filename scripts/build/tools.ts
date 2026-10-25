@@ -9,7 +9,7 @@
 import { execSync, spawnSync } from "node:child_process";
 import { accessSync, constants, existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { homedir } from "node:os";
-import { delimiter, join, resolve } from "node:path";
+import { basename, delimiter, dirname, join, resolve } from "node:path";
 import { pins } from "./ci-images/spec.ts";
 import type { Arch, Config, OS, Toolchain } from "./config.ts";
 import { BuildError } from "./error.ts";
@@ -113,6 +113,36 @@ interface Rejection {
 }
 
 /**
+ * The bun running this script, by a path that does not depend on how it was started. `bun run`
+ * puts a per-revision directory of `bun`/`node` links (`<tmp>/bun-node-<revision>`) first on the
+ * PATH of the scripts it runs, and whether `bun scripts/build.ts` in a package script resolves
+ * there depends on the calling shell (`bun bd` from a new PowerShell did, from Git Bash it did not). Every edge's command line
+ * names this path, so a build from the other shell would rerun all of them. The same executable
+ * found elsewhere on PATH (same size and modification time) is used instead.
+ */
+export function bunExecPath(): string {
+  const exec = process.execPath;
+  const shimDir = dirname(exec);
+  if (!/^bun-node-[0-9a-f]+$/i.test(basename(shimDir))) return exec;
+  let self: { size: number; mtimeMs: number };
+  try {
+    self = statSync(exec);
+  } catch {
+    return exec;
+  }
+  const exe = basename(exec);
+  for (const dir of (process.env.PATH ?? process.env.Path ?? "").split(delimiter)) {
+    if (dir.length === 0 || resolve(dir).toLowerCase() === resolve(shimDir).toLowerCase()) continue;
+    const candidate = join(dir, exe);
+    try {
+      const s = statSync(candidate);
+      if (s.isFile() && s.size === self.size && s.mtimeMs === self.mtimeMs) return candidate;
+    } catch {}
+  }
+  return exec;
+}
+
+/**
  * Find the bun executable for codegen (`bun install`, `bun build`, scripts
  * using Bun APIs). Must be the actual bun binary — NOT process.execPath,
  * since configure may run under node.
@@ -123,7 +153,7 @@ interface Rejection {
  * first.
  */
 export function findBun(os: OS): string {
-  if (process.versions.bun !== undefined) return process.execPath;
+  if (process.versions.bun !== undefined) return bunExecPath();
   const exe = os === "windows" ? "bun.exe" : "bun";
   const userBun = join(homedir(), ".bun", "bin", exe);
   if (isExecutable(userBun)) return userBun;
@@ -822,7 +852,7 @@ export function probeRustToolchain(os: OS): {
     required: false,
   })?.path;
   const channel = readRustToolchainChannel();
-  if (rustup !== undefined && channel !== undefined) {
+  if (rustup !== undefined && channel !== undefined && !rustupHasToolchainWithSource(channel)) {
     const started = performance.now();
     spawnSync(
       rustup,
@@ -889,6 +919,26 @@ function readRustToolchainChannel(): string | undefined {
   if (!existsSync(path)) return undefined;
   const m = /^\s*channel\s*=\s*"([^"]+)"/m.exec(readFileSync(path, "utf8"));
   return m?.[1];
+}
+
+/**
+ * Whether rustup already has `channel` with rust-src, the state the `rustup toolchain install` pre-flight
+ * ensures. That check costs 2-3 s on Windows (rustup re-reads the channel manifest), on every configure.
+ */
+function rustupHasToolchainWithSource(channel: string): boolean {
+  const toolchains = join(process.env.RUSTUP_HOME ?? join(homedir(), ".rustup"), "toolchains");
+  let entries: string[];
+  try {
+    entries = readdirSync(toolchains);
+  } catch {
+    return false;
+  }
+  return entries.some(
+    name =>
+      name.startsWith(`${channel}-`) &&
+      existsSync(join(toolchains, name, "lib", "rustlib", "src", "rust", "library", "Cargo.lock")) &&
+      existsSync(join(toolchains, name, "lib", "rustlib", "multirust-config.toml")),
+  );
 }
 
 /**

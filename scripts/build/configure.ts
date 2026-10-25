@@ -42,6 +42,7 @@ import { rustPlanFiles } from "./rust.ts";
 import { quote } from "./shell.ts";
 import {
   checkImageTools,
+  bunExecPath,
   findBun,
   findCargo,
   findMsvcLinker,
@@ -79,7 +80,7 @@ export function resolveJsToolchain(packageManager: PackageManager = "bun"): JsTo
 
   const bun = findBun(host.os);
   const q = (p: string) => quote(p, host.os === "windows");
-  return { bun, npm: undefined, jsRuntime: q(process.execPath), esbuild };
+  return { bun, npm: undefined, jsRuntime: q(bunExecPath()), esbuild };
 }
 
 /**
