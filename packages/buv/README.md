@@ -11,7 +11,7 @@ bun scripts/core.ts <native-core>
 bun scripts/forge.ts --buv <native-core>
 ```
 
-Forge defaults to core qualification, assembly and smoke. Qualification executes `buv:graph`, captures Bun/JSC source revisions and the executable SHA-256, and requires the embedded `buv uv --version` to report exactly UV 0.12.24. Forge never compiles another UV or legacy launcher. Network fetching is optional and requires `--steps fetch,core,assemble,smoke --allow-network`; embedded `../../vendor/uv` is read without cloning or moving the workspace's source tree.
+Forge defaults to core qualification, assembly and smoke. Qualification executes `buv:graph`, captures Bun/JSC source revisions and the executable SHA-256, and requires the embedded `buv uv --version` to report exactly UV 0.12.24. Forge never compiles another UV or legacy launcher. Network fetching is optional and requires `--steps fetch,core,assemble,smoke --allow-network`; embedded `../../plugins/uv/vendor/uv` is read without cloning or moving the workspace's source tree.
 
 Artifacts contain identical `bin/buv` and `bin/pyjs` core binaries, with `.exe` on Windows. UV consumers invoke `buv uv <command>`. No upstream `bun` or `uv` executable is installed into the artifact's `bin`. Each immutable artifact records the core, component pins, target, file hashes and symlinks in `share/buv/manifest.json`.
 
@@ -55,4 +55,4 @@ and PyCUDA compute. Linux, macOS, Nuitka onefile and WASI remain separate gates.
 
 ## Source ownership
 
-UV is compiled once from the repository's canonical `vendor/uv` tree at revision `f3e56e16e0302e26ea456cb51b676b35958572a0`. `packages/buv` has no Rust workspace, source clone step, or project-local vendor directory. The native CLI owns Python compilation in `src/runtime/cli/python_compile.py`; the shared CPython ABI belongs to `packages/bun-python-native`.
+UV is compiled once from the repository's canonical `plugins/uv/vendor/uv` tree at revision `f3e56e16e0302e26ea456cb51b676b35958572a0`. `packages/buv` has no Rust workspace, source clone step, or project-local vendor directory. The native CLI owns Python compilation in `src/runtime/cli/python_compile.py`; the shared CPython ABI belongs to `packages/bun-python-native`.

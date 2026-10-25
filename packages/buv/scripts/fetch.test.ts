@@ -50,7 +50,7 @@ describe("pins", () => {
     expect(vendor.sources).toHaveLength(1);
     expect(vendor.sources[0]).toMatchObject({
       name: "uv",
-      path: "../../vendor/uv",
+      path: "../../plugins/uv/vendor/uv",
       embedded: true,
       forkBranch: "claude/bun-uv",
     });

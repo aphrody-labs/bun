@@ -31,7 +31,7 @@ test("UV has exactly one source checkout and fetch never creates project vendors
   expect(vendor.sources).toHaveLength(1);
   expect(vendor.sources[0]).toMatchObject({
     name: "uv",
-    path: "../../vendor/uv",
+    path: "../../plugins/uv/vendor/uv",
     upstreamTag: "0.12.24",
     ref: "f3e56e16e0302e26ea456cb51b676b35958572a0",
     embedded: true,

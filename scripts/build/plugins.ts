@@ -3,10 +3,15 @@
  * inside it. `src/runtime/cli/plugin_command.rs` finds them next to the executable, in the plugin directory,
  * or downloads them from the release of the exact bun that runs them.
  *
- * Each plugin is one opaque `cargo build` (cargo tracks its sources; restat keeps a no-op build free), then
- * a copy into the binary directory.
+ * Each plugin is its own repository (aphrody-labs/bun-<name>), mounted as the optional submodule `plugins/<name>`
+ * (`update = none`; `git submodule update --init --checkout --recursive plugins/<name>`). Its Cargo workspace
+ * path-depends on crates of this checkout. Unmounted plugins are skipped.
+ *
+ * Each plugin is one opaque `cargo build` in its workspace (cargo tracks its sources; restat keeps a no-op build
+ * free), then a copy into the binary directory.
  */
 
+import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import type { Config } from "./config.ts";
 import { WINFW_SYSTEM_LIBRARIES } from "./deps/winfw.ts";
@@ -44,9 +49,20 @@ export const plugins: Plugin[] = [
   { name: "winmd", package: "bun_plugin_winmd" },
 ];
 
-/** Emit every plugin; returns the executables in the binary directory. */
+/** Checkout directory of a plugin's workspace, mounted as a submodule. */
+export function pluginDir(cwd: string, plugin: Plugin): string {
+  return resolve(cwd, "plugins", plugin.name);
+}
+
+/** The plugins whose submodule is checked out. */
+export function mountedPlugins(cwd: string): Plugin[] {
+  return plugins.filter(plugin => existsSync(resolve(pluginDir(cwd, plugin), "Cargo.toml")));
+}
+
+/** Emit every mounted plugin; returns the executables in the binary directory. */
 export function emitPlugins(n: Ninja, cfg: Config): string[] {
-  if (cfg.cargo === undefined || plugins.length === 0) return [];
+  const mounted = mountedPlugins(cfg.cwd);
+  if (cfg.cargo === undefined || mounted.length === 0) return [];
   const hostWin = cfg.host.os === "windows";
   const { unitEnv, triple } = cargoBuildInvocation(cfg);
   // What bun's graph compiles is LLVM bitcode under LTO (deps/winfw for the vpn plugin), which only lld reads.
@@ -63,7 +79,8 @@ export function emitPlugins(n: Ninja, cfg: Config): string[] {
   // cargo decides what is stale, so its edge runs on every build.
   n.phony("plugin-always", []);
   const outputs: string[] = [];
-  for (const plugin of plugins) {
+  for (const plugin of mounted) {
+    const dir = pluginDir(cfg.cwd, plugin);
     const native = plugin.native?.(cfg) ?? { inputs: [], env: {}, rustflags: [] };
     // The C/C++ bun's graph compiles for Windows uses the static CRT (/MT); so does every plugin, which then
     // needs no Visual C++ runtime installed.
@@ -104,10 +121,16 @@ export function emitPlugins(n: Ninja, cfg: Config): string[] {
       outputs: [built],
       rule: "dep_cargo",
       inputs: [],
-      implicitInputs: ["plugin-always", cfg.cargo, resolve(cfg.cwd, "rust-toolchain.toml"), ...native.inputs],
+      implicitInputs: [
+        "plugin-always",
+        cfg.cargo,
+        resolve(cfg.cwd, "rust-toolchain.toml"),
+        resolve(dir, "Cargo.lock"),
+        ...native.inputs,
+      ],
       vars: {
         name: `plugin-${plugin.name}`,
-        manifestdir: cfg.cwd,
+        manifestdir: dir,
         env: Object.entries(env)
           .map(([k, v]) => `--env=${k}=${quote(v, hostWin)}`)
           .join(" "),

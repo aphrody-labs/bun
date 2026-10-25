@@ -1,0 +1,334 @@
+{
+  "schema": 1,
+  "upstream": {
+    "repository": "https://github.com/oven-sh/bun",
+    "tag": "bun-v1.4.4",
+    "localTag": "upstream/bun-v1.4.4",
+    "commit": "38afee6c84fcf48c0edb2466aa4b27d287a59c30"
+  },
+  "bunOs": {
+    "repository": "https://github.com/aphrody-labs/bun-os.git",
+    "branch": "os"
+  },
+  "components": [
+    {
+      "component": "uv",
+      "path": [
+        "src/plugins/uv",
+        "vendor/uv"
+      ],
+      "type": "rust-workspace",
+      "kind": "plugin",
+      "destinationRepo": "https://github.com/aphrody-labs/bun-uv",
+      "forkMount": "plugins/uv",
+      "forkMountUpdate": "none",
+      "bunOsPath": "vendor/bun-uv",
+      "submoduleRevision": "c1c32fce6c2593873617e870bd52faae564737f7",
+      "upstream": "https://github.com/astral-sh/uv (0.12.24) via aphrody-labs/uv branch bun-0.12.24 c3c36e2a7b3",
+      "migrationState": "moved",
+      "notes": "vendor/uv is aphrody-labs/uv bun-0.12.24: upstream tag 0.12.24 plus the fork's tree verbatim. The vestigial uv build dependency (scripts/build/deps/uv.ts) was removed: no runtime crate reads it. packages/buv still points at plugins/uv/vendor/uv until PyJS moves."
+    },
+    {
+      "component": "vpn",
+      "path": [
+        "src/plugins/vpn",
+        "src/bun_vpn",
+        "vendor/mullvad"
+      ],
+      "type": "rust-workspace",
+      "kind": "plugin",
+      "destinationRepo": "https://github.com/aphrody-labs/bun-vpn",
+      "forkMount": "plugins/vpn",
+      "forkMountUpdate": "none",
+      "bunOsPath": "vendor/bun-vpn",
+      "submoduleRevision": "aff07e145237acd9126c8a532419da7eb0d4a9d4",
+      "upstream": "https://github.com/mullvad/mullvadvpn-app via aphrody-labs/mullvadvpn-app branch bun-embedded 9096ce027b8 (parent 493198790be)",
+      "migrationState": "moved",
+      "notes": "GPL-3.0-or-later. WinFw (scripts/build/deps/winfw.ts) builds from plugins/vpn/vendor/mullvad and is enabled only when it is mounted. The source offer of the Linux sidecar now names aphrody-labs/bun-vpn; that repository is private, so the GPL corresponding-source offer needs it public (owner decision)."
+    },
+    {
+      "component": "ssh",
+      "path": [
+        "src/plugins/ssh",
+        "src/ssh",
+        "vendor/russh-sftp"
+      ],
+      "type": "rust-workspace",
+      "kind": "plugin",
+      "destinationRepo": "https://github.com/aphrody-labs/bun-ssh",
+      "forkMount": "plugins/ssh",
+      "forkMountUpdate": "none",
+      "bunOsPath": "vendor/bun-ssh",
+      "submoduleRevision": "964aaa1063223b4b6e167ad4cebb1d40a336e774",
+      "upstream": "https://github.com/AspectUnk/russh-sftp 3.0.1 (patched, in-tree)",
+      "migrationState": "moved",
+      "notes": "scripts/aphrody/publish-vendors.ts still stages vendor/russh-sftp and vendor/uv from this tree; it must be pointed at the plugin repositories before the next vendor crate publication."
+    },
+    {
+      "component": "docker",
+      "path": [
+        "src/plugins/docker",
+        "src/docker"
+      ],
+      "type": "rust-workspace",
+      "kind": "plugin",
+      "destinationRepo": "https://github.com/aphrody-labs/bun-docker",
+      "forkMount": "plugins/docker",
+      "forkMountUpdate": "none",
+      "bunOsPath": "vendor/bun-docker",
+      "submoduleRevision": "24ac698c6c2108df518f5efba28b845c8750ead5",
+      "upstream": null,
+      "migrationState": "moved",
+      "notes": "Path-depends on plugins/ssh/bun_ssh: mount both."
+    },
+    {
+      "component": "just",
+      "path": [
+        "src/plugins/just",
+        "src/just"
+      ],
+      "type": "rust-workspace",
+      "kind": "plugin",
+      "destinationRepo": "https://github.com/aphrody-labs/bun-just",
+      "forkMount": "plugins/just",
+      "forkMountUpdate": "none",
+      "bunOsPath": "vendor/bun-just",
+      "submoduleRevision": "23ef9ebdaafa1ebf708affe7bb0b341da73cf4c3",
+      "upstream": "https://github.com/casey/just via aphrody-labs/just branch bun 5827d90d9ec (parent a6bc306)",
+      "migrationState": "moved",
+      "notes": "bun_just tests left the native-ci rust-toolchain-test gate; they run in the plugin workspace."
+    },
+    {
+      "component": "winmd",
+      "path": [
+        "src/plugins/winmd"
+      ],
+      "type": "rust-workspace",
+      "kind": "plugin",
+      "destinationRepo": "https://github.com/aphrody-labs/bun-winmd",
+      "forkMount": "plugins/winmd",
+      "forkMountUpdate": "none",
+      "bunOsPath": "vendor/bun-winmd",
+      "submoduleRevision": "8c1a9806a81cdae2f880f3213d7855e1b4416d36",
+      "upstream": "https://crates.io/crates/windows-bindgen",
+      "migrationState": "moved",
+      "notes": "Uses the checkout's vendor/find-msvc-tools, which stays (bun_runtime dependency)."
+    },
+    {
+      "component": "bun-video",
+      "path": [
+        "packages/bun-video",
+        "src/media/filmcraft"
+      ],
+      "type": "tree",
+      "kind": "package",
+      "destinationRepo": null,
+      "bunOsPath": null,
+      "submoduleRevision": null,
+      "upstream": null,
+      "migrationState": "pending",
+      "notes": "Next batch. bun_video_native is an optional path dependency of bun_runtime; scripts/aphrody media-sdk-*, media-release and release-* import packages/bun-video/src (Bun OS runtime-heavy-migration B4)."
+    },
+    {
+      "component": "pyjs",
+      "path": [
+        "packages/buv",
+        "packages/bun-python-native",
+        "packages/bun-python-toolchain",
+        "packages/bun-python-conformance",
+        "bun_python.json",
+        "bun_python.sqlite",
+        "packages/bun-runtime-sdk"
+      ],
+      "type": "tree",
+      "kind": "package",
+      "destinationRepo": null,
+      "bunOsPath": null,
+      "submoduleRevision": null,
+      "upstream": null,
+      "migrationState": "pending",
+      "notes": "Pending."
+    },
+    {
+      "component": "ui-web",
+      "path": [
+        "packages/bun-m3",
+        "packages/bun-plugin-tailwind",
+        "packages/bun-next",
+        "packages/web",
+        "packages/bun-web",
+        "packages/bun-webview-page",
+        "packages/bun-fluent",
+        "packages/bun-icons"
+      ],
+      "type": "tree",
+      "kind": "package",
+      "destinationRepo": "https://github.com/aphrody-labs/bun-ui",
+      "bunOsPath": null,
+      "submoduleRevision": null,
+      "upstream": null,
+      "migrationState": "pending",
+      "notes": "Destination aphrody-labs/bun-ui packages/<name>, imported by its owner session; Bun OS mounts bun-ui as one submodule. Create templates keep the npm bun-plugin-tailwind references."
+    },
+    {
+      "component": "packages-misc",
+      "path": [
+        "packages/bun-google",
+        "packages/bun-x",
+        "packages/bun-qr",
+        "packages/bun-fuzzy",
+        "packages/bun-timeline",
+        "packages/bun-cloudflare",
+        "packages/bun-chromium",
+        "packages/bun-llama",
+        "packages/bun-nginx",
+        "packages/bun-supervisor",
+        "packages/bun-tools",
+        "packages/bun-winsvc",
+        "packages/bun-cosmic",
+        "packages/bun-oxc",
+        "packages/bun-n2b",
+        "packages/bun-dotnet",
+        "packages/bun-webview-core",
+        "packages/aphrody-pkg-system"
+      ],
+      "type": "tree",
+      "kind": "package",
+      "destinationRepo": null,
+      "bunOsPath": null,
+      "submoduleRevision": null,
+      "upstream": null,
+      "migrationState": "pending",
+      "notes": "Pending. bun-dotnet-host is a non-optional bun_runtime dependency and stays until made optional."
+    },
+    {
+      "component": "distribution",
+      "path": [
+        "factory",
+        "patches/chromium",
+        "docs/chromium",
+        "scripts/aphrody/alpine"
+      ],
+      "type": "tree",
+      "kind": "distribution",
+      "destinationRepo": null,
+      "bunOsPath": null,
+      "submoduleRevision": null,
+      "upstream": null,
+      "migrationState": "pending",
+      "notes": "Pending. factory/artifacts are runtime qualification receipts (Bun OS B2 kept them here)."
+    },
+    {
+      "component": "bun_quality",
+      "path": [
+        "src/quality"
+      ],
+      "type": "rust-crate",
+      "kind": "runtime-linked",
+      "destinationRepo": null,
+      "bunOsPath": null,
+      "submoduleRevision": null,
+      "upstream": null,
+      "migrationState": "stays",
+      "notes": "Native bun check/lint/fmt backend required by CLAUDE.md; optional would need a feature gate on the CLI commands and a plugin like bun-<name>."
+    },
+    {
+      "component": "bun_lint",
+      "path": [
+        "src/lint"
+      ],
+      "type": "rust-crate",
+      "kind": "runtime-linked",
+      "destinationRepo": null,
+      "bunOsPath": null,
+      "submoduleRevision": null,
+      "upstream": null,
+      "migrationState": "stays",
+      "notes": "Linked by bun lint; same as bun_quality."
+    },
+    {
+      "component": "bun_sema",
+      "path": [
+        "src/sema"
+      ],
+      "type": "rust-crate",
+      "kind": "runtime-linked",
+      "destinationRepo": null,
+      "bunOsPath": null,
+      "submoduleRevision": null,
+      "upstream": null,
+      "migrationState": "stays",
+      "notes": "Type checker behind bun check; same as bun_quality."
+    },
+    {
+      "component": "bun_react_compiler",
+      "path": [
+        "src/react_compiler"
+      ],
+      "type": "rust-crate",
+      "kind": "runtime-linked",
+      "destinationRepo": null,
+      "bunOsPath": null,
+      "submoduleRevision": null,
+      "upstream": null,
+      "migrationState": "stays",
+      "notes": "Used by the bundler; optional only behind a bundler feature."
+    },
+    {
+      "component": "bun_migrate",
+      "path": [
+        "src/migrate"
+      ],
+      "type": "rust-crate",
+      "kind": "runtime-linked",
+      "destinationRepo": null,
+      "bunOsPath": null,
+      "submoduleRevision": null,
+      "upstream": null,
+      "migrationState": "stays",
+      "notes": "bun n2b; could become a plugin (cold CLI subsystem, opt-level z already)."
+    },
+    {
+      "component": "rio (runtime graph)",
+      "path": [
+        "src/rio"
+      ],
+      "type": "rust-crate",
+      "kind": "runtime-linked",
+      "destinationRepo": null,
+      "bunOsPath": null,
+      "submoduleRevision": null,
+      "upstream": null,
+      "migrationState": "stays",
+      "notes": "corcovado, rio-fonts, rio-grapheme-width, rio-graphics, rio-unicode, rio-vt, rio-window, sugarloaf, teletypewriter are linked; librio, librio-wasm, libsugarloaf, rio-backend, rio-grid, rio-notifier, rioterm are not and can move with a Bun OS consumer (aphrody-labs/rio fork exists)."
+    },
+    {
+      "component": "browser (runtime graph)",
+      "path": [
+        "src/browser"
+      ],
+      "type": "rust-crate",
+      "kind": "runtime-linked",
+      "destinationRepo": null,
+      "bunOsPath": null,
+      "submoduleRevision": null,
+      "upstream": null,
+      "migrationState": "stays",
+      "notes": "bun_browser_dom, bun_browser_detect, bun_browser_ssrf are linked; src/browser/crates/* (api, cdp, crawl, engine, ...) are standalone and can move."
+    },
+    {
+      "component": "bun:winui / bun:windows",
+      "path": [
+        "src/runtime/windows"
+      ],
+      "type": "rust-crate",
+      "kind": "runtime-linked",
+      "destinationRepo": null,
+      "bunOsPath": null,
+      "submoduleRevision": null,
+      "upstream": null,
+      "migrationState": "stays",
+      "notes": "Rust modules inside bun_runtime; optional would need a cargo feature around the module registration."
+    }
+  ]
+}

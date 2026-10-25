@@ -82,8 +82,6 @@ test("toolchain gates use the canonical Cargo wrapper and the changed native bin
     "bun_quality",
     "-p",
     "bun_migrate",
-    "-p",
-    "bun_just",
     "--lib",
     "--tests",
     "--locked",

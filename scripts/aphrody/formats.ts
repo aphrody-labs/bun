@@ -1124,7 +1124,7 @@ async function main() {
   const bun = configured("bun", values["bun-root"]);
   const roots = {
     bun,
-    uv: configured("uv", values["uv-root"], resolve(bun, "vendor/uv")),
+    uv: configured("uv", values["uv-root"], resolve(bun, "plugins/uv/vendor/uv")),
     cpython: configured("cpython", values["cpython-root"]),
     jsc: configured("jsc", values["jsc-root"]),
   };

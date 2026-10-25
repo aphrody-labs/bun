@@ -255,16 +255,6 @@
       "visibility": "PUBLIC"
     },
     {
-      "repo": "vendor/uv",
-      "kind": "in-tree",
-      "ref": "checkout",
-      "usedBy": [
-        "build",
-        "scripts/build/deps/uv.ts"
-      ],
-      "internal": false
-    },
-    {
       "repo": "aphrody-labs/WebKit",
       "kind": "prebuilt",
       "ref": "autobuild-87ee10da087b63e011bd1ada64d1814a850a4395",

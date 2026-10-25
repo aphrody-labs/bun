@@ -94,12 +94,6 @@ members = [
   "src/rio/librio-wasm",
   "src/rio/libsugarloaf",
   "crates/aphrody-jev",
-  "src/plugins/uv",
-  "src/plugins/vpn",
-  "src/plugins/ssh",
-  "src/plugins/docker",
-  "src/plugins/just",
-  "src/plugins/winmd",
   "src/browser/crates/api",
   "src/browser/crates/browser",
   "src/browser/crates/cdp",
@@ -119,7 +113,6 @@ members = [
   "src/browser/crates/frames",
   "src/x",
   "src/google",
-  "src/bun_vpn",
   "src/opaque",
   "src/adblock",
   "src/analytics",
@@ -263,13 +256,10 @@ members = [
   "src/spawn",
   "src/spawn_sys",
   "src/no_window",
-  "src/ssh",
   "src/system_tools",
-  "src/docker",
   "src/bunfig",
   "src/transpiler/ecma_api",
   "src/migrate",
-  "src/just",
   "src/quality",
   "src/quality/format_cli",
   "src/quality/lint_cli",
@@ -387,7 +377,6 @@ default-members = [
   "src/browser/crates/frames",
   "src/x",
   "src/google",
-  "src/bun_vpn",
   "src/opaque",
   "src/adblock",
   "src/analytics",
@@ -529,13 +518,10 @@ default-members = [
   "src/spawn",
   "src/spawn_sys",
   "src/no_window",
-  "src/ssh",
   "src/system_tools",
-  "src/docker",
   "src/bunfig",
   "src/transpiler/ecma_api",
   "src/migrate",
-  "src/just",
   "src/quality",
   "src/quality/format_cli",
   "src/quality/lint_cli",
@@ -623,7 +609,7 @@ default-members = [
 # heavy dev-dependencies (criterion, html5ever) never enter `Cargo.lock`.
 # `packages/bun-cosmic` is the libcosmic window helper of `bun:cosmic`: its own
 # workspace and lockfile, because libcosmic is a git dependency.
-exclude = ["scripts/verify-baseline-static", "vendor"]
+exclude = ["plugins", "scripts/verify-baseline-static", "vendor"]
 
 [workspace.package]
 "repository" = "https://github.com/aphrody-labs/bun"
@@ -917,7 +903,6 @@ map_identity = "allow"
 [workspace.dependencies]
 bun_google = { path = "src/google", version = "1.4.4", default-features = false, features = ["search"] }
 "bun_migrate" = { "path" = "src/migrate" }
-"bun_just" = { "path" = "src/just" }
 "bun_ecma_api" = { "path" = "src/transpiler/ecma_api" }
 "bun_quality" = { "path" = "src/quality" }
 "oxc_allocator" = { "package" = "bun_arena", "path" = "src/collections/arena", "version" = "0.153.0" }
@@ -1167,10 +1152,7 @@ bun_output_tags = { path = "src/bun_output_tags" }
 bun_patch_jsc = { path = "src/patch_jsc" }
 bun_router = { path = "src/router" }
 bun_shell_parser = { path = "src/shell_parser" }
-bun_ssh = { path = "src/ssh" }
 bun_system_tools = { path = "src/system_tools" }
-bun_docker = { path = "src/docker" }
-bun_vpn = { path = "src/bun_vpn" }
 bun_spawn = { path = "src/spawn" }
 bun_spawn_sys = { path = "src/spawn_sys" }
 bun_no_window = { path = "src/no_window" }
@@ -1263,75 +1245,6 @@ opt-level = "z"
 
 # Fork subsystems reached only from their own cold commands (`bun uv`/`uvx`, `bun vpn`, `bun winmd`, GitHub
 # release tooling): they are a quarter of the binary and none of them runs during startup or a hot loop.
-[profile.release.package.gotatun]
-opt-level = "s"
-
-[profile.release.package.h3]
-opt-level = "s"
-
-[profile.release.package.h3-datagram]
-opt-level = "s"
-
-[profile.release.package.h3-quinn]
-opt-level = "s"
-
-[profile.release.package.hickory-net]
-opt-level = "z"
-
-[profile.release.package.hickory-proto]
-opt-level = "z"
-
-[profile.release.package.hickory-resolver]
-opt-level = "z"
-
-[profile.release.package.mullvad-api]
-opt-level = "z"
-
-[profile.release.package.mullvad-api-constants]
-opt-level = "z"
-
-[profile.release.package.mullvad-daemon]
-opt-level = "z"
-
-[profile.release.package.mullvad-daemon-relay-selector]
-opt-level = "z"
-
-[profile.release.package.mullvad-encrypted-dns-proxy]
-opt-level = "z"
-
-[profile.release.package.mullvad-fs]
-opt-level = "z"
-
-[profile.release.package.mullvad-leak-checker]
-opt-level = "z"
-
-[profile.release.package.mullvad-logging]
-opt-level = "z"
-
-[profile.release.package.mullvad-management-interface]
-opt-level = "z"
-
-[profile.release.package.mullvad-masque-proxy]
-opt-level = "z"
-
-[profile.release.package.mullvad-paths]
-opt-level = "z"
-
-[profile.release.package.mullvad-relay-selector]
-opt-level = "z"
-
-[profile.release.package.mullvad-tls-client]
-opt-level = "z"
-
-[profile.release.package.mullvad-types]
-opt-level = "z"
-
-[profile.release.package.mullvad-update]
-opt-level = "z"
-
-[profile.release.package.mullvad-version]
-opt-level = "z"
-
 [profile.release.package.octocrab]
 opt-level = "z"
 
@@ -1344,312 +1257,7 @@ opt-level = "s"
 [profile.release.package.quinn-udp]
 opt-level = "s"
 
-[profile.release.package.talpid-core]
-opt-level = "z"
-
-[profile.release.package.talpid-dns]
-opt-level = "z"
-
-[profile.release.package.talpid-error]
-opt-level = "z"
-
-[profile.release.package.talpid-future]
-opt-level = "z"
-
-[profile.release.package.talpid-logging]
-opt-level = "z"
-
-[profile.release.package.talpid-net]
-opt-level = "z"
-
-[profile.release.package.talpid-netstack]
-opt-level = "z"
-
-[profile.release.package.talpid-platform-metadata]
-opt-level = "z"
-
-[profile.release.package.talpid-routing]
-opt-level = "z"
-
-[profile.release.package.talpid-time]
-opt-level = "z"
-
-[profile.release.package.talpid-tunnel]
-opt-level = "z"
-
-[profile.release.package.talpid-tunnel-config-client]
-opt-level = "z"
-
-[profile.release.package.talpid-types]
-opt-level = "z"
-
-[profile.release.package.talpid-windows]
-opt-level = "z"
-
-[profile.release.package.talpid-wireguard]
-opt-level = "z"
-
-[profile.release.package.tunnel-obfuscation]
-opt-level = "z"
-
-[profile.release.package.uv]
-opt-level = "z"
-
-[profile.release.package.uv-audit]
-opt-level = "z"
-
-[profile.release.package.uv-audit-operations]
-opt-level = "z"
-
-[profile.release.package.uv-auth]
-opt-level = "z"
-
-[profile.release.package.uv-bin-install]
-opt-level = "z"
-
-[profile.release.package.uv-build-backend]
-opt-level = "z"
-
-[profile.release.package.uv-build-commands]
-opt-level = "z"
-
-[profile.release.package.uv-build-frontend]
-opt-level = "z"
-
-[profile.release.package.uv-cache]
-opt-level = "z"
-
-[profile.release.package.uv-cache-info]
-opt-level = "z"
-
-[profile.release.package.uv-cache-key]
-opt-level = "z"
-
-[profile.release.package.uv-cli]
-opt-level = "z"
-
-[profile.release.package.uv-client]
-opt-level = "z"
-
-[profile.release.package.uv-command-support]
-opt-level = "z"
-
-[profile.release.package.uv-configuration]
-opt-level = "z"
-
-[profile.release.package.uv-console]
-opt-level = "z"
-
-[profile.release.package.uv-dirs]
-opt-level = "z"
-
-[profile.release.package.uv-dispatch]
-opt-level = "z"
-
-[profile.release.package.uv-distribution]
-opt-level = "z"
-
-[profile.release.package.uv-distribution-filename]
-opt-level = "z"
-
-[profile.release.package.uv-distribution-types]
-opt-level = "z"
-
-[profile.release.package.uv-environment-operations]
-opt-level = "z"
-
-[profile.release.package.uv-errors]
-opt-level = "z"
-
-[profile.release.package.uv-extract]
-opt-level = "z"
-
-[profile.release.package.uv-fastid]
-opt-level = "z"
-
-[profile.release.package.uv-flags]
-opt-level = "z"
-
-[profile.release.package.uv-fs]
-opt-level = "z"
-
-[profile.release.package.uv-git]
-opt-level = "z"
-
-[profile.release.package.uv-git-types]
-opt-level = "z"
-
-[profile.release.package.uv-globfilter]
-opt-level = "z"
-
-[profile.release.package.uv-install-operations]
-opt-level = "z"
-
-[profile.release.package.uv-install-wheel]
-opt-level = "z"
-
-[profile.release.package.uv-installer]
-opt-level = "z"
-
-[profile.release.package.uv-keyring]
-opt-level = "z"
-
-[profile.release.package.uv-lock]
-opt-level = "z"
-
-[profile.release.package.uv-lock-operations]
-opt-level = "z"
-
-[profile.release.package.uv-logging]
-opt-level = "z"
-
-[profile.release.package.uv-metadata]
-opt-level = "z"
-
-[profile.release.package.uv-netrc]
-opt-level = "z"
-
-[profile.release.package.uv-normalize]
-opt-level = "z"
-
-[profile.release.package.uv-once-map]
-opt-level = "z"
-
-[profile.release.package.uv-options-metadata]
-opt-level = "z"
-
-[profile.release.package.uv-pep440]
-opt-level = "z"
-
-[profile.release.package.uv-pep508]
-opt-level = "z"
-
-[profile.release.package.uv-pip-commands]
-opt-level = "z"
-
-[profile.release.package.uv-platform]
-opt-level = "z"
-
-[profile.release.package.uv-platform-tags]
-opt-level = "z"
-
-[profile.release.package.uv-preview]
-opt-level = "z"
-
-[profile.release.package.uv-project-commands]
-opt-level = "z"
-
-[profile.release.package.uv-project-edit]
-opt-level = "z"
-
-[profile.release.package.uv-publish]
-opt-level = "z"
-
-[profile.release.package.uv-publish-commands]
-opt-level = "z"
-
-[profile.release.package.uv-pypi-types]
-opt-level = "z"
-
-[profile.release.package.uv-python-commands]
-opt-level = "z"
-
-[profile.release.package.uv-python-discovery]
-opt-level = "z"
-
-[profile.release.package.uv-python-interpreter]
-opt-level = "z"
-
-[profile.release.package.uv-python-managed]
-opt-level = "z"
-
-[profile.release.package.uv-python-types]
-opt-level = "z"
-
-[profile.release.package.uv-redacted]
-opt-level = "z"
-
-[profile.release.package.uv-requirements]
-opt-level = "z"
-
-[profile.release.package.uv-requirements-txt]
-opt-level = "z"
-
-[profile.release.package.uv-resolve-operations]
-opt-level = "z"
-
-[profile.release.package.uv-resolver]
-opt-level = "z"
-
-[profile.release.package.uv-resolver-types]
-opt-level = "z"
-
-[profile.release.package.uv-scripts]
-opt-level = "z"
-
-[profile.release.package.uv-settings]
-opt-level = "z"
-
-[profile.release.package.uv-shell]
-opt-level = "z"
-
-[profile.release.package.uv-small-str]
-opt-level = "z"
-
-[profile.release.package.uv-state]
-opt-level = "z"
-
-[profile.release.package.uv-static]
-opt-level = "z"
-
-[profile.release.package.uv-threads]
-opt-level = "z"
-
-[profile.release.package.uv-toml]
-opt-level = "z"
-
-[profile.release.package.uv-tool]
-opt-level = "z"
-
-[profile.release.package.uv-tool-commands]
-opt-level = "z"
-
-[profile.release.package.uv-torch]
-opt-level = "z"
-
-[profile.release.package.uv-trampoline-builder]
-opt-level = "z"
-
-[profile.release.package.uv-types]
-opt-level = "z"
-
-[profile.release.package.uv-unix]
-opt-level = "z"
-
-[profile.release.package.uv-version]
-opt-level = "z"
-
-[profile.release.package.uv-virtualenv]
-opt-level = "z"
-
-[profile.release.package.uv-warnings]
-opt-level = "z"
-
-[profile.release.package.uv-windows]
-opt-level = "z"
-
-[profile.release.package.uv-workspace]
-opt-level = "z"
-
-[profile.release.package.uv-workspace-commands]
-opt-level = "z"
-
-[profile.release.package.windows-bindgen]
-opt-level = "z"
-
-
-
-# The hyper/reqwest client stack serves only those subsystems (and bun_docker): bun's own HTTP is uSockets.
+# The hyper/reqwest client stack serves only cold subsystems: bun's own HTTP is uSockets.
 [profile.release.package.hyper]
 opt-level = "s"
 
@@ -1662,39 +1270,15 @@ opt-level = "s"
 [profile.release.package.reqwest]
 opt-level = "s"
 
-[profile.release.package.tonic]
-opt-level = "s"
-
 [profile.release.package.tower]
 opt-level = "s"
 
-# Cold CLI subsystems of the fork: `bun mcp`, `bun just`, `bun n2b` migration, `bun ssh`, `bun docker`, `bun vpn`, crawling,
+# Cold CLI subsystems of the fork: `bun mcp`, `bun n2b` migration, crawling,
 # MSVC/.NET discovery, SBOM export.
 [profile.release.package.bun_migrate]
 opt-level = "z"
 
 [profile.release.package.bun_mcp]
-opt-level = "z"
-
-[profile.release.package.bun_just]
-opt-level = "z"
-
-[profile.release.package.bun_ssh]
-opt-level = "z"
-
-[profile.release.package.russh]
-opt-level = "z"
-
-[profile.release.package.russh-sftp]
-opt-level = "z"
-
-[profile.release.package.ssh-key]
-opt-level = "z"
-
-[profile.release.package.bun_docker]
-opt-level = "z"
-
-[profile.release.package.bun_vpn]
 opt-level = "z"
 
 [profile.release.package.find-msvc-tools]
@@ -1709,16 +1293,10 @@ opt-level = "z"
 [profile.release.package.bun_agent_tools]
 opt-level = "z"
 
-[profile.release.package.reqsign]
-opt-level = "z"
-
 [profile.release.package.bun_browser_crawl]
 opt-level = "z"
 
 [profile.release.package.bun_browser_net]
-opt-level = "z"
-
-[profile.release.package.cyclonedx-bom]
 opt-level = "z"
 
 [patch.crates-io]

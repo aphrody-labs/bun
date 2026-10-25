@@ -280,12 +280,11 @@ export async function verifyFactoryArtifacts(
       sidecar.asset !== "bun-vpn-linux-x86_64.tar.gz"
     )
       throw new Error("Native Mullvad VPS sidecar qualification missing");
-    const embeddedSource = Bun.spawnSync(["git", "cat-file", "-e", `${source}:vendor/mullvad/Cargo.toml`], {
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-    if (embeddedSource.exitCode !== 0 || sidecar.mullvadSource !== source)
-      throw new Error("Mullvad sidecar source does not match the embedded Bun source");
+    // The vpn plugin (aphrody-labs/bun-vpn) is the submodule plugins/vpn; its pin is the sidecar's source.
+    const plugin = Bun.spawnSync(["git", "ls-tree", source, "plugins/vpn"], { stdout: "pipe", stderr: "pipe" });
+    const gitlink = /^160000 commit ([a-f0-9]{40})	plugins/vpn$/.exec(plugin.stdout.toString().trim());
+    if (plugin.exitCode !== 0 || !gitlink || sidecar.mullvadSource !== gitlink[1])
+      throw new Error("Mullvad sidecar source does not match the vpn plugin pinned by the Bun source");
     assertAsset(sidecar.asset);
     assertAsset(sidecar.log);
   }

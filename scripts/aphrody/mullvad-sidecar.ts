@@ -14,7 +14,7 @@ export interface MullvadBuildPlan {
   mullvadSource: string;
   target: typeof MULLVAD_LINUX_TARGET;
   asset: typeof MULLVAD_ASSET;
-  workingDirectory: "vendor/mullvad";
+  workingDirectory: "plugins/vpn/vendor/mullvad";
   factoryLock: "/home/ubuntu/build/locks/heavy.lock";
   cargo: string[][];
   fetchRelayList: string;
@@ -34,7 +34,7 @@ export function createMullvadBuildPlan(source: string, mullvadSource: string): M
     mullvadSource,
     target: MULLVAD_LINUX_TARGET,
     asset: MULLVAD_ASSET,
-    workingDirectory: "vendor/mullvad",
+    workingDirectory: "plugins/vpn/vendor/mullvad",
     factoryLock: "/home/ubuntu/build/locks/heavy.lock",
     cargo: [
       [
@@ -89,7 +89,7 @@ export function createMullvadBuildPlan(source: string, mullvadSource: string): M
         "mullvad-management-interface",
       ],
     ],
-    fetchRelayList: "vendor/mullvad/target/x86_64-unknown-linux-gnu/release/relay-list",
+    fetchRelayList: "plugins/vpn/vendor/mullvad/target/x86_64-unknown-linux-gnu/release/relay-list",
     smoke: [
       ["mullvad-daemon", "--version"],
       ["mullvad", "--version"],
@@ -172,7 +172,7 @@ export function packageMullvadSidecar(options: {
     copyFileSync(join(mullvad, "THIRD_PARTY.md"), join(docs, "THIRD_PARTY.md"));
     writeFileSync(
       join(docs, "SOURCE.md"),
-      `Mullvad VPN source embedded in Bun\n\nBun source commit: ${options.mullvadSource}\nPath: vendor/mullvad\n\nThe embedded source and its build instructions are distributed under GPL-3.0-or-later.\n`,
+      `Mullvad VPN source of the Bun vpn plugin\n\nRepository: https://github.com/aphrody-labs/bun-vpn\nCommit: ${options.mullvadSource}\nPath: vendor/mullvad (submodule of https://github.com/aphrody-labs/mullvadvpn-app)\n\nThe embedded source and its build instructions are distributed under GPL-3.0-or-later.\n`,
     );
     const buildInfo = {
       ...plan,

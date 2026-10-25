@@ -8,10 +8,12 @@ Use the native Bun fork and read the repository's `AGENTS.md`, `PLAN.md`,
 
 ## Scope
 
-The implementation boundary is `src/bun_vpn`. The complete embedded graph is
-under `vendor/mullvad`, including the generated management interface, Talpid
+The vpn plugin lives in [aphrody-labs/bun-vpn](https://github.com/aphrody-labs/bun-vpn),
+mounted as the optional submodule `plugins/vpn`
+(`git submodule update --init --checkout --recursive plugins/vpn`). The implementation boundary is `plugins/vpn/bun_vpn`. The complete embedded graph is
+under `plugins/vpn/vendor/mullvad`, including the generated management interface, Talpid
 networking crates and the Windows native sources under
-`vendor/mullvad/windows`.
+`plugins/vpn/vendor/mullvad/windows`.
 
 `bun vpn daemon` runs the embedded daemon. `bun vpn status`, `connect` and
 `disconnect` use the native Mullvad management IPC client. Do not describe a
@@ -40,7 +42,7 @@ Index the complete Bun VPN domain with the native graph indexer:
 
 ```powershell
 bun scripts\aphrody\graph-index.ts --root C:\bun --profile bun `
-  --domains src/bun_vpn --artifact-directory C:\bun\tmp\graph-artifacts-vpn
+  --domains plugins/vpn/bun_vpn --artifact-directory C:\bun\tmp\graph-artifacts-vpn
 ```
 
 Export bounded, snapshot-pinned evidence with all scope identifiers returned by
@@ -49,7 +51,7 @@ the indexer:
 ```powershell
 bun scripts\aphrody\graph-docs.ts `
   --repository <repository> --snapshot <snapshot> `
-  --domain src/bun_vpn --source graph:bun:src:bun_vpn --profile bun `
+  --domain plugins/vpn/bun_vpn --source graph:bun:src:bun_vpn --profile bun `
   --workspace C:\bun --out C:\bun\tmp\graph-docs-vpn
 ```
 

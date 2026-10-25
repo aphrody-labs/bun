@@ -33,7 +33,6 @@ import { nodejsHeaders } from "./nodejs-headers.ts";
 import { picohttpparser } from "./picohttpparser.ts";
 import { rustArgon2 } from "./rust-argon2.ts";
 import { uutils } from "./uutils.ts";
-import { uv } from "./uv.ts";
 import { sqlite } from "./sqlite.ts";
 import { tinycc } from "./tinycc.ts";
 import { webkit } from "./webkit.ts";
@@ -69,7 +68,6 @@ export const allDeps: readonly Dependency[] = [
   rustArgon2,
   ngxRust,
   uutils,
-  uv,
   lshpack,
   lsqpack,
   mimalloc,
@@ -110,7 +108,6 @@ export {
   sqlite,
   tinycc,
   uutils,
-  uv,
   webkit,
   zlib,
   zstd,

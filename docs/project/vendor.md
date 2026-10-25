@@ -7,10 +7,12 @@ patches without a prebuilt. Everything else is fetched at a pinned revision.
 
 | Path                     | Consumer                                                       | Why in-tree                            |
 | ------------------------ | -------------------------------------------------------------- | -------------------------------------- |
-| `vendor/uv`              | `scripts/build/deps/uv.ts` (in-tree build dependency)          | uv 0.12.24 with Bun Python patches     |
 | `vendor/find-msvc-tools` | `bun msvc`, `src/runtime/windows/sys/toolchain.rs`             | MSVC sysroot/cross patches             |
-| `vendor/russh-sftp`      | `src/ssh` (Cargo path dependency)                              | patched crate                          |
-| `vendor/mullvad`         | `src/bun_vpn` (Cargo path deps), `scripts/build/deps/winfw.ts` | `embedded` daemon feature, winfw build |
+
+uv, Mullvad and russh-sftp left with the plugins that use them: `plugins/uv/vendor/uv`
+(aphrody-labs/uv `bun-0.12.24`), `plugins/vpn/vendor/mullvad` (aphrody-labs/mullvadvpn-app
+`bun-embedded`, also the WinFw source of `scripts/build/deps/winfw.ts`) and
+`plugins/ssh/vendor/russh-sftp`. See [fork layout](fork-layout.md).
 
 ## Fetched by the build (gitignored clones)
 
@@ -46,5 +48,6 @@ exact revision into the destination and applies the local patch, if any.
 
 ## Submodules
 
-The repository has no Git submodules. `vendor/brave-core`, `vendor/photocraft`
+The only submodules are the optional plugin repositories `plugins/<name>`
+(`update = none`), listed in [fork layout](fork-layout.md). `vendor/brave-core`, `vendor/photocraft`
 and `packages/aphrody-migrated/m3/aphrody-m3` were removed.

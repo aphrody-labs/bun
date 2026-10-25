@@ -29,7 +29,7 @@ const inputs = [
   "scripts/aphrody/graph-index.ts",
   "docs/runtime/graph.mdx",
   ".claude/skills/bun-graph/SKILL.md",
-  "vendor/uv/Cargo.toml",
+  "plugins/uv/vendor/uv/Cargo.toml",
 ];
 type Source = { path: string; sha256: string; bytes: number; declarations?: string[] };
 export interface DocsOptions {

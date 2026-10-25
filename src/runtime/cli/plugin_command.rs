@@ -174,7 +174,7 @@ pub(crate) fn fetch(name: &str) -> Vec<u8> {
     }
     let Some(bytes) = found else {
         fail(format_args!(
-            "error: no release of bun {} provides plugin \"{name}\" ({asset})\nnote: build it with `cargo build --release -p bun_plugin_{name}` and put {} next to bun",
+            "error: no release of bun {} provides plugin \"{name}\" ({asset})\nnote: build it from its submodule (`git submodule update --init --checkout --recursive plugins/{name}`, then `bun bd --target=plugins`) and put {} next to bun",
             Global::package_json_version_with_revision,
             exe_name(name)
         ));

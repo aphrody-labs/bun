@@ -108,7 +108,7 @@ test("VPS release plan keeps execution with the serialized Infra resource owner"
   expect(plan.wasm.runtimeQualified).toBe(false);
   if (!plan.mullvadSidecar) throw new Error("Linux full release plan must include its Mullvad sidecar");
   expect(plan.mullvadSidecar.target).toBe("x86_64-unknown-linux-gnu");
-  expect(plan.mullvadSidecar.workingDirectory).toBe(`${plan.source}/vendor/mullvad`);
+  expect(plan.mullvadSidecar.workingDirectory).toBe(`${plan.source}/plugins/vpn/vendor/mullvad`);
   expect(plan.mullvadSidecar.lock).toBe("/home/ubuntu/build/locks/heavy.lock");
   expect(plan.mullvadSidecar.outputDirectory).toBe("/home/ubuntu/build/bun/factory/artifacts/runtime-release");
   expect(plan.mullvadSidecar.workDirectory).toContain("/home/ubuntu/build/bun/factory/transient/mullvad-");
@@ -121,7 +121,7 @@ test("VPS release plan keeps execution with the serialized Infra resource owner"
     "bun",
     "scripts/aphrody/mullvad-sidecar.ts",
     "relay",
-    `${plan.source}/vendor/mullvad/target/x86_64-unknown-linux-gnu/release/relay-list`,
+    `${plan.source}/plugins/vpn/vendor/mullvad/target/x86_64-unknown-linux-gnu/release/relay-list`,
     `${plan.mullvadSidecar.workDirectory}/relays.json`,
   ]);
 });

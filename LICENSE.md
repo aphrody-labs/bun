@@ -1,8 +1,9 @@
-Bun's original source is MIT-licensed. The native `bun_vpn` integration includes
-Mullvad crates under GPL-3.0-or-later. A distributed Bun binary that includes
-`bun_vpn` must meet GPL-3.0-or-later terms for the combined work, including the
-corresponding source and notices. See [`vendor/mullvad/LICENSE.md`](vendor/mullvad/LICENSE.md)
-and [`vendor/mullvad/THIRD_PARTY.md`](vendor/mullvad/THIRD_PARTY.md).
+Bun's original source is MIT-licensed. The `bun vpn` plugin (`bun-vpn`, from
+[aphrody-labs/bun-vpn](https://github.com/aphrody-labs/bun-vpn)) embeds Mullvad crates under
+GPL-3.0-or-later; a distributed `bun-vpn` executable must meet GPL-3.0-or-later terms, including
+the corresponding source and notices. See the
+[Mullvad license](https://github.com/aphrody-labs/mullvadvpn-app/blob/bun-embedded/LICENSE.md) and
+[third-party notices](https://github.com/aphrody-labs/mullvadvpn-app/blob/bun-embedded/THIRD_PARTY.md).
 
 ## JavaScriptCore
 
@@ -50,7 +51,7 @@ Bun statically links these libraries:
 | [`uucode`](https://github.com/jacobsandlund/uucode) | MIT |
 | [`find-msvc-tools`](https://github.com/rust-lang/cc-rs) | [Apache 2.0](vendor/find-msvc-tools/LICENSE-APACHE) or [MIT](vendor/find-msvc-tools/LICENSE-MIT) |
 | [`windows-bindgen`, `windows-metadata` and `windows-default`](https://crates.io/crates/windows-bindgen) | Apache 2.0 or MIT |
-| [`uv`](https://github.com/astral-sh/uv) | [Apache 2.0](vendor/uv/LICENSE-APACHE) or [MIT](vendor/uv/LICENSE-MIT) |
+| [`uv`](https://github.com/astral-sh/uv), in the `bun uv` plugin ([aphrody-labs/uv](https://github.com/aphrody-labs/uv/tree/bun-0.12.24)) | Apache 2.0 or MIT |
 | A fork of [`uWebsockets`](https://github.com/jarred-sumner/uwebsockets) | Apache 2.0 licensed |
 | Parts of [Tigerbeetle's IO code](https://github.com/tigerbeetle/tigerbeetle/blob/532c8b70b9142c17e07737ab6d3da68d7500cbca/src/io/windows.zig#L1) | Apache 2.0 licensed |
 | `__cxa_thread_atexit` fallback from [LLVM libc++abi](https://github.com/llvm/llvm-project/blob/llvmorg-19.1.0/libcxxabi/src/cxa_thread_atexit.cpp) | Apache 2.0 with LLVM exception |

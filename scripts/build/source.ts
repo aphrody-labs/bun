@@ -471,7 +471,6 @@ export type DepName =
   | "sqlite3"
   | "tinycc"
   | "uutils"
-  | "uv"
   | "winfw"
   | "zlib"
   | "zstd";

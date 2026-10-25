@@ -23,7 +23,7 @@ export interface AssembleOptions {
 
 /** Licence files copied from the one canonical UV checkout and the repository. */
 const LICENSES: Record<string, string[]> = {
-  uv: ["vendor/uv/LICENSE-APACHE", "vendor/uv/LICENSE-MIT"],
+  uv: ["plugins/uv/vendor/uv/LICENSE-APACHE", "plugins/uv/vendor/uv/LICENSE-MIT"],
   buv: ["LICENSE", "NOTICE"],
   bun: ["../../LICENSE"],
   webkit: ["../../vendor/WebKit/Source/JavaScriptCore/COPYING", "../../vendor/WebKit/Source/WTF/COPYING.LIB"],
@@ -74,8 +74,8 @@ export async function assemble(options: AssembleOptions): Promise<{ artifact: st
     const destination = join(staging, "share", "buv", "licenses", part);
     mkdirSync(destination, { recursive: true });
     for (const file of files) {
-      const source = file.startsWith("vendor/uv/")
-        ? join(root, uv.path, file.slice("vendor/uv/".length))
+      const source = file.startsWith("plugins/uv/vendor/uv/")
+        ? join(root, uv.path, file.slice("plugins/uv/vendor/uv/".length))
         : join(root, file);
       if (existsSync(source)) copyFileSync(source, join(destination, file.split("/").at(-1) as string));
     }

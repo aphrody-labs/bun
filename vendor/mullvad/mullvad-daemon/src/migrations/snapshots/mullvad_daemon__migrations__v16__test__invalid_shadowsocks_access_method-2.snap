@@ -1,9 +1,0 @@
----
-source: mullvad-daemon/src/migrations/v16.rs
-expression: "serde_json::to_string_pretty(&old_settings).unwrap()"
----
-{
-  "api_access_methods": {
-    "custom": []
-  }
-}

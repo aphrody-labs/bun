@@ -17,7 +17,7 @@ committed integration; it does not establish integration of dirty files.
 | bun-npm-release4-source         | `41211b56872c` |                   1 | Integrate only registry confirmation; retain current stable-version and build guards.                                                               |
 | bun-glibc-integrate-20261010    | `67f218154586` |                   1 | Preserve the legacy `src/cli` deletion draft; do not delete the current directory.                                                                  |
 
-The archive declarations are supported by `vendor/uv/crates/uv-extract/src/stream.rs`:
+The archive declarations are supported by `plugins/uv/vendor/uv/crates/uv-extract/src/stream.rs`:
 bzip2, xz, lzip and lzma dispatch to real decoders; extraction drains the decoder
 to EOF. The 256 MiB limit bounds decoder memory, not extracted output size.
 Vendored owner and upstream revisions remain distinct and immutable.

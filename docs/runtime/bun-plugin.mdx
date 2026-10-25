@@ -28,3 +28,23 @@ The plugin receives the command's arguments, standard input and output, environm
 | `APHRODY_BUN_REPO`, `GITHUB_TOKEN` | Repository and token used for the release, as for `bun upgrade`                      |
 
 Release assets are named `bun-<name>-<os>-<arch>[-musl][.exe]`, for example `bun-uv-linux-x64` or `bun-uv-windows-x64.exe`.
+
+## Building a plugin from source
+
+Each plugin is its own repository, mounted in the Bun checkout as an optional submodule under `plugins/` (`update = none`, so a plain clone or `git submodule update` leaves it out):
+
+| Plugin   | Repository                                                         | Bundles                                                     |
+| -------- | ------------------------------------------------------------------ | ----------------------------------------------------------- |
+| `uv`     | [aphrody-labs/bun-uv](https://github.com/aphrody-labs/bun-uv)         | uv 0.12.24 (`vendor/uv`, aphrody-labs/uv `bun-0.12.24`)      |
+| `vpn`    | [aphrody-labs/bun-vpn](https://github.com/aphrody-labs/bun-vpn)       | `bun_vpn`, Mullvad (`vendor/mullvad`, GPL-3.0-or-later)     |
+| `ssh`    | [aphrody-labs/bun-ssh](https://github.com/aphrody-labs/bun-ssh)       | `bun_ssh`, patched `russh-sftp`                             |
+| `docker` | [aphrody-labs/bun-docker](https://github.com/aphrody-labs/bun-docker) | `bun_docker`; needs `plugins/ssh` mounted too               |
+| `just`   | [aphrody-labs/bun-just](https://github.com/aphrody-labs/bun-just)     | `bun_just` (`vendor/just`, aphrody-labs/just `bun`)         |
+| `winmd`  | [aphrody-labs/bun-winmd](https://github.com/aphrody-labs/bun-winmd)   | windows-bindgen; uses the checkout's `vendor/find-msvc-tools` |
+
+```sh
+git submodule update --init --checkout --recursive plugins/uv   # or: plugins (all of them)
+bun bd --target=plugins                                         # bun-<name> next to bun
+```
+
+`bun bd` builds only the plugins whose submodule is checked out. Each plugin is a Cargo workspace of its own, with its own `Cargo.lock`, that path-depends on crates of the checkout.

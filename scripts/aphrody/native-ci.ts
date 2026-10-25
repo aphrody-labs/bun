@@ -54,8 +54,6 @@ export const gates: Gate[] = [
       "bun_quality",
       "-p",
       "bun_migrate",
-      "-p",
-      "bun_just",
       "--lib",
       "--tests",
       "--locked",

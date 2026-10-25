@@ -168,7 +168,7 @@ ln -s lib "/opt/winsysroot/Windows Kits/10/Lib"
 
 The build looks for the sysroot at `/opt/winsysroot` (or `/opt/xwin`) automatically. If the sysroot is elsewhere, set `WINDOWS_SYSROOT=<path>` or pass `--winsysroot=<path>`. A user-writable path also lets configure manage the aliases for you. Configure validates the splat at the start of every cross build. CI agents bake the same splat into their images (the `windowsSysroot` tool of `scripts/build/ci-images/spec.ts`); when an agent doesn't have one, the build fetches it into its cache dir at configure time.
 
-The Windows firewall dependency (`winfw`) compiles sources of two Mullvad repositories that the vendored Mullvad tree only links as gitlinks. A Windows host gets them from `scripts/aphrody/setup.ts`. A cross build fetches the same pinned archives into `vendor/mullvad/windows/` at configure time when they are missing, because configure reads their project files.
+The Windows firewall dependency (`winfw`) compiles sources of two Mullvad repositories that the vendored Mullvad tree only links as gitlinks. A Windows host gets them from `scripts/aphrody/setup.ts`. A cross build fetches the same pinned archives into `plugins/vpn/vendor/mullvad/windows/` at configure time when they are missing, because configure reads their project files.
 
 ### Building
 

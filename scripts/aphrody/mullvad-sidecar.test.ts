@@ -8,7 +8,7 @@ test("Mullvad VPS release plan keeps the daemon in its own Linux sidecar", () =>
   const plan = createMullvadBuildPlan(bunSource, mullvadSource);
   expect(plan.target).toBe(MULLVAD_LINUX_TARGET);
   expect(plan.asset).toBe(MULLVAD_ASSET);
-  expect(plan.workingDirectory).toBe("vendor/mullvad");
+  expect(plan.workingDirectory).toBe("plugins/vpn/vendor/mullvad");
   expect(plan.factoryLock).toBe("/home/ubuntu/build/locks/heavy.lock");
   expect(plan.cargo[0]?.[0]).toBe("/home/ubuntu/src/aphrody/scripts/build/rust/cargo-serial.sh");
   expect(plan.cargo[0]?.[1]).toBe("+1.97.1");

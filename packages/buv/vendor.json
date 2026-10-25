@@ -4,7 +4,7 @@
   "sources": [
     {
       "name": "uv",
-      "path": "../../vendor/uv",
+      "path": "../../plugins/uv/vendor/uv",
       "url": "https://github.com/aphrody-labs/uv.git",
       "upstream": "https://github.com/astral-sh/uv.git",
       "upstreamTag": "0.12.24",

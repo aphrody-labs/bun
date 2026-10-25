@@ -32,7 +32,7 @@ const command = [
   ...actions[action],
   ...process.argv.slice(3),
 ];
-const cwd = action === "embedded" ? root : resolve(root, "vendor/uv");
+const cwd = action === "embedded" ? root : resolve(root, "plugins/uv/vendor/uv");
 const output = action === "metadata" ? resolve(root, "tmp/bun-python/cargo-uv-resolved.json") : undefined;
 const code = await runRecorded(registry, `buv-${action}`, command, cwd, output);
 if (output && code === 0) {

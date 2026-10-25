@@ -9,7 +9,7 @@
   "runtimeSource": {
     "repository": "aphrody-labs/bun",
     "checkout": "selected-workspace",
-    "embeddedUv": "vendor/uv",
+    "embeddedUv": "plugins/uv/vendor/uv",
     "upstreamRevision": "f3e56e16e0302e26ea456cb51b676b35958572a0"
   },
   "derived": {

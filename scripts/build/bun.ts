@@ -26,7 +26,6 @@ import { lolhtml } from "./deps/lolhtml.ts";
 import { ngxRust } from "./deps/ngx-rust.ts";
 import { rustArgon2 } from "./deps/rust-argon2.ts";
 import { uutils } from "./deps/uutils.ts";
-import { uv, uvRustSources } from "./deps/uv.ts";
 import { windowsToolchainRustSources } from "./deps/windows-toolchain.ts";
 import { WINFW_SYSTEM_LIBRARIES } from "./deps/winfw.ts";
 import { assert } from "./error.ts";
@@ -201,9 +200,6 @@ export function emitBun(n: Ninja, cfg: Config, sources: Sources): BunOutput {
   const uutilsDep = resolveDep(n, cfg, uutils, depsByName);
   assert(uutilsDep !== null, "uutils resolveDep returned null — should never be skipped");
   depsByName.set(uutils.name, uutilsDep);
-  const uvDep = resolveDep(n, cfg, uv, depsByName);
-  assert(uvDep !== null, "uv resolveDep returned null — should never be skipped");
-  depsByName.set(uv.name, uvDep);
   const webpDep = resolveDep(n, cfg, libwebp, depsByName);
   assert(webpDep !== null, "libwebp's native provider is required by Bun.Image and Rust bindings");
   depsByName.set(libwebp.name, webpDep);
@@ -217,7 +213,6 @@ export function emitBun(n: Ninja, cfg: Config, sources: Sources): BunOutput {
     codegenOrderOnly: codegen.rustInputs,
     rustSources: [
       ...sources.rust,
-      ...uvRustSources(cfg),
       ...windowsToolchainRustSources(cfg),
       ...dotnetHostRustSources(cfg),
     ],
@@ -226,7 +221,6 @@ export function emitBun(n: Ninja, cfg: Config, sources: Sources): BunOutput {
       ...rustArgon2Dep.outputs,
       ...ngxRustDep.outputs,
       ...uutilsDep.outputs,
-      ...uvDep.outputs,
     ],
     shimValidations: emitShimVerify(n, cfg),
   });

@@ -5,7 +5,8 @@ on:
     branches: [main]
     paths:
       [
-        "vendor/uv/**",
+        "plugins/uv",
+        "plugins/uv/**",
         "src/runtime/cli/**",
         "src/runtime/Cargo.toml",
         "src/js/bun/graph.ts",
@@ -20,7 +21,8 @@ on:
   pull_request:
     paths:
       [
-        "vendor/uv/**",
+        "plugins/uv",
+        "plugins/uv/**",
         "src/runtime/cli/**",
         "src/runtime/Cargo.toml",
         "src/js/bun/graph.ts",
@@ -52,11 +54,19 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Mount the plugin submodules
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.APHRODY_SYNC_TOKEN || github.token }}
+        # plugins/* are optional submodules (update = none) of private aphrody-labs/bun-<name> repositories.
+        run: |
+          gh auth setup-git
+          git submodule update --init --checkout --recursive plugins/uv
       - uses: ./.github/actions/setup-bun
         with:
           bun-version: "1.4.2"
       - name: Install the shared Rust toolchain
-        working-directory: vendor/uv
+        working-directory: plugins/uv/vendor/uv
         run: rustup show
       - name: UV formatting
         run: bun run buv:fmt
@@ -81,6 +91,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
+      - name: Mount the plugin submodules
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.APHRODY_SYNC_TOKEN || github.token }}
+        # plugins/* are optional submodules (update = none) of private aphrody-labs/bun-<name> repositories.
+        run: |
+          gh auth setup-git
+          git submodule update --init --checkout --recursive plugins/uv
       - uses: ./.github/actions/setup-bun
         with:
           bun-version: "1.4.2"

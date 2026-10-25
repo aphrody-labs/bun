@@ -1,6 +1,0 @@
-/target
-/packages
-/os-images
-/.ci-logs
-/config.json
-.container

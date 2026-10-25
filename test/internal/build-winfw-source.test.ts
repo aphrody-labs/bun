@@ -24,8 +24,8 @@ test("Windows setup materializes pinned archives and patched sources before conf
     { repo: "mullvad/windows-libraries", commit: "0267555ea4a8ae6bcfd59930ce454b8614510875" },
   ]);
   using directory = tempDir("winfw-source-preparation", {
-    "vendor/mullvad/windows/winfw/src/winfw/winfw.vcxproj": project("winfw", 24),
-    "vendor/mullvad/unrelated-source.txt": "preserved parent source",
+    "plugins/vpn/vendor/mullvad/windows/winfw/src/winfw/winfw.vcxproj": project("winfw", 24),
+    "plugins/vpn/vendor/mullvad/unrelated-source.txt": "preserved parent source",
   });
   const root = String(directory);
   const cache = join(root, "archive cache");
@@ -33,7 +33,7 @@ test("Windows setup materializes pinned archives and patched sources before conf
   const commands = vendorPreparationCommands(root, bunExe(), "win32", cache);
   expect(commands).toHaveLength(3);
   expect(commands.at(-1)).toEqual([bunExe(), "scripts/build.ts", "--profile=debug", "--configure-only"]);
-  const sourceRoot = join(root, "vendor/mullvad");
+  const sourceRoot = join(root, "plugins/vpn/vendor/mullvad");
   expect(() => winfwSources(sourceRoot)).toThrow("ENOENT");
 
   for (const source of WINFW_SOURCE_ARCHIVES) {

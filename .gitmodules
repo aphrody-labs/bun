@@ -1,0 +1,30 @@
+[submodule "plugins/uv"]
+	path = plugins/uv
+	url = https://github.com/aphrody-labs/bun-uv.git
+	update = none
+	branch = main
+[submodule "plugins/vpn"]
+	path = plugins/vpn
+	url = https://github.com/aphrody-labs/bun-vpn.git
+	update = none
+	branch = main
+[submodule "plugins/ssh"]
+	path = plugins/ssh
+	url = https://github.com/aphrody-labs/bun-ssh.git
+	update = none
+	branch = main
+[submodule "plugins/docker"]
+	path = plugins/docker
+	url = https://github.com/aphrody-labs/bun-docker.git
+	update = none
+	branch = main
+[submodule "plugins/just"]
+	path = plugins/just
+	url = https://github.com/aphrody-labs/bun-just.git
+	update = none
+	branch = main
+[submodule "plugins/winmd"]
+	path = plugins/winmd
+	url = https://github.com/aphrody-labs/bun-winmd.git
+	update = none
+	branch = main

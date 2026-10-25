@@ -3,6 +3,9 @@ import { existsSync, readFileSync } from "node:fs";
 import { dirname, relative, resolve } from "node:path";
 import type { Dependency } from "../source.ts";
 
+/** Mullvad source of the vpn plugin (aphrody-labs/bun-vpn, submodule `plugins/vpn`); WinFw is built only when it is mounted. */
+export const MULLVAD_SOURCE = "plugins/vpn/vendor/mullvad";
+
 // Gitlinks in mullvadvpn-app@493198790be1ec34b5cc3cfbfb50d02197264463 are absent from GitHub archives.
 export const WINFW_SOURCE_ARCHIVES = [
   {
@@ -29,7 +32,7 @@ export function winfwSourceFetchCommands(checkout: string, runtime: string, cach
     source.name,
     source.repo,
     source.commit,
-    resolve(checkout, "vendor/mullvad", source.path),
+    resolve(checkout, MULLVAD_SOURCE, source.path),
     cache,
     ...source.patches.map(patch => resolve(import.meta.dir, patch)),
   ]);
@@ -80,7 +83,7 @@ export function winfwSources(root: string): string[] {
  * pinned archives at configure, the way it fetches the Windows sysroot: configure reads their project files.
  */
 function crossWinfwSourceRoot(checkout: string, hostOs: string, cache: string): string {
-  const root = resolve(checkout, "vendor/mullvad");
+  const root = resolve(checkout, MULLVAD_SOURCE);
   if (hostOs === "windows" || WINFW_SOURCE_ARCHIVES.every(source => existsSync(resolve(root, source.path))))
     return root;
   for (const command of winfwSourceFetchCommands(checkout, process.execPath, resolve(cache, "tarballs"))) {
@@ -92,11 +95,11 @@ function crossWinfwSourceRoot(checkout: string, hostOs: string, cache: string): 
 
 export const winfw: Dependency = {
   name: "winfw",
-  enabled: cfg => cfg.windows,
+  enabled: cfg => cfg.windows && existsSync(resolve(cfg.cwd, MULLVAD_SOURCE, "Cargo.toml")),
   source: cfg => ({
     kind: "local",
-    path: resolve(cfg.cwd, "vendor/mullvad"),
-    hint: "Prepare the pinned Mullvad Windows submodule source closure",
+    path: resolve(cfg.cwd, MULLVAD_SOURCE),
+    hint: "Mount the vpn plugin: git submodule update --init --checkout --recursive plugins/vpn",
   }),
   build: cfg => ({
     kind: "direct",
@@ -106,7 +109,7 @@ export const winfw: Dependency = {
       command: [
         process.execPath,
         resolve(cfg.cwd, "scripts/build/deps/winfw-prepare.ts"),
-        resolve(cfg.cwd, "vendor/mullvad"),
+        resolve(cfg.cwd, MULLVAD_SOURCE),
         resolve(cfg.buildDir, "deps/winfw/generated/winfw/lannetworks.h"),
         resolve(cfg.cwd, "build/winfw-generator"),
         cfg.rustToolchain ?? "",
@@ -122,10 +125,10 @@ export const winfw: Dependency = {
       inputs: [
         "scripts/build/deps/winfw-prepare.ts",
         "scripts/build/deps/winfw-libwfp.patch",
-        "vendor/mullvad/Cargo.lock",
-        "vendor/mullvad/talpid-types/Cargo.toml",
-        "vendor/mullvad/talpid-types/src/bin/generate-cpp-lannetworks.rs",
-        "vendor/mullvad/talpid-types/src/net/mod.rs",
+        `${MULLVAD_SOURCE}/Cargo.lock`,
+        `${MULLVAD_SOURCE}/talpid-types/Cargo.toml`,
+        `${MULLVAD_SOURCE}/talpid-types/src/bin/generate-cpp-lannetworks.rs`,
+        `${MULLVAD_SOURCE}/talpid-types/src/net/mod.rs`,
       ].map(path => resolve(cfg.cwd, path)),
     },
     sources: winfwSources(crossWinfwSourceRoot(cfg.cwd, cfg.host.os, cfg.cacheDir)),
@@ -142,7 +145,7 @@ export const winfw: Dependency = {
       "/EHsc",
       "/GR",
       ...["windows/winfw/src/winfw", "windows/libwfp/src/libwfp", "windows/windows-libraries/src/libcommon"].flatMap(
-        path => ["/clang:-idirafter", `/clang:${resolve(cfg.cwd, "vendor/mullvad", path)}`],
+        path => ["/clang:-idirafter", `/clang:${resolve(cfg.cwd, MULLVAD_SOURCE, path)}`],
       ),
       ...(cfg.host.os !== "windows" && cfg.winsysroot
         ? ["/clang:-ivfsoverlay", `/clang:${resolve(cfg.buildDir, "deps/winfw/generated/sdk-vfs.json")}`]
