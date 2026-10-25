@@ -3,7 +3,7 @@ import { existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, writeFile
 import type { Database } from "bun:sqlite";
 import { delimiter, dirname, extname, join, posix } from "node:path";
 import { createHash } from "node:crypto";
-import { GitTree } from "../../packages/web/site/collect.ts";
+import { GitTree } from "../../packages/bun-ui/packages/web/site/collect.ts";
 import { writeGraphDocs } from "./graph-docs.ts";
 
 const textExtensions = new Set(

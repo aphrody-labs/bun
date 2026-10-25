@@ -17,7 +17,7 @@ import type { FactoryHostProfile } from "./build-host.ts";
 import { CRATES, WORKSPACES } from "./publish-crates.ts";
 import { npmName, PACKAGES } from "./publish-npm.ts";
 import { VENDORS } from "./publish-vendors.ts";
-import { git, GitTree } from "../../packages/web/site/collect.ts";
+import { git, GitTree } from "../../packages/bun-ui/packages/web/site/collect.ts";
 
 type Manifest = Record<string, any>;
 export type Product = {

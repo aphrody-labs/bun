@@ -88,7 +88,7 @@ R2 buckets are public only through custom domains (r2.dev off): `cdn.aphrody.app
 channels `bun/latest.json` and `bun/manifest.json`, written by `scripts/aphrody/release-r2.ts`, read by the
 installers).
 
-The vps timer `aphrody-site-publish` runs `packages/web/site/publish.ts`, which deploys through `packages/web/cloudflare/scripts/deploy.ts`;
+The vps timer `aphrody-site-publish` runs `packages/bun-ui/packages/web/site/publish.ts`, which deploys through `packages/bun-ui/packages/web/cloudflare/scripts/deploy.ts`;
 `app/systemd/aphrody-dns-migrate.timer` finishes the OVH move (deferred name servers, DNSSEC) and then disables itself.
 rosegriffon.fr has no application: its web hosts are proxied to the `app/maintenance` Worker (503 maintenance
 page), deployed by `ovh.ts` once the zone is active.

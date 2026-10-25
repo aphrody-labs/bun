@@ -33,3 +33,8 @@
 	url = https://github.com/aphrody-labs/bun-video.git
 	update = none
 	branch = main
+[submodule "packages/bun-ui"]
+	path = packages/bun-ui
+	url = https://github.com/aphrody-labs/bun-ui.git
+	update = none
+	branch = main

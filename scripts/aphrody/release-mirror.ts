@@ -1,8 +1,8 @@
 // Runtime releases published on the Aphrody distribution mirror (dist.aphrody.app/bun/<tag>/), the source of the
 // installers. A git tag counts as a release only when the mirror serves its SHA256SUMS.txt; assets, sizes and
 // checksums come from the mirror and the notes from the commits between the tag and the previous runtime tag.
-import { parseSums, type Release } from "../../packages/web/site/build.ts";
-import { PRIVATE_TERMS } from "../../packages/web/site/collect.ts";
+import { parseSums, type Release } from "../../packages/bun-ui/packages/web/site/build.ts";
+import { PRIVATE_TERMS } from "../../packages/bun-ui/packages/web/site/collect.ts";
 
 export const MIRROR = "https://dist.aphrody.app/bun";
 const RUNTIME_TAG = /^(?:bun-v|aphrody-v)\d/;

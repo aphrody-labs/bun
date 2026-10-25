@@ -6,7 +6,7 @@ import { tempDir } from "harness";
 import { DOMAINS, SURFACE_FILES, indexSurface, plan } from "../../scripts/aphrody/google-chromium-graph";
 
 test("graph plan covers the owned domains and separates runtime from source tools", () => {
-  expect(DOMAINS).toEqual(["packages/bun-google", "packages/bun-chromium", "packages/bun-m3", "src/browser"]);
+  expect(DOMAINS).toEqual(["packages/bun-google", "packages/bun-chromium", "src/browser"]);
   expect(SURFACE_FILES).toContain("src/js/bun/google.ts");
   expect(SURFACE_FILES).toContain("scripts/aphrody/browser.ts");
   expect(SURFACE_FILES).toContain("scripts/aphrody/gn.ts");

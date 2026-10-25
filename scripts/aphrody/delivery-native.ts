@@ -2,7 +2,7 @@
 import { createHash } from "node:crypto";
 import { resolve } from "node:path";
 import { parseArgs } from "node:util";
-import { GitTree, git } from "../../packages/web/site/collect.ts";
+import { GitTree, git } from "../../packages/bun-ui/packages/web/site/collect.ts";
 
 type Document = Record<string, any>;
 export const PIPELINES = {

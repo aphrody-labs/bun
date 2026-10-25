@@ -1,6 +1,6 @@
 # Bun site synchronization
 
-`packages/web/site/sync.ts` publishes the public Bun site from immutable
+`packages/bun-ui/packages/web/site/sync.ts` publishes the public Bun site from immutable
 `origin/main`. The same source generates documentation, a SQLite source catalog,
 native extracted graph snapshots, the public Neon projection and static Worker
 assets. The captured upstream homepage retains Bun's components, stylesheets,
@@ -47,8 +47,8 @@ through Wrangler's standard input. Existing application secrets are preserved;
 this path does not run application D1 migrations.
 
 ```sh
-bun packages/web/site/sync.ts --dry-run --offline
-bun packages/web/site/sync.ts
+bun packages/bun-ui/packages/web/site/sync.ts --dry-run --offline
+bun packages/bun-ui/packages/web/site/sync.ts
 ```
 
 The dry run generates and validates artifacts and the Worker bundle without
@@ -74,7 +74,7 @@ The resulting French dossiers disclose their source-derived assembly and retain
 literal excerpts, document hashes and the immutable documentation/graph snapshot.
 
 ```sh
-bun packages/web/site/editorial-generate.ts --source <published-source-sha> --snapshot <public-snapshot-sha256> --out <new-absolute-directory>
+bun packages/bun-ui/packages/web/site/editorial-generate.ts --source <published-source-sha> --snapshot <public-snapshot-sha256> --out <new-absolute-directory>
 ```
 
 Defaults resolve protected references below `APHRODY_HOME` or the current user's

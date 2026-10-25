@@ -11,7 +11,7 @@
 
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
-import { repositoryRoot, validateWebConfig } from "../../../packages/bun-web/src/config.ts";
+import { repositoryRoot, validateWebConfig } from "../../../packages/bun-ui/packages/bun-web/src/config.ts";
 
 export const WEB_CRATES = [
   "bun_browser",
@@ -72,7 +72,7 @@ export function planStages(options: { stages?: StageId[]; rust?: boolean; crawla
       steps: [
         ...["typecheck", "lint", "test"].map(script => ({
           name: `@aphrody/bun-web ${script}`,
-          command: ["bun", "run", "--cwd", "packages/bun-web", script],
+          command: ["bun", "run", "--cwd", "packages/bun-ui/packages/bun-web", script],
           timeoutMs: 10 * MINUTE,
         })),
         {

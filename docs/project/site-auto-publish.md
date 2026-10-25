@@ -1,6 +1,6 @@
 # Recurring source-pinned site publication
 
-`packages/web/site/install-auto-publish-task.ps1` manages the single native Windows
+`packages/bun-ui/packages/web/site/install-auto-publish-task.ps1` manages the single native Windows
 task `Aphrody Site Publish`. It uses the current owner's interactive login, checks
 every five minutes while that login is available, ignores overlapping starts, and
 bounds each execution to thirty minutes.
@@ -12,7 +12,7 @@ production receipt and fresh matching public static and database responses. The
 publisher must already be committed and pushed; its Git blob is pinned in the
 task arguments. Activation before those checks is refused.
 
-The task invokes `packages/web/site/auto-publish.ts` with the installed Aphrody Bun.
+The task invokes `packages/bun-ui/packages/web/site/auto-publish.ts` with the installed Aphrody Bun.
 That entrypoint verifies its bootstrap bytes, fetches `origin/main`, and exports
 the immutable commit using the existing `auto-publish.sh` archive contract. The
 source-owned `jit-source.ts` supplies workspace metadata. Cloudflare dependencies

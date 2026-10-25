@@ -4,7 +4,7 @@ import { tempDir } from "../../test/harness";
 import { join } from "node:path";
 import { mkdirSync, statSync } from "node:fs";
 import { Database } from "bun:sqlite";
-import { GitTree } from "../../packages/web/site/collect";
+import { GitTree } from "../../packages/bun-ui/packages/web/site/collect";
 import { indexDetachedRelease, verifyReleaseCatalog, writeRelativeReferences } from "./release-graph";
 
 test("an exported release graph keeps its revision when the ancestor checkout advances", async () => {

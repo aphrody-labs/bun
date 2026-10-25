@@ -1,6 +1,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
-import { BRAND } from "../../../packages/web/site/brand.ts";
+import { BRAND } from "../../../packages/bun-ui/packages/web/site/brand.ts";
 
 export type DomainGraph = {
   source: string;

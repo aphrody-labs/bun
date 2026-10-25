@@ -48,7 +48,7 @@ export function withoutNode(): Record<string, string> {
   return { [key]: path };
 }
 
-/** The `next-bun` CLI of packages/bun-next (`next-bun build` runs `bun --bun next build`). */
+/** The `next-bun` CLI of packages/bun-ui/packages/bun-next (`next-bun build` runs `bun --bun next build`). */
 export const nextBunBin = join(import.meta.dir, "..", "..", "..", "..", "packages", "bun-next", "bin", "next-bun.js");
 
 /**

@@ -1048,7 +1048,7 @@ paquets `packages/**` qui refont une API Bun (`http`, `fuzzy`, `sql`, `paths`…
 - ✅ API Bun natives : `Bun.semver.order` (update), `Bun.Glob` (tauri apps), `Bun.hash.crc32` (canonical-tar,
   mcu-image-fixture). Aphrody `9ad186926`.
 - ✅ Types : catalogue `@types/bun` → `npm:@aphrody/bun-types@1.4.3-aphrody.1`. Aphrody `aa4980040`.
-- ✅ Migré ici : `@aphrody/webview-page` → `packages/bun-webview-page` (`@aphrody/bun-webview-page`, publié
+- ✅ Migré ici : `@aphrody/webview-page` → `packages/bun-ui/packages/bun-webview-page` (`@aphrody/bun-webview-page`, publié
   `0.1.1-aphrody.2`, ancien nom déprécié). Fork `5a11460837d`, `729caaf440f` ; Aphrody `69ba8ec2b`, `3250f76f6`.
   Cause de l'e2e Windows « Chrome process closed the pipe » : un Chrome lancé en session élevée se relance
   dé-élevé et perd le pipe CDP ; le paquet passe `--do-not-de-elevate` sous Windows (e2e Chrome 154 vert).

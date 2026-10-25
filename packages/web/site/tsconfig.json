@@ -1,4 +1,0 @@
-{
-  "extends": "../../bun-cloudflare/tsconfig.json",
-  "include": ["sync.ts", "site-neon-publish.ts", "../../bun-types/index.d.ts"]
-}

@@ -9,13 +9,13 @@
 //
 //   bun scripts/aphrody/dataset/publish.ts [--dir build/dataset] [--dry-run] [--no-index]
 //
-// Credentials: packages/web/cloudflare/.env, else ~/.aphrody/config/cloudflare.env (CLOUDFLARE_ACCOUNT_ID,
+// Credentials: packages/bun-ui/packages/web/cloudflare/.env, else ~/.aphrody/config/cloudflare.env (CLOUDFLARE_ACCOUNT_ID,
 // CLOUDFLARE_API_TOKEN, R2_ENDPOINT and R2/AWS access keys).
 
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { envFile, parseEnv } from "../../../packages/web/cloudflare/scripts/deploy.ts";
+import { envFile, parseEnv } from "../../../packages/bun-ui/packages/web/cloudflare/scripts/deploy.ts";
 import { DATASET, type Entry } from "./build.ts";
 
 export const BUCKET = "aphrody-dist";

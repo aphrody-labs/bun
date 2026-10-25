@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: Apache-2.0
 import { describe, expect, test } from "bun:test";
-import { repositoryRoot } from "../../../packages/bun-web/src/config.ts";
+import { repositoryRoot } from "../../../packages/bun-ui/packages/bun-web/src/config.ts";
 import { checkConfigFile, executionCommand, parseArgs, planStages, runStages, WEB_CRATES } from "./web-verify.ts";
 
 describe("native gate execution", () => {

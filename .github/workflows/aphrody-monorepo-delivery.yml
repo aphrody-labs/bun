@@ -22,6 +22,14 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - uses: ./.github/actions/setup-bun
+      - name: Mount bun-ui (optional submodule of aphrody-labs/bun-ui)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.APHRODY_SYNC_TOKEN || github.token }}
+        run: |
+          gh auth setup-git
+          git submodule update --init --checkout packages/bun-ui
+          bun install --frozen-lockfile --cwd packages/bun-ui
       - name: Inspect immutable source, upstreams and published artifacts
         run: |
           git remote add upstream https://github.com/oven-sh/bun.git
@@ -40,6 +48,14 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - uses: ./.github/actions/setup-bun
+      - name: Mount bun-ui (optional submodule of aphrody-labs/bun-ui)
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.APHRODY_SYNC_TOKEN || github.token }}
+        run: |
+          gh auth setup-git
+          git submodule update --init --checkout packages/bun-ui
+          bun install --frozen-lockfile --cwd packages/bun-ui
       - name: Execute capacity-qualified dependency graph and owner gates
         env:
           DELIVERY_OPERATION: ${{ inputs.operation }}

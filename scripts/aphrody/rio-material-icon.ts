@@ -2,8 +2,8 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
-import { parseIco } from "../../packages/bun-icons/src/ico.ts";
-import { pngSize } from "../../packages/bun-icons/src/png.ts";
+import { parseIco } from "../../packages/bun-ui/packages/bun-icons/src/ico.ts";
+import { pngSize } from "../../packages/bun-ui/packages/bun-icons/src/png.ts";
 
 const material = process.argv.find(arg => arg.startsWith("--material="))?.slice(11);
 if (!material) throw new Error("Pass --material=<Material workspace>");
