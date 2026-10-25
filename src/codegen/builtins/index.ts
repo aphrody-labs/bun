@@ -10,7 +10,7 @@ import { builtinFunctionIds } from "../builtin-function-ids.ts";
 import { nativeCalls, type EngineFunctions } from "../builtins-manifest-model.ts";
 import { engineDirectory, engineFile } from "../engine-directory.ts";
 import { nativeCallListStamp } from "../generate-js2native.ts";
-import { argParse, writeIfNotChanged } from "../helpers.ts";
+import { argParse, listArgument, writeIfNotChanged } from "../helpers.ts";
 import { tableEntryRecord } from "../removable-entry-points.ts";
 import { buildModel } from "./build-model.ts";
 import { describeUndescribedResults, summarizeUndescribedResults } from "./check-dependencies.ts";
@@ -324,7 +324,7 @@ function checkFilesAreCurrent(directory: string, files: ReadonlyMap<string, stri
   problems.throwIfAny();
 }
 
-const listOf = (value: string): string[] => value.split(",").filter(item => item !== "");
+const listOf = listArgument;
 
 function readCommandLine(): CommandLine {
   const flags: Record<string, string | boolean | undefined> = argParse([

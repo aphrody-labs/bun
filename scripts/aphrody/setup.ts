@@ -1132,16 +1132,16 @@ export async function collectDependencies(checkout: string): Promise<Dependency[
   }
   deps.push(...gitDeps.values());
 
-  // packages/buv embeds forks through vendor/ (uv) and records the others it was built from.
-  const buv = join(checkout, "packages/buv/vendor.json");
+  // packages/bun-python/buv embeds forks through vendor/ (uv) and records the others it was built from.
+  const buv = join(checkout, "packages/bun-python/buv/vendor.json");
   if (existsSync(buv)) {
     const vendor = JSON.parse(readFileSync(buv, "utf8")) as { sources: { name: string; url?: string; ref?: string }[] };
     for (const s of vendor.sources) {
       const repo = s.url?.match(/github\.com\/([^/]+\/[^/.]+)/)?.[1];
       if (repo && s.ref)
-        add({ repo, kind: "in-tree", ref: s.ref, usedBy: ["packages/buv/vendor.json"], note: `source of ${s.name}` });
+        add({ repo, kind: "in-tree", ref: s.ref, usedBy: ["packages/bun-python/buv/vendor.json"], note: `source of ${s.name}` });
     }
-    const manifest = JSON.parse(readFileSync(join(checkout, "packages/buv/buv.json"), "utf8")) as {
+    const manifest = JSON.parse(readFileSync(join(checkout, "packages/bun-python/buv/buv.json"), "utf8")) as {
       predecessor?: { repository: string; revision: string };
     };
     const p = manifest.predecessor;
@@ -1150,8 +1150,8 @@ export async function collectDependencies(checkout: string): Promise<Dependency[
         repo: p.repository,
         kind: "provenance",
         ref: p.revision,
-        usedBy: ["packages/buv/buv.json"],
-        note: "code packages/buv was absorbed from; not fetched",
+        usedBy: ["packages/bun-python/buv/buv.json"],
+        note: "code packages/bun-python/buv was absorbed from; not fetched",
       });
     }
   }

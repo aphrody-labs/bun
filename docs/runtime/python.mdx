@@ -3,7 +3,7 @@ title: Python
 description: Run Python files and the python CLI through a CPython host, embed CPython in the JavaScript process with bun:python, and compile Python with bun compile.
 ---
 
-Bun runs Python through a separately installed CPython host library (`bun_python_host`, ABI 1) that it loads on demand. The host is built from [`packages/bun-python-native`](https://github.com/aphrody-labs/bun/tree/main/packages/bun-python-native) with `cargo build -p bun-python-host --release`. JavaScript that never touches Python never loads it. Once the host is configured, `bun app.py` and `bun python` run CPython in the Bun process, and `bun:python` calls the same interpreter from JavaScript. Python packages and projects are managed with the embedded UV through `bun uv` (see [Buv and PyJS](/runtime/buv)).
+Bun runs Python through a separately installed CPython host library (`bun_python_host`, ABI 1) that it loads on demand. The host is built from [`packages/bun-python/bun-python-native`](https://github.com/aphrody-labs/bun/tree/main/packages/bun-python-native) with `cargo build -p bun-python-host --release`. JavaScript that never touches Python never loads it. Once the host is configured, `bun app.py` and `bun python` run CPython in the Bun process, and `bun:python` calls the same interpreter from JavaScript. Python packages and projects are managed with the embedded UV through `bun uv` (see [Buv and PyJS](/runtime/buv)).
 
 ```sh terminal icon="terminal"
 export BUN_PYTHON_HOST_LIBRARY=/opt/bun-python/lib/libbun_python_host.so

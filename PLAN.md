@@ -411,7 +411,7 @@ chantier touché (`bun-fork-aphrody`, `next-on-bun-plan`, …) à la fin du lot.
 
 ## 6. Buv, PyJS et graphe natif — 2026-10-09
 
-- Plan de compatibilité, performances et livraison : [packages/buv/PLAN.md](packages/buv/PLAN.md).
+- Plan de compatibilité, performances et livraison : [packages/bun-python/buv/PLAN.md](packages/bun-python/buv/PLAN.md).
 - Binaire du fork construit dans un checkout isolé : 118 tests natifs réussis ; pont CPython SDK v3 qualifié.
 - Sélection du fork et hachage natif Bun : 11 tests réussis. Plugin TS7/Ruff : 11 tests, 119 assertions.
 - Moteur de graphe Rust : 47 tests réussis. Exports docs/skills : 2 tests, 15 assertions.

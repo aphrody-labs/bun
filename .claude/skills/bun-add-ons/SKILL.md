@@ -53,8 +53,8 @@ git submodule update --init --checkout --recursive packages/bun-video
 bun bd --target=plugins                                             # mounted plugins only
 ```
 
-`--checkout` overrides `update = none`. The repositories can be private: run
-`gh auth setup-git` or use SSH. Each plugin is its own Cargo workspace and `Cargo.lock`. It
+`--checkout` overrides `update = none`. The repositories are public, so no credentials are
+needed to fetch them. Each plugin is its own Cargo workspace and `Cargo.lock`. It
 path-depends on `src/system_tools`, `src/no_window`, `src/zlib_rs` and
 `vendor/find-msvc-tools`, so it builds only while mounted here. Do not fold it into the root
 workspace. Direct build: `cd plugins/<name> && cargo build --locked --profile plugin -p bun_plugin_<name> --bin bun-<name>`.

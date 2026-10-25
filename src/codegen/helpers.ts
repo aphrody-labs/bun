@@ -123,6 +123,12 @@ export function pathToUpperSnakeCase(filepath: string) {
     .toUpperCase();
 }
 
+/** A comma-separated list, or with `@<file>` the lines of that file (the build passes long lists so: cmd.exe takes 8191 characters). */
+export function listArgument(value: string): string[] {
+  const items = value.startsWith("@") ? fs.readFileSync(value.slice(1), "utf8").split(/\r?\n/) : value.split(",");
+  return items.filter(item => item !== "");
+}
+
 export function argParse(keys: string[]): any {
   const options: { [key: string]: boolean | string } = {};
   for (const arg of process.argv.slice(2)) {

@@ -1129,7 +1129,7 @@ async function main() {
     jsc: configured("jsc", values["jsc-root"]),
   };
   const manifest = (await Bun.file(resolve(bun, "package.json")).json()) as { version: string };
-  const uvUpstreamRevision = vendorRevision(await Bun.file(resolve(bun, "packages/buv/vendor.json")).json(), "uv");
+  const uvUpstreamRevision = vendorRevision(await Bun.file(resolve(bun, "packages/bun-python/buv/vendor.json")).json(), "uv");
   const uvPackage = Bun.TOML.parse(await Bun.file(resolve(roots.uv, "crates/uv/Cargo.toml")).text()) as {
     package: { version: string };
   };

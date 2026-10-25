@@ -36,7 +36,7 @@ import { builtinUsesArguments, emitAotCodegen, guardInputs, hashTableInputs, typ
 import { generateBuildOptionsRs } from "./buildOptionsRs.ts";
 import { webkitVersionName, type CodegenFields } from "./config.ts";
 import { BuildError, assert } from "./error.ts";
-import { writeIfChanged } from "./fs.ts";
+import { listFileArgument, writeIfChanged } from "./fs.ts";
 import { generateJsonByteClass } from "./jsonByteClass.ts";
 import type { Ninja } from "./ninja.ts";
 import { quote, quoteArgs } from "./shell.ts";
@@ -1050,7 +1050,11 @@ export function emitBindgen({ n, cfg, sources, o, dirStamp, engine }: Ctx): void
     outputs: [...cpp, ...headers, ...rust, types],
     rule: "codegen",
     inputs: [...sources.bindgen, ...sources.bindgenCodegen],
-    implicitInputs: [...declaredTypeInputs(cfg), ...guardInputs({ cfg, engine })],
+    implicitInputs: [
+      resolve(cfg.buildDir, "bindgen-sources.txt"),
+      ...declaredTypeInputs(cfg),
+      ...guardInputs({ cfg, engine }),
+    ],
     orderOnlyInputs: [dirStamp],
     vars: {
       cwd: cfg.cwd,
@@ -1058,7 +1062,10 @@ export function emitBindgen({ n, cfg, sources, o, dirStamp, engine }: Ctx): void
       args: shJoin(cfg, [
         script,
         // Every schema: build/types is shared by every profile, so Bindgen.d.ts describes them all.
-        `--sources=${sources.bindgen.map(src => `${crates.get(src)}=${src}`).join(",")}`,
+        `--sources=${listFileArgument(
+          resolve(cfg.buildDir, "bindgen-sources.txt"),
+          sources.bindgen.map(src => `${crates.get(src)}=${src}`),
+        )}`,
         typesOnlyFlag(cfg, sources),
         `--codegen-path=${cfg.codegenDir}`,
         `--types-path=${cfg.typesDir}`,

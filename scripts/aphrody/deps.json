@@ -375,7 +375,7 @@
       "kind": "in-tree",
       "ref": "f3e56e16e0302e26ea456cb51b676b35958572a0",
       "usedBy": [
-        "packages/buv/vendor.json"
+        "packages/bun-python/buv/vendor.json"
       ],
       "note": "source of uv",
       "internal": true,

@@ -555,6 +555,7 @@ export function resolveLlvmToolchain(
   | "hostCxx"
   | "hostAr"
   | "ar"
+  | "ranlib"
   | "ld"
   | "ld64Lld"
   | "rustLlvmVersion"
@@ -569,6 +570,7 @@ export function resolveLlvmToolchain(
   | "dsymutil"
   | "ccache"
   | "rc"
+  | "mt"
   | "nasm"
   | "clangVersion"
   | "clangResourceDir"
@@ -642,6 +644,17 @@ export function resolveLlvmToolchain(
           required: true,
         })?.path;
 
+  // ranlib: llvm-ranlib (unix hosts only — llvm-lib targets don't need it).
+  // Needed for nested cmake builds (CMAKE_RANLIB). llvm-ar's `s` flag does the
+  // same thing for our direct archives, but deps may call ranlib explicitly.
+  let ranlib: string | undefined;
+  if (os !== "windows") {
+    ranlib = findLlvmTool("llvm-ranlib", paths, os, {
+      checkVersion: false,
+      required: true,
+    })?.path;
+  }
+
   // ld: lld-link for windows targets, ld.lld on Linux (passed as --ld-path=).
   // On Darwin clang drives the system linker directly.
   let ld: string;
@@ -707,10 +720,15 @@ export function resolveLlvmToolchain(
     dsymutil = findLlvmTool("dsymutil", paths, os, { checkVersion: false, required: false })?.path;
   }
 
-  // rc: windows targets only (the final link embeds windows-app-info.res).
+  // rc/mt: windows targets only. rc is required (the final link embeds
+  // windows-app-info.res, and nested cmake's try_compile uses it); mt is passed to
+  // nested cmake as CMAKE_MT and is optional (not all LLVM distros ship it —
+  // source.ts sets CMAKE_TRY_COMPILE_TARGET_TYPE=STATIC_LIBRARY as fallback).
   let rc: string | undefined;
+  let mt: string | undefined;
   if (msvcTarget) {
     rc = findLlvmTool("llvm-rc", paths, os, { checkVersion: false, required: true })?.path;
+    mt = findLlvmTool("llvm-mt", paths, os, { checkVersion: false, required: false })?.path;
   }
 
   // nasm: BoringSSL win-x64 and libjpeg-turbo x86_64 SIMD; compile.ts:nasm() asserts at the use site.
@@ -751,6 +769,7 @@ export function resolveLlvmToolchain(
     hostCxx,
     hostAr,
     ar,
+    ranlib,
     ld,
     ld64Lld,
     rustLlvmVersion,
@@ -765,6 +784,7 @@ export function resolveLlvmToolchain(
     dsymutil,
     ccache,
     rc,
+    mt,
     nasm,
   };
 }

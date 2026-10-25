@@ -372,7 +372,7 @@ test.concurrent("graph documentation escapes MDX and rejects cross-profile expor
   const { writeGraphDocs } = await import("../../scripts/aphrody/graph-docs.ts");
   using directory = tempDir("graph-documentation-scope", {});
   using registry = new BunPython(":memory:");
-  const domain = "packages/buv",
+  const domain = "packages/bun-python/buv",
     source = "graph:bun:packages:buv",
     profile = "bun";
   const repo = registry.repository("bun/" + domain, "source", "/fixture", null, {

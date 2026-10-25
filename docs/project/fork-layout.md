@@ -93,3 +93,15 @@ cd packages/bun-ui && bun install --frozen-lockfile
 ```
 
 The create templates keep depending on the npm package `bun-plugin-tailwind`.
+
+## Bun Python (PyJS)
+
+`buv`, `bun-python-native`, `bun-python-toolchain` and `bun-python-conformance` live in
+[aphrody-labs/bun-python](https://github.com/aphrody-labs/bun-python) as top-level directories,
+mounted here as the optional submodule `packages/bun-python`. `bun:python` and `bun python`
+stay in the runtime and load `bun_python_host` at run time; `bun-runtime-sdk` stays here.
+
+```sh
+git submodule update --init --checkout packages/bun-python
+cd packages/bun-python && cargo build --locked --release -p bun-python-host
+```

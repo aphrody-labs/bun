@@ -33,13 +33,6 @@
         "bun-google-index-public": "./src/public-index-cli.ts",
       },
     },
-    "packages/bun-qr": {
-      "name": "@aphrody/qr",
-      "version": "1.4.7",
-      "devDependencies": {
-        "@types/bun": "npm:@aphrody/bun-types@1.4.4",
-      },
-    },
     "packages/bun-runtime-sdk": {
       "name": "@aphrody/bun-runtime-sdk",
       "version": "1.4.11",
@@ -53,16 +46,6 @@
       },
       "devDependencies": {
         "@aphrody/bun-types": "workspace:*",
-      },
-    },
-    "packages/bun-timeline": {
-      "name": "@aphrody/timeline",
-      "version": "1.4.7",
-      "dependencies": {
-        "graphql": "17.0.2",
-      },
-      "devDependencies": {
-        "@types/bun": "npm:@aphrody/bun-types@1.4.4",
       },
     },
     "packages/bun-types": {
@@ -107,11 +90,7 @@
 
     "@aphrody/paths": ["@aphrody/paths@0.1.2", "", {}, "sha512-TPrnizCIZrW3WWc6GljP62AeF9rw7P6kmVvGefT038ut8UxtdSvt4FXrkZcKV+oDpXkUvyy9EU7B7UBDGLy1Rg=="],
 
-    "@aphrody/qr": ["@aphrody/qr@workspace:packages/bun-qr"],
-
     "@aphrody/runtime-sdk": ["@aphrody/runtime-sdk@0.1.2", "", {}, "sha512-h2fqoQEVn6rFBM6/LMU5XU0oTGpbR4k93MNGCTMwoaU/3v2ScWQXXlC4M3/bpbMj1hX82/JuOoF2eHCYZbfgDQ=="],
-
-    "@aphrody/timeline": ["@aphrody/timeline@workspace:packages/bun-timeline"],
 
     "@aphrody/update": ["@aphrody/update@0.1.2", "", { "dependencies": { "@aphrody/paths": "0.1.2" } }, "sha512-LHjRUrUJYWwoDarJecnvnMNunSI1vZbMNUA1TBeqLxhZLVbIxh7VZILpsiWdaQOES/hJGSNqC1mUGgYA8V7krQ=="],
 
@@ -200,8 +179,6 @@
     "csstype": ["csstype@3.2.3", "", {}, "sha512-z1HGKcYy2xA8AGQfwrn0PAy+PB7X/GSj3UVJW9qKyn43xWa+gl5nXmU4qqLMRzWVLFC8KusUX8T/0kCiOYpAIQ=="],
 
     "esbuild": ["esbuild@0.21.5", "", { "optionalDependencies": { "@esbuild/aix-ppc64": "0.21.5", "@esbuild/android-arm": "0.21.5", "@esbuild/android-arm64": "0.21.5", "@esbuild/android-x64": "0.21.5", "@esbuild/darwin-arm64": "0.21.5", "@esbuild/darwin-x64": "0.21.5", "@esbuild/freebsd-arm64": "0.21.5", "@esbuild/freebsd-x64": "0.21.5", "@esbuild/linux-arm": "0.21.5", "@esbuild/linux-arm64": "0.21.5", "@esbuild/linux-ia32": "0.21.5", "@esbuild/linux-loong64": "0.21.5", "@esbuild/linux-mips64el": "0.21.5", "@esbuild/linux-ppc64": "0.21.5", "@esbuild/linux-riscv64": "0.21.5", "@esbuild/linux-s390x": "0.21.5", "@esbuild/linux-x64": "0.21.5", "@esbuild/netbsd-x64": "0.21.5", "@esbuild/openbsd-x64": "0.21.5", "@esbuild/sunos-x64": "0.21.5", "@esbuild/win32-arm64": "0.21.5", "@esbuild/win32-ia32": "0.21.5", "@esbuild/win32-x64": "0.21.5" }, "bin": { "esbuild": "bin/esbuild" } }, "sha512-mg3OPMV4hXywwpoDxu3Qda5xCKQi+vCTZq8S9J/EpkhB2HzKXq4SNFZE3+NK93JYxc8VMSep+lOUSC/RVKaBqw=="],
-
-    "graphql": ["graphql@17.0.2", "", {}, "sha512-FRWbddMxfkjiB7z+aQDWIR+E34xo9I8c9mtK2RPv8PmMzKRvrdsreHL/Ui/TmwHJfhHChEtsFPyMHKI+xuarQQ=="],
 
     "iceberg-js": ["iceberg-js@0.8.1", "", {}, "sha512-1dhVQZXhcHje7798IVM+xoo/1ZdVfzOMIc8/rgVSijRK38EDqOJoGula9N/8ZI5RD8QTxNQtK/Gozpr+qUqRRA=="],
 
