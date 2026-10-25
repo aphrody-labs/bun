@@ -19,13 +19,13 @@
 import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
 import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import { ar, cc, cxx, link, nasm, pch, type PrecompiledHeader } from "./compile.ts";
-import type { Config } from "./config.ts";
+import type { BuildType, Config } from "./config.ts";
 import { assert } from "./error.ts";
 import { computeSourceIdentity, fetchCliPath } from "./fetch-cli.ts";
 import { computeDepFlags, computeDepPICFlags, computeTargetLinkFlags, safeStackFlags } from "./flags.ts";
 import { writeIfChanged } from "./fs.ts";
 import type { Ninja } from "./ninja.ts";
-import { quote, quoteArgs } from "./shell.ts";
+import { quote, quoteArgs, slash } from "./shell.ts";
 import { streamPath } from "./stream.ts";
 import { toolIdentityFile } from "./tools.ts";
 import { nativeSDKHash, nativeSDKSourceRoot, registerNativeSDKRoot, selectNativeSDK } from "./native-sdk.ts";
@@ -685,6 +685,7 @@ export function registerDepRules(n: Ninja, cfg: Config): void {
   // unchanged so there's no cost on the common case. Host shell syntax.
   const hostWin = cfg.host.os === "windows";
   const q = (p: string) => quote(p, hostWin);
+  const cmake = q(cfg.cmake);
   const fetchCli = q(fetchCliPath);
 
   // stream.ts wraps commands to give live prefixed output while ninja runs
@@ -717,6 +718,33 @@ export function registerDepRules(n: Ninja, cfg: Config): void {
   n.rule("dep_fetch_prebuilt", {
     command: `${stream} ${cfg.jsRuntime} ${fetchCli} prebuilt $name $url $dest $identity $rm_paths`,
     description: "fetch $name (prebuilt)",
+    restat: true,
+    pool: "dep",
+  });
+  // Configure: runs cmake for a nested-cmake dep (curl). restat: unchanged
+  // cache prunes downstream.
+  n.rule("dep_configure", {
+    command: `${stream} --cwd=$srcdir ${cmake} --fresh -B$builddir $args`,
+    description: "cmake $name",
+    restat: true,
+    pool: "dep",
+  });
+
+  // Build: runs cmake --build. Restat is critical — if no source changed in
+  // the dep, cmake --build is a no-op (inner ninja re-stats), and our restat
+  // prunes everything downstream.
+  n.rule("dep_build", {
+    command: `${stream} ${cmake} --build $builddir --config $buildtype $targets`,
+    description: "build $name",
+    restat: true,
+    pool: "dep",
+  });
+
+  // A step that runs before a dep configures or compiles (winfw's generated
+  // headers). restat: an idempotent script prunes everything downstream.
+  n.rule("dep_prebuild", {
+    command: `${stream} --cwd=$cwd $cmd`,
+    description: "prebuild $name",
     restat: true,
     pool: "dep",
   });
@@ -933,6 +961,8 @@ export function resolveDep(
       includes: sdk.includes.map(file => resolve(destination, file)),
       defines: sdk.defines,
       outputs: libraries,
+      generatedHeaders: [],
+      configureInputs: [],
     };
   }
 

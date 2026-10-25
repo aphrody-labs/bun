@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { crateOf, debugFlag, shJoin, typesOnlyFlag, type Ctx } from "./codegen.ts";
 import type { CodegenFields, Config } from "./config.ts";
 import { assert } from "./error.ts";
+import { listFileArgument } from "./fs.ts";
 import type { Ninja } from "./ninja.ts";
 import { quote } from "./shell.ts";
 import { streamPath } from "./stream.ts";
@@ -245,12 +246,18 @@ export function emitBuiltinsTable({ n, cfg, sources, o, dirStamp, engine }: Ctx)
     engineFunctionsJson(cfg),
   ];
   const outputs = [...rust, cpp, tableHeader, ...table, ...data, ...engine.builtinTableOutputs];
+  const sourceList = resolve(cfg.buildDir, "aot-builtin-sources.txt");
+  const sourcesArgument = listFileArgument(
+    sourceList,
+    sources.bindgen.map(src => `${crateOf(src)}=${src}`),
+  );
 
   n.build({
     outputs,
     rule: "codegen_bun",
     inputs: [
       script,
+      sourceList,
       ...sources.builtinsTableCodegen.filter(path => path !== script),
       ...sources.bindgen,
       ...sources.js,
@@ -285,7 +292,7 @@ export function emitBuiltinsTable({ n, cfg, sources, o, dirStamp, engine }: Ctx)
         script,
         `--codegen-path=${cfg.codegenDir}`,
         `--target=${builtinTableTarget(cfg)}`,
-        `--sources=${sources.bindgen.map(src => `${crateOf(src)}=${src}`).join(",")}`,
+        `--sources=${sourcesArgument}`,
         `--engine-directory=${engine.directory}`,
         ...(engine.javaScriptCore === undefined
           ? [`--prebuilt-generated=${engine.builtinsGeneratedDirectory}`]

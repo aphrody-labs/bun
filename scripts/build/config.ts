@@ -415,8 +415,10 @@ export interface Config {
   rustHostTriple: string | undefined;
   /** Windows: MSVC link.exe path (to avoid Git's /usr/bin/link shadowing). */
   msvcLinker: string | undefined;
-  /** Windows: llvm-rc, compiles bun.exe's resources. */
+  /** Windows: llvm-rc, compiles bun.exe's resources (and CMAKE_RC_COMPILER of nested cmake). */
   rc: string | undefined;
+  /** Windows: llvm-mt for nested cmake (CMAKE_MT). May be absent in some LLVM distros. */
+  mt: string | undefined;
   /** x64: nasm for BoringSSL's win-x64 assembly and libjpeg-turbo's x86_64 SIMD. */
   nasm: string | undefined;
 
@@ -604,6 +606,7 @@ export interface Toolchain extends JsToolchain {
   /** `clang -print-resource-dir`. undefined on Windows. */
   clangResourceDir: string | undefined;
   ar: string;
+  ranlib: string | undefined;
   ld: string;
   /**
    * lld's Mach-O port (`ld64.lld`), resolved on non-darwin unix hosts.
@@ -646,6 +649,13 @@ export interface Toolchain extends JsToolchain {
   msvcLinker: string | undefined;
   /** Windows only: llvm-rc (resource compiler). */
   rc: string | undefined;
+  /**
+   * Windows only: llvm-mt (manifest tool). Passed to nested cmake as
+   * CMAKE_MT. Optional — some LLVM distributions don't ship llvm-mt;
+   * when absent, cmake's STATIC_LIBRARY try-compile mode (set in
+   * source.ts) sidesteps the need.
+   */
+  mt: string | undefined;
   /** x64 targets: nasm for BoringSSL's win-x64 assembly and libjpeg-turbo's x86_64 SIMD. */
   nasm: string | undefined;
 }
@@ -1657,6 +1667,7 @@ export function resolveConfig(partial: PartialConfig, toolchain: Toolchain): Con
     clangVersion: toolchain.clangVersion,
     clangResourceDir: toolchain.clangResourceDir,
     ar: toolchain.ar,
+    ranlib: toolchain.ranlib,
     ld: ld64StripSwap?.ld ?? toolchain.ld,
     // Cross strips: linux-gnu uses <triple>-strip (GNU, handles -R .eh_frame
     // fully; host strip rejects foreign-arch ELF); other cross targets use
@@ -1695,6 +1706,7 @@ export function resolveConfig(partial: PartialConfig, toolchain: Toolchain): Con
     rustHostTriple: toolchain.rustHostTriple,
     msvcLinker: toolchain.msvcLinker,
     rc: toolchain.rc,
+    mt: toolchain.mt,
     nasm: toolchain.nasm,
     osxDeploymentTarget,
     osxSysroot,

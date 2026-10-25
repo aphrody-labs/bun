@@ -53,3 +53,12 @@ export function mkdirAll(dirs: Iterable<string>): void {
     seen.add(dir);
   }
 }
+
+/**
+ * Writes `items` one per line to `path` (only if changed) and returns `@<path>`, the spelling of a list
+ * argument that `listArgument` (src/codegen/helpers.ts) reads back. For lists longer than cmd.exe accepts.
+ */
+export function listFileArgument(path: string, items: readonly string[]): string {
+  writeIfChanged(path, items.map(item => `${item}\n`).join(""));
+  return `@${path}`;
+}
