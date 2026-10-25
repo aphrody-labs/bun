@@ -9,9 +9,7 @@
     "./packages/bun-types",
     "./packages/bun-sql",
     "./packages/bun-x",
-    "./packages/bun-fuzzy",
-    "./packages/bun-qr",
-    "./packages/bun-timeline"
+    "./packages/bun-fuzzy"
   ],
   "scripts": {
     "gn": "bun scripts/aphrody/gn.ts",

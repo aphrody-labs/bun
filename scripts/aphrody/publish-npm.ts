@@ -352,8 +352,6 @@ export const PACKAGES: PackageSpec[] = [
   { dir: "bun-google", bunVersion: true },
   { dir: "bun-chromium", bunVersion: true },
   { dir: "bun-fuzzy", name: "fuzzy" },
-  { dir: "bun-qr", name: "qr" },
-  { dir: "bun-timeline", name: "timeline" },
   { dir: "bun-x", name: "x" },
   {
     dir: "bun-agent-plugin",

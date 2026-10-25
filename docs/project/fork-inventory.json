@@ -218,16 +218,58 @@
       "forkMountUpdate": "none"
     },
     {
+      "component": "bun-llama",
+      "path": [
+        "packages/bun-llama"
+      ],
+      "type": "package",
+      "kind": "package",
+      "destinationRepo": "https://github.com/aphrody-labs/bun-llama",
+      "forkMount": null,
+      "bunOsPath": "vendor/bun-llama",
+      "submoduleRevision": "d7e760c9ffb88b52e6421a473abd0263814177aa",
+      "upstream": null,
+      "migrationState": "moved",
+      "notes": "First commit holds the fork tree of main 8d61d6cdb06 verbatim. The only fork consumers were the root workspace, the npm publish list or the private version sync; all removed."
+    },
+    {
+      "component": "bun-qr",
+      "path": [
+        "packages/bun-qr"
+      ],
+      "type": "package",
+      "kind": "package",
+      "destinationRepo": "https://github.com/aphrody-labs/bun-qr",
+      "forkMount": null,
+      "bunOsPath": "vendor/bun-qr",
+      "submoduleRevision": "09ae9805b9ebe861306081b0eec32110a4a072ca",
+      "upstream": null,
+      "migrationState": "moved",
+      "notes": "First commit holds the fork tree of main 8d61d6cdb06 verbatim. The only fork consumers were the root workspace, the npm publish list or the private version sync; all removed."
+    },
+    {
+      "component": "bun-timeline",
+      "path": [
+        "packages/bun-timeline"
+      ],
+      "type": "package",
+      "kind": "package",
+      "destinationRepo": "https://github.com/aphrody-labs/bun-timeline",
+      "forkMount": null,
+      "bunOsPath": "vendor/bun-timeline",
+      "submoduleRevision": "c9d6b55deee3887b4d5cd8c136d8d0b52491f2b8",
+      "upstream": null,
+      "migrationState": "moved",
+      "notes": "First commit holds the fork tree of main 8d61d6cdb06 verbatim. The only fork consumers were the root workspace, the npm publish list or the private version sync; all removed."
+    },
+    {
       "component": "packages-misc",
       "path": [
         "packages/bun-google",
         "packages/bun-x",
-        "packages/bun-qr",
         "packages/bun-fuzzy",
-        "packages/bun-timeline",
         "packages/bun-cloudflare",
         "packages/bun-chromium",
-        "packages/bun-llama",
         "packages/bun-nginx",
         "packages/bun-supervisor",
         "packages/bun-tools",
@@ -246,7 +288,7 @@
       "submoduleRevision": null,
       "upstream": null,
       "migrationState": "pending",
-      "notes": "Pending. bun-dotnet-host is a non-optional bun_runtime dependency and stays until made optional."
+      "notes": "Still here, each for a reason: bun-tools is runtime-linked (src/runtime/cli/tools_command.rs embeds src/tool-assets.json); bun-supervisor has runtime tests in test/js/bun/supervisor and is used by release-portable-npm; bun-cloudflare is imported by scripts/aphrody/media-sdk-publish.ts; bun-fuzzy is a root workspace used by the publish-npm tests; bun-google and bun-chromium back the bun:google and bun:chromium builtins and the Google/Chromium graph; bun-nginx, bun-winsvc, bun-cosmic, bun-webview-core, bun-oxc and bun-n2b are root Cargo members, and bun-nginx feeds release-native-nginx; bun-dotnet pairs with bun-dotnet-host, a non-optional bun_runtime dependency; bun-x is a root workspace; aphrody-pkg-system is a Cargo member. Each needs its consumers moved or made optional first."
     },
     {
       "component": "distribution",
@@ -262,8 +304,8 @@
       "bunOsPath": null,
       "submoduleRevision": null,
       "upstream": null,
-      "migrationState": "pending",
-      "notes": "Pending. factory/artifacts are runtime qualification receipts (Bun OS B2 kept them here)."
+      "migrationState": "stays",
+      "notes": "factory/ stays: 572 references; it holds the runtime's own qualification receipts and the default outputs of runtime scripts (Bun OS runtime-heavy-migration B2). patches/chromium and docs/chromium stay: scripts/aphrody/chromium.ts and chromium-patches.ts (bun run chromium patch) apply and refresh them, and docs/chromium is in the Google/Chromium graph surface; they move only together with the Chromium tooling. scripts/aphrody/alpine stays for now: its wgpu-probe example is a root Cargo member and its WSL scripts are runtime setup."
     },
     {
       "component": "bun_quality",

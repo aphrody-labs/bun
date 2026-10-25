@@ -8,7 +8,6 @@ const DEFAULT_ROOT = resolve(import.meta.dir, "../../..");
 const SEMVER = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 export const OWNED_PRIVATE_MANIFESTS: Readonly<Record<string, string>> = {
   "packages/bun-error/package.json": "bun-error",
-  "packages/bun-llama/package.json": "bun-llama",
   "packages/bun-lambda/package.json": "bun-lambda",
   "packages/bun-release/package.json": "bun-release-action",
 };
