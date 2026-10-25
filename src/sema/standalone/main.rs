@@ -81,6 +81,7 @@ fn run(args: &[String]) {
                 stops_like_tsc: !args.iter().any(|a| a == "--every-stage"),
                 uses_typescript_wording: false,
                 after_file: None,
+                declaration_file_emitted: None,
             };
             // A binary without the flag silently ignores it, so a script that tests start orders looks for this line.
             if request.order != 1 {

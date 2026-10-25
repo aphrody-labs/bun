@@ -1803,6 +1803,7 @@ fn run_one(
             stops_like_tsc: false,
             uses_typescript_wording: true,
             after_file,
+            declaration_file_emitted: None,
         };
         let began = std::time::Instant::now();
         bun_sema_driver::check_project(&host, project, &request, Report::default(), began)
@@ -1995,6 +1996,7 @@ fn compare_task_groupings(projects: &[String], lib_dir: &str, threads: usize) ->
             stops_like_tsc: true,
             uses_typescript_wording: false,
             after_file: None,
+            declaration_file_emitted: None,
         };
         bun_sema_driver::check_then(&request, |report| {
             let mut printed = Vec::new();

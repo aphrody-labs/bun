@@ -1022,7 +1022,7 @@ pub(crate) fn expand_as_oxfmt(
     });
     index_sort::sort_slice_by(&mut found[..], |a, b| a.path.cmp(&b.path));
     found.dedup_by(|a, b| a.path == b.path);
-    if found.is_empty() && error_on_unmatched_pattern && !skipped_link {
+    if found.is_empty() && error_on_unmatched_pattern {
         let error = b"Expected at least one target file. All matched files may have been excluded by ignore rules.";
         return Ok(vec![Expanded::Error(error.to_vec())]);
     }

@@ -5082,11 +5082,11 @@ impl VirtualMachine {
         }
         // RefString's external buffer is Latin-1; decode UTF-8 before JSC sees it.
         if !bun_core::strings::is_all_ascii(code) {
-            return ResolvedSource {
+            return Ok(ResolvedSource {
                 source_code: bun_core::String::clone_utf8(code),
                 source_url: specifier.create_if_different(source_url),
                 ..Default::default()
-            };
+            });
         }
         let source = self.ref_counted_string(code, hash_)?;
         // SAFETY: `ref_counted_string` returns a live `RefString` held in

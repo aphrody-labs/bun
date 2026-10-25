@@ -8595,7 +8595,7 @@ impl<'a, const TYPESCRIPT: bool, const SCAN_ONLY: bool> P<'a, TYPESCRIPT, SCAN_O
             ));
         }
         let stmts = self.arena.alloc_slice_copy(&stmts);
-        self.append_part(parts, stmts)
+        self.append_part(parts, stmts).map(|_| ())
     }
 
     pub(crate) fn wrap_value_for_server_component_reference(

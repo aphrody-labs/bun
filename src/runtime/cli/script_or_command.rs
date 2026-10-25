@@ -163,6 +163,8 @@ fn asks_the_command(command: &[u8], arg: &[u8]) -> bool {
 }
 
 /// Whether `bun <command>` runs something from the project, as it did before `command` became a built-in command.
+// The fork routes `bun lint` and `bun fmt` to the native commands without asking the project.
+#[allow(dead_code)]
 #[cold]
 #[inline(never)]
 pub(crate) fn is_of_the_project(command: &[u8]) -> bool {

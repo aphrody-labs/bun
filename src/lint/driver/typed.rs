@@ -514,6 +514,7 @@ fn check_and_lint_in(
         stops_like_tsc: false,
         uses_typescript_wording: false,
         after_file: Some(&after_file),
+        declaration_file_emitted: None,
     };
     let provided = Provided {
         already_read,

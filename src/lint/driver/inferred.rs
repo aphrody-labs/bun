@@ -265,6 +265,7 @@ impl<'e> Inferred<'e> {
             stops_like_tsc: false,
             uses_typescript_wording: false,
             after_file: None,
+            declaration_file_emitted: None,
         };
         bun_sema_driver::check_provided_then(&request, Provided::default(), |report| {
             let mut tables = Tables {

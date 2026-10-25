@@ -234,7 +234,6 @@ impl<'e> ForRules<'e> {
             !with_node_modules && strings::split(&relative, b"/").any(|it| it == b"node_modules");
         if is_in_node_modules
             || ignored.ignores_file(path, &None)
-            || ignored.ignores_native_git(path, false)
         {
             return Ok(Formatted::Skipped);
         }

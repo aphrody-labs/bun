@@ -142,7 +142,7 @@ pub(crate) fn is_package_script(name: &[u8]) -> bool {
     if env_var::npm_lifecycle_event::get().is_some_and(|event| event == name) {
         return false;
     }
-    super::script_or_command::runs(name) == super::script_or_command::Runs::Script
+    matches!(super::script_or_command::runs(name), Ok(super::script_or_command::Runs::Script))
 }
 
 /// `bun create aphrody/<template>` composes the Aphrody stack templates instead of cloning a GitHub repository;

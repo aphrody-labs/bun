@@ -915,6 +915,8 @@ pub struct Request<'a> {
     /// still alive. This is how to read the type of every expression. A discarded task's files are rechecked, so this
     /// can be called more than once for a file, and the last call counts.
     pub after_file: Option<&'a (dyn Fn(&mut bun_sema::check::Checker<'_, '_>, FileId) + Sync)>,
+    /// Called with the path and the text of each declaration file that a project of a `tsc -b` run emits for the projects that reference it. Nothing is written to disk: this is the way to observe them.
+    pub declaration_file_emitted: Option<&'a (dyn Fn(&[u8], &[u8]) + Sync)>,
 }
 
 /// A diagnostic, ready to be formatted.

@@ -15,7 +15,7 @@ macro_rules! pretty {
     };
 }
 
-const NO_FILES: &[u8] = b"No files found to lint. Please check your paths and ignore patterns.";
+pub(crate) const NO_FILES: &[u8] = b"No files found to lint. Please check your paths and ignore patterns.";
 
 pub(crate) fn write_error(out: &mut Vec<u8>, colors: bool, text: &[u8]) {
     pretty!(out, colors, "<red>error<r><d>:<r> {}\n", BStr::new(text));

@@ -944,7 +944,6 @@ impl InputSourceMap {
             mappings_vlq,
             None,
             i32::try_from(sources.len()).unwrap_or(i32::MAX),
-            i32::MAX as usize,
             mapping::ParseOptions {
                 allow_names: false,
                 sort: true,

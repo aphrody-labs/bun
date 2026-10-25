@@ -570,7 +570,7 @@ impl UpgradeCommand {
     fn install_local(filesystem: &fs::FileSystem, source: &[u8]) -> crate::Result<()> {
         let mut source_buf = bun_paths::path_buffer_pool::get();
         let source_z = bun_paths::join_abs_string_buf_z::<bun_paths::platform::Auto>(
-            filesystem.top_level_dir,
+            filesystem.top_level_dir(),
             &mut source_buf[..],
             &[source],
         );
@@ -602,7 +602,7 @@ impl UpgradeCommand {
         let result = match spawn_sync::spawn(&spawn_sync::Options {
             argv: build_argv(&verify_argv),
             envp: None,
-            cwd: Box::<[u8]>::from(filesystem.top_level_dir),
+            cwd: Box::<[u8]>::from(filesystem.top_level_dir()),
             stdout: spawn_sync::SyncStdio::Buffer,
             stderr: spawn_sync::SyncStdio::Ignore,
             stdin: spawn_sync::SyncStdio::Ignore,
