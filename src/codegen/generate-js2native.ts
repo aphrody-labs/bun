@@ -1,10 +1,13 @@
-// This file implements the global state for $rust and $cpp preprocessor macros
-// as well as all the code it generates.
+// This file implements the global state for the $cpp and $bindgen preprocessor macros
+// as well as all the code they generate.
 //
 // For the actual parsing, see replacements.ts
 
 import path, { basename, sep } from "path";
+import { textOfNativeBinding, type Guard, type Guards } from "./builtins/guards";
+import type { NativeCallKind } from "./builtins/vocabulary";
 import { readdirRecursiveWithExclusionsAndExtensionsSync } from "./helpers";
+import { guardedBindingCreation, recordedPointer, removableFeatures } from "./removable-entry-points";
 
 //
 interface NativeCall {
@@ -13,19 +16,24 @@ interface NativeCall {
   filename: string;
   symbol: string;
   is_wrapped: boolean;
+  written_kind: NativeCallKind;
+  written_file: string;
+  written_symbol: string;
 }
 
 interface WrapperCall {
-  type: NativeCallType;
   wrap_kind: "new-function";
   symbol_target: string;
   symbol_generated: string;
   display_name: string;
   call_length: number;
   filename: string;
+  written_kind: NativeCallKind;
+  written_file: string;
+  written_symbol: string;
 }
 
-type NativeCallType = "rust" | "cpp" | "bind";
+type NativeCallType = "cpp" | "bind";
 
 const nativeCalls: NativeCall[] = [];
 const wrapperCalls: WrapperCall[] = [];
@@ -127,19 +135,9 @@ function callBaseName(x: string) {
 }
 
 function resolveNativeFileId(call_type: NativeCallType, filename: string) {
-  const ext = call_type === "bind" ? ".bind.ts" : call_type === "rust" ? ".rs" : `.${call_type}`;
+  const ext = call_type === "bind" ? ".bind.ts" : `.${call_type}`;
   if (!filename.endsWith(ext)) {
     throw new Error(`Expected filename for $${call_type} to have ${ext} extension, got ${JSON.stringify(filename)}`);
-  }
-
-  if (call_type === "rust") {
-    const relative = rustIdentifierPaths[filename];
-    if (!relative) {
-      throw new Error(
-        `Unknown $rust() file identifier ${JSON.stringify(filename)}. Add it to rustIdentifierPaths in src/codegen/generate-js2native.ts.`,
-      );
-    }
-    return path.join(srcDir, relative.replaceAll("/", sep));
   }
 
   filename = filename.replaceAll("/", sep);
@@ -153,6 +151,15 @@ function resolveNativeFileId(call_type: NativeCallType, filename: string) {
   return filename;
 }
 
+function nativeCallKind(call_type: NativeCallType, is_wrapped: boolean): NativeCallKind {
+  switch (call_type) {
+    case "bind":
+      return "Bindgen";
+    case "cpp":
+      return is_wrapped ? "NewCppFunction" : "Cpp";
+  }
+}
+
 export function registerNativeCall(
   call_type: NativeCallType,
   filename: string,
@@ -160,6 +167,7 @@ export function registerNativeCall(
   create_fn_len: null | number,
 ) {
   const resolved_filename = resolveNativeFileId(call_type, filename);
+  const written_kind = nativeCallKind(call_type, create_fn_len != null);
 
   const maybe_wrapped_symbol = create_fn_len != null ? "js2native_wrap_" + symbol.replace(/[^A-Za-z]/g, "_") : symbol;
 
@@ -180,57 +188,103 @@ export function registerNativeCall(
     filename: resolved_filename,
     symbol: maybe_wrapped_symbol,
     is_wrapped: create_fn_len != null,
+    written_kind,
+    written_file: filename,
+    written_symbol: symbol,
   });
   if (create_fn_len != null) {
     wrapperCalls.push({
-      type: call_type,
       wrap_kind: "new-function",
       symbol_target: symbol,
       symbol_generated: "js2native_wrap_" + symbol.replace(/[^A-Za-z]/g, "_"),
       display_name: callBaseName(symbol),
       call_length: create_fn_len,
       filename: resolved_filename,
+      written_kind,
+      written_file: filename,
+      written_symbol: symbol,
     });
   }
   return id;
 }
 
-function symbol(call: Pick<NativeCall, "type" | "symbol" | "filename">) {
-  return call.type === "rust"
-    ? `JS2Rust__${call.filename ? normalizeSymbolPathPrefix(call.filename) + "_" : ""}${call.symbol.replace(/[^A-Za-z]/g, "_")}`
-    : call.symbol;
+export interface NativeCallRecord {
+  id: number;
+  type: "cpp" | "bind";
+  file: string;
+  symbol: string;
+  isWrapped: boolean;
 }
 
-function normalizeSymbolPathPrefix(input: string) {
-  input = path.resolve(input);
-
-  const bunDir = path.resolve(path.join(import.meta.dir, "..", ".."));
-  if (input.startsWith(bunDir)) {
-    input = input.slice(bunDir.length);
-  }
-
-  return input.replaceAll(".rs", "_rs_").replace(/[^A-Za-z]/g, "_");
+export function nativeCallList(): NativeCallRecord[] {
+  return nativeCalls.map(call => ({
+    id: call.id,
+    type: call.type,
+    file: (path.isAbsolute(call.filename) ? path.relative(srcDir, call.filename) : call.filename).replaceAll(sep, "/"),
+    symbol: call.symbol,
+    isWrapped: call.is_wrapped,
+  }));
 }
 
-export function getJS2NativeCPP() {
+export interface CreatedFunctionRecord {
+  kind: NativeCallKind;
+  file: string;
+  symbol: string;
+  /** The native code of the function, as GeneratedJS2Native.h names it. */
+  hostFunction: string;
+  /** Declares it. */
+  header: string;
+  length: number;
+}
+
+export function createdFunctionList(): CreatedFunctionRecord[] {
+  return wrapperCalls.map(call => ({
+    kind: call.written_kind,
+    file: call.written_file,
+    symbol: call.written_symbol,
+    hostFunction: call.symbol_target,
+    header: call.filename.replace(/.cpp$/, ".h").replaceAll(sep, "/"),
+    length: call.call_length,
+  }));
+}
+
+export function nativeCallListStamp(): string {
+  const lines = nativeCallList()
+    .map(call => `${call.id} ${call.type} ${call.file} ${call.symbol} ${call.isWrapped}\n`)
+    .join("");
+  let hash = 2166136261;
+  for (const byte of Buffer.from(lines)) hash = Math.imul(hash ^ byte, 16777619) >>> 0;
+  return hash.toString(16).padStart(8, "0");
+}
+
+function bindgenSymbol(call: Pick<NativeCall, "filename" | "symbol">) {
+  return `js2native_bindgen_${basename(call.filename.replace(/\.bind\.ts$/, ""))}_${call.symbol}`;
+}
+
+function nativePointer(guard: Guard | null, native_symbol: string) {
+  return guard
+    ? recordedPointer(removableFeatures(), guard.feature, "Throw", native_symbol, guard.builtin)
+    : native_symbol;
+}
+
+function callNative(guard: Guard | null, native_symbol: string) {
+  if (!guard) return `${native_symbol}(global)`;
+  return guardedBindingCreation(removableFeatures(), guard.feature, native_symbol, guard.builtin, ["global"]);
+}
+
+function nativeCallExpression(call: NativeCall, guard: Guard | null) {
+  if (call.type === "bind") return `JSC::JSValue::decode(${callNative(guard, bindgenSymbol(call))})`;
+  if (!guard || call.is_wrapped) return `${call.symbol}(global)`;
+  return callNative(guard, call.symbol);
+}
+
+export function getJS2NativeCPP(guards: Guards) {
+  const guardOf = (call: Pick<NativeCall, "written_kind" | "written_file" | "written_symbol">) =>
+    guards.ofPath(textOfNativeBinding(call.written_kind, call.written_file, call.written_symbol));
+
   const files = [
     ...new Set(nativeCalls.filter(x => x.filename.endsWith(".cpp")).map(x => x.filename.replace(/.cpp$/, ".h"))),
   ];
-
-  const externs: string[] = [];
-
-  const nativeCallStrings = nativeCalls
-    .filter(x => x.type === "rust")
-    .flatMap(
-      call => (
-        externs.push(`extern "C" SYSV_ABI JSC::EncodedJSValue ${symbol(call)}_workaround(Zig::GlobalObject*);` + "\n"),
-        [
-          `static ALWAYS_INLINE JSC::JSValue ${symbol(call)}(Zig::GlobalObject* global) {`,
-          `    return JSValue::decode(${symbol(call)}_workaround(global));`,
-          `}` + "\n\n",
-        ]
-      ),
-    );
 
   const wrapperCallStrings = wrapperCalls.map(x => {
     if (x.wrap_kind === "new-function") {
@@ -246,12 +300,7 @@ export function getJS2NativeCPP() {
       return [
         "",
         `static JSC::JSValue ${x.symbol_generated}(Zig::GlobalObject* globalObject) {`,
-        `  return js2nativeNewFunction(globalObject, ${x.call_length}, ${JSON.stringify(x.display_name)}_s, ${symbol({
-          type: x.type,
-          symbol: x.symbol_target,
-
-          filename: x.filename,
-        })});`,
+        `  return js2nativeNewFunction(globalObject, ${x.call_length}, ${JSON.stringify(x.display_name)}_s, ${nativePointer(guardOf(x), x.symbol_target)});`,
         `}`,
       ].join("\n");
     }
@@ -262,7 +311,6 @@ export function getJS2NativeCPP() {
     `#pragma once`,
     `#include "root.h"`,
     ...files.map(filename => `#include ${JSON.stringify(filename)}`),
-    ...externs,
     "\n" + "namespace JS2NativeGenerated {",
     "using namespace Bun;",
     "using namespace JSC;",
@@ -271,31 +319,21 @@ export function getJS2NativeCPP() {
     `static NEVER_INLINE JSC::JSValue js2nativeNewFunction(Zig::GlobalObject* globalObject, unsigned length, ASCIILiteral name, JSC::NativeFunction function) {`,
     `  return JSC::JSFunction::create(globalObject->vm(), globalObject, length, name, function, JSC::ImplementationVisibility::Public);`,
     `}` + "\n",
-    ...nativeCallStrings,
     ...wrapperCallStrings,
     ...nativeCalls
       .filter(x => x.type === "bind")
-      .map(
-        x =>
-          `extern "C" SYSV_ABI JSC::EncodedJSValue js2native_bindgen_${basename(x.filename.replace(/\.bind\.ts$/, ""))}_${x.symbol}(Zig::GlobalObject*);`,
-      ),
+      .map(x => `extern "C" SYSV_ABI JSC::EncodedJSValue ${bindgenSymbol(x)}(Zig::GlobalObject*);`),
     `typedef JSC::JSValue (*JS2NativeFunction)(Zig::GlobalObject*);`,
     `static ALWAYS_INLINE JSC::JSValue callJS2Native(int32_t index, Zig::GlobalObject* global) {`,
     ` switch(index) {`,
-    ...nativeCalls.map(
-      x =>
-        `    case ${x.id}: return ${
-          x.type === "bind"
-            ? `JSC::JSValue::decode(js2native_bindgen_${basename(x.filename.replace(/\.bind\.ts$/, ""))}_${x.symbol}(global))`
-            : `${symbol(x)}(global)`
-        };`,
-    ),
+    ...nativeCalls.map(x => `    case ${x.id}: return ${nativeCallExpression(x, guardOf(x))};`),
     `    default:`,
     `      __builtin_unreachable();`,
     `  }`,
     `}`,
     `#define JS2NATIVE_COUNT ${nativeCalls.length}`,
     "}",
+    `extern "C" const uint8_t Bun__js2nativeList_${nativeCallListStamp()} = 0;`,
   ].join("\n");
 }
 
@@ -428,10 +466,6 @@ export function getJS2NativeDTS() {
         .join("|"),
     // resolveNativeFileId matches any path suffix of a source file, e.g. "streams/BunStreamConsumers.cpp".
     "declare type NativeFilenameCPP = NativeBasenameCPP | `${string}/${NativeBasenameCPP}`",
-    "declare type NativeFilenameRust = " +
-      Object.keys(rustIdentifierPaths)
-        .map(x => JSON.stringify(x))
-        .join("|"),
     "",
   ].join("\n");
 }

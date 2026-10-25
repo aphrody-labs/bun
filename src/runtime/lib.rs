@@ -54,11 +54,15 @@ pub(crate) mod api;
 pub(crate) mod cosmic;
 #[cfg(debug_assertions)]
 pub(crate) mod class_ref_test;
+pub(crate) mod checker_queries_testing;
+pub(crate) mod code_resolver_testing;
 pub(crate) mod dispatch;
 pub(crate) mod dotnet;
 pub(crate) mod elevate;
 pub(crate) mod graph_native;
 pub(crate) mod hw_exports;
+#[cfg(debug_assertions)]
+pub(crate) mod imported_class_test;
 pub(crate) mod ipc;
 pub(crate) mod ipc_host;
 pub(crate) mod jsc_hooks;
@@ -67,16 +71,16 @@ pub(crate) mod json_line_buffer;
 pub(crate) mod linear_fifo_testing;
 pub(crate) mod linux;
 pub(crate) mod napi;
+pub(crate) mod removed_feature;
 #[path = "../bun.js.rs"]
 pub(crate) mod run_main;
 pub(crate) mod timer;
 pub(crate) mod windows;
 
+// In the crate graph for the functions generated C++ calls.
+use {bun_css_jsc as _, bun_install_jsc as _, bun_patch_jsc as _, bun_semver_jsc as _};
 pub(crate) mod generated_bindgen; // include!()s ${BUN_CODEGEN_DIR}/generated_bindgen_bun_runtime.rs
-pub(crate) mod generated_classes; // include!()s ${BUN_CODEGEN_DIR}/generated_classes.rs
 pub(crate) mod generated_host_exports; // include!()s ${BUN_CODEGEN_DIR}/generated_host_exports.rs
-pub(crate) mod generated_js2native; // include!()s ${BUN_CODEGEN_DIR}/generated_js2native.rs
-pub(crate) mod generated_jssink; // include!()s ${BUN_CODEGEN_DIR}/generated_jssink.rs
 
 pub(crate) mod crawl;
 pub(crate) mod web_detect;

@@ -267,6 +267,4 @@ export function createHashTable(input: string, output: string): void {
   writeIfNotChanged(output, hashTableHeader(readFileSync(input, "utf8")));
 }
 
-if (import.meta.main) {
-  createHashTable(process.argv[2], process.argv[3]);
-}
+createHashTable(process.argv[2], process.argv[3]);

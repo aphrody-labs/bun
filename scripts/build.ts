@@ -602,6 +602,10 @@ const configFlags: {
   buildType: "string",
   mode: "string",
   lto: "boolean",
+  trimmable: "boolean",
+  jit: "boolean",
+  aot: "boolean",
+  relr: "boolean",
   pgoGenerate: "string",
   pgoUse: "string",
   asan: "boolean",
@@ -617,6 +621,10 @@ const configFlags: {
   valgrind: "boolean",
   fuzzilli: "boolean",
   hardened: "boolean",
+  requireMdwe: "boolean",
+  lockEnvironment: "boolean",
+  guardedPages: "boolean",
+  executeOnlyStart: "boolean",
   socketFaultInjection: "boolean",
   codeGenerationFromStrings: "boolean",
   webAssembly: "boolean",
@@ -626,9 +634,16 @@ const configFlags: {
   browserCrawl: "boolean",
   browserIndex: "boolean",
   googleSearch: "boolean",
+  shadowRealm: "boolean",
+  ffi: "boolean",
   unifiedSources: "boolean",
   archiveDeps: "boolean",
   timeTrace: "boolean",
+  rustCodegenUnits: "number",
+  rustIncremental: "boolean",
+  rustLto: "boolean",
+  debugInfo: "string",
+  linkerMap: "boolean",
   ci: "boolean",
   buildkite: "boolean",
   webkit: "string",
@@ -831,15 +846,23 @@ Options:
                                     from a non-Windows host)
   --<field>=<value>       Override a config field. Boolean fields take
                           on/off/true/false/yes/no/1/0.
-                          Fields: asan, lto, assertions, logs, baseline,
-                                  canary, valgrind, hardened,
+                          Fields: asan, lto, relr, assertions, logs, baseline,
+                                  canary, valgrind, hardened, requireMdwe,
+                                  lockEnvironment, guardedPages,
+                                  executeOnlyStart,
                                   webkit (prebuilt|local),
                                   local-deps (name=path[,name=path] — build a
                                   vendored dep from a local checkout),
                                   package-manager (bun|npm, installs the
                                   package.json files the build needs),
                                   buildDir, binaryDir, mode (full|codegen),
-                                  unifiedSources, timeTrace, os, arch, abi,
+                                  unifiedSources, timeTrace, rustCodegenUnits
+                                  (codegen units a crate), rustIncremental and
+                                  rustLto (off: the crates are linked as machine
+                                  code), for faster rebuilds,
+                                  debugInfo (full|lines|none) and linkerMap,
+                                  for faster compiles and links,
+                                  os, arch, abi,
                                   winsysroot (Windows cross-compile SDK root)
   --target=<name>         Build a specific ninja target (repeatable)
   --configure-only        Emit build.ninja, don't run it

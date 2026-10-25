@@ -1921,6 +1921,7 @@ pub fn GetEnvironmentVariableW(
 
 pub mod dll;
 pub mod env;
+pub mod private_folder;
 
 // ──────────────────────────────────────────────────────────────────────────
 // Additional surface unblocked for dependents.

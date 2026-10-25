@@ -21,6 +21,8 @@ test("Rust sources linked into Bun do not use the streams of the standard librar
   const known = new Map([
     // Readiness output lives only in archive.rs #[cfg(test)] mod tests.
     ["src/browser/crates/crawl/src/archive.rs", 2],
+    ["src/aot/emit/tests.rs", 1],
+    ["src/aot/tests/ir_tests.rs", 4],
     ["src/bun_alloc/lib.rs", 1],
     ["src/bun_core/Global.rs", 1],
     ["src/libuv_sys/libuv.rs", 1],
@@ -31,6 +33,7 @@ test("Rust sources linked into Bun do not use the streams of the standard librar
     // dbg! under cfg(test) and the ZLIB_DEBUG trace macros: neither is compiled into a release build.
     ["src/zlib_rs/src/inflate.rs", 3],
     ["src/zlib_rs/src/lib.rs", 2],
+    ["src/trim/tests/trimming_invariants.rs", 1],
   ]);
   // Imported before this rule applied to them: a ratchet that only goes down. Convert to `bun_core::Output`.
   const pending = new Map<string, number>([

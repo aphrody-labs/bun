@@ -50,6 +50,7 @@ Library/Caches
 *.tmp
 *.trace
 *.wat
+!test/aot/programs/**/*.wat
 *.zip
 **/.verdaccio-db.json
 **/*.dir
@@ -108,6 +109,9 @@ tools/dev/sha
 myscript.sh
 node_modules
 node_modules_*
+!test/aot/programs/**/node_modules/
+!test/aot/programs/**/dist/
+!test/aot/ir/**/node_modules/
 out
 out.*
 outcss
@@ -216,6 +220,7 @@ Heap-*.json.*
 isolate-*.log
 # Core dumps are files; directories named core are source.
 core
+!test/aot/**/core/
 core.[0-9]*
 !core/
 !src/migrate/
@@ -262,3 +267,4 @@ src/runtime/hawk_root.rs
 *.har
 
 /docs/chromium/sources/
+__pycache__/

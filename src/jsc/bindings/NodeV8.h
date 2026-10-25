@@ -191,7 +191,7 @@ private:
     JSC::Strong<JSC::JSObject> m_nearCallback;
 };
 
-JSC::JSObject* createNodeV8Binding(JSC::JSGlobalObject* globalObject);
+JSC::JSValue createNodeV8Binding(JSC::JSGlobalObject* globalObject);
 
 // --expose-gc (CLI or v8.setFlagsFromString): node:vm contexts created while
 // it is set get a global gc().

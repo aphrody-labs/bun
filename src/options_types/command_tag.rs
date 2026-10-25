@@ -15,6 +15,7 @@ pub enum Tag {
     BuildCommand,
     BunxCommand,
     CheckCommand,
+    CompileCommand,
     CreateCommand,
     DiscordCommand,
     GetCompletionsCommand,
@@ -63,6 +64,7 @@ impl Tag {
             Tag::BuildCommand => b'b',
             Tag::BunxCommand => b'B',
             Tag::CheckCommand => b'K',
+            Tag::CompileCommand => b'E',
             Tag::CreateCommand => b'c',
             Tag::DiscordCommand => b'D',
             Tag::GetCompletionsCommand => b'g',
@@ -152,6 +154,7 @@ impl Tag {
         Self::BuildCommand,
         Self::BunxCommand,
         Self::CheckCommand,
+        Self::CompileCommand,
         Self::CreateCommand,
         Self::DiscordCommand,
         Self::GetCompletionsCommand,
@@ -225,6 +228,7 @@ impl<V> core::ops::Index<Tag> for TagTable<V> {
 pub static LOADS_CONFIG: TagTable<bool> = TagTable({
     let mut a = [false; Tag::COUNT];
     a[Tag::BuildCommand as usize] = true;
+    a[Tag::CompileCommand as usize] = true;
     a[Tag::TestCommand as usize] = true;
     a[Tag::LintCommand as usize] = true;
     a[Tag::FormatCommand as usize] = true;
@@ -251,6 +255,7 @@ pub static LOADS_CONFIG: TagTable<bool> = TagTable({
 pub static ALWAYS_LOADS_CONFIG: TagTable<bool> = TagTable({
     let mut a = [false; Tag::COUNT];
     a[Tag::BuildCommand as usize] = true;
+    a[Tag::CompileCommand as usize] = true;
     a[Tag::TestCommand as usize] = true;
     a[Tag::LintCommand as usize] = true;
     a[Tag::FormatCommand as usize] = true;

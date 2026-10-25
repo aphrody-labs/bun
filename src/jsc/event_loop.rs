@@ -17,7 +17,7 @@ use bun_uws as uws;
 
 use crate::js_promise::Status as PromiseStatus;
 use crate::virtual_machine::VirtualMachine;
-use crate::{self as jsc, CallFrame, JSGlobalObject, JSValue, JsResult};
+use crate::{self as jsc, JSGlobalObject, JSValue, JsResult};
 
 // ──────────────────────────────────────────────────────────────────────────
 // Re-exports (thin re-exports of sibling/neighbor modules — do NOT inline
@@ -74,6 +74,9 @@ pub struct EventLoop {
     pub yield_tasks: Vec<Task>,
 
     pub concurrent_tasks: ConcurrentQueue,
+    /// See `TaskTag::is_plugin_request`: as other threads post them, and as this thread has taken them.
+    concurrent_plugin_requests: ConcurrentQueue,
+    plugin_requests: Queue,
     /// Set only on Bun.spawnSync's isolated loop: how other threads reach *this*
     /// loop's queue (the VM's handle names only the VM's own two loops).
     pub(crate) isolated_poster: Option<std::sync::Arc<crate::vm_handle::IsolatedPosterInner>>,
@@ -124,6 +127,8 @@ impl Default for EventLoop {
             next_immediate_tasks: Vec::new(),
             yield_tasks: Vec::new(),
             concurrent_tasks: ConcurrentQueue::default(),
+            concurrent_plugin_requests: ConcurrentQueue::default(),
+            plugin_requests: Queue::init(),
             isolated_poster: None,
             global: None,
             virtual_machine: None,
@@ -155,6 +160,7 @@ mod drain_result {
 // the microtask queue through it is interior mutation invisible to Rust.
 unsafe extern "C" {
     safe fn JSC__JSGlobalObject__drainMicrotasks(global: &JSGlobalObject) -> u8;
+    safe fn Bun__noteEntryEvaluation(global: &JSGlobalObject);
 }
 
 impl JSGlobalObject {
@@ -592,6 +598,7 @@ impl EventLoop {
     /// Other threads have posted work that this loop's next drain will pick up.
     pub(crate) fn has_concurrent_tasks(&self) -> bool {
         !self.concurrent_tasks.is_empty()
+            || !self.concurrent_plugin_requests.is_empty()
             || self
                 .macro_loop_if_not_running()
                 .is_some_and(|m| !m.concurrent_tasks.is_empty())
@@ -630,7 +637,7 @@ impl EventLoop {
         if let Some(macro_loop) = self.macro_loop_if_not_running() {
             macro_loop.apply_concurrent_ref_delta();
             let batch = macro_loop.concurrent_tasks.pop_batch();
-            self.take_concurrent_tasks(batch);
+            Self::take_concurrent_tasks(&mut self.tasks, batch);
         }
 
         let concurrent = self.concurrent_tasks.pop_batch();
@@ -768,7 +775,31 @@ impl EventLoop {
     /// Work is queued that the next `tick()` will run: the poll before it must
     /// not block.
     pub fn has_pending_tasks(&self) -> bool {
-        self.tasks.readable_length() > 0 || self.has_concurrent_tasks()
+        self.tasks.readable_length() > 0
+            || self.plugin_requests.readable_length() > 0
+            || self.has_concurrent_tasks()
+    }
+
+    /// Any thread.
+    pub(crate) fn post(&self, task: NonNull<ConcurrentTaskItem>) {
+        // SAFETY: the task is the caller's until it is pushed.
+        match unsafe { task.as_ref() }.task.tag.is_plugin_request() {
+            true => self.concurrent_plugin_requests.push(task),
+            false => self.concurrent_tasks.push(task),
+        }
+    }
+
+    /// The task that the drain of the queue runs next.
+    pub fn next_task(&mut self) -> Option<Task> {
+        if !self.concurrent_plugin_requests.is_empty() {
+            let batch = self.concurrent_plugin_requests.pop_batch();
+            Self::take_concurrent_tasks(&mut self.plugin_requests, batch);
+        }
+        if let Some(request) = self.plugin_requests.read_item() {
+            self.plugin_requests.reset_head_if_empty();
+            return Some(request);
+        }
+        self.tasks.read_item()
     }
 
     pub fn tick(&mut self) {
@@ -891,13 +922,13 @@ impl EventLoop {
     }
 
     /// Move a batch other threads posted (`concurrent_tasks`) into
-    /// `self.tasks`, freeing the heap `ConcurrentTask` carriers, so one pass
+    /// `tasks`, freeing the heap `ConcurrentTask` carriers, so one pass
     /// over `self.tasks` releases everything. Called by `release_queued_tasks`
     /// in teardown, after `join_child_workers()` (every child has posted its
     /// close task by then) and before the JSC VM is destroyed (so captured
     /// `Ref<>`s in queued C++ lambdas drop against a live heap).
     fn take_concurrent_tasks(
-        &mut self,
+        tasks: &mut Queue,
         batch: bun_threading::unbounded_queue::Batch<ConcurrentTaskItem>,
     ) {
         let mut iter = batch.iterator();
@@ -910,7 +941,7 @@ impl EventLoop {
             // iterator advanced past it before returning.
             let task =
                 unsafe { ConcurrentTask::ConcurrentTask::into_task(NonNull::new_unchecked(node)) };
-            let _ = self.tasks.write_item(task);
+            let _ = tasks.write_item(task);
         }
     }
 
@@ -923,9 +954,9 @@ impl EventLoop {
     pub fn release_queued_tasks(&mut self) {
         self.closed_for_tasks = true;
         let batch = self.concurrent_tasks.pop_batch();
-        self.take_concurrent_tasks(batch);
+        Self::take_concurrent_tasks(&mut self.tasks, batch);
         let _ = self.promote_yield_tasks();
-        while let Some(task) = self.tasks.read_item() {
+        while let Some(task) = self.next_task() {
             // SAFETY: JS thread, heap alive; `task` just left the queue.
             unsafe { self.release_task_unrun(task) };
         }
@@ -953,7 +984,10 @@ impl EventLoop {
         // also made later enqueues release on arrival) and refused posts never
         // reach `concurrent_tasks`; nothing can be left to leak with the VM box.
         debug_assert!(
-            self.tasks.readable_length() == 0 && self.concurrent_tasks.is_empty(),
+            self.tasks.readable_length() == 0
+                && self.concurrent_tasks.is_empty()
+                && self.plugin_requests.readable_length() == 0
+                && self.concurrent_plugin_requests.is_empty(),
             "queued tasks must be released (release_queued_tasks) before the loop is destroyed"
         );
         debug_assert!(
@@ -961,6 +995,7 @@ impl EventLoop {
             "pending immediates must be released (release_queued_tasks) while the loop is alive"
         );
         self.tasks = Queue::init();
+        self.plugin_requests = Queue::init();
         // Free the deferred-task map's storage. The tasks must not be run, and an
         // entry owns nothing but a `Copy` ctx pointer whose owner released it when
         // the JSC teardown before this finalized it. A worker's VM box is
@@ -1362,6 +1397,9 @@ impl EventLoop {
                 break;
             }
             self.tick();
+            if crate::compiled_program::compiled_program().is_some() {
+                Bun__noteEntryEvaluation(self.global_ref());
+            }
             let vm = self.vm_ref();
             let terminated = vm.worker_ref().is_some_and(|w| w.has_requested_terminate());
             if terminated
@@ -1380,49 +1418,12 @@ impl EventLoop {
 }
 
 /// Testing API to expose event loop state
-#[bun_jsc::host_fn]
-pub fn get_active_tasks(global_object: &JSGlobalObject, _frame: &CallFrame) -> JsResult<JSValue> {
-    // fields and call &-methods on it for the duration of this host fn.
-    let vm_ref = global_object.bun_vm();
+pub(crate) fn get_active_tasks(
+    heap: &crate::bindgen::JsHeap<'_>,
+) -> crate::generated_bindgen::event_loop::ActiveTasks {
+    // SAFETY: only the VM is taken from it.
+    let vm_ref = unsafe { heap.global() }.bun_vm();
     let event_loop = vm_ref.event_loop_shared();
-    let result = JSValue::create_empty_object(global_object, 9);
-    result.put(
-        global_object,
-        b"activeTasks",
-        JSValue::js_number(vm_ref.active_tasks as f64),
-    );
-    result.put(
-        global_object,
-        b"tasks",
-        JSValue::js_number(event_loop.tasks.readable_length() as f64),
-    );
-    result.put(
-        global_object,
-        b"immediateTasks",
-        JSValue::js_number(
-            (event_loop.immediate_tasks.len() + event_loop.next_immediate_tasks.len()) as f64,
-        ),
-    );
-    result.put(
-        global_object,
-        b"concurrentTasksEmpty",
-        JSValue::from(event_loop.concurrent_tasks.is_empty()),
-    );
-    result.put(
-        global_object,
-        b"loopActive",
-        JSValue::from(vm_ref.platform_loop_opt().is_some_and(|h| h.is_active())),
-    );
-    result.put(
-        global_object,
-        b"eventLoopAlive",
-        JSValue::from(vm_ref.is_event_loop_alive()),
-    );
-    result.put(
-        global_object,
-        b"concurrentRef",
-        JSValue::js_number(event_loop.concurrent_ref.load(Ordering::SeqCst) as f64),
-    );
     #[cfg(windows)]
     // SAFETY: `Loop::get()` returns the live process-global `uv_loop_t`.
     let num_polls: i32 =
@@ -1431,18 +1432,18 @@ pub fn get_active_tasks(global_object: &JSGlobalObject, _frame: &CallFrame) -> J
     #[cfg(not(windows))]
     // SAFETY: uws::Loop::get() returns a live process-global loop.
     let num_polls: i32 = unsafe { (*uws::Loop::get()).num_polls };
-    result.put(
-        global_object,
-        b"numPolls",
-        JSValue::js_number(num_polls as f64),
-    );
-    result.put(
-        global_object,
-        b"iteration",
+    crate::generated_bindgen::event_loop::ActiveTasks {
+        active_tasks: vm_ref.active_tasks,
+        tasks: event_loop.tasks.readable_length(),
+        immediate_tasks: event_loop.immediate_tasks.len() + event_loop.next_immediate_tasks.len(),
+        concurrent_tasks_empty: event_loop.concurrent_tasks.is_empty(),
+        loop_active: vm_ref.platform_loop_opt().is_some_and(|h| h.is_active()),
+        event_loop_alive: vm_ref.is_event_loop_alive(),
+        concurrent_ref: event_loop.concurrent_ref.load(Ordering::SeqCst),
+        num_polls,
         // SAFETY: usockets_loop() returns the live process-global loop.
-        JSValue::js_number(unsafe { (*event_loop.usockets_loop()).iteration_number() } as f64),
-    );
-    Ok(result)
+        iteration: unsafe { (*event_loop.usockets_loop()).iteration_number() },
+    }
 }
 
 #[cfg(windows)]

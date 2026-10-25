@@ -650,12 +650,14 @@ struct CollectedRow {
 const PADDING: u32 = 1;
 
 impl<'a> TablePrinter<'a> {
+    #[inline(never)]
     pub fn init(
         global_object: &'a JSGlobalObject,
         level: MessageLevel,
         tabular_data: JSValue,
         properties: JSValue,
     ) -> JsResult<Self> {
+        bun_removable_features::removable_definition!(ConsoleTable, Self::init);
         let _ = level;
         Ok(TablePrinter {
             global_object,
@@ -867,10 +869,15 @@ impl<'a> TablePrinter<'a> {
         let _ = writer.write_all("│\n".as_bytes());
     }
 
+    #[inline(never)]
     pub fn print_table<const ENABLE_ANSI_COLORS: bool>(
         &mut self,
         writer: &mut dyn bun_io::Write,
     ) -> JsResult<()> {
+        bun_removable_features::removable_definition!(
+            ConsoleTable,
+            Self::print_table::<ENABLE_ANSI_COLORS>
+        );
         let global_object = self.global_object;
 
         let mut columns: Vec<Column> = Vec::with_capacity(16);
@@ -1267,42 +1274,8 @@ impl ErrorDisplayLevel {
 }
 
 impl FormatOptions {
-    pub fn from_js(&mut self, global_this: &JSGlobalObject, arguments: &[JSValue]) -> JsResult<()> {
-        let arg1 = arguments[0];
-
-        if arg1.is_object() {
-            if let Some(opt) = arg1.get_truthy(global_this, "depth")? {
-                self.set_depth(global_this, opt)?;
-            }
-            if let Some(opt) = arg1.get_boolean_loose(global_this, "colors")? {
-                self.enable_colors = opt;
-            }
-            if let Some(opt) = arg1.get_boolean_loose(global_this, "sorted")? {
-                self.ordered_properties = opt;
-            }
-            if let Some(opt) = arg1.get_boolean_loose(global_this, "compact")? {
-                self.single_line = opt;
-            }
-        } else {
-            // formatOptions.show_hidden = arg1.toBoolean();
-            if !arguments.is_empty() {
-                self.set_depth(global_this, arg1)?;
-                if arguments.len() > 1 && !arguments[1].is_empty_or_undefined_or_null() {
-                    self.enable_colors = arguments[1].to_boolean();
-                }
-            }
-        }
-        Ok(())
-    }
-
-    /// `depth`: a non-negative integer (clamped to `u16::MAX`) or `Infinity`; non-numbers are
-    /// ignored. Decided on the number's value, so an integer JSC boxed as a double (a
-    /// `Float64Array` element, `-0`) is accepted like its int32 twin.
-    fn set_depth(&mut self, global_this: &JSGlobalObject, depth: JSValue) -> JsResult<()> {
-        if !depth.is_number() {
-            return Ok(());
-        }
-        let depth = depth.as_number();
+    /// `depth`: a non-negative integer (clamped to `u16::MAX`) or `Infinity`.
+    pub fn set_depth(&mut self, global_this: &JSGlobalObject, depth: f64) -> JsResult<()> {
         if depth.is_infinite() {
             self.max_depth = u16::MAX;
         } else if depth.trunc() != depth {
@@ -2237,13 +2210,19 @@ pub mod formatter {
                 T::RegExpObject => TagPayload::String,
                 T::Symbol => TagPayload::Symbol,
                 T::BooleanObject => TagPayload::Boolean,
-                T::JSFunction => TagPayload::Function,
+                T::JSFunction
+                | T::CompiledClosure
+                | T::SlimClosure
+                | T::SlimClosureWithProperties => TagPayload::Function,
                 T::WeakMap | T::Map => TagPayload::Map,
                 T::MapIterator => TagPayload::MapIterator,
                 T::SetIterator => TagPayload::SetIterator,
                 T::WeakSet | T::Set => TagPayload::Set,
                 T::JSDate => TagPayload::JSON,
                 T::JSPromise => TagPayload::Promise,
+
+                // The engine's generator objects have a cell type of their own, which falls to the last arm.
+                T::Object if value.is_compiled_generator() => TagPayload::JSON,
 
                 T::WrapForValidIterator
                 | T::RegExpStringIterator
@@ -2252,6 +2231,7 @@ pub mod formatter {
                 | T::IteratorHelper
                 | T::Object
                 | T::FinalObject
+                | T::CompiledObject
                 | T::ModuleNamespaceObject => TagPayload::Object,
 
                 T::ProxyObject => {
@@ -4532,7 +4512,7 @@ pub mod formatter {
                 }
             }
 
-            // `DOMFormData` is a C++-backed WebCore type — no `JsClass` derive,
+            // `DOMFormData` is a C++-backed WebCore type — no `JsClass` impl,
             // so use its dedicated `from_js` FFI downcast instead of `value.as_`.
             if crate::DOMFormData::from_js(value).is_some() {
                 let prev_quote_keys = self.quote_keys;
@@ -5907,8 +5887,7 @@ pub(crate) extern "C" fn Bun__ConsoleObject__timeLog(
 ///
 /// Ident concat via `${concat()}` is unstable (`macro_metavar_expr_concat`)
 /// and `paste` is not a `bun_jsc` dep, so the full `Bun__ConsoleObject__<name>`
-/// export symbol is passed verbatim — same pattern as `export_callbacks!` in
-/// `runtime/api/BunObject.rs`.
+/// export symbol is passed verbatim.
 macro_rules! console_noop_hooks {
     (str: $($name:ident),+ $(,)?) => {$(
         #[unsafe(no_mangle)]

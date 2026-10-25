@@ -289,31 +289,6 @@ impl StringOrBuffer<'static> {
         unsafe { ThreadIsolated::new(Self::owned(bytes)) }
     }
 
-    /// Copies a `Sync`-parsed buffer's current bytes, or isolates a string, for a work-pool job.
-    pub(crate) fn make_thread_isolated_copy(&mut self, global: &JSGlobalObject) -> JsResult<()> {
-        match self {
-            Self::Buffer(buffer) => {
-                buffer.buffer = jsc::ArrayBuffer::from_typed_array(global, buffer.buffer.value);
-                let mut bytes = Vec::new();
-                if bytes.try_reserve_exact(buffer.slice().len()).is_err() {
-                    return Err(global.throw_out_of_memory());
-                }
-                bytes.extend_from_slice(buffer.slice());
-                global.vm().report_extra_memory(bytes.len());
-                *self = Self::owned(bytes);
-            }
-            Self::String(str) => {
-                str.make_thread_isolated();
-                *self = Self::ThreadIsolatedString(core::mem::take(str));
-            }
-            Self::ThreadIsolatedString(_) | Self::Utf8(_) => {}
-            Self::PinnedBuffer(_) => {
-                unreachable!("make_thread_isolated_copy on a value parsed with Flavor::Async")
-            }
-        }
-        Ok(())
-    }
-
     /// `value` is ArrayBuffer-like (the caller checked): borrowed for `Sync`,
     /// [`PinnedArrayBuffer::root_read_only`] for `Async`.
     pub(crate) fn buffer_from_js(
@@ -1179,12 +1154,31 @@ impl PathLikeExt for PathLike<'_> {
     }
 }
 
+/// The system resolves a relative path against its own working directory, which is never a folder of the executable.
+fn from_working_directory_in_executable(str: bun_core::String) -> bun_core::String {
+    use bun_paths::resolve_path::{self, platform};
+    let Some(directory) = bun_core::working_directory_in_executable() else {
+        return str;
+    };
+    let utf8 = str.to_utf8();
+    let path = utf8.slice();
+    if path.is_empty() || bun_paths::is_absolute(path) || strings::contains_char(path, 0) {
+        drop(utf8);
+        return str;
+    }
+    bun_core::String::clone_utf8(resolve_path::join_abs_string::<platform::Auto>(
+        directory,
+        &[path],
+    ))
+}
+
 /// `str` as a `PathLike`, NUL-checked; the caller checks the length ([`Valid::path_length`]).
 fn path_like_from_string(
     global: &JSGlobalObject,
     str: bun_core::String,
     will_be_async: bool,
 ) -> JsResult<PathLike<'static>> {
+    let str = from_working_directory_in_executable(str);
     let utf8 = if will_be_async {
         str.into_utf8_with_string_thread_isolated()
     } else {

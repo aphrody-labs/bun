@@ -287,7 +287,7 @@ extern "C" void Bun__NodeV8__applyMaxOldSpaceSize(JSGlobalObject* globalObject)
     ensureHeapLimitObserver(globalObject).setLimit(static_cast<size_t>(megabytes) * 1024 * 1024);
 }
 
-JSC::JSObject* createNodeV8Binding(JSC::JSGlobalObject* globalObject)
+JSC::JSValue createNodeV8Binding(JSC::JSGlobalObject* globalObject)
 {
     auto& vm = JSC::getVM(globalObject);
     JSC::JSObject* object = JSC::constructEmptyObject(vm, globalObject->nullPrototypeObjectStructure());
