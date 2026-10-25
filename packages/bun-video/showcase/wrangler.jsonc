@@ -6,7 +6,5 @@
   "observability": { "enabled": true, "head_sampling_rate": 1 },
   "r2_buckets": [{ "binding": "SHOWCASE", "bucket_name": "aphrody-video" }],
   "vars": { "SHOWCASE_PREFIX": "showcase/20261022-v3" },
-  // No route: video.aphrody.com is a Cloudflare redirect to the home page of the Bun site, so a deploy of this
-  // Worker does not take the hostname back.
-  "routes": [],
+  "routes": [{ "pattern": "video.aphrody.com/*", "zone_name": "aphrody.com" }],
 }

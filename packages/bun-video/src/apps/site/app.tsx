@@ -99,9 +99,7 @@ function Film({
         </video>
       </div>
       <div className="film-top">
-        <a className="timeline-catalog-link" href="/catalog">
-          Aphrody Video · Catalogue
-        </a>
+        <span className="timeline-catalog-link">Aphrody Video</span>
         <span className="chapter">
           {work.chapter ?? work.engine} · {String(index + 1).padStart(2, "0")} / {String(count).padStart(2, "0")}
         </span>
@@ -578,7 +576,7 @@ function App() {
     return () => controller.abort();
   }, []);
   useEffect(() => {
-    if (!manifest || !feed.current || (location.pathname !== "/" && !location.pathname.startsWith("/shorts"))) return;
+    if (!manifest || !feed.current) return;
     const workId = new URLSearchParams(location.search).get("v");
     const initial = workId ? manifest.works.findIndex(work => work.id === workId) : 0;
     if (initial >= 0) setActive(initial);
@@ -624,8 +622,6 @@ function App() {
         block: "start",
       });
   };
-  if (manifest && location.pathname !== "/" && !location.pathname.startsWith("/shorts"))
-    return <Discover manifest={manifest} />;
   return (
     <main ref={feed} className="timeline" aria-label="Timeline des vidéos Aphrody" tabIndex={0} onKeyDown={page}>
       {!manifest && (

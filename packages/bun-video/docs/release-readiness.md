@@ -1,4 +1,50 @@
-# Release readiness — 2026-10-20
+# Release readiness — 2026-10-25
+
+## Current serving state
+
+`https://video.aphrody.com/` now serves the Bun Video timeline directly through
+the `bun-video-showcase` Cloudflare Worker. The Worker route is
+`video.aphrody.com/*` (route `92284de5770447b39ce0f7edac79fc94`). The old
+301 redirect to the Bun site is disabled (rule
+`c21dc96ff02d40029828fd125456a69b`, ruleset version 5).
+
+The published R2 prefix `showcase/20261022-v3` contains 38 objects, including
+the application shell, manifest, 16 MP4 videos, posters, fonts and source
+receipts. Live checks returned HTTP 200 for `/`, `/showcase.json` and `/app.js`,
+and HTTP 206 for an MP4 byte range. Browser checks confirmed autoplay, vertical
+scroll to the next video, seeking and fullscreen.
+
+The public manifest contains 16 videos across Remotion, HyperFrames and
+FilmCraft, with 24 evidence records. It does not include the supplied Shenron
+episode. Private media, cookies and signed URLs remain outside the public
+prefix.
+
+The static timeline is served; the server API is not yet connected. The Worker
+has no `BUN_VIDEO_BACKEND_URL`, and `GET /api/health` returns HTTP 503 with
+`bun_video_backend_unavailable`. Source edits in this checkpoint make all
+showcase paths resolve to the video timeline and remove the catalogue link;
+they still need qualification and publication before appearing on the live
+site.
+
+## Package state
+
+The source package is `1.4.4-video.5`. A registry read on 2026-10-25 showed
+`next: 1.4.4-video.5`, while `latest` remains `1.4.4-video.0`. This is a
+prerelease publication, not a stable release.
+
+The VPS and DBFR identities were revalidated through Infra as `vps-203bea89`
+and `vps-6732365f`. All three VPS factory slots were free; `/home` had 173 GiB
+available. DBFR had 5.1 GiB free on `/`, so no build or media workload should
+run there.
+
+The checks above qualify public static serving and browser playback only. They
+do not qualify the Bun API backend, editing jobs, server-side source capture,
+YouTube API, native decoding/encoding, DRM, GPU rendering, stable npm release,
+or the unshipped source edits.
+
+---
+
+Historical audit and remaining qualification notes follow.
 
 The requested delivery is a stable unified Bun Video package on npm and a working
 deployment at `https://video.aphrody.com`, qualified using the Shenron catalogue.
