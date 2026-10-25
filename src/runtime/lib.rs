@@ -52,6 +52,8 @@ pub(crate) mod shell;
 #[path = "api.rs"]
 pub(crate) mod api;
 pub(crate) mod cosmic;
+#[cfg(debug_assertions)]
+pub(crate) mod class_ref_test;
 pub(crate) mod dispatch;
 pub(crate) mod dotnet;
 pub(crate) mod elevate;

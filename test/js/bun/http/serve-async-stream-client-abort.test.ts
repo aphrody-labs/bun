@@ -56,7 +56,20 @@ test.concurrent("client aborting an async-pull ReadableStream response does not 
 test.concurrent("client aborting a native-source stream response does not use the sink after free", async () => {
   const { stdout, stderr, exitCode, signalCode } = await runFixture("serve-native-stream-client-abort-fixture.ts");
 
+    expect(stderr).toBe("");
+    expect(JSON.parse(stdout)).toEqual({ ok: true, aborted: 3 });
+    expect({ exitCode, signalCode }).toEqual({ exitCode: 0, signalCode: null });
+  },
+  60_000,
+);
+
+test.concurrent("a req.signal abort listener cannot write to the direct stream of a closed response", async () => {
+  const { stdout, stderr, exitCode, signalCode } = await runFixture("serve-abort-listener-write-fixture.ts");
+
   expect(stderr).toBe("");
-  expect(JSON.parse(stdout)).toEqual({ ok: true, aborted: 3 });
+  expect(JSON.parse(stdout)).toEqual({
+    heard: ["write:0", "flush:0", "cancel:AbortError: The connection was closed."],
+    pendingRequests: 0,
+  });
   expect({ exitCode, signalCode }).toEqual({ exitCode: 0, signalCode: null });
-}, 60_000);
+});

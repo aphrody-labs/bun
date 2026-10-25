@@ -1,7 +1,5 @@
 import { afterAll, describe, expect, test } from "bun:test";
-import fs from "node:fs";
-import path from "node:path";
-import { bunEnv, bunExe, isWindows, tempDir } from "harness";
+import { bunEnv, bunExe } from "harness";
 
 describe("Bun.Cookie validation tests", () => {
   describe("expires validation", () => {
@@ -478,203 +476,43 @@ describe("cookie name parsing from Cookie header", () => {
   });
 });
 
-describe("bun cookie", () => {
-  async function bunCookie(cwd: string, args: string[], stdin?: string) {
-    await using proc = Bun.spawn({
-      cmd: [bunExe(), "cookie", ...args],
-      cwd,
-      env: { ...bunEnv, BUN_COOKIE_DIR: undefined },
-      stdin: stdin === undefined ? "ignore" : new Blob([stdin]),
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-    const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
-    return { stdout, stderr, exitCode };
-  }
-
-  const devtoolsExport = JSON.stringify([
-    {
-      name: "sid",
-      value: "top-secret",
-      domain: ".example.com",
-      path: "/",
-      expirationDate: 4102444800,
-      httpOnly: true,
-      secure: true,
-      sameSite: "lax",
-    },
-    { name: "theme", value: "dark", domain: "example.com", path: "/", session: true, sameSite: "no_restriction" },
-    { name: "other", value: "x", domain: ".other.org", path: "/" },
-  ]);
-
-  test.concurrent("imports a DevTools export, never prints values, and builds the Cookie header", async () => {
-    using dir = tempDir("bun-cookie-json", { "export.json": devtoolsExport });
-    const cwd = String(dir);
-    const base = ["--name", "site", "--dir", "jars"];
-
-    let result = await bunCookie(cwd, ["import", "export.json", "--domain", "example.com", ...base]);
-    expect(result.stderr).toBe("");
-    expect(result.stdout).toStartWith("imported 2 cookies into jar site (2 total): ");
-    expect(result.exitCode).toBe(0);
-
-    const jarFile = path.join(cwd, "jars", "site.json");
-    expect(JSON.parse(await Bun.file(jarFile).text())).toEqual([
-      {
-        name: "sid",
-        value: "top-secret",
-        domain: ".example.com",
-        path: "/",
-        expires: 4102444800,
-        httpOnly: true,
-        secure: true,
-        sameSite: "Lax",
-      },
-      {
-        name: "theme",
-        value: "dark",
-        domain: "example.com",
-        path: "/",
-        expires: -1,
-        httpOnly: false,
-        secure: false,
-        sameSite: "None",
-      },
-    ]);
-    if (!isWindows) {
-      expect(fs.statSync(jarFile).mode & 0o777).toBe(0o600);
-      expect(fs.statSync(path.join(cwd, "jars")).mode & 0o777).toBe(0o700);
-    }
-
-    result = await bunCookie(cwd, ["list", ...base]);
-    expect(result.stdout).not.toContain("top-secret");
-    expect(result.stdout).toContain("********");
-    expect(result.stdout).toContain("2100-01-01T00:00:00Z");
-    expect(result.stdout).toContain("session");
-
-    result = await bunCookie(cwd, ["header", "https://www.example.com/home", ...base]);
-    expect(result.stdout).toBe("Cookie: sid=********\n");
-
-    result = await bunCookie(cwd, ["header", "example.com", "--reveal", ...base]);
-    expect(result.stdout).toBe("Cookie: sid=top-secret; theme=dark\n");
-
-    // a bare host is https; --insecure drops the Secure cookie
-    result = await bunCookie(cwd, ["header", "example.com", "--insecure", "--reveal", "--value-only", ...base]);
-    expect(result.stdout).toBe("theme=dark\n");
-
-    result = await bunCookie(cwd, ["header", "nope.org", ...base]);
-    expect(result.exitCode).toBe(1);
-    expect(result.stderr).toContain("no cookie in jar site applies to nope.org");
-
-    result = await bunCookie(cwd, ["get", "sid", "--reveal", ...base]);
-    expect(result.stdout).toBe("top-secret\n");
+test("throws when a cookie is too long to serialize, and Bun.serve responds without it", async () => {
+  await using proc = Bun.spawn({
+    cmd: [
+      bunExe(),
+      "-e",
+      `
+        // Each quote becomes %22.
+        const cookie = new Bun.Cookie("a", '"'.repeat(32 * 1024));
+        const map = new Bun.CookieMap();
+        map.set(cookie);
+        for (const serialize of [() => cookie.toString(), () => map.toSetCookieHeaders()]) {
+          try {
+            console.log("length", serialize().length);
+          } catch (e) {
+            console.log(e.name, e.message);
+          }
+        }
+        using server = Bun.serve({
+          port: 0,
+          development: false,
+          routes: {
+            "/": req => {
+              req.cookies.set(cookie);
+              return new Response("hello");
+            },
+          },
+        });
+        const res = await fetch(server.url);
+        console.log(res.status, res.headers.get("set-cookie"), await res.text());
+      `,
+    ],
+    env: { ...bunEnv, BUN_FEATURE_FLAG_SYNTHETIC_MEMORY_LIMIT: String(64 * 1024) },
+    stdout: "pipe",
+    stderr: "pipe",
   });
-
-  test.concurrent("the header it builds is the one Bun.CookieMap reads", async () => {
-    using dir = tempDir("bun-cookie-roundtrip", { "export.json": devtoolsExport });
-    const cwd = String(dir);
-    const base = ["--name", "site", "--dir", "jars"];
-    await bunCookie(cwd, ["import", "export.json", ...base]);
-    const { stdout } = await bunCookie(cwd, ["header", "example.com", "--reveal", "--value-only", ...base]);
-    expect(new Bun.CookieMap(stdout.trim()).toJSON()).toEqual({ sid: "top-secret", theme: "dark" });
-  });
-
-  test.concurrent("imports Netscape cookies.txt and a header string", async () => {
-    using dir = tempDir("bun-cookie-formats", {
-      "cookies.txt":
-        "# Netscape HTTP Cookie File\n.example.com\tTRUE\t/\tTRUE\t4102444800\tsid\tabc\n#HttpOnly_www.example.com\tFALSE\t/app\tFALSE\t0\ttoken\txyz\n",
-    });
-    const cwd = String(dir);
-    const base = ["--name", "n", "--dir", "jars"];
-
-    let result = await bunCookie(cwd, ["import", "cookies.txt", ...base]);
-    expect(result.stdout).toStartWith("imported 2 cookies into jar n (2 total)");
-    const saved = JSON.parse(await Bun.file(path.join(cwd, "jars", "n.json")).text());
-    expect(saved[1]).toMatchObject({
-      name: "token",
-      domain: "www.example.com",
-      path: "/app",
-      httpOnly: true,
-      expires: -1,
-    });
-
-    // a header string needs a domain
-    result = await bunCookie(cwd, ["import", "a=1; b=2", ...base]);
-    expect(result.exitCode).toBe(1);
-    expect(result.stderr).toContain("--domain");
-
-    result = await bunCookie(cwd, ["import", "a=1; sid=new", "--domain", "example.com", ...base]);
-    expect(result.stdout).toStartWith("imported 2 cookies into jar n (3 total)");
-
-    result = await bunCookie(cwd, ["import", "-", "--domain", "stdin.test", "--replace", ...base], "Cookie: z=9");
-    expect(result.stdout).toStartWith("imported 1 cookies into jar n (1 total)");
-  });
-
-  test.concurrent("rm and check", async () => {
-    using dir = tempDir("bun-cookie-rm", {
-      "export.json": JSON.stringify([
-        {
-          name: "good",
-          value: "1",
-          domain: "example.com",
-          path: "/",
-          expires: 4102444800,
-          httpOnly: true,
-          secure: true,
-          sameSite: "Lax",
-        },
-        { name: "old", value: "2", domain: "example.com", path: "/", expires: 1000, httpOnly: true, secure: true },
-        { name: "bad", value: "3", domain: "example.com", path: "/", httpOnly: true, secure: false, sameSite: "None" },
-        { name: "__Host-id", value: "4", domain: ".example.com", path: "/app", httpOnly: true, secure: true },
-      ]),
-    });
-    const cwd = String(dir);
-    const base = ["--name", "j", "--dir", "jars"];
-    await bunCookie(cwd, ["import", "export.json", ...base]);
-
-    let result = await bunCookie(cwd, ["check", "--json", ...base]);
-    const report = JSON.parse(result.stdout);
-    expect(result.exitCode).toBe(1);
-    expect(report).toMatchObject({ cookies: 4, passed: false });
-    const codes = Object.fromEntries(report.report.map((r: any) => [r.name, r.issues.map((i: any) => i.code)]));
-    expect(codes).toEqual({
-      good: [],
-      old: ["expired"],
-      bad: ["samesite-none-insecure", "not-secure"],
-      "__Host-id": ["prefix-host", "prefix-host"],
-    });
-    expect(result.stdout).not.toContain('"value"');
-
-    result = await bunCookie(cwd, ["rm", "--expired", ...base]);
-    expect(result.stdout).toBe("removed 1 cookies from jar j (3 left)\n");
-    result = await bunCookie(cwd, ["rm", "bad", ...base]);
-    expect(result.stdout).toBe("removed 1 cookies from jar j (2 left)\n");
-    result = await bunCookie(cwd, ["rm", "bad", ...base]);
-    expect(result.exitCode).toBe(1);
-
-    result = await bunCookie(cwd, ["jars", "--dir", "jars"]);
-    expect(result.stdout).toBe("j  (2 cookies)\n");
-    result = await bunCookie(cwd, ["rm", "--all", ...base]);
-    expect(result.exitCode).toBe(0);
-    expect(fs.existsSync(path.join(cwd, "jars", "j.json"))).toBe(false);
-  });
-
-  test.concurrent("BUN_COOKIE_DIR chooses the jar directory and bad usage exits with 2", async () => {
-    using dir = tempDir("bun-cookie-dir", {});
-    const cwd = String(dir);
-    await using proc = Bun.spawn({
-      cmd: [bunExe(), "cookie", "import", "a=1", "--domain", "example.com"],
-      cwd,
-      env: { ...bunEnv, BUN_COOKIE_DIR: path.join(cwd, "env-jars") },
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-    expect(await proc.exited).toBe(0);
-    expect(fs.existsSync(path.join(cwd, "env-jars", "default.json"))).toBe(true);
-
-    expect((await bunCookie(cwd, ["frobnicate"])).exitCode).toBe(2);
-    expect((await bunCookie(cwd, ["list", "--name", "../x", "--dir", "jars"])).exitCode).toBe(2);
-    const help = await bunCookie(cwd, ["--help"]);
-    expect(help.stdout).toStartWith("bun cookie: keep browser cookies in jars");
-    expect(help.exitCode).toBe(0);
-  });
+  const [stdout, stderr, exitCode] = await Promise.all([proc.stdout.text(), proc.stderr.text(), proc.exited]);
+  expect(stdout).toBe("RangeError Out of memory\nRangeError Out of memory\n200 null hello\n");
+  expect(stderr).toContain("RangeError: Out of memory");
+  expect(exitCode).toBe(0);
 });

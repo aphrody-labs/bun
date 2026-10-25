@@ -596,7 +596,7 @@ class ListenConnection {
               resolve(conn);
               this.#clearSweep();
               this.#sweep();
-              adapter.runUserCallback(adapter.connectionInfo.onconnect, null);
+              adapter.runUserCallback($getByIdDirect(adapter.connectionInfo, "onconnect"), null);
             }),
             adapter.ownerCallback(err => {
               err ??= adapter.connectionClosedError();
@@ -610,7 +610,7 @@ class ListenConnection {
                 for (const entry of this.#channels.values()) entry.ready = null;
                 this.#scheduleSweep();
               }
-              adapter.runUserCallback(adapter.connectionInfo.onclose, err);
+              adapter.runUserCallback($getByIdDirect(adapter.connectionInfo, "onclose"), err);
             }),
             undefined,
             login,

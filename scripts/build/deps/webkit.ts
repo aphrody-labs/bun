@@ -3,7 +3,7 @@
  * for local mode. Override via `--webkit-version=<hash>` to test a branch.
  * From https://github.com/oven-sh/WebKit releases.
  */
-export const WEBKIT_VERSION = "87ee10da087b63e011bd1ada64d1814a850a4395";
+export const WEBKIT_VERSION = "d6375c72affe0f70222cdcb45012b10f0bf3a9d5";
 
 /** Upstream prebuilt releases; the default source. */
 export const WEBKIT_UPSTREAM_REPO = "oven-sh/WebKit";
@@ -70,7 +70,7 @@ export const APHRODY_WEBKIT_PREBUILTS: Readonly<Record<string, readonly string[]
  * **prebuilt**: Download tarball from oven-sh/WebKit releases (or from
  *   aphrody-labs/WebKit, see `webkitPrebuiltRepo` / `$BUN_WEBKIT_REPO`). Tarball name
  *   encodes {os, arch, musl, debug|lto, asan, assertions} — each is a separate
- *   ABI — and coverage.
+ *   ABI — and coverage and hardened.
  *   ASAN MUST match bun's setting: WTF::Vector layout changes with ASAN
  *   (see WTF/Vector.h:682), so mixing → silent memory corruption.
  *
@@ -101,7 +101,7 @@ export const APHRODY_WEBKIT_PREBUILTS: Readonly<Record<string, readonly string[]
 import { homedir } from "node:os";
 import { join, resolve } from "node:path";
 import type { Config } from "../config.ts";
-import { computeCpuTargetFlags } from "../flags.ts";
+import { computeCpuTargetFlags, hardeningFlags } from "../flags.ts";
 import { slash } from "../shell.ts";
 import { type Dependency, type NestedCmakeBuild, type Source, depBuildDir, depSourceDir } from "../source.ts";
 
@@ -128,6 +128,7 @@ function prebuiltSuffix(cfg: Config): string {
     if (cfg.assertions) s += "-assertions";
     if (cfg.fuzzilli) s += "-coverage";
   }
+  if (cfg.hardened) s += "-hardened";
   return s;
 }
 
@@ -351,6 +352,7 @@ export const webkit: Dependency = {
     // PIE-default distros — without it the driver still passes -pie and the
     // -fno-pic probe object fails R_X86_64_32S relocation, killing FindThreads.
     if (cfg.unix && cfg.abi !== "android") optFlags.push("-fno-pic", "-fno-pie", "-no-pie");
+    if (cfg.hardened) optFlags.push(...hardeningFlags);
     if (cfg.lto) optFlags.push("-flto=thin");
     if (cfg.pgoGenerate) optFlags.push(`-fprofile-generate=${cfg.pgoGenerate}`);
     if (cfg.pgoUse) {

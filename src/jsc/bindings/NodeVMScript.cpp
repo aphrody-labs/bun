@@ -6,7 +6,6 @@
 
 #include "JavaScriptCore/CodeCache.h"
 #include "JavaScriptCore/Completion.h"
-#include "JavaScriptCore/JIT.h"
 #include "JavaScriptCore/JSWeakMap.h"
 #include "JavaScriptCore/JSWeakMapInlines.h"
 #include "JavaScriptCore/ProgramCodeBlock.h"
@@ -67,8 +66,10 @@ bool ScriptOptions::fromJS(JSC::JSGlobalObject* globalObject, JSC::VM& vm, JSC::
             any = true;
         RETURN_IF_EXCEPTION(scope, false);
 
-        if (validateCachedData(globalObject, vm, scope, options, this->cachedData))
+        if (validateCachedData(globalObject, vm, scope, options, this->cachedData)) {
+            this->cachedDataProvided = true;
             any = true;
+        }
         RETURN_IF_EXCEPTION(scope, false);
 
         // Handle importModuleDynamically option
@@ -146,10 +147,6 @@ constructScript(JSGlobalObject* globalObject, CallFrame* callFrame, JSValue newT
     fetcher->owner(vm, script);
     ensureStillAliveHere(importer);
 
-    // Decoded before the first compile so an accepted cachedData replaces the parse and bytecode generation.
-    if (!script->cachedData().isEmpty())
-        script->adoptCachedData(globalObject);
-
     // Node's vm.Script throws SyntaxError at construction; the REPL's
     // recoverable-error flow (and user code) relies on that.
     JSC::ParserError parseError;
@@ -174,7 +171,20 @@ constructScript(JSGlobalObject* globalObject, CallFrame* callFrame, JSValue newT
     }
     RETURN_IF_EXCEPTION(scope, {});
 
-    if (script->cachedData().isEmpty() && script->options().produceCachedData)
+    WTF::Vector<uint8_t>& cachedData = script->cachedData();
+
+    // Like Node, reject an empty cachedData.
+    if (script->options().cachedDataProvided) {
+        // Only record whether the bytecode decodes. Each run links the block compiled from source (unlinkedCodeBlockFor).
+        bool accepted = false;
+        if (RefPtr<JSC::CachedBytecode> cachedBytecode = unwrapCachedData(cachedData.span())) {
+            JSC::LexicallyScopedFeatures lexicallyScopedFeatures = globalObject->globalScopeExtension() ? JSC::TaintedByWithScopeLexicallyScopedFeature : JSC::NoLexicallyScopedFeatures;
+            JSC::SourceCodeKey key(script->source(), {}, JSC::SourceCodeType::ProgramType, lexicallyScopedFeatures, JSC::JSParserScriptMode::Classic, JSC::DerivedContextType::None, JSC::EvalContextType::None, false, {}, std::nullopt);
+            accepted = !!JSC::decodeCodeBlock<UnlinkedProgramCodeBlock>(vm, key, cachedBytecode.releaseNonNull());
+        }
+        script->cachedDataRejected(accepted ? TriState::False : TriState::True);
+        cachedData = {};
+    } else if (script->options().produceCachedData)
         script->cacheBytecode();
 
     return JSValue::encode(script);
@@ -198,7 +208,7 @@ JSC::UnlinkedProgramCodeBlock* NodeVMScript::unlinkedCodeBlockFor(JSGlobalObject
     if (m_unlinkedCodeBlock && m_unlinkedCodeBlock->codeGenerationMode() == codeGenerationMode)
         return m_unlinkedCodeBlock.get();
 
-    // The CodeCache records the parse on the executable it is given, so each compile gets a fresh one; every run links its own anyway.
+    // The CodeCache records the parse on the executable passed to it, and every run links its own executable.
     JSC::UnlinkedProgramCodeBlock* block = vm.codeCache()->getUnlinkedProgramCodeBlock(vm, JSC::ProgramExecutable::create(globalObject, m_source), m_source, codeGenerationMode, error);
     if (block)
         m_unlinkedCodeBlock.set(vm, this, block);
@@ -211,22 +221,6 @@ JSValue NodeVMScript::evaluate(JSGlobalObject* globalObject, NakedPtr<JSC::Excep
     // JSC::evaluate reports the failure the way it always has, by compiling itself.
     JSC::ParserError ignoredError;
     return JSC::evaluate(globalObject, m_source, unlinkedCodeBlockFor(globalObject, ignoredError), globalObject, exception);
-}
-
-bool NodeVMScript::adoptCachedData(JSGlobalObject* globalObject)
-{
-    VM& vm = JSC::getVM(globalObject);
-    JSC::LexicallyScopedFeatures lexicallyScopedFeatures = globalObject->globalScopeExtension() ? JSC::TaintedByWithScopeLexicallyScopedFeature : JSC::NoLexicallyScopedFeatures;
-    JSC::SourceCodeKey key(m_source, {}, JSC::SourceCodeType::ProgramType, lexicallyScopedFeatures, JSC::JSParserScriptMode::Classic, JSC::DerivedContextType::None, JSC::EvalContextType::None, false, {}, std::nullopt);
-    Ref<JSC::CachedBytecode> cachedBytecode = NodeVM::createOwnedCachedBytecode(m_options.cachedData.span());
-    JSC::UnlinkedProgramCodeBlock* block = JSC::decodeCodeBlock<JSC::UnlinkedProgramCodeBlock>(vm, key, WTF::move(cachedBytecode));
-    if (!block) {
-        m_cachedDataRejected = TriState::True;
-        return false;
-    }
-    m_unlinkedCodeBlock.set(vm, this, block);
-    m_cachedDataRejected = TriState::False;
-    return true;
 }
 
 void NodeVMScript::cacheBytecode()
@@ -248,8 +242,7 @@ JSC::JSUint8Array* NodeVMScript::getBytecodeBuffer()
         if (!m_cachedBytecode)
             return nullptr;
 
-        std::span<const uint8_t> bytes = m_cachedBytecode->span();
-        m_cachedBytecodeBuffer.set(vm(), this, WebCore::createBuffer(globalObject(), bytes));
+        m_cachedBytecodeBuffer.set(vm(), this, createCachedDataBuffer(globalObject(), m_cachedBytecode->span()));
         RETURN_IF_EXCEPTION(scope, nullptr);
         if (!m_cachedBytecodeBuffer) {
             return nullptr;
@@ -327,8 +320,10 @@ static JSC::EncodedJSValue runInContext(NodeVMGlobalObject* globalObject, NodeVM
         }
     }
 
-    // Set the contextified object before evaluating
-    globalObject->setContextifiedObject(contextifiedObject);
+    // Using a global's own proxy as its sandbox would recurse forever.
+    if (auto* proxy = dynamicDowncast<JSC::JSGlobalProxy>(contextifiedObject); !proxy || proxy->target() != globalObject) {
+        globalObject->setContextifiedObject(contextifiedObject);
+    }
 
     NakedPtr<JSC::Exception> exception;
     JSValue result {};
@@ -358,6 +353,12 @@ static JSC::EncodedJSValue runInContext(NodeVMGlobalObject* globalObject, NodeVM
     RELEASE_AND_RETURN(scope, JSValue::encode(result));
 }
 
+// In a bare call `this` is the caller's scope object. toThis() converts it to undefined, which is what a strict JS callee sees.
+static EncodedJSValue throwThisIsNotAScript(JSGlobalObject* globalObject, ThrowScope& scope, JSValue thisValue)
+{
+    return ERR::INVALID_ARG_VALUE(scope, globalObject, "this"_s, thisValue.toThis(globalObject, ECMAMode::strict()), "must be a Script"_s);
+}
+
 JSC_DEFINE_HOST_FUNCTION(scriptRunInThisContext, (JSGlobalObject * globalObject, CallFrame* callFrame))
 {
     VM& vm = JSC::getVM(globalObject);
@@ -366,7 +367,7 @@ JSC_DEFINE_HOST_FUNCTION(scriptRunInThisContext, (JSGlobalObject * globalObject,
     JSValue thisValue = callFrame->thisValue();
     auto* script = dynamicDowncast<NodeVMScript>(thisValue);
     if (!script) [[unlikely]] {
-        return ERR::INVALID_ARG_VALUE(scope, globalObject, "this"_s, thisValue, "must be a Script"_s);
+        return throwThisIsNotAScript(globalObject, scope, thisValue);
     }
 
     JSValue optionsArg = callFrame->argument(0);
@@ -407,7 +408,7 @@ JSC_DEFINE_CUSTOM_GETTER(scriptGetSourceMapURL, (JSGlobalObject * globalObject, 
     JSValue thisValue = JSValue::decode(thisValueEncoded);
     auto* script = dynamicDowncast<NodeVMScript>(thisValue);
     if (!script) [[unlikely]] {
-        return ERR::INVALID_ARG_VALUE(scope, globalObject, "this"_s, thisValue, "must be a Script"_s);
+        return throwThisIsNotAScript(globalObject, scope, thisValue);
     }
 
     // Populated by the compile in the constructor (a CodeCache hit copies it over too).
@@ -426,7 +427,7 @@ JSC_DEFINE_CUSTOM_GETTER(scriptGetCachedData, (JSGlobalObject * globalObject, JS
     JSValue thisValue = JSValue::decode(thisValueEncoded);
     auto* script = dynamicDowncast<NodeVMScript>(thisValue);
     if (!script) [[unlikely]] {
-        return ERR::INVALID_ARG_VALUE(scope, globalObject, "this"_s, thisValue, "must be a Script"_s);
+        return throwThisIsNotAScript(globalObject, scope, thisValue);
     }
 
     scope.assertNoExceptionExceptTermination();
@@ -443,7 +444,7 @@ JSC_DEFINE_CUSTOM_GETTER(scriptGetCachedDataProduced, (JSGlobalObject * globalOb
     JSValue thisValue = JSValue::decode(thisValueEncoded);
     auto* script = dynamicDowncast<NodeVMScript>(thisValue);
     if (!script) [[unlikely]] {
-        return ERR::INVALID_ARG_VALUE(scope, globalObject, "this"_s, thisValue, "must be a Script"_s);
+        return throwThisIsNotAScript(globalObject, scope, thisValue);
     }
 
     scope.assertNoExceptionExceptTermination();
@@ -457,7 +458,7 @@ JSC_DEFINE_CUSTOM_GETTER(scriptGetCachedDataRejected, (JSGlobalObject * globalOb
     JSValue thisValue = JSValue::decode(thisValueEncoded);
     auto* script = dynamicDowncast<NodeVMScript>(thisValue);
     if (!script) [[unlikely]] {
-        return ERR::INVALID_ARG_VALUE(scope, globalObject, "this"_s, thisValue, "must be a Script"_s);
+        return throwThisIsNotAScript(globalObject, scope, thisValue);
     }
 
     switch (script->cachedDataRejected()) {
@@ -478,7 +479,7 @@ JSC_DEFINE_HOST_FUNCTION(scriptCreateCachedData, (JSGlobalObject * globalObject,
     JSValue thisValue = callFrame->thisValue();
     auto* script = dynamicDowncast<NodeVMScript>(thisValue);
     if (!script) [[unlikely]] {
-        return ERR::INVALID_ARG_VALUE(scope, globalObject, "this"_s, thisValue, "must be a Script"_s);
+        return throwThisIsNotAScript(globalObject, scope, thisValue);
     }
 
     const JSC::SourceCode& source = script->source();
@@ -493,7 +494,7 @@ JSC_DEFINE_HOST_FUNCTION(scriptRunInContext, (JSGlobalObject * globalObject, Cal
     JSValue thisValue = callFrame->thisValue();
     auto* script = dynamicDowncast<NodeVMScript>(thisValue);
     if (!script) [[unlikely]] {
-        return ERR::INVALID_ARG_VALUE(scope, globalObject, "this"_s, thisValue, "must be a Script"_s);
+        return throwThisIsNotAScript(globalObject, scope, thisValue);
     }
 
     ArgList args(callFrame);
@@ -532,6 +533,13 @@ JSC_DEFINE_HOST_FUNCTION(scriptRunInNewContext, (JSGlobalObject * globalObject, 
     getNodeVMContextOptions(globalObject, vm, scope, contextOptionsArg, contextOptions, optionNames(vm).contextCodeGeneration(vm), &importer);
     RETURN_IF_EXCEPTION(scope, {});
 
+    // vm.ts runInNewContext() passes the DONT_CONTEXTIFY global created by createContext().
+    if (auto* proxy = dynamicDowncast<JSC::JSGlobalProxy>(contextObjectValue)) {
+        if (auto* existing = dynamicDowncast<NodeVMGlobalObject>(proxy->target()); existing && existing->isNotContextified()) {
+            RELEASE_AND_RETURN(scope, runInContext(existing, script, proxy, contextOptionsArg));
+        }
+    }
+
     contextOptions.notContextified = notContextified;
 
     auto* zigGlobalObject = defaultGlobalObject(globalObject);
@@ -542,10 +550,7 @@ JSC_DEFINE_HOST_FUNCTION(scriptRunInNewContext, (JSGlobalObject * globalObject, 
     RETURN_IF_EXCEPTION(scope, {});
 
     if (notContextified) {
-        auto* specialSandbox = NodeVMSpecialSandbox::create(vm, targetContext);
-        RETURN_IF_EXCEPTION(scope, {});
-        targetContext->setSpecialSandbox(specialSandbox);
-        RELEASE_AND_RETURN(scope, runInContext(targetContext, script, targetContext->specialSandbox(), callFrame->argument(1)));
+        RELEASE_AND_RETURN(scope, runInContext(targetContext, script, targetContext->globalThis(), callFrame->argument(1)));
     }
 
     RELEASE_AND_RETURN(scope, runInContext(targetContext, script, context, callFrame->argument(1)));

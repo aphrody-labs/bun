@@ -64,12 +64,14 @@ fn dangerously_run_without_jit_protections<R>(func: impl FnOnce() -> R) -> R {
     func()
 }
 
+/// Mirrors `FFIFields` in `src/jsc/bindings/ffi.cpp`.
 #[repr(C)]
 struct Offsets {
     js_array_buffer_view_offset_of_length: u32,
     js_array_buffer_view_offset_of_byte_offset: u32,
     js_array_buffer_view_offset_of_vector: u32,
     js_cell_offset_of_type: u32,
+    call_frame_argument_count_including_this_slot: u32,
 }
 
 unsafe extern "C" {
@@ -148,10 +150,14 @@ fn create_jsc_ffi_function(
 mod exposed_to_ffi {
     use super::{JSGlobalObject, JSValue};
     unsafe extern "C" {
-        #[link_name = "JSC__JSValue__toInt64"]
-        pub(super) fn JSVALUE_TO_INT64(value: JSValue) -> i64;
-        #[link_name = "JSC__JSValue__toUInt64NoTruncate"]
-        pub(super) fn JSVALUE_TO_UINT64(value: JSValue) -> u64;
+        /// Defined in `JSCFFIBridge.cpp`.
+        #[link_name = "Bun__FFI__jsValueToSlotSlow"]
+        pub(super) fn JSVALUE_TO_SLOT_SLOW(
+            global: *mut JSGlobalObject,
+            abi_type: i32,
+            threw: *mut bool,
+            value: JSValue,
+        ) -> u64;
         #[link_name = "JSC__JSValue__fromInt64NoTruncate"]
         pub(super) fn INT64_TO_JSVALUE(global: *mut JSGlobalObject, i: i64) -> JSValue;
         #[link_name = "JSC__JSValue__fromUInt64NoTruncate"]
@@ -1224,7 +1230,7 @@ impl FFI {
             object.get_own(global_this, &bun_core::String::borrow_utf8(b"source"))?
         {
             if source_value.is_array() {
-                compile_c.source = Source::Files(Vec::new());
+                let mut files = Vec::new();
                 let mut iter = source_value.array_iterator(global_this)?;
                 while let Some(value) = iter.next()? {
                     if !value.is_string() {
@@ -1234,10 +1240,16 @@ impl FFI {
                             value,
                         ));
                     }
-                    if let Source::Files(files) = &mut compile_c.source {
-                        files.push(value.to_bun_string(global_this)?.to_owned_slice_z());
-                    }
+                    files.push(value.to_bun_string(global_this)?.to_owned_slice_z());
                 }
+                if files.is_empty() {
+                    return Err(global_this.throw_invalid_argument_value_custom(
+                        b"source",
+                        source_value,
+                        b"must have at least one file",
+                    ));
+                }
+                compile_c.source = Source::Files(files);
             } else if !source_value.is_string() {
                 return Err(global_this.throw_invalid_argument_type_value(
                     b"source",
@@ -1306,7 +1318,9 @@ impl FFI {
         let napi_env = make_napi_env_if_needed(compile_c.symbols.map.values(), global_this);
 
         let obj = JSValue::create_empty_object(global_this, compile_c.symbols.map.len());
-        for function in compile_c.symbols.map.values_mut() {
+        // `close()` closes the functions in this array. It can't use `obj` because JS can modify it.
+        let functions = JSValue::create_empty_array(global_this, compile_c.symbols.map.len())?;
+        for (i, function) in (0u32..).zip(compile_c.symbols.map.values_mut()) {
             // Clone the name before `compile(&mut self)` so the
             // immutable borrow of `function.base_name` doesn't overlap.
             let function_name = function.base_name.clone();
@@ -1341,6 +1355,7 @@ impl FFI {
                     );
                     // `cb` is rooted by the `symbolsValue` cached own-property set below.
                     obj.put(global_this, symbol_name, cb);
+                    functions.put_index(global_this, i, cb)?;
                 }
             }
         }
@@ -1355,6 +1370,11 @@ impl FFI {
 
         let js_object = lib.to_js(global_this);
         symbols_value_set_cached(js_object, global_this, obj);
+        crate::generated_classes::js_FFI::functions_value_set_cached(
+            js_object,
+            global_this,
+            functions,
+        );
         Ok(js_object)
     }
 
@@ -1427,8 +1447,26 @@ impl FFI {
     }
 
     #[bun_jsc::host_fn(method)]
-    pub(crate) fn close(&self, _global_this: &JSGlobalObject, _: &CallFrame) -> JsResult<JSValue> {
+    pub(crate) fn close(
+        &self,
+        global_this: &JSGlobalObject,
+        callframe: &CallFrame,
+    ) -> JsResult<JSValue> {
+        unsafe extern "C" {
+            fn Bun__FFI__closeFunctions(global: *const JSGlobalObject, library: JSValue) -> bool;
+        }
         jsc::mark_binding();
+        // SAFETY: thin FFI wrapper. The C++ side type-checks the cell (dynamicDowncast) before use.
+        let is_running = unsafe { Bun__FFI__closeFunctions(global_this, callframe.this()) };
+        if is_running {
+            // The running call returns into the compiled code, so leak it instead of letting `do_close` free it.
+            self.shared_state.set(None);
+            self.functions.with_mut(|functions| {
+                for function in functions.values_mut() {
+                    function.state = None;
+                }
+            });
+        }
         self.do_close();
         Ok(JSValue::UNDEFINED)
     }
@@ -1441,7 +1479,16 @@ impl FFI {
         if let Some(dylib) = self.dylib.replace(None) {
             dylib.close();
         }
-        if let Some(state) = self.shared_state.take() {
+        // C code with a `napi_env` can register callbacks into itself that are never unregistered, so leak it.
+        let has_napi_env = self
+            .functions
+            .get()
+            .values()
+            .iter()
+            .any(Function::needs_napi_env);
+        if let Some(state) = self.shared_state.take()
+            && !has_napi_env
+        {
             // SAFETY: state is a valid TCC::State pointer; we have exclusive ownership
             unsafe { TCC::State::destroy(state.as_ptr()) };
         }
@@ -1686,7 +1733,14 @@ impl FFI {
                         return ret;
                     }
                 };
-            obj.put(global, symbol_name, cb);
+            // Symbol names are user input, so one can be an array index like "0".
+            let key = bun_core::String::borrow_utf8(function_name.as_bytes());
+            if let Err(err) = obj.put_may_be_index(global, &key, cb) {
+                dylib.close();
+                // SAFETY: lib_ptr is the live, JS-owned FFI allocation (from into_raw).
+                unsafe { &*lib_ptr }.do_close();
+                return Err(err);
+            }
         }
 
         // SAFETY: lib_ptr is the live, JS-owned FFI allocation (from into_raw).
@@ -1771,7 +1825,13 @@ impl FFI {
                         return err;
                     }
                 };
-            obj.put(global, symbol_name, cb);
+            // Symbol names are user input, so one can be an array index like "0".
+            let key = bun_core::String::borrow_utf8(function_name.as_bytes());
+            if let Err(err) = obj.put_may_be_index(global, &key, cb) {
+                // SAFETY: lib_ptr is the live, JS-owned FFI allocation (from into_raw).
+                unsafe { &*lib_ptr }.do_close();
+                return Err(err);
+            }
         }
 
         // SAFETY: lib_ptr is the live, JS-owned FFI allocation (from into_raw).
@@ -2221,34 +2281,72 @@ impl Function {
               ZIG_REPR_TYPE JSFunctionCall(void* JS_GLOBAL_OBJECT, void* callFrame) {\n",
         )?;
 
-        // Every argument is validated before the target is called: a value of
-        // the wrong JS type (or a missing one) throws a TypeError instead of
-        // being reinterpreted as raw bits.
         if !self.arg_types.is_empty() {
-            writer.write_all(
-                b"  LOAD_ARGUMENTS_FROM_CALL_FRAME;\n  LOAD_ARGUMENT_COUNT_FROM_CALL_FRAME;\n",
+            writeln!(
+                writer,
+                "  LOAD_ARGUMENTS_FROM_CALL_FRAME({});",
+                self.arg_types.len()
             )?;
             for (i, arg) in self.arg_types.iter().enumerate() {
                 if *arg == ABIType::NapiEnv {
+                    write!(
+                        writer,
+                        "  napi_env arg{} = (napi_env)&Bun__thisFFIModuleNapiEnv;\n  argsPtr++;\n",
+                        i
+                    )?;
+                } else if *arg == ABIType::NapiValue {
                     writeln!(
                         writer,
-                        "  napi_env arg{i} = (napi_env)&Bun__thisFFIModuleNapiEnv;"
+                        "  EncodedJSValue arg{} = {{ .asInt64 = *argsPtr++ }};",
+                        i
                     )?;
-                    continue;
-                }
-                writeln!(writer, "  EncodedJSValue arg{i} = LOAD_ARGUMENT({i});")?;
-                match arg_check_kind(*arg) {
-                    ArgCheck::None => {}
-                    ArgCheck::Number(kind) => writeln!(
-                        writer,
-                        "  if (!JSVALUE_CHECK_NUMBER(JS_GLOBAL_OBJECT, arg{i}, {i}, {kind})) return 0;"
-                    )?,
-                    ArgCheck::Pointer(kind) => writeln!(
-                        writer,
-                        "  void* parg{i};\n  if (!JSVALUE_TO_PTR_CHECKED(JS_GLOBAL_OBJECT, arg{i}, {i}, {kind}, &parg{i})) return 0;"
-                    )?,
+                } else if arg.needs_a_cast_in_c() {
+                    if i < self.arg_types.len() - 1 {
+                        writeln!(
+                            writer,
+                            "  EncodedJSValue arg{} = {{ .asInt64 = *argsPtr++ }};",
+                            i
+                        )?;
+                    } else {
+                        write!(
+                            writer,
+                            "  EncodedJSValue arg{};\n  arg{}.asInt64 = *argsPtr;\n",
+                            i, i
+                        )?;
+                    }
+                } else {
+                    if i < self.arg_types.len() - 1 {
+                        writeln!(writer, "  int64_t arg{} = *argsPtr++;", i)?;
+                    } else {
+                        writeln!(writer, "  int64_t arg{} = *argsPtr;", i)?;
+                    }
                 }
             }
+        }
+
+        let mut arg_buf = [0u8; 512];
+        arg_buf[0..3].copy_from_slice(b"arg");
+
+        // Convert first so a conversion that throws returns before the handle scope opens and the native call runs.
+        let mut declared_threw = false;
+        for (i, arg) in self.arg_types.iter().enumerate() {
+            if !arg.arg_conversion_can_throw() {
+                continue;
+            }
+            if !declared_threw {
+                declared_threw = true;
+                writer.write_all(b"  bool threw = false;\n")?;
+            }
+            let length_buf = bun_core::fmt::print_int(&mut arg_buf[3..], i);
+            let arg_name = &arg_buf[0..3 + length_buf];
+            writer.write_all(b"  ")?;
+            arg.typename(writer)?;
+            write!(
+                writer,
+                " converted{} = {};\n  if (threw) return 0;\n",
+                i,
+                arg.to_c(arg_name)
+            )?;
         }
 
         if self.needs_handle_scope() {
@@ -2257,8 +2355,6 @@ impl Function {
             )?;
         }
 
-        let mut arg_buf = [0u8; 512];
-
         writer.write_all(b"    ")?;
         if self.return_type != ABIType::Void {
             self.return_type.typename(writer)?;
@@ -2266,7 +2362,6 @@ impl Function {
         }
         write!(writer, "{}(", BStr::new(self.base_name.as_bytes()))?;
         first = true;
-        arg_buf[0..3].copy_from_slice(b"arg");
         for (i, arg) in self.arg_types.iter().enumerate() {
             if !first {
                 writer.write_all(b", ")?;
@@ -2276,10 +2371,12 @@ impl Function {
 
             let length_buf = bun_core::fmt::print_int(&mut arg_buf[3..], i);
             let arg_name = &arg_buf[0..3 + length_buf];
-            match arg_check_kind(*arg) {
-                ArgCheck::Pointer(_) => write!(writer, "parg{i}")?,
-                _ if *arg == ABIType::NapiEnv => writer.write_all(arg_name)?,
-                _ => write!(writer, "{}", arg.to_c(arg_name))?,
+            if arg.arg_conversion_can_throw() {
+                write!(writer, "converted{}", i)?;
+            } else if arg.needs_a_cast_in_c() {
+                write!(writer, "{}", arg.to_c(arg_name))?;
+            } else {
+                writer.write_all(arg_name)?;
             }
         }
         writer.write_all(b");\n")?;
@@ -2292,7 +2389,8 @@ impl Function {
 
         if self.needs_handle_scope() {
             writer.write_all(
-                b"  NapiHandleScope__close(&Bun__thisFFIModuleNapiEnv, handleScope);\n",
+                b"  NapiHandleScope__close(&Bun__thisFFIModuleNapiEnv, handleScope);\n\
+                  \x20   if (NapiEnv__throwPendingException(&Bun__thisFFIModuleNapiEnv)) return 0;\n",
             )?;
         }
 
@@ -2368,113 +2466,6 @@ impl Default for Compiled {
 // ─── ABIType ────────────────────────────────────────────────────────────────
 use super::abi_type::ABIType;
 
-// Mirrors FFI_ARG_KIND_* in FFI.h.
-const FFI_ARG_KIND_NUMBER: i32 = 0;
-const FFI_ARG_KIND_INT64: i32 = 1;
-const FFI_ARG_KIND_PTR: i32 = 2;
-const FFI_ARG_KIND_FUNCTION: i32 = 3;
-const FFI_ARG_KIND_BUFFER: i32 = 4;
-
-enum ArgCheck {
-    None,
-    Number(i32),
-    Pointer(i32),
-}
-
-fn arg_check_kind(arg: ABIType) -> ArgCheck {
-    match arg {
-        ABIType::Char
-        | ABIType::Int8T
-        | ABIType::Uint8T
-        | ABIType::Int16T
-        | ABIType::Uint16T
-        | ABIType::Int32T
-        | ABIType::Uint32T
-        | ABIType::Double
-        | ABIType::Float => ArgCheck::Number(FFI_ARG_KIND_NUMBER),
-        ABIType::Int64T
-        | ABIType::Uint64T
-        | ABIType::I64Fast
-        | ABIType::U64Fast
-        | ABIType::BufferLength => ArgCheck::Number(FFI_ARG_KIND_INT64),
-        ABIType::Ptr | ABIType::CString => ArgCheck::Pointer(FFI_ARG_KIND_PTR),
-        ABIType::Function => ArgCheck::Pointer(FFI_ARG_KIND_FUNCTION),
-        ABIType::Buffer => ArgCheck::Pointer(FFI_ARG_KIND_BUFFER),
-        ABIType::Bool | ABIType::Void | ABIType::NapiEnv | ABIType::NapiValue => ArgCheck::None,
-    }
-}
-
-fn throw_ffi_argument_type(global: &JSGlobalObject, value: JSValue, index: i32, kind: i32) {
-    let expected: &[u8] = match kind {
-        FFI_ARG_KIND_INT64 => b"number or bigint",
-        FFI_ARG_KIND_PTR => b"number, bigint, TypedArray, ArrayBuffer, DataView or null",
-        FFI_ARG_KIND_FUNCTION => b"JSCallback, number, bigint or null",
-        FFI_ARG_KIND_BUFFER => b"TypedArray, ArrayBuffer or DataView",
-        _ => b"number",
-    };
-    let mut name = Vec::new();
-    let _ = write!(&mut name, "arguments[{index}]");
-    let _ = global.throw_invalid_argument_type_value(name, expected, value);
-}
-
-/// `JSVALUE_ARGUMENT_SLOW` in FFI.h: the value failed the inline number check.
-extern "C" fn jsvalue_argument_slow(
-    global: *mut JSGlobalObject,
-    value: JSValue,
-    index: i32,
-    kind: i32,
-) -> bool {
-    // SAFETY: TCC trampolines pass the live global object they were called with.
-    let global = unsafe { &*global };
-    if kind == FFI_ARG_KIND_INT64 && value.is_big_int() {
-        return true;
-    }
-    throw_ffi_argument_type(global, value, index, kind);
-    false
-}
-
-/// `JSVALUE_TO_PTR_SLOW` in FFI.h: anything that is not null, a typed array
-/// or a number.
-extern "C" fn jsvalue_to_ptr_slow(
-    global: *mut JSGlobalObject,
-    value: JSValue,
-    index: i32,
-    kind: i32,
-    out: *mut *mut c_void,
-) -> bool {
-    // SAFETY: TCC trampolines pass the live global object they were called with
-    // and a pointer to a local `void*`.
-    let (global, out) = unsafe { (&*global, &mut *out) };
-    if kind != FFI_ARG_KIND_BUFFER {
-        if value.is_big_int() {
-            *out = value.to_uint64_no_truncate() as usize as *mut c_void;
-            return true;
-        }
-        // `CString` and `JSCallback` carry their address in `.ptr`.
-        if value.is_object() && value.as_array_buffer(global).is_none() {
-            match value.get(global, "ptr") {
-                Ok(Some(p)) if p.is_number() => {
-                    *out = p.as_number() as usize as *mut c_void;
-                    return true;
-                }
-                Ok(Some(p)) if p.is_big_int() => {
-                    *out = p.to_uint64_no_truncate() as usize as *mut c_void;
-                    return true;
-                }
-                Ok(_) => {}
-                Err(_) => return false,
-            }
-        }
-    }
-    if value.is_object() {
-        if let Some(buffer) = value.as_array_buffer(global) {
-            *out = buffer.ptr.cast::<c_void>();
-            return true;
-        }
-    }
-    throw_ffi_argument_type(global, value, index, kind);
-    false
-}
 
 // ─── CompilerRT ─────────────────────────────────────────────────────────────
 
@@ -2718,6 +2709,10 @@ impl CompilerRT {
                 bun_jsc::sizes::BUN_FFI_POINTER_OFFSET_TO_ARGUMENTS_LIST as i64,
             ),
             (
+                "Bun_FFI_PointerOffsetToArgumentCountIncludingThis",
+                offsets.call_frame_argument_count_including_this_slot as i64,
+            ),
+            (
                 "JSArrayBufferView__offsetOfLength",
                 offsets.js_array_buffer_view_offset_of_length as i64,
             ),
@@ -2755,6 +2750,7 @@ impl CompilerRT {
         unsafe extern "C" {
             fn NapiHandleScope__open(env: *mut napi::NapiEnv, escapable: bool) -> *mut c_void;
             fn NapiHandleScope__close(env: *mut napi::NapiEnv, current: *mut c_void);
+            fn NapiEnv__throwPendingException(env: *mut napi::NapiEnv) -> bool;
         }
         state
             .add_symbol(
@@ -2768,17 +2764,17 @@ impl CompilerRT {
                 NapiHandleScope__close as *const c_void,
             )
             .expect("unreachable");
+        state
+            .add_symbol(
+                zstr!("NapiEnv__throwPendingException"),
+                NapiEnv__throwPendingException as *const c_void,
+            )
+            .expect("unreachable");
 
         state
             .add_symbol(
-                zstr!("JSVALUE_TO_INT64_SLOW"),
-                WORKAROUND.jsvalue_to_int64 as *const c_void,
-            )
-            .expect("unreachable");
-        state
-            .add_symbol(
-                zstr!("JSVALUE_TO_UINT64_SLOW"),
-                WORKAROUND.jsvalue_to_uint64 as *const c_void,
+                zstr!("JSVALUE_TO_SLOT_SLOW"),
+                exposed_to_ffi::JSVALUE_TO_SLOT_SLOW as *const c_void,
             )
             .expect("unreachable");
         state
@@ -2791,18 +2787,6 @@ impl CompilerRT {
             .add_symbol(
                 zstr!("UINT64_TO_JSVALUE_SLOW"),
                 WORKAROUND.uint64_to_jsvalue as *const c_void,
-            )
-            .expect("unreachable");
-        state
-            .add_symbol(
-                zstr!("JSVALUE_ARGUMENT_SLOW"),
-                jsvalue_argument_slow as *const c_void,
-            )
-            .expect("unreachable");
-        state
-            .add_symbol(
-                zstr!("JSVALUE_TO_PTR_SLOW"),
-                jsvalue_to_ptr_slow as *const c_void,
             )
             .expect("unreachable");
         atomics::inject(state);
@@ -2983,15 +2967,11 @@ mod atomics {
 }
 
 struct MyFunctionSStructWorkAround {
-    jsvalue_to_int64: unsafe extern "C" fn(JSValue) -> i64,
-    jsvalue_to_uint64: unsafe extern "C" fn(JSValue) -> u64,
     int64_to_jsvalue: unsafe extern "C" fn(*mut JSGlobalObject, i64) -> JSValue,
     uint64_to_jsvalue: unsafe extern "C" fn(*mut JSGlobalObject, u64) -> JSValue,
 }
 
 static WORKAROUND: MyFunctionSStructWorkAround = MyFunctionSStructWorkAround {
-    jsvalue_to_int64: exposed_to_ffi::JSVALUE_TO_INT64,
-    jsvalue_to_uint64: exposed_to_ffi::JSVALUE_TO_UINT64,
     int64_to_jsvalue: exposed_to_ffi::INT64_TO_JSVALUE,
     uint64_to_jsvalue: exposed_to_ffi::UINT64_TO_JSVALUE,
 };

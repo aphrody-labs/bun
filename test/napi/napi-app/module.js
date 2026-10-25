@@ -1949,6 +1949,38 @@ nativeTests.test_ungated_calls_worker_terminate = async () => {
   }
 };
 
+nativeTests.test_async_work_worker_terminate = async () => {
+  const { Worker } = require("node:worker_threads");
+  const path = require("node:path");
+  const report = new Int32Array(new SharedArrayBuffer(8));
+  const worker = new Worker(
+    `globalThis.buffer = require(${JSON.stringify(path.join(__dirname, "build/Debug/napitests.node"))})
+      .async_work_with_external_buffer(require("node:worker_threads").workerData);`,
+    { eval: true, workerData: report },
+  );
+  const { promise: failed, reject } = Promise.withResolvers();
+  worker.once("error", reject);
+  while (Atomics.load(report, 0) === 0) await Promise.race([failed, new Promise(resolve => setImmediate(resolve))]);
+  console.log("terminate() resolved with", await worker.terminate());
+  console.log("finalized during execute():", report[1]);
+};
+
+nativeTests.test_gated_calls_worker_terminate = async () => {
+  const { Worker } = require("node:worker_threads");
+  const path = require("node:path");
+  const report = new Int32Array(new SharedArrayBuffer(12));
+  const worker = new Worker(
+    `require(${JSON.stringify(path.join(__dirname, "build/Debug/napitests.node"))})
+      .gated_calls_until_terminated(require("node:worker_threads").workerData);`,
+    { eval: true, workerData: report },
+  );
+  const { promise: failed, reject } = Promise.withResolvers();
+  worker.once("error", reject);
+  while (Atomics.load(report, 0) === 0) await Promise.race([failed, new Promise(resolve => setImmediate(resolve))]);
+  console.log("terminate() resolved with", await worker.terminate());
+  console.log("napi_throw:", report[1], "exception pending:", report[2]);
+};
+
 // See ungated_calls_through_timeout in standalone_tests.cpp: 600ms of ungated
 // calls under a 150ms timeout. The timeout is wall-clock from the start of the
 // run, so it must comfortably cover reaching the addon on the slowest lane.
