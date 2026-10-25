@@ -240,8 +240,6 @@ const nativeFiles = [
   "JSEventTargetNode.cpp",
   "JSInspectorProfiler.cpp",
   "JSMIMEParams.cpp",
-  "JSNodePerformanceHooksHistogram.cpp",
-  "JSNodePerformanceHooksHistogramPrototype.cpp",
   "JSSQLStatement.cpp",
   "JSWebSocket.cpp",
   "NoOpForTesting.cpp",

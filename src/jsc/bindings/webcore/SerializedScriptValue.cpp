@@ -3495,7 +3495,7 @@ private:
             return JSValue();
         }
         // The classes are written in JavaScript.
-        JSValue module = globalObject->internalModuleRegistry()->requireId(globalObject, vm, Bun::InternalModuleRegistry::InternalPerfHooksHistogram);
+        JSValue module = BUN_REQUIRE_INTERNAL_MODULE(globalObject, InternalPerfHooksHistogram, "structuredClone", "adopt"_s);
         RETURN_IF_EXCEPTION(scope, JSValue());
         JSValue adopt = module.get(globalObject, Identifier::fromString(vm, "adopt"_s));
         RETURN_IF_EXCEPTION(scope, JSValue());
