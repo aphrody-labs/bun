@@ -1,5 +1,6 @@
 //! `Bun.Archive` — tar/tgz/zip pack + extract over libarchive.
 
+use bun_jsc::bindgen::{JsLocal, JsScope};
 use std::ffi::CString;
 
 use crate::webcore::Blob;
@@ -10,7 +11,7 @@ use crate::webcore::node_types::PathOrFileDescriptor;
 use bun_core::{self, EncodedSlice, Output, Utf8Bytes, ZBox, strings};
 use bun_glob as glob;
 use bun_jsc::{
-    self as jsc, CallFrame, JSGlobalObject, JSMap, JSPromise, JSPromiseStrong, JSValue, JsResult,
+    self as jsc, JSGlobalObject, JSMap, JSPromise, JSPromiseStrong, JSValue, JsResult,
 };
 use bun_jsc::{EncodedSliceJsc as _, StringJsc as _, SysErrorJsc as _};
 use bun_libarchive as libarchive;
@@ -301,18 +302,18 @@ impl ArchiveSource {
     }
 }
 
-// `jsc.Codegen.JSArchive` — codegen already emits `js_Archive`
-// (`generate-classes.ts:generateRust()`); route through it so the
-// `Archive__{fromJS,create,getConstructor}` externs are declared exactly once.
-bun_jsc::impl_js_class_via_generated!(Archive => crate::generated_classes::js_Archive);
 
 impl Archive {
     /// `Archive.write(path, data, options?)` static class fn — codegen
     /// (`ArchiveClass__write`) resolves it as an associated item on the struct,
     /// so forward to the module-level [`write`] body below.
-    #[inline]
-    pub(crate) fn write(global: &JSGlobalObject, callframe: &CallFrame) -> JsResult<JSValue> {
-        self::write(global, callframe)
+    pub(crate) fn write(
+        cx: &mut JsScope<'_>,
+        path: JsLocal<'_>,
+        data: JsLocal<'_>,
+        options: JsLocal<'_>,
+    ) -> JsResult<JSValue> {
+        write_impl(cx.global(), path.to_js(), data.to_js(), options.to_js())
     }
 
     /// Pretty-print for console.log
@@ -411,11 +412,19 @@ impl Archive {
     // NOTE: `#[bun_jsc::host_fn]` has no `constructor` kind yet; the
     // `JsClass` derive emits a `constructor` shim that calls this directly.
     pub(crate) fn constructor(
+        cx: &mut JsScope<'_>,
+        data: JsLocal<'_>,
+        options: JsLocal<'_>,
+    ) -> JsResult<Self> {
+        Self::construct_from(cx.global(), data.to_js(), options.to_js()).map(|archive| *archive)
+    }
+
+    fn construct_from(
         global: &JSGlobalObject,
-        callframe: &CallFrame,
+        data_arg: JSValue,
+        options_arg: JSValue,
     ) -> JsResult<Box<Archive>> {
-        let [data_arg, options_arg] = callframe.arguments_as_array::<2>();
-        if data_arg.is_empty() {
+        if data_arg.is_empty() || data_arg.is_undefined() {
             return Err(
                 global.throw_invalid_arguments(format_args!("new Archive() requires an argument"))
             );
@@ -795,11 +804,14 @@ fn get_entry_data<'a>(
 /// For Archive instances, uses the archive's compression settings unless overridden by options.
 /// Options:
 ///   - gzip: { level?: number } - Override compression settings
-#[bun_jsc::host_fn]
-pub(crate) fn write(global: &JSGlobalObject, callframe: &CallFrame) -> JsResult<JSValue> {
-    let cx = global.js_thread_of_caller(callframe);
-    let [path_arg, data_arg, options_arg] = callframe.arguments_as_array::<3>();
-    if data_arg.is_empty() {
+fn write_impl(
+    global: &JSGlobalObject,
+    path_arg: JSValue,
+    data_arg: JSValue,
+    options_arg: JSValue,
+) -> JsResult<JSValue> {
+    let cx = global.js_thread_of_caller();
+    if data_arg.is_empty() || data_arg.is_undefined() {
         return Err(global.throw_invalid_arguments(format_args!(
             "Archive.write requires 2 arguments (path, data)"
         )));
@@ -880,14 +892,15 @@ impl Archive {
     /// Options:
     ///   - glob: string | string[] - Only extract files matching the glob pattern(s). Supports negative patterns with "!".
     /// Returns Promise<number> with count of extracted files
-    #[bun_jsc::host_fn(method)]
     pub(crate) fn extract(
         &self,
-        global: &JSGlobalObject,
-        callframe: &CallFrame,
+        cx: &mut JsScope<'_>,
+        path: JsLocal<'_>,
+        options: JsLocal<'_>,
     ) -> JsResult<JSValue> {
-        let cx = global.js_thread_of_caller(callframe);
-        let [path_arg, options_arg] = callframe.arguments_as_array::<2>();
+        let global = cx.global();
+        let (path_arg, options_arg) = (path.to_js(), options.to_js());
+        let cx = global.js_thread_of_caller();
         if path_arg.is_empty() || !path_arg.is_string() {
             return Err(global.throw_invalid_arguments(format_args!(
                 "Archive.extract requires a path argument"
@@ -985,30 +998,24 @@ fn parse_pattern_arg(
 impl Archive {
     /// Instance method: archive.blob()
     /// Returns Promise<Blob> with the archive data (compressed if gzip was set in options)
-    #[bun_jsc::host_fn(method)]
-    pub(crate) fn blob(&self, global: &JSGlobalObject, frame: &CallFrame) -> JsResult<JSValue> {
-        let cx = global.js_thread_of_caller(frame);
+    pub(crate) fn blob(&self, cx: &mut JsScope<'_>) -> JsResult<JSValue> {
+        let cx = cx.js_thread();
         start_blob_task(&cx, &self.store, self.compress, BlobOutputType::Blob)
     }
 
     /// Instance method: archive.bytes()
     /// Returns Promise<Uint8Array> with the archive data (compressed if gzip was set in options)
-    #[bun_jsc::host_fn(method)]
-    pub(crate) fn bytes(&self, global: &JSGlobalObject, frame: &CallFrame) -> JsResult<JSValue> {
-        let cx = global.js_thread_of_caller(frame);
+    pub(crate) fn bytes(&self, cx: &mut JsScope<'_>) -> JsResult<JSValue> {
+        let cx = cx.js_thread();
         start_blob_task(&cx, &self.store, self.compress, BlobOutputType::Bytes)
     }
 
     /// Instance method: archive.files(glob?)
     /// Returns Promise<Map<string, File>> with archive file contents
-    #[bun_jsc::host_fn(method)]
-    pub(crate) fn files(
-        &self,
-        global: &JSGlobalObject,
-        callframe: &CallFrame,
-    ) -> JsResult<JSValue> {
-        let cx = global.js_thread_of_caller(callframe);
-        let glob_arg = callframe.argument(0);
+    pub(crate) fn files(&self, cx: &mut JsScope<'_>, glob: JsLocal<'_>) -> JsResult<JSValue> {
+        let global = cx.global();
+        let glob_arg = glob.to_js();
+        let cx = global.js_thread_of_caller();
 
         let mut glob_patterns: Option<Vec<GlobPattern>> = None;
         // errdefer freePatterns — handled by Drop

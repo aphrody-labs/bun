@@ -176,6 +176,9 @@ export interface ReplacementRule {
 export const function_replacements = [
   "$debug",
   "$assert",
+  // The fork's own native bindings; upstream's are bindgen schemas.
+  "$rust",
+  "$newRustFunction",
   "$cpp",
   "$newCppFunction",
   "$isPromiseFulfilled",
@@ -236,7 +239,8 @@ export function applyReplacements(src: string, length: number) {
         rest2,
         true,
       ];
-    } else if (["cpp", "newCppFunction"].includes(name)) {
+    } else if (["rust", "cpp", "newRustFunction", "newCppFunction"].includes(name)) {
+      const kind = name.includes("ust") ? "rust" : "cpp";
       const is_create_fn = name.startsWith("new");
 
       const inner = sliceSourceCode(rest, true);
@@ -266,7 +270,7 @@ export function applyReplacements(src: string, length: number) {
         }
       }
 
-      const id = registerNativeCall("cpp", args[0], args[1], is_create_fn ? args[2] : null);
+      const id = registerNativeCall(kind, args[0], args[1], is_create_fn ? args[2] : null);
 
       return [slice.slice(0, match.index) + "__intrinsic__lazy(" + id + ")", inner.rest, true];
     } else if (name === "isPromiseFulfilled" || name === "isPromiseRejected" || name === "isPromisePending") {

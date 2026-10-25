@@ -4359,7 +4359,9 @@ fn what_loading_gives(loader: Loader) -> Loaded {
         | Loader::Text
         | Loader::Yaml
         | Loader::Json5
-        | Loader::Xml => Loaded::Data,
+        | Loader::Xml
+        | Loader::Jsonl
+        | Loader::Ini => Loaded::Data,
     }
 }
 

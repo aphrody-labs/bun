@@ -3169,7 +3169,7 @@ fn apply_snapshot_serializers(
 
 /// The `printer`/`serialize` callback handed to snapshot serializers: formats a nested value.
 #[bun_jsc::host_fn]
-fn snapshot_serializer_printer(global: &JSGlobalObject, callframe: &CallFrame) -> JsResult<JSValue> {
+fn snapshot_serializer_printer(global: &JSGlobalObject, callframe: &bun_jsc::CallFrame) -> JsResult<JSValue> {
     let [value] = callframe.arguments_as_array::<1>();
     let mut out: Vec<u8> = Vec::new();
     write_snapshot_value(global, value, &mut out)?;
@@ -3178,7 +3178,7 @@ fn snapshot_serializer_printer(global: &JSGlobalObject, callframe: &CallFrame) -
 
 /// The `indent` callback of the legacy `print(val, serialize, indent)` serializer form.
 #[bun_jsc::host_fn]
-fn snapshot_serializer_indent(global: &JSGlobalObject, callframe: &CallFrame) -> JsResult<JSValue> {
+fn snapshot_serializer_indent(global: &JSGlobalObject, callframe: &bun_jsc::CallFrame) -> JsResult<JSValue> {
     let [value] = callframe.arguments_as_array::<1>();
     let text = value.to_utf8(global)?;
     let mut out: Vec<u8> = Vec::with_capacity(text.len() + 2);

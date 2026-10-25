@@ -670,6 +670,7 @@ public:
     void setNodeWorkerEntryEvaluatedHook(JSObject* hook);
 
     Bun::MarkdownTagStrings& markdownTagStrings() { return m_markdownTagStrings; }
+#include "ZigGeneratedClasses+lazyStructureHeader.h"
 
     void finishCreation(JSC::VM&);
 

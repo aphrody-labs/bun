@@ -15,6 +15,20 @@ pub(crate) struct Video {
     time: Cell<f64>,
 }
 
+/// Runs the Image method `name` on the Video's Image with the same arguments, and returns the Video.
+/// The Image is a bindgen class, so its methods are reached through JavaScript.
+fn forward_to_image(global: &JSGlobalObject, frame: &CallFrame, name: &'static str) -> JsResult<JSValue> {
+    let this = frame.this();
+    let Some(image) = js::image_get_cached(this) else {
+        return Err(global.throw_invalid_arguments(format_args!("Video has no image")));
+    };
+    let Some(method) = image.get(global, name)? else {
+        return Err(global.throw_invalid_arguments(format_args!("Image has no method {name}")));
+    };
+    method.call(global, image, frame.arguments())?;
+    Ok(this)
+}
+
 impl Video {
     pub(crate) fn constructor(
         global: &JSGlobalObject,
@@ -54,7 +68,9 @@ impl Video {
         value: JSValue,
         property: PropertyName,
     ) -> JsResult<JSValue> {
-        Image::get_backend(global, value, property)
+        let _ = (value, property);
+        // SAFETY: a getter of the Video wrapper runs on the JS thread, with the engine entered.
+        unsafe { bun_jsc::bindgen::JsScope::with(core::ptr::from_ref(global).cast_mut(), Image::get_backend) }
     }
 
     pub(crate) fn set_backend(
@@ -63,7 +79,14 @@ impl Video {
         backend: JSValue,
         property: PropertyName,
     ) -> bool {
-        Image::set_backend(global, value, backend, property)
+        let _ = (value, property);
+        // SAFETY: as for get_backend.
+        unsafe {
+            bun_jsc::bindgen::JsScope::with(core::ptr::from_ref(global).cast_mut(), |cx| {
+                let backend = bun_jsc::bindgen::JsLocal::new(&cx.heap, backend);
+                Image::set_backend(cx, backend).is_ok()
+            })
+        }
     }
 
     pub(crate) fn get_decoder(
@@ -92,7 +115,7 @@ impl Video {
         global: &JSGlobalObject,
         frame: &CallFrame,
     ) -> JsResult<JSValue> {
-        self.image().do_extract(global, frame)
+        forward_to_image(global, frame, "extract")
     }
 
     #[bun_jsc::host_fn(method)]
@@ -101,22 +124,22 @@ impl Video {
         global: &JSGlobalObject,
         frame: &CallFrame,
     ) -> JsResult<JSValue> {
-        self.image().do_resize(global, frame)
+        forward_to_image(global, frame, "resize")
     }
 
     #[bun_jsc::host_fn(method)]
     pub(crate) fn do_png(&self, global: &JSGlobalObject, frame: &CallFrame) -> JsResult<JSValue> {
-        self.image().do_format_png(global, frame)
+        forward_to_image(global, frame, "png")
     }
 
     #[bun_jsc::host_fn(method)]
     pub(crate) fn do_jpeg(&self, global: &JSGlobalObject, frame: &CallFrame) -> JsResult<JSValue> {
-        self.image().do_format_jpeg(global, frame)
+        forward_to_image(global, frame, "jpeg")
     }
 
     #[bun_jsc::host_fn(method)]
     pub(crate) fn do_webp(&self, global: &JSGlobalObject, frame: &CallFrame) -> JsResult<JSValue> {
-        self.image().do_format_webp(global, frame)
+        forward_to_image(global, frame, "webp")
     }
 
     fn schedule(
@@ -128,7 +151,7 @@ impl Video {
     ) -> JsResult<JSValue> {
         let image = js::image_get_cached(frame.this()).expect("Video owns an Image source");
         self.image()
-            .schedule_video(&global.js_thread_of_caller(frame), image, time, deliver)
+            .schedule_video(&global.js_thread_of_caller(), image, time, deliver)
     }
 
     #[bun_jsc::host_fn(method)]
@@ -137,17 +160,17 @@ impl Video {
         global: &JSGlobalObject,
         frame: &CallFrame,
     ) -> JsResult<JSValue> {
-        self.image().do_rotate(global, frame)
+        forward_to_image(global, frame, "rotate")
     }
 
     #[bun_jsc::host_fn(method)]
     pub(crate) fn do_flip(&self, global: &JSGlobalObject, frame: &CallFrame) -> JsResult<JSValue> {
-        self.image().do_flip(global, frame)
+        forward_to_image(global, frame, "flip")
     }
 
     #[bun_jsc::host_fn(method)]
     pub(crate) fn do_flop(&self, global: &JSGlobalObject, frame: &CallFrame) -> JsResult<JSValue> {
-        self.image().do_flop(global, frame)
+        forward_to_image(global, frame, "flop")
     }
 
     #[bun_jsc::host_fn(method)]
@@ -156,17 +179,17 @@ impl Video {
         global: &JSGlobalObject,
         frame: &CallFrame,
     ) -> JsResult<JSValue> {
-        self.image().do_modulate(global, frame)
+        forward_to_image(global, frame, "modulate")
     }
 
     #[bun_jsc::host_fn(method)]
     pub(crate) fn do_heic(&self, global: &JSGlobalObject, frame: &CallFrame) -> JsResult<JSValue> {
-        self.image().do_format_heic(global, frame)
+        forward_to_image(global, frame, "heic")
     }
 
     #[bun_jsc::host_fn(method)]
     pub(crate) fn do_avif(&self, global: &JSGlobalObject, frame: &CallFrame) -> JsResult<JSValue> {
-        self.image().do_format_avif(global, frame)
+        forward_to_image(global, frame, "avif")
     }
 
     #[bun_jsc::host_fn(method)]
@@ -204,7 +227,7 @@ impl Video {
     ) -> JsResult<JSValue> {
         let image = js::image_get_cached(frame.this()).expect("Video owns an Image source");
         self.image().schedule_video_operation(
-            &global.js_thread_of_caller(frame),
+            &global.js_thread_of_caller(),
             image,
             operation,
             Deliver::Uint8Array,
@@ -390,7 +413,7 @@ impl Video {
         }
         let image = js::image_get_cached(frame.this()).expect("Video owns an Image source");
         self.image().schedule_video_operation(
-            &global.js_thread_of_caller(frame),
+            &global.js_thread_of_caller(),
             image,
             VideoOperation::Placeholder(self.time.get()),
             Deliver::DataUrl,
@@ -439,11 +462,13 @@ impl Video {
 
     #[bun_jsc::host_fn(getter)]
     pub(crate) fn get_width(&self, global: &JSGlobalObject) -> JSValue {
-        self.image().get_width(global)
+        let _ = global;
+        JSValue::js_number_from_int32(self.image().get_width())
     }
 
     #[bun_jsc::host_fn(getter)]
     pub(crate) fn get_height(&self, global: &JSGlobalObject) -> JSValue {
-        self.image().get_height(global)
+        let _ = global;
+        JSValue::js_number_from_int32(self.image().get_height())
     }
 }

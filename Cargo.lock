@@ -1789,6 +1789,78 @@ dependencies = [
 ]
 
 [[package]]
+name = "bun_aot"
+version = "1.4.7"
+dependencies = [
+ "bitflags 2.13.2",
+ "bstr",
+ "bun_alloc",
+ "bun_aot",
+ "bun_aot_builtins",
+ "bun_aot_interface",
+ "bun_ast",
+ "bun_base64",
+ "bun_builtin_sources",
+ "bun_collections",
+ "bun_core",
+ "bun_glob",
+ "bun_lint",
+ "bun_lint_react_compiler",
+ "bun_options_types",
+ "bun_paths",
+ "bun_react_compiler",
+ "bun_removable_features",
+ "bun_resolve_builtins",
+ "bun_sema",
+ "bun_sema_driver",
+ "bun_sema_parser",
+ "bun_sema_standalone",
+ "bun_sys",
+ "bun_threading",
+ "bun_trim",
+ "bun_zstd",
+ "hashbrown 0.15.5",
+ "rustc-hash 2.1.3",
+ "smallvec",
+]
+
+[[package]]
+name = "bun_aot_absent"
+version = "1.4.7"
+dependencies = [
+ "bun_aot_interface",
+ "bun_ast",
+ "bun_options_types",
+ "bun_sema",
+ "bun_trim",
+]
+
+[[package]]
+name = "bun_aot_builtins"
+version = "1.4.7"
+dependencies = [
+ "bitflags 2.13.2",
+ "bun_collections",
+ "bun_core",
+ "bun_removable_features",
+ "bun_sema",
+ "smallvec",
+]
+
+[[package]]
+name = "bun_aot_interface"
+version = "1.4.7"
+dependencies = [
+ "bstr",
+ "bun_ast",
+ "bun_core",
+ "bun_options_types",
+ "bun_sema",
+ "bun_sema_driver",
+ "bun_trim",
+]
+
+[[package]]
 name = "bun_arena"
 version = "0.153.0"
 dependencies = [
@@ -2211,6 +2283,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "bun_builtin_sources"
+version = "1.4.7"
+dependencies = [
+ "bun_core",
+ "bun_sema_standalone",
+ "bun_zstd",
+]
+
+[[package]]
 name = "bun_bundler"
 version = "1.4.7"
 dependencies = [
@@ -2218,6 +2299,8 @@ dependencies = [
  "bstr",
  "bun_alloc",
  "bun_analytics",
+ "bun_aot",
+ "bun_aot_interface",
  "bun_ast",
  "bun_base64",
  "bun_collections",
@@ -2228,6 +2311,7 @@ dependencies = [
  "bun_errno",
  "bun_event_loop",
  "bun_exe_format",
+ "bun_glob",
  "bun_hash",
  "bun_http_types",
  "bun_ini",
@@ -2241,8 +2325,12 @@ dependencies = [
  "bun_paths",
  "bun_perf",
  "bun_ptr",
+ "bun_removable_features",
  "bun_resolve_builtins",
  "bun_resolver",
+ "bun_sema",
+ "bun_sema_driver",
+ "bun_sema_standalone",
  "bun_sourcemap",
  "bun_sys",
  "bun_threading",
@@ -2487,6 +2575,7 @@ dependencies = [
  "bun_no_window",
  "bun_paths",
  "bun_ptr",
+ "bun_removable_features",
  "bun_sys",
  "bun_threading",
  "bun_which",
@@ -3573,11 +3662,22 @@ version = "1.4.7"
 dependencies = [
  "bstr",
  "bun_core",
+ "bun_sema_standalone",
  "bun_sha_hmac",
  "bun_sys",
  "bytemuck",
+ "libc",
  "strum 0.28.0",
  "thiserror 2.0.21",
+]
+
+[[package]]
+name = "bun_executable"
+version = "1.4.7"
+dependencies = [
+ "bun_aot",
+ "bun_aot_absent",
+ "bun_runtime",
 ]
 
 [[package]]
@@ -3930,6 +4030,7 @@ dependencies = [
  "bun_io",
  "bun_picohttp",
  "bun_ptr",
+ "bun_removable_features",
  "bun_sys",
  "bun_threading",
  "bun_url",
@@ -4040,6 +4141,7 @@ dependencies = [
  "bun_perf",
  "bun_picohttp",
  "bun_ptr",
+ "bun_removable_features",
  "bun_resolver",
  "bun_semver",
  "bun_sha_hmac",
@@ -4200,6 +4302,7 @@ dependencies = [
  "bstr",
  "bun_alloc",
  "bun_analytics",
+ "bun_aot_interface",
  "bun_ast",
  "bun_base64",
  "bun_boringssl",
@@ -4224,6 +4327,7 @@ dependencies = [
  "bun_patch",
  "bun_paths",
  "bun_ptr",
+ "bun_removable_features",
  "bun_resolve_builtins",
  "bun_resolver",
  "bun_s3_signing",
@@ -4529,6 +4633,9 @@ dependencies = [
  "bun_core",
  "bun_lint",
  "bun_react_compiler",
+ "bun_sema",
+ "bun_sema_parser",
+ "bun_sema_standalone",
  "rustc-hash 2.1.3",
 ]
 
@@ -4743,6 +4850,7 @@ name = "bun_node_path"
 version = "1.4.7"
 dependencies = [
  "bun_core",
+ "bun_highway",
  "bun_paths",
  "bun_sys",
  "bytemuck",
@@ -4756,6 +4864,7 @@ version = "1.4.7"
 name = "bun_options_types"
 version = "1.4.7"
 dependencies = [
+ "bitflags 2.13.2",
  "bstr",
  "bun_ast",
  "bun_collections",
@@ -4764,6 +4873,7 @@ dependencies = [
  "bun_errno",
  "bun_install_types",
  "bun_paths",
+ "bun_removable_features",
  "bun_semver",
  "bun_sys",
  "bun_url",
@@ -5015,6 +5125,7 @@ dependencies = [
  "bun_ast",
  "bun_collections",
  "bun_core",
+ "bun_removable_features",
  "bun_threading",
  "enumset",
  "rustc-hash 2.1.3",
@@ -5052,6 +5163,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "bun_removable_features"
+version = "1.4.7"
+
+[[package]]
 name = "bun_resolve_builtins"
 version = "1.4.7"
 dependencies = [
@@ -5086,7 +5201,9 @@ dependencies = [
  "bun_paths",
  "bun_perf",
  "bun_ptr",
+ "bun_removable_features",
  "bun_resolve_builtins",
+ "bun_sema_standalone",
  "bun_semver",
  "bun_sys",
  "bun_threading",
@@ -5137,6 +5254,7 @@ dependencies = [
  "bun_adblock",
  "bun_alloc",
  "bun_analytics",
+ "bun_aot_interface",
  "bun_ast",
  "bun_ast_jsc",
  "bun_base64",
@@ -5148,6 +5266,7 @@ dependencies = [
  "bun_browser_dom",
  "bun_browser_index",
  "bun_browser_ssrf",
+ "bun_builtin_sources",
  "bun_bundler",
  "bun_bundler_jsc",
  "bun_bunfig",
@@ -5167,6 +5286,7 @@ dependencies = [
  "bun_env_cookie",
  "bun_errno",
  "bun_event_loop",
+ "bun_exe_format",
  "bun_format_conformance",
  "bun_glob",
  "bun_google",
@@ -5208,11 +5328,13 @@ dependencies = [
  "bun_ptr",
  "bun_quality",
  "bun_readability",
+ "bun_removable_features",
  "bun_resolve_builtins",
  "bun_resolver",
  "bun_router",
  "bun_s3_signing",
  "bun_safety",
+ "bun_sema",
  "bun_sema_baselines",
  "bun_sema_driver",
  "bun_semver",
@@ -5231,6 +5353,7 @@ dependencies = [
  "bun_tcc_sys",
  "bun_text_diff",
  "bun_threading",
+ "bun_trim",
  "bun_url",
  "bun_uws",
  "bun_uws_sys",
@@ -5331,6 +5454,7 @@ dependencies = [
  "bun_paths",
  "bun_sema",
  "bun_sema_parser",
+ "bun_sema_standalone",
  "bun_sys",
  "bun_threading",
 ]
@@ -5344,6 +5468,7 @@ dependencies = [
  "bun_core",
  "bun_highway",
  "bun_sema",
+ "bun_sema_standalone",
  "bun_threading",
  "smallvec",
 ]
@@ -5354,13 +5479,17 @@ version = "1.4.7"
 dependencies = [
  "bstr",
  "bun_alloc",
+ "bun_boringssl_sys",
  "bun_core",
  "bun_js_parser",
  "bun_sema",
  "bun_sema_baselines",
  "bun_sema_driver",
+ "bun_sema_parser",
  "bun_sys",
  "bun_threading",
+ "bun_zstd",
+ "cc",
  "libc",
 ]
 
@@ -5449,7 +5578,6 @@ dependencies = [
 name = "bun_sourcemap_jsc"
 version = "1.4.7"
 dependencies = [
- "bstr",
  "bun_alloc",
  "bun_ast",
  "bun_collections",
@@ -5461,7 +5589,6 @@ dependencies = [
  "bun_options_types",
  "bun_paths",
  "bun_sourcemap",
- "bun_url",
  "bun_wyhash",
 ]
 
@@ -5555,6 +5682,7 @@ dependencies = [
  "bitflags 2.13.2",
  "bstr",
  "bun_alloc",
+ "bun_aot_interface",
  "bun_ast",
  "bun_bundler",
  "bun_collections",
@@ -5573,6 +5701,7 @@ dependencies = [
  "bun_sourcemap",
  "bun_sys",
  "bun_threading",
+ "bun_trim",
  "bun_url",
  "bun_zlib",
  "bun_zstd",
@@ -5676,6 +5805,19 @@ name = "bun_transpiler"
 version = "1.4.7"
 dependencies = [
  "bun_bundler",
+]
+
+[[package]]
+name = "bun_trim"
+version = "1.4.7"
+dependencies = [
+ "bun_core",
+ "bun_exe_format",
+ "bun_options_types",
+ "bun_removable_features",
+ "bun_sema_standalone",
+ "strum 0.28.0",
+ "thiserror 2.0.21",
 ]
 
 [[package]]

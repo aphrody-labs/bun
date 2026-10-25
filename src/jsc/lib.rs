@@ -35,7 +35,9 @@ use core::ffi::{c_char, c_void};
 // Proc-macro re-exports. `#[bun_jsc::host_call]` is implemented in the `bun_jsc_macros` crate
 // (Rust forbids `proc-macro = true` crates from exporting non-macro items).
 // ──────────────────────────────────────────────────────────────────────────
-pub use bun_jsc_macros::{JsAffine, host_call};
+// `JsClass` (derive), `host_fn` and `codegen_cached_accessors` are kept by the fork for its own
+// `*.classes.ts` and `$rust` bindings, beside bindgen.
+pub use bun_jsc_macros::{JsAffine, JsClass, codegen_cached_accessors, host_call, host_fn};
 
 // ──────────────────────────────────────────────────────────────────────────
 // Submodules. Each `#[path]` points at the actual PascalCase / snake_case
@@ -425,6 +427,117 @@ pub mod virtual_machine_exports;
 
 #[rustfmt::skip]
 #[path = "host_fn.rs"] pub mod host_fn;
+#[path = "host_object.rs"]
+pub mod host_object;
+// Hand-stubbed in `generated.rs` for the fork's generate-classes.ts bindings.
+#[path = "generated.rs"]
+pub mod generated;
+
+// The rest of `host_fn`'s surface is re-exported below, beside `mark_binding`.
+pub use self::host_fn::{JSHostFnZig, host_construct_result, host_fn_result, host_setter_result};
+pub use self::host_object::{HostFnEntry, create_host_function_object};
+
+// ──────────────────────────────────────────────────────────────────────────
+// `__macro_support` — runtime helpers invoked by `#[bun_jsc::host_fn]` /
+// `#[bun_jsc::JsClass]` expansions. Not part of the public API; the names are
+// load-bearing for the proc-macro crate only.
+// ──────────────────────────────────────────────────────────────────────────
+#[doc(hidden)]
+pub mod __macro_support {
+    use super::{JSGlobalObject, JSValue, JsResult};
+
+    /// Normalizes a host-fn body's return type to `JsResult<JSValue>` so the
+    /// proc-macro can wrap bodies that return either `JSValue` or
+    /// `JsResult<JSValue>`.
+    pub trait IntoHostFnResult {
+        fn into_host_fn_result(self) -> JsResult<JSValue>;
+    }
+    impl IntoHostFnResult for JSValue {
+        #[inline]
+        fn into_host_fn_result(self) -> JsResult<JSValue> {
+            Ok(self)
+        }
+    }
+    impl IntoHostFnResult for JsResult<JSValue> {
+        #[inline]
+        fn into_host_fn_result(self) -> JsResult<JSValue> {
+            self
+        }
+    }
+
+    /// Map a `JsResult<JSValue>` from a Rust host fn to the raw `JSValue` the
+    /// JSC ABI expects (`.ZERO` when an exception is/was thrown).
+    /// Installs an `ExceptionValidationScope`
+    /// pinned at the macro caller's `Location` and asserts the empty/thrown
+    /// invariant.
+    ///
+    /// Takes a closure (not a value) so the user-fn body runs *inside*
+    /// `to_js_host_call`'s `catch_unwind` barrier — a `panic!` in the body
+    /// becomes a JS exception instead of unwinding out of the `extern "C"`
+    /// thunk (UB).
+    #[inline]
+    #[track_caller]
+    pub fn host_fn_result<R: IntoHostFnResult>(
+        global: &JSGlobalObject,
+        f: impl FnOnce() -> R,
+    ) -> JSValue {
+        // `to_js_host_call` is
+        // `#[track_caller]` so the caller's `Location` propagates through this
+        // `#[track_caller]` shim into `ExceptionValidationScope::init`.
+        super::host_fn::to_js_host_call(global, move || f().into_host_fn_result())
+    }
+
+    /// Setter result mapping: `()` / `JsResult<()>` → `bool` (false on throw).
+    /// Matches generate-classes.ts setter ABI:
+    /// `extern bool ${T}Prototype__${name}(void*, JSGlobalObject*, EncodedJSValue)`.
+    ///
+    /// Accepts the same [`IntoHostSetterReturn`] surface as
+    /// [`super::host_fn::host_setter_result`] so `#[host_fn(setter)]`-tagged
+    /// methods type-check against the exact signature the codegen calls.
+    /// Takes a closure for the same `catch_unwind` reason as
+    /// [`host_fn_result`].
+    #[inline]
+    #[track_caller]
+    pub fn host_fn_setter_result<R>(global: &JSGlobalObject, f: impl FnOnce() -> R) -> bool
+    where
+        R: super::host_fn::IntoHostSetterReturn,
+    {
+        super::host_fn::host_setter_result(global, f)
+    }
+}
+
+// Compile-time smoke test for the `host_fn` proc-macro (no runtime body —
+// just asserts the expansion type-checks against the real
+// `JSGlobalObject`/`CallFrame`/`JSValue`/`JsResult` shapes).
+#[cfg(test)]
+mod __macro_smoke {
+    use super::{CallFrame, JSGlobalObject, JSValue, JsResult};
+
+    #[crate::host_fn(export = "SmokeFree__call")]
+    fn smoke_free(_global: &JSGlobalObject, _frame: &CallFrame) -> JsResult<JSValue> {
+        Ok(JSValue::UNDEFINED)
+    }
+}
+
+
+pub mod codegen {
+    // GENERATED: re-run src/codegen/generate-classes.ts with .rs output
+    pub mod js {
+        /// Generic accessor for the JSC constructor of a `#[bun_jsc::JsClass]` type.
+        /// The per-class extern (`${TypeName}__getConstructor`) is wired by the
+        /// `#[bun_jsc::JsClass]` proc-macro into [`JsClass::get_constructor`];
+        /// this generic just fronts that trait method (mirrors codegen
+        /// `pub fn getConstructor(global) JSValue` in
+        /// generate-classes.ts:2449).
+        #[inline]
+        pub fn get_constructor<T: crate::JsClass>(
+            global: &crate::JSGlobalObject,
+        ) -> crate::JSValue {
+            T::get_constructor(global)
+        }
+    }
+}
+
 #[path = "AnyPromise.rs"]
 pub mod any_promise;
 #[path = "BytecodeOrderRecorder.rs"]
@@ -681,6 +794,8 @@ impl ThrowFmtArgs for core::fmt::Arguments<'_> {
 /// `bun_http_jsc` / `bun_event_loop` can call it without a `bun_jsc` cycle.
 /// Re-exported here so existing `crate::mark_binding!()` call sites resolve.
 pub use bun_core::mark_binding;
+// The fork's `#[bun_jsc::JsClass]` expansions name `bun_jsc::heap`.
+pub use bun_core::heap;
 
 pub use self::host_fn::{
     JSHostFn, from_js_host_call, from_js_host_call_generic, to_js_host_call, to_js_host_fn_result,
@@ -1384,7 +1499,66 @@ pub trait JsClass: Sized {
     fn from_js(value: JSValue) -> Option<*mut Self>;
     /// Only an instance with the structure of the class: no subclass, no own property.
     fn from_js_direct(value: JSValue) -> Option<*mut Self>;
+
+    // The fork's generate-classes.ts bindings: the generated `${T}__getConstructor` and the GC's
+    // extra memory. Bindgen classes keep the defaults.
+    /// Fetch the JSC constructor object for this class
+    /// (`${TypeName}__getConstructor(global)` — generate-classes.ts:2449/2539).
+    /// The proc-macro wires the per-type extern; manual impls bind it directly.
+    ///
+    /// Classes declared `noConstructor: true` in `.classes.ts` get NO C++-side
+    /// `${T}__getConstructor` export, so the default body returns `undefined`
+    /// instead of forcing every `#[JsClass(no_constructor)]` site to declare a
+    /// dangling extern.
+    fn get_constructor(global: &JSGlobalObject) -> JSValue {
+        let _ = global;
+        JSValue::UNDEFINED
+    }
+
+    /// Dynamic heap footprint reported to JSC's GC via
+    /// `reportExtraMemoryAllocated` / `reportExtraMemoryVisited`
+    /// (generate-classes.ts:1656-1660, 1913-1916). Implements the
+    /// `${typeName}.estimatedSize(thisValue)` contract: types that own large
+    /// out-of-line buffers (Blob/Request/Response bodies) override this so the
+    /// collector sees real memory pressure, not just `size_of::<Self>()`.
+    ///
+    /// Override with an inherent `fn estimated_size(&self) -> usize` on the
+    /// concrete type — the `#[JsClass(estimated_size)]` hook resolves via
+    /// method syntax, so an inherent impl shadows this default.
+    fn estimated_size(&self) -> usize {
+        core::mem::size_of::<Self>()
+    }
 }
+
+/// GC-finalize hook resolved by the generated `${T}Class__finalize` thunk for
+/// `finalize: true` classes. The thunk body is
+/// `host_fn::host_fn_finalize(this, |b| ${T}::finalize(b))` — Rust path
+/// resolution on `${T}::finalize` picks an *inherent* `fn finalize(self:
+/// Box<Self>)` first when one exists (leak-on-pending types), otherwise falls
+/// through to this trait's default: drop the `Box`, running `T`'s `Drop` glue
+/// and freeing the allocation. Refcounted payloads are `refCounted: true` classes
+/// ([`JsFinalizeRefCounted`]) instead.
+///
+/// **Override by defining an inherent `pub fn finalize(self: Box<Self>)` on
+/// the concrete type** — do *not* `impl JsFinalize for MyType`; the blanket
+/// impl below already covers every `Sized` type and a second impl would
+/// conflict. The generated thunk imports `JsFinalize as _` so the trait
+/// is in scope for path resolution without polluting any per-type module.
+pub trait JsFinalize: Sized {
+    #[inline]
+    fn finalize(self: Box<Self>) {
+        drop(self)
+    }
+}
+impl<T: Sized> JsFinalize for T {}
+
+/// [`JsFinalize`] for `refCounted: true` classes: the hook that runs before the
+/// wrapper's ref is dropped. Override with an inherent `pub fn finalize(&self)`.
+pub trait JsFinalizeRefCounted {
+    #[inline]
+    fn finalize(&self) {}
+}
+impl<T: bun_ptr::AnyRefCounted> JsFinalizeRefCounted for T {}
 
 /// Track whether an object should keep the event loop alive
 #[derive(Default)]

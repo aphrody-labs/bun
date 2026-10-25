@@ -52,8 +52,8 @@ pub(crate) mod shell;
 #[path = "api.rs"]
 pub(crate) mod api;
 pub(crate) mod cosmic;
-#[cfg(debug_assertions)]
-pub(crate) mod class_ref_test;
+pub(crate) mod generated_js2native; // include!()s ${BUN_CODEGEN_DIR}/generated_js2native.rs (the fork's $rust thunks)
+pub(crate) mod generated_classes; // include!()s ${BUN_CODEGEN_DIR}/generated_classes.rs (the fork's *.classes.ts)
 pub(crate) mod checker_queries_testing;
 pub(crate) mod code_resolver_testing;
 pub(crate) mod dispatch;

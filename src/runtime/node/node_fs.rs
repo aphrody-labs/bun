@@ -2361,7 +2361,7 @@ mod _async_tasks {
                         &this.args,
                     );
                     if let Err(e) = &r {
-                        if e.errno == E::EEXIST as _ && !args.flags.error_on_exist {
+                        if e.errno == E::EEXIST as u16 && !args.flags.error_on_exist {
                             this.finish_concurrently(Ok(()));
                             return;
                         }

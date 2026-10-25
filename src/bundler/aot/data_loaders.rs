@@ -86,6 +86,11 @@ pub(crate) fn parse_data<'s>(
             is_embedded: false,
         }),
         Loader::Html => Ok(DataModule::Page),
+        // The fork's JSONL and INI loaders have no AOT data form yet.
+        Loader::Jsonl | Loader::Ini => {
+            log_diagnostic(log, Code::UnsupportedOption, &[b"the jsonl and ini loaders in an AOT build"]);
+            Err(Failed)
+        }
         Loader::Jsx | Loader::Js | Loader::Ts | Loader::Tsx => {
             debug_assert!(false, "the host never asks for a script loader as data");
             log_diagnostic(log, Code::UnsupportedOption, &[b"a script loader as data"]);

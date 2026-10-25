@@ -3,6 +3,7 @@ bun:ffi CFunction CString FFIType JSCallback cc default dlopen linkSymbols nativ
 bun:jsc bytecodeOrderStats callerSourceOrigin codeCoverageForFile default describe describeArray deserialize drainMicrotasks edenGC estimateShallowMemoryUsageOf fullGC gcAndSweep generateHeapSnapshotForDebugging getProtectedObjects getRandomSeed heapSize heapStats isRope jscDescribe jscDescribeArray memoryUsage noFTL noInline noOSRExitFuzzing numberOfDFGCompiles optimizeNextInvocation percentAvailableMemoryInUse profile releaseWeakRefs reoptimizationRetryCount samplingProfilerStackTraces serialize setRandomSeed setTimeZone setTimezone startRemoteDebugger startSamplingProfiler totalCompileTime
 bun:sqlite Database SQLiteError Statement __esModule constants default=property
 bun:test afterAll afterEach beforeAll beforeEach default describe expect expectTypeOf it jest mock onTestFinished setDefaultTimeout setSystemTime spyOn test vi xdescribe xit xtest
+bun:vitest afterAll afterEach beforeAll beforeEach default describe expect expectTypeOf it jest mock onTestFailed onTestFinished setDefaultTimeout setSystemTime spyOn suite test vi xdescribe xit xtest
 node:_http_agent Agent default globalAgent shouldUseEnvProxy
 node:_http_client ClientRequest default
 node:_http_common CRLF HTTPParser MAX_HEADER_PAIRS _checkInvalidHeaderChar _checkIsHttpToken calculateLenientFlags chunkExpression continueExpression default freeParser isLenient kIncomingMessage kSkipPendingData methods parsers prepareError validateHeaderName validateHeaderValue

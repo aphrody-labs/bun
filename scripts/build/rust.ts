@@ -336,7 +336,8 @@ export function cargoBuildInvocation(cfg: Config): CargoInvocation {
     cfg.browserIndex && "browser_index",
     cfg.googleSearch && "google_search",
   ].filter(Boolean);
-  if (features.length) args.push("--features", features.join(","));
+  // The fork's features belong to bun_runtime; cargo builds bun_executable, which depends on it.
+  if (features.length) args.push("--features", features.map(f => `bun_runtime/${f}`).join(","));
   if (!cfg.aot) args.push("--no-default-features", "--features", "without_aot");
   // std is compiled from source (cargoBuildStdArg) in every build: the link is bun's own and takes each crate's rlib
   // as the output of an edge (rust/units.ts linkedRlibs), so std's crates have to be units of the graph like the

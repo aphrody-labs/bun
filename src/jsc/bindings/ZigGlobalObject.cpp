@@ -5050,6 +5050,7 @@ extern "C" void WebWorker__teardownJSCVM(Zig::GlobalObject* globalObject)
     destroyVM(vm);
 }
 
+#include "ZigGeneratedClasses+lazyStructureImpl.h"
 #include "ZigGlobalObject.lut.h"
 
 const JSC::ClassInfo GlobalObject::s_info = { "GlobalObject"_s, &Base::s_info, &bunGlobalObjectTable, nullptr,

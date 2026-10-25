@@ -283,12 +283,22 @@ impl Image {
         let mut image = Box::<Image>::default();
         apply_options(&mut image, global, options)?;
         image.max_pixels = image.max_pixels.min((256 << 20) / 4);
-        let pointer = core::ptr::NonNull::from(image.as_ref());
-        let value = Image::to_js_boxed(image, global);
+        let wrapper = {
+            use bun_jsc::bindgen::JsPayload as _;
+            (*image).into_js_wrapper(global)
+        };
+        // SAFETY: the wrapper owns the payload for as long as the returned value is alive.
+        let pointer = core::ptr::NonNull::from(unsafe { wrapper.payload_ref() });
+        let value = wrapper.to_js();
         let _hold = Strong::create(value, global);
-        let source = source_from_js(global, input, value)?;
+        let source = source_from_js(global, input)?;
+        let borrows_input = matches!(source, Source::JsBuffer);
         // The Strong protects the wrapper while source coercion can re-enter JS.
         unsafe { pointer.as_ref() }.source.set(source);
+        if borrows_input {
+            // As in the constructor: the wrapper keeps the borrowed ArrayBuffer/TypedArray alive.
+            js::source_js_set_cached(value, global, input);
+        }
         Ok((value, pointer))
     }
 

@@ -789,4 +789,10 @@ export default b.declarations(
     ),
   }),
   b.excluded("builtins/Bake", "renderRoutesForProdStatic"),
+  // The fork's own built-ins: runtime and test-runner entry points that a compiled program does not reach.
+  b.excluded("builtins/Curl", "run"),
+  b.excluded("builtins/JestModuleMock", "createAutomock"),
+  b.excluded("builtins/TestEnvironment", "installTestEnvironment"),
+  b.excluded("builtins/WebView", "openApplication"),
+  b.excluded("builtins/WebView", "importProfile"),
 );

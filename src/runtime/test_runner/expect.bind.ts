@@ -183,7 +183,7 @@ export const Expect = b.class({
     closeTo: asymmetricMatchers.closeTo,
     extend: { args: { matchers: b.any }, ...js },
     /** The running test's path, name and assertion counters (Jest, Vitest). */
-    getState: { returns: b.any, ...js },
+    getState: { returns: b.any.returning("object"), ...js },
     hasAssertions: { ...js, length: 1 },
     not: { getter: ExpectStatic, capability: "heap", rustName: "static_not" },
     objectContaining: asymmetricMatchers.objectContaining,

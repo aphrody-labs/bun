@@ -332,6 +332,7 @@ export function emitCodegen(n: Ninja, cfg: CodegenFields, sources: Sources, engi
   emitRuntimeJs(ctx);
   emitNodeFallbacks(ctx);
   emitErrorCode(ctx);
+  emitGeneratedClasses(ctx);
   emitHostExports(ctx);
   emitCppBind(ctx);
   emitJsModules(ctx);
@@ -762,6 +763,43 @@ function emitErrorCode({ n, cfg, o, dirStamp }: Ctx): void {
 const declaredTypeInputs = (cfg: Ctx["cfg"]): string[] => [
   resolve(cfg.cwd, "src", "codegen", "declared-type-checks.ts"),
 ];
+// Fork-owned: the classes of the fork's own `*.classes.ts`. Upstream's classes are bindgen schemas.
+function emitGeneratedClasses({ n, cfg, sources, o, dirStamp }: Ctx): void {
+  const script = resolve(cfg.cwd, "src", "codegen", "generate-classes.ts");
+
+  const outputs = [
+    resolve(cfg.codegenDir, "ZigGeneratedClasses.h"),
+    resolve(cfg.codegenDir, "ZigGeneratedClasses.cpp"),
+    resolve(cfg.codegenDir, "ZigGeneratedClasses+lazyStructureHeader.h"),
+    resolve(cfg.codegenDir, "ZigGeneratedClasses+DOMClientIsoSubspaces.h"),
+    resolve(cfg.codegenDir, "ZigGeneratedClasses+DOMIsoSubspaces.h"),
+    resolve(cfg.codegenDir, "ZigGeneratedClasses+lazyStructureImpl.h"),
+    // Rust sibling: include!()'d by src/runtime/generated_classes.rs. Must be
+    // a declared output: bun_runtime's dep-info names it, and ninja can only
+    // rebuild that crate in the same build as this step if it knows the file.
+    resolve(cfg.codegenDir, "generated_classes.rs"),
+  ];
+  const types = resolve(cfg.typesDir, "ZigGeneratedClasses.d.ts");
+
+  n.build({
+    outputs: [...outputs, types],
+    rule: "codegen",
+    inputs: [script, ...sources.zigGeneratedClasses],
+    orderOnlyInputs: [dirStamp],
+    vars: {
+      cwd: cfg.cwd,
+      desc: "ZigGeneratedClasses.{cpp,h,rs}",
+      args: shJoin(cfg, [script, ...sources.zigGeneratedClasses, cfg.codegenDir, cfg.typesDir]),
+    },
+  });
+
+  o.all.push(...outputs, types);
+  o.generatedTypes.push(types);
+  o.rustInputs.push(...outputs);
+  o.cppSources.push(outputs[1]!); // .cpp
+  o.cppHeaders.push(outputs[0]!, outputs[2]!, outputs[3]!, outputs[4]!, outputs[5]!); // .h files
+}
+
 function emitHostExports({ n, cfg, sources, o, dirStamp }: Ctx): void {
   const script = resolve(cfg.cwd, "src", "codegen", "generate-host-exports.ts");
   const output = resolve(cfg.codegenDir, "generated_host_exports.rs");
@@ -877,6 +915,9 @@ function emitJsModules({ n, cfg, sources, o, dirStamp, engine }: Ctx): void {
     resolve(cfg.codegenDir, "SyntheticModuleType.h"),
     resolve(cfg.codegenDir, "BuiltinModuleKeys.h"),
     resolve(cfg.codegenDir, "GeneratedJS2Native.h"),
+    // Rust sibling for the fork's `$rust` call sites: include!()'d by src/runtime/generated_js2native.rs.
+    // Declared for the same reason as generated_resolved_source_tag.rs below.
+    resolve(cfg.codegenDir, "generated_js2native.rs"),
     // Specifier → module-ID tag table: include!()'d by the
     // `resolved_source_tag` module in src/jsc/lib.rs. Must be a declared
     // output: bun_jsc's dep-info names it, and ninja can only rebuild that

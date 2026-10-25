@@ -1,4 +1,8 @@
 use core::ffi::{c_char, c_int, c_uint, c_void};
+// Upstream's owned z_stream (#46607), used by node:zlib and CompressionStream.
+mod stream;
+pub use stream::ZStream;
+
 use core::mem::size_of;
 
 use bun_collections::VecExt as _;

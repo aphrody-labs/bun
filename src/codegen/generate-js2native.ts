@@ -22,6 +22,7 @@ interface NativeCall {
 }
 
 interface WrapperCall {
+  type: NativeCallType;
   wrap_kind: "new-function";
   symbol_target: string;
   symbol_generated: string;
@@ -33,7 +34,8 @@ interface WrapperCall {
   written_symbol: string;
 }
 
-type NativeCallType = "cpp" | "bind";
+// "rust": the fork's own `$rust`/`$newRustFunction` call sites; upstream's are bindgen schemas.
+type NativeCallType = "rust" | "cpp" | "bind";
 
 const nativeCalls: NativeCall[] = [];
 const wrapperCalls: WrapperCall[] = [];
@@ -135,9 +137,19 @@ function callBaseName(x: string) {
 }
 
 function resolveNativeFileId(call_type: NativeCallType, filename: string) {
-  const ext = call_type === "bind" ? ".bind.ts" : `.${call_type}`;
+  const ext = call_type === "bind" ? ".bind.ts" : call_type === "rust" ? ".rs" : `.${call_type}`;
   if (!filename.endsWith(ext)) {
-    throw new Error(`Expected filename for $${call_type} to have ${ext} extension, got ${JSON.stringify(filename)}`);
+    throw new Error(`Expected filename for ${call_type} to have ${ext} extension, got ${JSON.stringify(filename)}`);
+  }
+
+  if (call_type === "rust") {
+    const relative = rustIdentifierPaths[filename];
+    if (!relative) {
+      throw new Error(
+        `Unknown $rust() file identifier ${JSON.stringify(filename)}. Add it to rustIdentifierPaths in src/codegen/generate-js2native.ts.`,
+      );
+    }
+    return path.join(srcDir, relative.replaceAll("/", sep));
   }
 
   filename = filename.replaceAll("/", sep);
@@ -157,6 +169,8 @@ function nativeCallKind(call_type: NativeCallType, is_wrapped: boolean): NativeC
       return "Bindgen";
     case "cpp":
       return is_wrapped ? "NewCppFunction" : "Cpp";
+    case "rust":
+      return (is_wrapped ? "NewRustFunction" : "Rust") as NativeCallKind;
   }
 }
 
@@ -194,6 +208,7 @@ export function registerNativeCall(
   });
   if (create_fn_len != null) {
     wrapperCalls.push({
+      type: call_type,
       wrap_kind: "new-function",
       symbol_target: symbol,
       symbol_generated: "js2native_wrap_" + symbol.replace(/[^A-Za-z]/g, "_"),
@@ -210,7 +225,7 @@ export function registerNativeCall(
 
 export interface NativeCallRecord {
   id: number;
-  type: "cpp" | "bind";
+  type: NativeCallType;
   file: string;
   symbol: string;
   isWrapped: boolean;
@@ -261,6 +276,20 @@ function bindgenSymbol(call: Pick<NativeCall, "filename" | "symbol">) {
   return `js2native_bindgen_${basename(call.filename.replace(/\.bind\.ts$/, ""))}_${call.symbol}`;
 }
 
+/** The C name of a `$rust` binding's thunk; anything else keeps its own name. */
+function symbol(call: Pick<NativeCall, "type" | "symbol" | "filename">) {
+  return call.type === "rust"
+    ? `JS2Rust__${call.filename ? normalizeSymbolPathPrefix(call.filename) + "_" : ""}${call.symbol.replace(/[^A-Za-z]/g, "_")}`
+    : call.symbol;
+}
+
+function normalizeSymbolPathPrefix(input: string) {
+  input = path.resolve(input);
+  const bunDir = path.resolve(path.join(import.meta.dir, "..", ".."));
+  if (input.startsWith(bunDir)) input = input.slice(bunDir.length);
+  return input.replaceAll(".rs", "_rs_").replace(/[^A-Za-z]/g, "_");
+}
+
 function nativePointer(guard: Guard | null, native_symbol: string) {
   return guard
     ? recordedPointer(removableFeatures(), guard.feature, "Throw", native_symbol, guard.builtin)
@@ -273,6 +302,7 @@ function callNative(guard: Guard | null, native_symbol: string) {
 }
 
 function nativeCallExpression(call: NativeCall, guard: Guard | null) {
+  if (call.type === "rust") return `${symbol(call)}(global)`;
   if (call.type === "bind") return `JSC::JSValue::decode(${callNative(guard, bindgenSymbol(call))})`;
   if (!guard || call.is_wrapped) return `${call.symbol}(global)`;
   return callNative(guard, call.symbol);
@@ -285,6 +315,18 @@ export function getJS2NativeCPP(guards: Guards) {
   const files = [
     ...new Set(nativeCalls.filter(x => x.filename.endsWith(".cpp")).map(x => x.filename.replace(/.cpp$/, ".h"))),
   ];
+
+  const externs: string[] = [];
+  const rustCallStrings = nativeCalls
+    .filter(x => x.type === "rust")
+    .flatMap(call => {
+      externs.push(`extern "C" SYSV_ABI JSC::EncodedJSValue ${symbol(call)}_workaround(Zig::GlobalObject*);`);
+      return [
+        `static ALWAYS_INLINE JSC::JSValue ${symbol(call)}(Zig::GlobalObject* global) {`,
+        `    return JSValue::decode(${symbol(call)}_workaround(global));`,
+        `}`,
+      ];
+    });
 
   const wrapperCallStrings = wrapperCalls.map(x => {
     if (x.wrap_kind === "new-function") {
@@ -300,7 +342,7 @@ export function getJS2NativeCPP(guards: Guards) {
       return [
         "",
         `static JSC::JSValue ${x.symbol_generated}(Zig::GlobalObject* globalObject) {`,
-        `  return js2nativeNewFunction(globalObject, ${x.call_length}, ${JSON.stringify(x.display_name)}_s, ${nativePointer(guardOf(x), x.symbol_target)});`,
+        `  return js2nativeNewFunction(globalObject, ${x.call_length}, ${JSON.stringify(x.display_name)}_s, ${nativePointer(guardOf(x), x.type === "rust" ? symbol({ type: "rust", symbol: x.symbol_target, filename: x.filename }) : x.symbol_target)});`,
         `}`,
       ].join("\n");
     }
@@ -315,6 +357,8 @@ export function getJS2NativeCPP(guards: Guards) {
     "using namespace Bun;",
     "using namespace JSC;",
     "using namespace WebCore;" + "\n",
+    ...externs,
+    ...rustCallStrings,
     // One out-of-line JSFunction::create for all the `new-function` wrappers below.
     `static NEVER_INLINE JSC::JSValue js2nativeNewFunction(Zig::GlobalObject* globalObject, unsigned length, ASCIILiteral name, JSC::NativeFunction function) {`,
     `  return JSC::JSFunction::create(globalObject->vm(), globalObject, length, name, function, JSC::ImplementationVisibility::Public);`,
@@ -466,6 +510,10 @@ export function getJS2NativeDTS() {
         .join("|"),
     // resolveNativeFileId matches any path suffix of a source file, e.g. "streams/BunStreamConsumers.cpp".
     "declare type NativeFilenameCPP = NativeBasenameCPP | `${string}/${NativeBasenameCPP}`",
+    "declare type NativeFilenameRust = " +
+      Object.keys(rustIdentifierPaths)
+        .map(x => JSON.stringify(x))
+        .join("|"),
     "",
   ].join("\n");
 }

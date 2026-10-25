@@ -39,6 +39,7 @@ pub(super) fn run_queue<'s>(
 fn queue_request<'a>(request: &CompileRequest<'a, '_>) -> Request<'a> {
     Request {
         cwd: b"",
+        declaration_file_emitted: None,
         project: None,
         listed_projects: None,
         build: false,

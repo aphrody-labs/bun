@@ -626,7 +626,7 @@ pub(crate) fn create_vitest_context(
     sequence: &super::execution::ExecutionSequence,
 ) -> JsResult<JSValue> {
     let ctx = JSValue::create_empty_object(global, 6);
-    ctx.put(global, b"expect", jsc::codegen::js::get_constructor::<Expect>(global));
+    ctx.put(global, b"expect", js_Expect::get_constructor(global));
 
     // SAFETY: `test_entry` points at an entry owned by the live BunTest.
     let name: &[u8] = sequence
@@ -642,12 +642,12 @@ pub(crate) fn create_vitest_context(
     ctx.put(
         global,
         b"onTestFinished",
-        jsc::JSFunction::create(global, "onTestFinished", generic_hook::__jsc_host_vitest_on_test_finished, 1, Default::default()),
+        jsc::JSFunction::create(global, "onTestFinished", Bun__BunTest__vitestOnTestFinished, 1, Default::default()),
     );
     ctx.put(
         global,
         b"onTestFailed",
-        jsc::JSFunction::create(global, "onTestFailed", generic_hook::__jsc_host_vitest_on_test_failed, 1, Default::default()),
+        jsc::JSFunction::create(global, "onTestFailed", Bun__BunTest__vitestOnTestFailed, 1, Default::default()),
     );
     ctx.put(global, b"signal", jsc::AbortSignal::create(global));
     Ok(ctx)

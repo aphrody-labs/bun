@@ -438,6 +438,15 @@ impl JSValue {
         if b { Self::TRUE } else { Self::FALSE }
     }
     #[inline]
+    /// An int32 when `i` fits, a double otherwise (the fork's Linux bindings).
+    pub fn js_number_from_int64(i: i64) -> JSValue {
+        if i <= i32::MAX as i64 && i >= i32::MIN as i64 {
+            Self::js_number_from_int32(i as i32)
+        } else {
+            Self::js_double_number(i as f64)
+        }
+    }
+
     pub fn js_number_from_int32(i: i32) -> JSValue {
         // NumberTag | i (low 32 bits).
         const NUMBER_TAG: usize = 0xfffe_0000_0000_0000;

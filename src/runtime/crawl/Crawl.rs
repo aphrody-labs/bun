@@ -165,7 +165,7 @@ mod native {
         let cancel = Arc::new(Cancel::default());
         let promise = jsc::JSPromiseStrong::init(global);
         let result = promise.value();
-        let cx = global.js_thread_of_caller(frame);
+        let cx = global.js_thread_of_caller();
         let mut abort = Box::new(AbortState {
             handle: jsc::AbortHandle::for_owner::<AbortState>(),
             cancel: cancel.clone(),

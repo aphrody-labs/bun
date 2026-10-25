@@ -437,6 +437,9 @@ pub(crate) const AUTO_REQUIREMENT_ROWS: &[RequirementRow] = {
             RuntimeRequirement::Feature(Feature::AotCompiler),
         ),
         (Long(b"smol"), Nothing),
+        // The fork's own: a heap limit and a shell option, neither of which needs a removable feature.
+        (Long(b"max-old-space-size"), Nothing),
+        (Long(b"nounset"), Nothing),
         (Long(b"interactive"), Nothing),
         (Long(b"preload"), RuntimeCode),
         (Long(b"require"), RuntimeCode),
