@@ -513,11 +513,9 @@
         "cargoPackage": "bun_plugin_build_essential"
       },
       "knownDrift": [
-        "scripts/build/plugins.ts",
-        "src/runtime/cli/plugin_command.rs",
-        ".gitmodules(update)"
+        "src/runtime/cli/plugin_command.rs"
       ],
-      "notes": "Seventh plugin, mounted by 050ec748b6e. aphrody-main-runtime.yml already mounts and releases it (loop and asset list), the repository is public with Cargo package bun_plugin_build_essential (bin bun-build-essential), but it is missing from PLUGINS in plugin_command.rs, `plugins` in scripts/build/plugins.ts, the docs and the update = none setting of its .gitmodules entry. knownDrift lists those; check-fork-inventory.ts reports them as warnings until each is fixed and then removed from this list."
+      "notes": "Seventh plugin, mounted by 050ec748b6e. aphrody-main-runtime.yml mounts and releases it; the repository is public with Cargo package bun_plugin_build_essential (bin bun-build-essential). scripts/build/plugins.ts now builds it and .gitmodules has update = none. Still missing: it is not in PLUGINS in src/runtime/cli/plugin_command.rs (and has no `bun build-essential` dispatch there), so `bun plugin list` does not know it. Needs a rebuilt bun to land and verify, so it is recorded in knownDrift; check-fork-inventory.ts warns until it is added and then fails if the entry is left behind."
     },
     {
       "type": "tree",

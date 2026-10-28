@@ -31,7 +31,7 @@ A plugin is a cold part of Bun built as its own executable, `bun-<name>`. The `b
 - **docker**: the native Docker Engine client. It reaches remote engines through `bun_ssh`, so mount `plugins/ssh` too.
 - **just**: justfile recipes (`vendor/just`, aphrody-labs/just branch `bun`). See [just](/runtime/just).
 - **winmd**: Rust and `bun:ffi` bindings from Windows metadata (windows-bindgen). It uses this checkout's `vendor/find-msvc-tools`. See [msvc](/runtime/msvc).
-- **build-essential**: pinned GNU make, meson, ninja, CMake, pkgconf and C/C++ compiler drivers. The release workflow already builds and uploads `bun-build-essential`; the `bun build-essential` dispatch (`PLUGINS` in `plugin_command.rs`) is still to be added, which the inventory records as `knownDrift`.
+- **build-essential**: pinned GNU make, meson, ninja, CMake, pkgconf and C/C++ compiler drivers. `bun bd --target=plugins` builds it and the runtime release uploads `bun-build-essential`; registering it in `PLUGINS` of `plugin_command.rs`, so `bun` dispatches to it, is still to be done, which the inventory records as `knownDrift`.
 
 ### Install a plugin
 

@@ -46,4 +46,5 @@
 [submodule "plugins/build-essential"]
 	path = plugins/build-essential
 	url = https://github.com/aphrody-labs/bun-build-essential.git
+	update = none
 	branch = main

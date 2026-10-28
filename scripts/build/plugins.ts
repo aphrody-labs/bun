@@ -48,6 +48,7 @@ export const plugins: Plugin[] = [
   { name: "docker", package: "bun_plugin_docker" },
   { name: "just", package: "bun_plugin_just" },
   { name: "winmd", package: "bun_plugin_winmd" },
+  { name: "build-essential", package: "bun_plugin_build_essential" },
 ];
 
 /** `RUSTC_WRAPPER`/`CARGO_BUILD_RUSTC_WRAPPER` set to "" where this environment names a wrapper that is not installed. */

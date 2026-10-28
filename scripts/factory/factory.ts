@@ -50,6 +50,7 @@ const HELP = `Usage: bun scripts/factory/factory.ts <command> [target] [--config
   build <target>  autoninja the configured ninja targets
   all <target>    sync, gen and build
   slots           Print which build slots are taken
+  inventory       Check docs/project/fork-inventory.json against .gitmodules, the plugin lists, docs and CI
   run [--slots <n>] [--max-slots <n>] -- <command...>
                   Run a heavy command (bun bd, cargo, ninja) in build slots; alone, it takes all CPUs
   lane <runtime|os|web> -- <command...>
@@ -531,6 +532,16 @@ export async function main(argv = process.argv.slice(2)) {
       return depot(dry);
     case "timer":
       return timer(dry);
+    case "inventory": {
+      // Plugin and module factory: docs/project/fork-inventory.json against .gitmodules, plugin lists, docs and CI.
+      const { checkForkInventory } = await import("../aphrody/check-fork-inventory.ts");
+      const report = checkForkInventory(resolve(import.meta.dir, "../.."));
+      for (const w of report.warnings) console.log(`warning: ${w}`);
+      for (const e of report.errors) console.log(`error: ${e}`);
+      console.log(`fork inventory: ${report.errors.length} errors, ${report.warnings.length} warnings`);
+      if (report.errors.length) process.exitCode = 1;
+      return;
+    }
     case "slots":
       for (const s of slots()) console.log(`${s.taken ? "taken" : "free "}  cpus ${s.cpus}  ${s.lock}`);
       return;
