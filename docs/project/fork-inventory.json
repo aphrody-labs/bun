@@ -453,7 +453,7 @@
       "submoduleRevision": null,
       "upstream": null,
       "migrationState": "stays",
-      "notes": "Headless VT/ANSI screen behind Bun.TerminalScreen; std only, Apache-2.0. Published to crates.io as bun_vt from a staged manifest (scripts/aphrody/publish-crates.ts --only leaf, workflow aphrody-publish-crates.yml with only=leaf) once the leaf run succeeds; name was free on crates.io on 2026-10-29. The source stays in the runtime workspace."
+      "notes": "Headless VT/ANSI screen behind Bun.TerminalScreen; std only, Apache-2.0. Published to crates.io as bun_vt 1.4.7 (2026-10-28, run 40784894179 of aphrody-publish-crates.yml with only=leaf, staged by scripts/aphrody/publish-crates.ts --only leaf); the name was free beforehand. The source stays in the runtime workspace."
     },
     {
       "component": "curl-upstream",
