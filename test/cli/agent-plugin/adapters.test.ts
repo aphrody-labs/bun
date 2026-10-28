@@ -19,7 +19,7 @@ test("adapters share skills but use native harness schemas", () => {
   }
   expect(json("gemini/hooks/hooks.json").hooks.BeforeTool[0].hooks[0].timeout).toBe(10000);
   expect(json("gemini/hooks/hooks.json").hooks.PreToolUse).toBeUndefined();
-  expect(json("opencode/opencode.json").mcp.bun).toEqual({ type: "local", command: ["bun", "mcp"], enabled: true });
+  expect(json("opencode/opencode.json").mcp).toEqual({});
   expect(files.has("opencode/hooks/hooks.json")).toBe(false);
   expect(files.has("local/hooks/hooks.json")).toBe(false);
   expect(String(files.get("opencode/plugins/bun.ts"))).toContain('"../hooks/rewrite.ts"');
@@ -27,11 +27,11 @@ test("adapters share skills but use native harness schemas", () => {
   expect(json("codex/.codex-plugin/plugin.json").hooks).toBeUndefined();
 });
 
-test("OpenCode native callback delegates rewriting and preserves unrelated arguments", async () => {
+test("OpenCode leaves commands unchanged without legacy rewriting", async () => {
   const hooks = await BunPlugin({ directory: root });
   const output = { args: { command: "npm install", description: "install dependencies" } };
   await hooks["tool.execute.before"]({ tool: "bash" }, output);
-  expect(output.args).toEqual({ command: "bun install", description: "install dependencies" });
+  expect(output.args).toEqual({ command: "npm install", description: "install dependencies" });
   const other = { args: { command: "npm install" } };
   await hooks["tool.execute.before"]({ tool: "read" }, other);
   expect(other.args.command).toBe("npm install");
@@ -52,7 +52,7 @@ test("install and uninstall preserve OpenCode model and other MCP servers", () =
   expect(merged.model).toBe(initial.model);
   expect(merged.provider).toEqual(initial.provider);
   expect(merged.mcp.other).toEqual(initial.mcp.other);
-  expect(merged.mcp.bun.type).toBe("local");
+  expect(merged.mcp.bun).toBeUndefined();
   expect(existsSync(join(String(home), ".gemini/extensions/bun/GEMINI.md"))).toBe(true);
   expect(existsSync(join(String(home), ".gemini/config/plugins/bun"))).toBe(false);
   const skill = join(String(home), ".config/opencode/skills/bun-rust-first/SKILL.md");
@@ -65,17 +65,15 @@ test("install and uninstall preserve OpenCode model and other MCP servers", () =
   expect(existsSync(join(String(home), ".config/opencode/plugins/bun.ts"))).toBe(false);
 });
 
-test("OpenCode collisions fail before changing generated installation or user config", () => {
+test("OpenCode preserves a user-owned Bun MCP server", () => {
   using home = tempDir("bun-adapter-collision", {
     ".config/opencode/opencode.json": '{"mcp":{"bun":{"type":"local","command":["custom"]}}}',
   });
   const path = join(String(home), ".config/opencode/opencode.json");
-  const initial = readFileSync(path, "utf8");
-  expect(() => install(files, { home: String(home), targets: ["opencode"], quiet: true })).toThrow(
-    "Existing OpenCode bun MCP owner",
-  );
-  expect(readFileSync(path, "utf8")).toBe(initial);
-  expect(existsSync(join(String(home), ".bun/agent-plugin"))).toBe(false);
+  install(files, { home: String(home), targets: ["opencode"], quiet: true });
+  expect(JSON.parse(readFileSync(path, "utf8")).mcp.bun).toEqual({ type: "local", command: ["custom"] });
+  uninstall({ home: String(home), quiet: true });
+  expect(JSON.parse(readFileSync(path, "utf8")).mcp.bun).toEqual({ type: "local", command: ["custom"] });
 });
 
 test("Antigravity installation uses native schema and absolute hooks, separate from Gemini", () => {
@@ -120,6 +118,7 @@ test("Gemini hook returns native argument override without Claude permission fie
   const proc = Bun.spawn(
     [process.execPath, join(root, "packages/bun-agent-plugin/src/hooks/pre-tool-use.ts"), "gemini"],
     {
+      env: { ...process.env, BUN_AGENT_PLUGIN_REWRITE: "1" },
       stdin: new Blob([
         JSON.stringify({ tool_name: "run_shell_command", tool_input: { command: "npm install" }, cwd: root }),
       ]),

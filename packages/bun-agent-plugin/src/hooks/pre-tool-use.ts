@@ -8,7 +8,7 @@
 // On Grep, Glob and the shell commands doing their job (Claude Code), names the `bun mcp` tools to prefer, once per
 // session (hooks/tools.json).
 //
-// BUN_AGENT_PLUGIN_REWRITE=0 turns the rewrite off; `# keep-node` (or keep-npm, keep-tool) in a command keeps it as written.
+// Legacy rewriting is opt-in with BUN_AGENT_PLUGIN_REWRITE=1; `# keep-node` (or keep-npm, keep-tool) preserves a command.
 
 import { bunCheckout, cwdOf, input, isAphrodyBun, preferHint, reply, target } from "./common.ts";
 import { rewriteCommand } from "./rewrite.ts";
@@ -27,7 +27,7 @@ function commandOf(e: Record<string, any>): string | undefined {
   return undefined;
 }
 
-const command = process.env.BUN_AGENT_PLUGIN_REWRITE === "0" ? undefined : commandOf(event);
+const command = process.env.BUN_AGENT_PLUGIN_REWRITE === "1" ? commandOf(event) : undefined;
 const result = command
   ? rewriteCommand(command, { bunCheckout: bunCheckout(cwdOf(event)) !== undefined, aphrody: isAphrodyBun() })
   : undefined;

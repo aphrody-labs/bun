@@ -317,7 +317,7 @@
     },
     {
       "name": "n2b",
-      "description": "Move a Node.js project to Bun with n2b (`bun n2b`): safe and behavior-changing rewrites, reports, project migration. Use when converting Node code, scripts or package.json to Bun.",
+      "description": "Maintain or use the legacy Aphrody n2b migration tool when a compatible extension is explicitly installed; upstream Bun does not provide bun n2b.",
       "sections": [
         {
           "kind": "markdown",
@@ -327,7 +327,7 @@
     },
     {
       "name": "bun-deps",
-      "description": "Read the installed sources and docs of a project's dependencies (npm packages, Cargo crates, vendored libraries) at their exact versions, and digest a directory into one prompt, with the `bun mcp` tools git_ingest and deps_*. Use instead of fetching a library's repository from the web.",
+      "description": "Inspect installed dependency sources using the optional legacy Aphrody MCP server when explicitly configured; upstream Bun does not provide bun mcp.",
       "sections": [
         {
           "kind": "tools"

@@ -9,7 +9,7 @@ Run this under `/goal` (or `/loop` without an interval). Set the goal condition 
 
 1. **Orient.** Read `CLAUDE.md`/`AGENTS.md`, `PLAN.md`, the nested guidance of the directory, memory notes and `git status`. Pick the queue: `bun scripts/aphrody/work.ts status|next` when the checkout has it; otherwise list open plan items, failing gates, stubs and TODOs yourself. Never touch paths another active lot owns.
 2. **Research before building.** Verify the thing does not already exist (`aphrody graph --source graph:bun query "<question>"`, `graph_symbols`, grep). Then look outward, in this order, stopping when the answer is solid:
-   - `bun mcp` tools: `docs_search`/`docs_read`, `examples_search`, `deps_docs`/`deps_read` for pinned dependency sources.
+   - Inspect installed dependency sources and available MCP tools; the legacy `bun mcp` server requires a compatible explicitly installed extension.
    - Context7 (`resolve-library-id`, `query-docs`) for every library you touch; your memory of an API is not a source.
    - GitHub (`gh search code|repos|issues`, `gh api`) for how upstream and comparable projects solved it; read the code, not the README.
    - Web search for current releases, benchmarks and known bugs. Prefer primary sources; cite the URL and date in the commit body or the doc you write.
@@ -21,7 +21,7 @@ Run this under `/goal` (or `/loop` without an interval). Set the goal condition 
    - Remove dead code: unused exports, files, flags, deps and tests of removed behaviour. Prove it with the graph (`graph_callers`) or a search before deleting.
    - Deduplicate packages and crates: find parallel implementations of one capability, keep the canonical owner, port the unique behaviour into it, migrate callers, delete the copy.
    - Flatten the monorepo: one workspace root, one lockfile, no nested workspaces (`bun scripts/aphrody/flatten-workspace.ts <dir> --check` for Cargo), shared deps hoisted, one version per dependency.
-7. **Gate.** Run the narrowest real gate for the change: `bun bd test <file>` for native code (never plain `bun test`), `cargo check -p <crate>`/`cargo clippy`, `bun test` for scripts, native `bun bd check|lint|fmt|n2b`. A red gate is fixed, not skipped. Fix pre-existing failures in files you touched.
+7. **Gate.** Run the narrowest meaningful checks for the changed component. Use official upstream Bun canary for scripts and the corresponding changed binary for native runtime changes; select legacy fork tools explicitly when needed.
 8. **Ship.** Commit by path with the owner's identity, `git fetch`, confirm ancestry or rebase, normal push, then prove it with `git branch -r --contains <sha>`. Then deploy and publish what the change affects (site, runtime, SDK, npm, crates) using the project's own release scripts and the credentials already in the protected env files. Verify the live result (HTTP status, version endpoint, `npm view`, `cargo search`) before calling it shipped.
 9. **If it breaks, fix forward.** A failed deploy, publish or CI run becomes the next lot: read the logs (`bun run ci:errors`, `ci:logs`), fix the cause, ship again. Roll back only to restore service, and say so.
 10. **Record.** Mark the lot done, save any durable lesson as a memory note, then start the next pass.

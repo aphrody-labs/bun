@@ -14,10 +14,10 @@ la livraison, et un contrôle manquant doit être signalé.
 
 Lire les instructions du dépôt, ses manifests et lockfiles, les claims et les
 diffs concurrents. Résoudre le checkout et les outils depuis le contexte courant.
-Vérifier le runtime avec `bun agent-plugin doctor --json` ; si son lanceur embarqué
-est cassé, utiliser `bun scripts/aphrody/agent-plugin.ts doctor --json` dans Bun.
-Consigner executable, version, revision et provenance ; un numéro upstream ne
-prouve pas qu'une fonctionnalité existe dans Bun OS.
+Utiliser le canary officiel Bun upstream par défaut et consigner l'exécutable,
+`Bun.revision` et `process.release.sourceUrl`. Les commandes Aphrody et leurs
+API nécessitent un composant compatible explicitement installé ; ne pas supposer
+qu'elles existent dans le runtime upstream.
 
 Pour chaque API envisagée, lire documentation et types du checkout, trouver son
 implémentation par graph/LSP et exécuter une petite preuve comportementale sur le

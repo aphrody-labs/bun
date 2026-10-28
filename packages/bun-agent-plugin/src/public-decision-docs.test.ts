@@ -14,6 +14,7 @@ const pages = [
 ];
 const blocks = (text: string) => [...text.matchAll(/```ts\r?\n([\s\S]*?)\r?\n```/g)].map(match => match[1]!);
 const transpiler = new Bun.Transpiler({ loader: "ts" });
+const hasNativeYolo = await import("bun:yolo").then(() => true, () => false);
 
 test("public decision guides use Bun terminology and the canonical generic route", async () => {
   for (const path of pages) {
@@ -79,7 +80,7 @@ async function execute(source: string, suffix: string) {
   return stdout.trim();
 }
 
-test("public TypeScript decision examples execute the native validator with explicit fixtures", async () => {
+test.skipIf(!hasNativeYolo)("public TypeScript decision examples execute the native validator with explicit fixtures", async () => {
   const first = blocks(await Bun.file(join(root, pages[0]!)).text())[0]!;
   expect(await execute(first, "")).toBe("read allowed");
   const examples = [
@@ -99,7 +100,7 @@ test("public TypeScript decision examples execute the native validator with expl
   }
 });
 
-test("context guide resolves the real package export and selects a fixture source without a paid fallback", async () => {
+test.skipIf(!hasNativeYolo)("context guide resolves the real package export and selects a fixture source without a paid fallback", async () => {
   const directory = mkdtempSync(join(tmpdir(), "bun-public-context-"));
   const target = resolve(directory),
     child = relative(resolve(tmpdir()), target);

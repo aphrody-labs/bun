@@ -1,6 +1,5 @@
-// SessionStart (Claude, Codex) / first PreInvocation (Antigravity): says whether the `bun` on PATH is the
-// Aphrody runtime (aphrody-labs/bun), adds its working rules (context.md, generated from docs/project/agent-plugin.mdx),
-// and refreshes the installed plugin in the background when its version differs from `bun --version`.
+// SessionStart / first PreInvocation: identify the executing runtime, load generated rules and
+// refresh the legacy embedded plugin only when running the Aphrody runtime.
 
 import { spawn } from "node:child_process";
 import { readFileSync, writeFileSync } from "node:fs";
@@ -21,17 +20,13 @@ const aphrody = isAphrodyBun();
 if (aphrody) {
   lines.push(`bun ${Bun.version_with_sha} (Aphrody runtime, aphrody-labs/bun) at ${process.execPath}.`);
 } else {
-  lines.push(
-    `WARNING: the bun on PATH (${process.execPath}, ${Bun.version_with_sha}) is not the Aphrody runtime (aphrody-labs/bun). ` +
-      'Install it: `curl -fsSL https://bun.aphrody.app/install | bash` (Windows: `powershell -c "irm bun.aphrody.app/install.ps1|iex"`), ' +
-      "then make sure ~/.bun/bin comes first on PATH.",
-  );
+  lines.push(`Bun ${Bun.version_with_sha} at ${process.execPath}; use official upstream canary by default. Aphrody-specific integrations require an explicitly selected compatible runtime until migrated.`);
 }
 
 const checkout = bunCheckout(cwdOf(event));
 if (checkout) {
   lines.push(
-    `This is a Bun checkout (${checkout}): build with \`bun bd\`, test with \`bun bd test <file>\`, and qualify native quality/migration with \`bun bd check\`, \`bun bd lint\`, \`bun bd fmt\`, \`bun bd n2b\`.`,
+    `This is a Bun checkout (${checkout}). Qualify runtime changes with the corresponding changed binary; installed upstream Bun does not contain checkout changes.`,
   );
 }
 

@@ -1,5 +1,15 @@
 # Bun agent guidance
 
+# Runtime transition — 2026-10-28
+
+Use the official `oven-sh/bun` canary as the default runtime. Aphrody-specific
+features are transitioning to optional modules and plugins; fork-only commands
+and APIs in older guidance are legacy maintenance instructions, not upstream
+Bun capabilities. Use `bun compile` for supported experimental AOT builds and
+verify application compatibility. Existing workflows, services and native
+components must be migrated and verified before their fork dependencies are
+removed. Project-pinned native build toolchains remain in force until migrated.
+
 Bun is a Rust runtime and toolkit with JavaScriptCore C++ bindings, a bundler,
 test runner and package manager.
 
@@ -41,17 +51,9 @@ test runner and package manager.
   `bun factory sync|gen|build|all <target>`, which takes free build slots
   (multi-build mode, `bun factory slots`); `bun factory run -- <command>` runs
   any other heavy command, such as `bun bd`, in a slot.
-- Use the Aphrody Bun fork for JavaScript, TypeScript and Python tooling.
-  Check provenance with `bun agent-plugin doctor --json`.
-- Build and execute checkout changes with `bun bd [command]`; test with
-  `bun bd test <file>`. Installed Bun does not include checkout changes.
-- Run type checking, lint, formatting and migration through the native commands
-  `bun check`, `bun lint`, `bun fmt` and `bun n2b`. Do not delegate these commands
-  to subprocess backends, `bunx`, standalone Oxc tools, tsgo/tsc or external n2b.
-  Qualify checkout changes with `bun bd check`, `bun bd lint`, `bun bd fmt` and
-  `bun bd n2b`; fix native failures instead of selecting an external fallback.
-  Package scripts may expose these native commands, but must not replace them
-  with wrappers or external backends.
+- Use official upstream Bun canary for JavaScript and TypeScript. Verify `Bun.revision` and `process.release.sourceUrl`; use uv for Python. Fork-specific tooling must be selected explicitly as a legacy component during migration.
+- Changes to this existing fork still require the corresponding changed binary for meaningful runtime qualification. Its build and test commands remain transitional until their owners are migrated.
+- Choose type checking, linting, formatting and migration tools according to the component being migrated. Do not assume fork-only commands exist in upstream Bun.
 - Build scripts accept trailing execution arguments. Put build flags before them;
   see `scripts/build.ts`. Do not invoke the debug executable directly.
 - Run long builds asynchronously; keep user updates responsive. Do not impose

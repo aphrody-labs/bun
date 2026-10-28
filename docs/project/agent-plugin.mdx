@@ -1,12 +1,12 @@
 ---
 title: Agent plugin
-description: Install Bun rules, skills, hooks and the bun MCP server into Claude Code, Codex, Gemini CLI, OpenCode and other coding agents.
+description: Install agent skills and optional legacy hooks for Bun projects.
 ---
 
-`bun agent-plugin` installs a Bun plugin into Claude Code, Codex, Gemini CLI, OpenCode, Antigravity (`agy`) and other local agent harnesses. Rules, skills and command rewriting come from one source; each agent gets its own configuration format and event protocol. The plugin provides:
+The standalone `bun-agent-plugin` package installs skills and optional legacy hooks into Claude Code, Codex, Gemini CLI, OpenCode, Antigravity (`agy`) and local agent harnesses. The default runtime is official upstream Bun canary. The plugin provides:
 
-- the runtime's MCP server, `bun mcp`, over stdio;
-- hooks that run `bun`, `bunx` and `bun uv` instead of `node`, `npm`, `npx`, `yarn`, `pnpm`, `pip` and `python`, and `bun bd test` instead of `bun test` inside a Bun checkout;
+- skills and rules generated for supported agent harnesses;
+- optional legacy hooks that rewrite commands for the Aphrody fork when `BUN_AGENT_PLUGIN_REWRITE=1`;
 - skills for building, testing and navigating Bun, generated from the repository.
 
 Codex receives the MCP server, the skills and `AGENTS.md`, but no hooks, so its shell commands are not rewritten.
@@ -14,11 +14,11 @@ Codex receives the MCP server, the skills and `AGENTS.md`, but no hooks, so its 
 <CodeGroup>
 
 ```bash Every agent found
-bun agent-plugin install
+bun-agent-plugin install
 ```
 
 ```bash Some agents
-bun agent-plugin install codex gemini opencode local
+bun-agent-plugin install codex gemini opencode local
 ```
 
 ```bash From a checkout
@@ -44,7 +44,7 @@ Everything lands in `~/.bun/agent-plugin` (`$BUN_INSTALL/agent-plugin`). The age
 
 Other plugins, marketplaces and settings are left as they are.
 
-Every agent gets the `bun` MCP server (`bun mcp`). Claude Code also gets `bun lsp` as its language server (`bun lsp --stdio`, one server for every language it routes). The list of tools in the plugin's instructions and the extensions given to Claude Code are read from the sources (`src/mcp/tools`, `src/agent_tools/tools.json`, `src/lsp/language.rs`), so a tool or a language added there shows up at the next generation.
+Generated adapters do not register MCP or LSP servers by default. The historical `bun mcp` and `bun lsp` require an explicitly selected compatible fork executable; they are not upstream Bun commands. The catalog below describes those legacy tools until standalone extensions are available.
 
 | Command                                 | Does                                                                                  |
 | --------------------------------------- | ------------------------------------------------------------------------------------- |
@@ -62,8 +62,8 @@ The hooks are TypeScript files run by `bun` (`bun --no-install --no-env-file hoo
 
 | Hook             | Claude Code                                                                         | Antigravity                   | Does                                                                                                                                                                                |
 | ---------------- | ----------------------------------------------------------------------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Session start    | `SessionStart`                                                                      | `PreInvocation`               | checks that `bun` is the Aphrody runtime, otherwise says how to install it; in a Bun checkout, recalls `bun bd` and `bun bd test`; reinstalls the plugin when `bun` changed version |
-| Before a command | `PreToolUse` (`Bash`)                                                               | `PreToolUse` (`run_command`)  | rewrites the command, see below                                                                                                                                                     |
+| Session start    | `SessionStart`                                                                      | `PreInvocation`               | Reports the executing runtime and loads the current agent rules; a legacy fork installation may update its embedded plugin. |
+| Before a command | `PreToolUse` (`Bash`)                                                               | `PreToolUse` (`run_command`)  | Rewrites commands only when the legacy mode is explicitly enabled, see below. |
 | Before a search  | `PreToolUse` (`Grep`, `Glob`, and `rg`, `grep`, `find` in `Bash`; Claude Code only) |                               | once per session, names the `bun mcp` tools to prefer (`graph_*`, `lsp_*`, `vfs_*` when the server has them)                                                                        |
 | After a command  | `PostToolUse` (`Bash`)                                                              | `PostToolUse` (`run_command`) | when `node`, `npm` or `python` is not found, names the Aphrody runtime's equivalent                                                                                                 |
 
@@ -86,7 +86,7 @@ The hooks are TypeScript files run by `bun` (`bun --no-install --no-env-file hoo
 
 The Python rewrites only happen when the `bun` that runs the hook is the Aphrody runtime, which carries `uv`. A rewritten command runs without confirmation only when the agent already runs without asking (Claude Code `bypassPermissions`); otherwise Claude Code and Antigravity ask for it. Gemini CLI and OpenCode get the same rewriting through their own hook and plugin formats.
 
-A command ending with `# keep-node` (or `# keep-npm`, `# keep-tool`) is left as written; `BUN_AGENT_PLUGIN_REWRITE=0` turns the rewriting off, and `BUN_AGENT_PLUGIN_AUTO_ALLOW=1` runs rewritten commands without asking.
+A command ending with `# keep-node` (or `# keep-npm`, `# keep-tool`) is left as written. Rewriting is off by default; `BUN_AGENT_PLUGIN_REWRITE=1` enables the legacy fork mappings, and `BUN_AGENT_PLUGIN_AUTO_ALLOW=1` runs rewritten commands without asking.
 
 ## Generating
 
@@ -106,9 +106,7 @@ The build packs the result into the executable (`codegen/agent-plugin.bin`), whi
 
 ## Agent rules
 
-- Use the Aphrody runtime (aphrody-labs/bun) for everything JavaScript, TypeScript and Python: `bun` instead of `node`, `bun install`/`bun add`/`bun remove`/`bun run` instead of `npm`, `yarn` and `pnpm`, `bunx` instead of `npx` for unrelated packages, `bun uv` instead of `pip`, `python` and `uv`.
-- Type checking, lint, formatting and migration must use native `bun check`, `bun lint`, `bun fmt` and `bun n2b` directly. Never delegate these four commands to subprocess backends, standalone Oxc tools, tsgo/tsc or external n2b. In a Bun checkout, run them as `bun bd check`, `bun bd lint`, `bun bd fmt` and `bun bd n2b`; correct native failures instead of using an external fallback. Package scripts may expose these native commands but must not wrap or replace them; `bunx` is reserved for unrelated packages.
-- Check which `bun` runs with `bun agent-plugin doctor --json`. Stable releases such as `1.4.4+<commit>` are identified by `process.release.sourceUrl` under `https://github.com/aphrody-labs/bun/releases/download/`, with a matching release version and native `Bun.revision` commit. Older `-aphrody.N` releases are also recognized. The plugin's content hash identifies the plugin, not the runtime. If the runtime is not recognized, install it (`curl -fsSL https://bun.aphrody.app/install | bash`, or `powershell -c "irm bun.aphrody.app/install.ps1|iex"` on Windows) or upgrade it (`bun upgrade`).
-- The `bun` MCP server (`bun mcp`) exposes the tools of the Aphrody runtime to the agent; prefer them over ad hoc scripts when they cover the task.
-- In a checkout of the Bun repository, build with `bun bd` and test with `bun bd test <file>`: plain `bun test` runs the installed `bun`, not your changes. Read `AGENTS.md` and the repository's applicable guidance first; `CLAUDE.md` remains a compatible source, not a restriction to Claude.
-- For a task on Bun itself, load the matching skill of this plugin (`bun-build`, `bun-tests`, `bun-crates`, `bun-runtime`, `bun-docs`) and the reference it lists.
+- Use the official `oven-sh/bun` canary as the default JavaScript and TypeScript runtime. Check `Bun.revision` and `process.release.sourceUrl` to identify the executable. Use standalone `uv` for Python.
+- Use `bun compile` for supported experimental AOT builds and check compatibility on the target platform. Select formatting, linting and migration tools according to the project; do not assume fork-only commands exist upstream.
+- Aphrody runtime integrations are being migrated to optional modules and plugins. Until a component is independently available, its fork-specific commands and MCP or LSP server require an explicitly selected compatible executable. Do not claim upstream Bun provides them.
+- For changes to runtime source, qualify the resulting changed binary; the installed canary cannot demonstrate changes it does not contain. Follow applicable repository guidance and preserve project-pinned native toolchains.

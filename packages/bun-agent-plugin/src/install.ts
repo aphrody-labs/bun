@@ -168,6 +168,7 @@ export function install(files: Map<string, string | Uint8Array>, options: Instal
   const p = paths(home, real);
   const meta = JSON.parse(str(files.get("meta.json") ?? files.get("claude/meta.json")));
   const previous = readJson(join(p.root, "install.json"));
+  const oldOpenCodeMcp = readJson(join(p.root, "opencode", "opencode.json")).mcp?.bun;
   const executable = typeof Bun !== "undefined" && isAphrodyBun() ? stableExecutable() : undefined;
   if (executable) {
     files = new Map(files);
@@ -185,7 +186,7 @@ export function install(files: Map<string, string | Uint8Array>, options: Instal
     }
     if (files.has("opencode/opencode.json")) {
       const config = JSON.parse(str(files.get("opencode/opencode.json")));
-      config.mcp.bun.command[0] = executable;
+      if (config.mcp?.bun?.command) config.mcp.bun.command[0] = executable;
       files.set("opencode/opencode.json", JSON.stringify(config, null, 2) + "\n");
     }
     const config = files.get("codex/config.toml");
@@ -238,9 +239,6 @@ export function install(files: Map<string, string | Uint8Array>, options: Instal
     const config = existsSync(path) ? JSON.parse(readFileSync(path, "utf8")) : {};
     if (config.instructions !== undefined && !Array.isArray(config.instructions))
       throw new Error(`Invalid OpenCode instructions at ${path}`);
-    const owned = readJson(join(p.root, "opencode", "opencode.json")).mcp?.bun;
-    if (config.mcp?.bun && JSON.stringify(config.mcp.bun) !== JSON.stringify(owned))
-      throw new Error(`Existing OpenCode bun MCP owner at ${path}`);
     const plugin = join(p.opencode, "plugins", "bun.ts");
     const expected = `export { BunPlugin } from ${JSON.stringify(join(p.root, "opencode", "plugins", "bun.ts").replaceAll("\\", "/"))};\n`;
     if (existsSync(plugin) && readFileSync(plugin, "utf8") !== expected)
@@ -362,12 +360,11 @@ export function install(files: Map<string, string | Uint8Array>, options: Instal
     // Never replace a JSONC config or an existing server/provider definition silently.
     const config = existsSync(path) ? JSON.parse(readFileSync(path, "utf8")) : {};
     config.$schema ??= "https://opencode.ai/config.json";
-    config.mcp ??= {};
-    config.mcp.bun = JSON.parse(str(files.get("opencode/opencode.json"))).mcp.bun;
+    if (oldOpenCodeMcp && JSON.stringify(config.mcp?.bun) === JSON.stringify(oldOpenCodeMcp)) delete config.mcp.bun;
     config.instructions ??= [];
     const rules = join(p.root, "opencode", "AGENTS.md");
     if (!config.instructions.includes(rules)) config.instructions.push(rules);
-    actions.push(`merge ${path}: Bun MCP and instructions; install native OpenCode adapter`);
+    actions.push(`merge ${path}: instructions; install native OpenCode adapter`);
     write(path, JSON.stringify(config, null, 2) + "\n");
     // Plugin imports the shared engine from the generated root, without duplicating it.
     write(
@@ -464,7 +461,7 @@ export function uninstall(options: InstallOptions = {}): InstallReport {
     if (existsSync(path)) {
       const config = JSON.parse(readFileSync(path, "utf8"));
       const owned = readJson(join(p.root, "opencode", "opencode.json")).mcp?.bun;
-      if (JSON.stringify(config.mcp?.bun) === JSON.stringify(owned)) delete config.mcp.bun;
+      if (owned && JSON.stringify(config.mcp?.bun) === JSON.stringify(owned)) delete config.mcp.bun;
       const rules = join(p.root, "opencode", "AGENTS.md");
       if (Array.isArray(config.instructions))
         config.instructions = config.instructions.filter((s: string) => s !== rules);

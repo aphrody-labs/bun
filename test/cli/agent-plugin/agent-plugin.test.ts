@@ -18,7 +18,7 @@ import { delimiter, join, relative, resolve } from "path";
 import { lspExtensions, mcpTools } from "../../../packages/bun-agent-plugin/src/catalog.ts";
 import { generate } from "../../../packages/bun-agent-plugin/src/generate.ts";
 import { hasTable } from "../../../packages/bun-agent-plugin/src/install.ts";
-import { isAphrodyRuntime } from "../../../packages/bun-agent-plugin/src/hooks/common.ts";
+import { isAphrodyBun, isAphrodyRuntime } from "../../../packages/bun-agent-plugin/src/hooks/common.ts";
 import { rewriteCommand } from "../../../packages/bun-agent-plugin/src/hooks/rewrite.ts";
 import { forbiddenIn } from "../../../packages/bun-agent-plugin/src/sanitize.ts";
 
@@ -55,7 +55,7 @@ describe("runtime identity", () => {
     using home = tempDir("agent-plugin-doctor-identity", {});
     const { stdout, exitCode } = await run([bunExe(), cli, "doctor", "--json", "--home", String(home)]);
     expect(exitCode).toBe(0);
-    expect(JSON.parse(stdout)).toMatchObject({ aphrody: true, version: Bun.version_with_sha });
+    expect(JSON.parse(stdout)).toMatchObject({ aphrody: isAphrodyBun(), version: Bun.version_with_sha });
   });
 });
 
@@ -81,7 +81,7 @@ async function run(cmd: string[], options: { stdin?: string; env?: Record<string
   return { stdout, stderr, exitCode };
 }
 
-test("embedded plugin repairs an incomplete owned cache during concurrent invocations", async () => {
+test.skipIf(!isAphrodyBun())("embedded plugin repairs an incomplete owned cache during concurrent invocations", async () => {
   using fixture = tempDir("agent-plugin-cache-repair", {});
   const env = { TMPDIR: String(fixture), TMP: String(fixture), TEMP: String(fixture) };
   const home = join(String(fixture), "home");
@@ -121,7 +121,7 @@ test("embedded plugin repairs an incomplete owned cache during concurrent invoca
   expect(readdirSync(base).filter(name => name.startsWith("."))).toEqual([]);
 });
 
-test("embedded plugin cache refuses directory links without traversing their target", async () => {
+test.skipIf(!isAphrodyBun())("embedded plugin cache refuses directory links without traversing their target", async () => {
   using fixture = tempDir("agent-plugin-cache-link", {});
   const env = { TMPDIR: String(fixture), TMP: String(fixture), TEMP: String(fixture) };
   const home = join(String(fixture), "home");
@@ -170,11 +170,7 @@ describe("generate", () => {
       path: "./codex",
     });
     for (const t of ["claude", "codex"]) {
-      expect(json(`${t}/.mcp.json`).mcpServers.bun).toEqual({
-        type: "stdio",
-        command: "bun",
-        args: ["mcp"],
-      });
+      expect(json(`${t}/.mcp.json`).mcpServers).toEqual({});
       if (t === "codex") {
         expect(files.has("codex/hooks/hooks.json")).toBe(false);
         expect(codex.hooks).toBeUndefined();
@@ -182,11 +178,9 @@ describe("generate", () => {
       }
       const hooks = json(`${t}/hooks/hooks.json`).hooks;
       expect(Object.keys(hooks).sort()).toEqual(["PostToolUse", "PreToolUse", "SessionStart", "UserPromptSubmit"]);
-      expect(hooks.PreToolUse[0].matcher).toBe(
-        t === "claude" ? "Bash|Grep|Glob" : "Bash|Shell|exec_command|shell_command|grep_files|list_files",
-      );
+      expect(hooks.PreToolUse[0].matcher).toBe("Bash|Shell|exec_command|shell_command|grep_files|list_files");
     }
-    expect(json("agy/mcp_config.json").mcpServers.bun).toEqual({ command: "bun", args: ["mcp"] });
+    expect(json("agy/mcp_config.json").mcpServers).toEqual({});
     expect(json("agy/hooks.json")["bun-commands"].PreToolUse[0].matcher).toBe("run_command");
     expect(String(files.get("codex/AGENTS.md"))).toContain("## Skills");
     expect(files.has("agy/GEMINI.md")).toBe(false);
@@ -239,14 +233,20 @@ describe("generate", () => {
       tools.filter(name => !["read_file", "write_file", "edit_file", "shell"].includes(name)),
     );
     expect(String(files.get("codex/AGENTS.md"))).toContain("BUN_FEATURE_FLAG_EXPERIMENTAL_MCP_NATIVE_TOOLS=1");
-    const lsp = lspExtensions(root);
     const declared = json("claude/.claude-plugin/plugin.json").lspServers;
-    if (Object.keys(lsp).length)
-      expect(declared).toEqual({
-        bun: { command: "bun", args: ["lsp", "--stdio"], extensionToLanguage: lsp },
-      });
+    expect(declared).toBeUndefined();
     for (const t of ["claude", "codex", "agy"])
       expect(String(files.get(`${t}/skills/bun-aphrody/SKILL.md`))).toContain("`graph_symbols`");
+  });
+
+  test("generated agent guidance defaults to upstream and does not force fork tools", () => {
+    const instructions = String(files.get("codex/AGENTS.md"));
+    const context = String(files.get("claude/hooks/context.md"));
+    expect(instructions).toContain("official `oven-sh/bun` canary");
+    expect(context).toContain("official upstream Bun canary");
+    expect(context).not.toContain("never delegate them to subprocess backends");
+    expect(context).not.toContain("Native media: Bun.Video probes");
+    expect(json("claude/.mcp.json").mcpServers).toEqual({});
   });
 
   test("reads tool names, constants and agent tools from a checkout's sources", () => {
@@ -358,11 +358,21 @@ describe("hooks", () => {
   // Outside any Bun checkout; the hooks only read it.
   const cwd = resolve(root, "..");
 
+  test("PreToolUse leaves commands unchanged unless legacy rewriting is enabled", async () => {
+    const result = await run([bunExe(), hook("pre-tool-use"), "claude"], {
+      env: { BUN_AGENT_PLUGIN_REWRITE: "" },
+      stdin: JSON.stringify({ tool_input: { command: "npm i" }, cwd }),
+    });
+    expect(result.exitCode).toBe(0);
+    expect(result.stdout).toBe("");
+  }, SPAWN_TIMEOUT);
+
   test.concurrent(
     "PreToolUse rewrites `npm i` to `bun i`, asks unless the agent runs without asking",
     async () => {
       const [ask, bypass, other] = await Promise.all([
         run([bunExe(), hook("pre-tool-use"), "claude"], {
+          env: { BUN_AGENT_PLUGIN_REWRITE: "1" },
           stdin: JSON.stringify({
             tool_input: { command: "npm i" },
             cwd,
@@ -370,6 +380,7 @@ describe("hooks", () => {
           }),
         }),
         run([bunExe(), hook("pre-tool-use"), "claude"], {
+          env: { BUN_AGENT_PLUGIN_REWRITE: "1" },
           stdin: JSON.stringify({
             tool_input: { command: "npm i" },
             cwd,
@@ -400,9 +411,11 @@ describe("hooks", () => {
     async () => {
       const [codex, agy] = await Promise.all([
         run([bunExe(), hook("pre-tool-use"), "codex"], {
+          env: { BUN_AGENT_PLUGIN_REWRITE: "1" },
           stdin: JSON.stringify({ tool_input: { command: "npx tsc" }, cwd }),
         }),
         run([bunExe(), hook("pre-tool-use"), "agy"], {
+          env: { BUN_AGENT_PLUGIN_REWRITE: "1" },
           stdin: JSON.stringify({
             toolCall: { args: { CommandLine: "node x.js" } },
             workspacePaths: [cwd],
@@ -428,15 +441,15 @@ describe("hooks", () => {
         env: { BUN_INSTALL: String(home) },
       });
       const context = JSON.parse(stdout).hookSpecificOutput.additionalContext;
-      expect(context).toContain("(Aphrody runtime, aphrody-labs/bun)");
-      expect(context).toContain("bun bd test");
+      expect(context).toContain(isAphrodyBun() ? "(Aphrody runtime, aphrody-labs/bun)" : "use official upstream canary");
+      expect(context).toContain("corresponding changed binary");
       expect(exitCode).toBe(0);
     },
     SPAWN_TIMEOUT,
   );
 
   test.concurrent(
-    "PreToolUse names the `bun mcp` tools to prefer over Grep, once per session",
+    "PreToolUse does not suggest an unregistered MCP server",
     async () => {
       using out = tempDir("agent-plugin-prefer", {});
       for (const [k, v] of generate({ root, pkg }))
@@ -453,9 +466,7 @@ describe("hooks", () => {
       const prefer = join(String(out), "hooks", "pre-tool-use.ts");
       const first = await run([bunExe(), prefer, "claude"], { stdin: event });
       const second = await run([bunExe(), prefer, "claude"], { stdin: event });
-      expect(JSON.parse(first.stdout).hookSpecificOutput.additionalContext).toContain(
-        "mcp__plugin_bun_bun__graph_symbols",
-      );
+      expect(first.stdout).toBe("");
       expect(second.stdout).toBe("");
       expect([first.exitCode, second.exitCode]).toEqual([0, 0]);
     },
@@ -479,8 +490,7 @@ describe("bun agent-plugin", () => {
       expect(install.stderr).toBe("");
       expect(JSON.parse(install.stdout).targets).toEqual(["codex"]);
       const installed = JSON.parse(readFileSync(join(h, ".bun/agent-plugin/codex/.mcp.json"), "utf8"));
-      expect(installed.mcpServers.bun.command).toEndWith("/bun");
-      expect(realpathSync(installed.mcpServers.bun.command)).toBe(realpathSync(bunExe()));
+      expect(installed.mcpServers).toEqual({});
       expect(realpathSync(JSON.parse(readFileSync(join(h, ".bun/agent-plugin/install.json"), "utf8")).executable)).toBe(
         realpathSync(bunExe()),
       );
@@ -490,7 +500,7 @@ describe("bun agent-plugin", () => {
   );
 
   test.concurrent(
-    "installs the embedded plugin and uninstalls it, leaving the other plugins as they were",
+    "standalone CLI installs and uninstalls the plugin, leaving other plugins intact",
     async () => {
       const settings = { enabledPlugins: { "aphrody@aphrody": true }, theme: "dark" };
       const config = 'model = "o3"\n\n[mcp_servers.other]\ncommand = "other"\n';
@@ -500,7 +510,7 @@ describe("bun agent-plugin", () => {
         ".gemini/config/.keep": "",
       });
       const h = String(home);
-      const install = await run([bunExe(), "agent-plugin", "install", "--home", h, "--json"], {
+      const install = await run([bunExe(), cli, "install", "--home", h, "--json"], {
         cwd: h,
       });
       expect(install.stderr).toBe("");
@@ -516,22 +526,22 @@ describe("bun agent-plugin", () => {
       const toml = readFileSync(join(h, ".codex/config.toml"), "utf8");
       expect(toml).toStartWith(config);
       expect(toml).toContain('[plugins."bun@aphrody-bun"]');
-      expect(readFileSync(join(h, ".codex/AGENTS.md"), "utf8")).toContain("aphrody-labs/bun");
+      expect(readFileSync(join(h, ".codex/AGENTS.md"), "utf8")).toContain("oven-sh/bun");
       const plugin = tree(join(h, ".bun/agent-plugin"));
       expect(JSON.parse(plugin["claude/.claude-plugin/plugin.json"]).name).toBe("bun");
       const executable = realpathSync(bunExe());
       for (const target of ["claude", "codex"]) {
-        expect(realpathSync(JSON.parse(plugin[`${target}/.mcp.json`]).mcpServers.bun.command)).toBe(executable);
+        expect(JSON.parse(plugin[`${target}/.mcp.json`]).mcpServers).toEqual({});
       }
-      expect(realpathSync(JSON.parse(plugin["agy/mcp_config.json"]).mcpServers.bun.command)).toBe(executable);
-      expect(realpathSync(JSON.parse(plugin["install.json"]).executable)).toBe(executable);
+      expect(JSON.parse(plugin["agy/mcp_config.json"]).mcpServers).toEqual({});
+      if (isAphrodyBun()) expect(realpathSync(JSON.parse(plugin["install.json"]).executable)).toBe(executable);
       expect(existsSync(join(h, ".gemini/config/plugins/bun/hooks.json"))).toBe(true);
       expect(existsSync(join(h, ".gemini/extensions/bun/gemini-extension.json"))).toBe(true);
 
-      const again = await run([bunExe(), "agent-plugin", "install", "--update", "--home", h, "--json"], { cwd: h });
+      const again = await run([bunExe(), cli, "install", "--update", "--home", h, "--json"], { cwd: h });
       expect(JSON.parse(again.stdout).skipped).toBe("up to date");
 
-      const uninstall = await run([bunExe(), "agent-plugin", "uninstall", "--home", h, "--quiet"], {
+      const uninstall = await run([bunExe(), cli, "uninstall", "--home", h, "--quiet"], {
         cwd: h,
       });
       expect(uninstall.stderr).toBe("");
@@ -551,7 +561,7 @@ describe("bun agent-plugin", () => {
     async () => {
       using home = tempDir("agent-plugin-update", { ".claude/settings.json": "{}\n" });
       const { stdout, exitCode } = await run(
-        [bunExe(), "agent-plugin", "install", "--update", "--home", String(home), "--json"],
+        [bunExe(), cli, "install", "--update", "--home", String(home), "--json"],
         { cwd: String(home) },
       );
       expect(JSON.parse(stdout).skipped).toBe("not installed");
@@ -561,7 +571,7 @@ describe("bun agent-plugin", () => {
     SPAWN_TIMEOUT,
   );
 
-  test.concurrent(
+  test.skipIf(!isAphrodyBun())(
     "the package's own CLI generates the same plugin as the executable carries",
     async () => {
       using out = tempDir("agent-plugin-generate", {});

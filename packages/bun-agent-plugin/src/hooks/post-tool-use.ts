@@ -18,7 +18,7 @@ if (
   /command not found|is not recognized as|No such file or directory|cannot find the path|ENOENT/i.test(output)
 ) {
   const r = rewriteCommand(command, { aphrody: true });
-  if (r) hint = `Use the Aphrody runtime instead: ${r.command}`;
+  if (r && process.env.BUN_AGENT_PLUGIN_REWRITE === "1") hint = `Legacy Aphrody runtime alternative: ${r.command}`;
 }
 
 if (t === "agy") reply({});

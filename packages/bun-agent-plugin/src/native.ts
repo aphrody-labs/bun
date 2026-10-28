@@ -381,18 +381,6 @@ const token = await Bun.secrets.get({ service: "my-app", name: "token" });
 console.log(token !== null);`,
   },
   {
-    task: "Native video metadata and transformed still frames",
-    instead: ["ffprobe-static", "video-thumbnail", "fluent-ffmpeg"],
-    use: "Bun.Video for native metadata, transformed frames, bounded audio and MP4 remux; composition encoding uses the Bun Video package",
-    before: `import ffmpeg from "fluent-ffmpeg";
-ffmpeg("input.mp4").screenshots({ timestamps: [1], filename: "preview.png" });`,
-    after: `if (!Bun.Video.available) throw new Error("Native video provider unavailable");
-const video = new Bun.Video("input.mp4");
-const metadata = await video.metadata();
-await video.frame(1).resize(640).png().write("preview.png");
-console.log(metadata.width, metadata.height, metadata.codec);`,
-  },
-  {
     task: "Package scripts and CLI",
     instead: ["npm install", "npx", "yarn", "pnpm", "npm run"],
     use: "bun install / bun fmt / bun run; bunx only for commands without a native Bun owner",
@@ -410,16 +398,12 @@ export const SEARCH_URL = "https://bun.aphrody.app/api/bun/search?q=";
 
 /** Compact, injected at session start (hooks/context.md) and summarized by the user-prompt-submit hook. */
 export const RULES = [
-  "Write Bun-native code: a Bun API before a Node.js module, a built-in before an npm package.",
-  "Quality and migration: run native `bun check`, `bun lint`, `bun fmt` and `bun n2b` directly; never delegate them to subprocess backends, standalone Oxc, tsgo/tsc or external n2b. Qualify checkout changes with `bun bd check`, `bun bd lint`, `bun bd fmt` and `bun bd n2b`. Package scripts may expose these native commands but must not wrap or replace them; `bunx` is reserved for unrelated packages.",
-  "HTTP and WebSocket servers: Bun.serve({ routes, fetch, websocket }), never express/fastify/koa/ws.",
-  "Files: Bun.file(path).text()/.json()/.bytes()/.exists() and Bun.write(path, data), not fs.readFile/fs.writeFile.",
-  "Databases: bun:sqlite (Database), Bun.sql/Bun.SQL (Postgres, MySQL), Bun.redis; never better-sqlite3, pg, ioredis.",
-  "Processes: Bun.$`cmd` (Bun Shell) or Bun.spawn/Bun.spawnSync, not child_process or execa.",
-  "Tests: bun:test (test, expect, mock, spyOn) run by `bun test`, never jest/vitest/mocha.",
-  "Native media: Bun.Video probes, decodes and remuxes; Bun.Image transforms and encodes extracted frames. Use the bun-video skill for bounds and composition/browser/FFmpeg requirements.",
+  "Use official Bun APIs when appropriate for the project's supported runtimes and compatibility requirements.",
+  "Use official upstream Bun canary by default. Choose project-appropriate quality tools; fork-only commands require an explicitly selected compatible component.",
+  "Bun provides Bun.serve, Bun.file, Bun.write, bun:sqlite, Bun.spawn and bun:test; choose APIs to fit the application.",
+  "Media capabilities specific to the Aphrody fork require an explicitly installed compatible extension; upstream Bun does not provide Bun.Video.",
   "Also built in: fetch, Bun.s3, Bun.password, Bun.hash, Bun.CryptoHasher, Bun.Glob, Bun.build, Bun.YAML/TOML/JSONC, Bun.semver, HTMLRewriter, bun:ffi, Worker; .env is loaded without dotenv; TypeScript runs without ts-node/tsx.",
-  "Unsure of an API? examples_search / docs_search (bun mcp), the bun-native skill, or " + SEARCH_URL + "<words>.",
+  "Check upstream Bun documentation and the actual runtime version before relying on an API. Legacy MCP tools require a separately configured compatible server.",
 ];
 
 export type Replacement = { names: string[]; use: string; task?: string };

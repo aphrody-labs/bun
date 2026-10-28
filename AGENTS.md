@@ -1,11 +1,27 @@
 # Bun agent guidance
 
+## Runtime transition — 2026-10-28
+
+- Use the official `oven-sh/bun` canary as the default runtime for projects and
+  agent tooling. Verify its revision and provenance before relying on it.
+- Aphrody functionality is being moved to independently installed modules and
+  plugins. Treat fork-specific commands and APIs below as legacy instructions
+  for maintaining those components, not as capabilities of upstream Bun.
+- Prefer upstream `bun compile` for experimental ahead-of-time builds where the
+  target and application are supported. Verify compatibility before deployment.
+- This is a migration target, not a claim that existing extensions, workflows,
+  services or builds already run on upstream Bun. Inspect and migrate their
+  actual owners before removing fork-specific code or release machinery.
+- Where older instructions in this file require the Aphrody runtime as the
+  default, this transition takes precedence. Keep project-pinned toolchains when
+  building existing native sources until their owners are migrated.
+
 ## Owner workflow update — 2026-10-18
 
 - Do not create Git worktrees. Consolidate existing branches and worktrees into
   the canonical checkout, preserving their work in Git before retiring them.
-- Build and qualify on the VPS only. The Windows workstation edits and
-  synchronizes sources; it does not run builds or qualification hooks.
+- Build and qualify on Windows or the VPS as appropriate to the target. Windows
+  builds and qualification are authorized; use available resources responsibly.
 - Commit source checkpoints before synchronization, fetch before normal pushes,
   and synchronize the PC and VPS at each delivery boundary. Never force-push.
 - Share the VPS factory slots across Bun runtime, Bun OS and Web OS. Reserve at
@@ -80,17 +96,9 @@ test runner and package manager.
   the native Infra catalog each time.
 - Host budgets are independent: `dbfr` has 6 CPUs and about 11.40 GiB RAM and
   serves production. Never apply the VPS's 45.93 GiB budget to it.
-- Use the Aphrody Bun fork for JavaScript, TypeScript and Python tooling.
-  Check provenance with `bun agent-plugin doctor --json`.
-- Build and execute checkout changes with `bun bd [command]`; test with
-  `bun bd test <file>`. Installed Bun does not include checkout changes.
-- Run type checking, lint, formatting and migration through the native commands
-  `bun check`, `bun lint`, `bun fmt` and `bun n2b`. Do not delegate these commands
-  to subprocess backends, `bunx`, standalone Oxc tools, tsgo/tsc or external n2b.
-  Qualify checkout changes with `bun bd check`, `bun bd lint`, `bun bd fmt` and
-  `bun bd n2b`; fix native failures instead of selecting an external fallback.
-  Package scripts may expose these native commands, but must not replace them
-  with wrappers or external backends.
+- Use official upstream Bun canary for JavaScript and TypeScript. Verify `Bun.revision` and `process.release.sourceUrl`; use uv for Python. Fork-specific tooling must be selected explicitly as a legacy component during migration.
+- Changes to this existing fork still require the corresponding changed binary for meaningful runtime qualification. Its build and test commands remain transitional until their owners are migrated.
+- Choose type checking, linting, formatting and migration tools according to the component being migrated. Do not assume fork-only commands exist in upstream Bun.
 - Build scripts accept trailing execution arguments. Put build flags before them;
   see `scripts/build.ts`. Do not invoke the debug executable directly.
 - Run long builds asynchronously; keep user updates responsive. Do not impose

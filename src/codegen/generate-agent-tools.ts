@@ -478,7 +478,7 @@ function toolReference(tool: ToolSpec, level: number): string {
 function toolsSection(tools: ToolsFile, s: Extract<Section, { kind: "tools" }>): string {
   inputs.add(TOOLS_JSON);
   const picked = s.names ? tools.tools.filter(t => s.names!.includes(t.name)) : tools.tools;
-  return `## ${s.title ?? "Tools of `bun mcp`"}\n\n${tools.description}\n\n${picked.map(t => toolReference(t, 3)).join("\n\n")}`;
+  return `## ${s.title ?? "Tools of `bun mcp`"}\n\nThese legacy tools require a separately configured compatible server; official upstream Bun does not provide \`bun mcp\`.\n\n${tools.description}\n\n${picked.map(t => toolReference(t, 3)).join("\n\n")}`;
 }
 
 // ─── Outputs ───────────────────────────────────────────────────────────────

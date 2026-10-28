@@ -2,13 +2,15 @@
 
 One source for Claude Code, Codex, Antigravity, Gemini CLI, OpenCode and local-model harnesses. Skills, native command rewriting and source-derived catalogs are shared. Each harness receives its own configuration and hook protocol; Antigravity is not Gemini CLI.
 
+Run this package as a standalone tool with official Bun upstream canary. Fork-specific MCP and native features require their own executable and are not supplied by upstream Bun; adapter migration is in progress.
+
 ## Generate and install
 
 ```text
-bun scripts/aphrody/agent-plugin.ts generate
-bun scripts/aphrody/agent-plugin.ts generate --check
-bun scripts/aphrody/agent-plugin.ts install claude codex agy opencode local
-bun scripts/aphrody/agent-plugin.ts doctor --json
+bun packages/bun-agent-plugin/bin/bun-agent-plugin.ts generate
+bun packages/bun-agent-plugin/bin/bun-agent-plugin.ts generate --check
+bun packages/bun-agent-plugin/bin/bun-agent-plugin.ts install claude codex agy opencode local
+bun packages/bun-agent-plugin/bin/bun-agent-plugin.ts doctor --json
 ```
 
 Use `gemini` only for Gemini CLI. `agy` uses Antigravity's plugin schema and native hooks. `local` exports MCP configuration, AGENTS.md and skills for an explicitly chosen harness; it does not configure an inference server, install model weights or select a model.

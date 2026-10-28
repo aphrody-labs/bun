@@ -5,14 +5,14 @@ description: "Catalog router for what the Bun OS fork adds to upstream Bun; read
 
 # What this fork adds to Bun
 
-Bun OS is upstream Bun 1.4.4 plus native Aphrody features in the one `bun` executable. Before
-you add a dependency, write a script or answer that Bun lacks a capability, find the
-feature in the catalog below, then confirm in the owning source with `rg` and
-`bun <command> --help`.
+The catalog describes features of the historical Aphrody fork. The default runtime is
+the official upstream Bun canary; these fork features are being moved to optional
+modules and plugins and are not automatically available upstream. Check each feature
+against its owning source and the actual selected executable before using it.
 
 Route by need:
 
-- Type check, lint, format, migrate: `bun check`, `bun lint`, `bun fmt`, `bun n2b` (native; never `tsc`, `eslint`, `prettier` or `bunx` wrappers).
+- Fork quality tools include `bun check`, `bun lint`, `bun fmt` and `bun n2b`; availability and behavior depend on the selected runtime.
 - Hosts and network: `bun ssh`, `bun docker`, `bun vpn`, `bun host`, `bun rsync --native`.
 - Configuration and sessions: `bun env` (`.env` files), `bun cookie` (cookie jars, `Cookie` headers).
 - Agents: `bun mcp`, `bun agent-plugin`, `bun lsp`, `bun docs`; skills and memory come from the plugin.

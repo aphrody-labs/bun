@@ -6,7 +6,7 @@
 //   pack --out FILE                      the archive `bun agent-plugin` embeds
 //   inputs                               the files generate reads (one per line)
 //   memory --from DIR                    import memory fiches (bun-*.md), sanitized, into <package>/memory
-//   doctor                               is the bun on PATH the Aphrody runtime, and what is installed
+//   doctor                               identify the runtime and check installed adapters
 //
 // Common options: --root DIR (the Bun checkout; default: the one this package is in), --skills DIR (more skills,
 // repeatable), --from DIR (install an already generated tree, e.g. the one `bun agent-plugin` extracts).
@@ -226,9 +226,13 @@ export async function main(argv: string[]) {
       try {
         installed = JSON.parse(readFileSync(join(root, "install.json"), "utf8"));
       } catch {}
+      const source = process.release.sourceUrl ?? "";
+      const upstream = /^https:\/\/github\.com\/oven-sh\/bun\/releases\/download\//.test(source);
       const report = {
         bun: process.execPath,
-        version: Bun.version_with_sha,
+        version: Bun.version_with_sha ?? `${Bun.version}+${Bun.revision.slice(0, 9)}`,
+        source,
+        upstream,
         aphrody: isAphrodyBun(),
         installed: installed ?? null,
         current: installed ? installed.bunVersion === Bun.version : false,
@@ -237,12 +241,12 @@ export async function main(argv: string[]) {
       if (a.json) console.log(JSON.stringify(report, null, 2));
       else {
         console.log(
-          `bun: ${report.bun} ${report.version}${report.aphrody ? " (Aphrody runtime)" : " (NOT the Aphrody runtime: bun upgrade, or scripts/aphrody/install.sh|ps1)"}`,
+          `bun: ${report.bun} ${report.version} (${report.upstream ? "upstream Bun" : report.aphrody ? "legacy Aphrody runtime" : "unrecognized provenance"})`,
         );
         console.log(
           installed
-            ? `plugin: ${installed.version} for ${installed.targets.join(", ")}${report.current ? "" : " (made for another bun: bun agent-plugin install --update)"}`
-            : "plugin: not installed (bun agent-plugin install)",
+            ? `plugin: ${installed.version} for ${installed.targets.join(", ")}${report.current ? "" : " (made for another Bun version)"}`
+            : "plugin: not installed (bun-agent-plugin install)",
         );
       }
       if (report.mcp && !a.json)
@@ -251,7 +255,7 @@ export async function main(argv: string[]) {
             ? `mcp: ${report.mcp.command} ${report.mcp.args.join(" ")} answers initialize`
             : `mcp: FAILING ${report.mcp.command} ${report.mcp.args.join(" ")}: ${report.mcp.error} (bun agent-plugin install --update)`,
         );
-      if (!report.aphrody || (report.mcp && !report.mcp.ok)) process.exitCode = 1;
+      if ((!report.upstream && !report.aphrody) || (report.mcp && !report.mcp.ok)) process.exitCode = 1;
       return;
     }
     case "":

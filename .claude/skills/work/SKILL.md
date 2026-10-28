@@ -9,8 +9,8 @@ One entry point: `bun scripts/aphrody/work.ts <command>`. The queue is `scripts/
 
 1. `status`: ahead/behind, dirty paths grouped by lot owner, audit findings. Never touch paths owned by another active lot.
 2. `next`: the lot to work on (exit 3 = queue empty: run `refill`, which turns audit findings into lots; still empty = nothing left, stop).
-3. Read before coding: the memory notes and skills the lot needs (`bun-skills-catalog` routes them), the nested CLAUDE.md of the directory, `aphrody graph --source graph:bun query "<question>"` and the `bun mcp` tools. Verify that code does not already exist.
-4. Code, then `gate [paths]`: `cargo check -p <crate>` (Windows: `bun msvc exec --toolset 14.44 -- cargo …`) for the crate, `bun test` for scripts and `test/internal`, `bun bd test` for native tests (never `bun test` on native changes), plugin `generate --check`, audit for docs and skills.
+3. Read the applicable repository guidance and skills, then inspect the existing source. Use graph or MCP tools only when a compatible optional server is installed.
+4. Code, then run focused checks for the affected component. Use official upstream Bun canary for scripts, and qualify runtime source changes with the corresponding changed binary. Fork-specific build helpers require a compatible explicitly selected runtime.
 5. `ship --lot ID -m "<message>" [paths]`: gate, `git add` and `git commit -- <paths>` only, push to main, `git branch -r --contains <sha>` as proof. A red gate commits nothing.
 6. `mark ID done`, back to 1. Do not stop while a lot is todo or active.
 

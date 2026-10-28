@@ -394,7 +394,7 @@ function derivedSkills(root: string, fiches: Fiche[], repo: Skill[]): Skill[] {
     "How the Aphrody runtime works and is documented: Bun APIs, CLI commands, built-in JS modules, node:* compatibility, Bun.serve, fetch and streams, HTTP/SQL/Valkey, the shell, the test runner and the package manager (bun install, lockfile, linkers).",
     [
       "# The Bun runtime",
-      "Use native `bun check`, `bun lint`, `bun fmt` and `bun n2b` directly. Checkout qualification uses `bun bd check`, `bun bd lint`, `bun bd fmt` and `bun bd n2b`; no subprocess or external backend may replace them. Package scripts may expose these native commands but must not wrap or replace them; `bunx` is reserved for unrelated packages.",
+      "Use official upstream Bun canary by default. Select quality and migration tools according to the project; fork-specific commands require an explicitly selected compatible runtime until migrated.",
       "## Runtime documentation pages (docs/)",
       table(
         runtimePages.map(p => [p.title, `\`docs${p.page}.mdx\``, p.description]),
@@ -426,9 +426,9 @@ function derivedSkills(root: string, fiches: Fiche[], repo: Skill[]): Skill[] {
   const all = [...repo.map(s => s.name), ...DERIVED_SKILLS.map(d => d.name), NATIVE_SKILL].sort();
   make(
     "bun-aphrody",
-    "Start here for any work with Bun: use the Aphrody runtime (aphrody-labs/bun) for everything (bun, bunx, bun uv instead of node, npm, npx, yarn, pnpm, pip, python), install and upgrade it, and pick the skill or memory fiche for the task.",
+    "Use when maintaining Aphrody's Bun extensions and agent integration during migration to official Bun upstream canary.",
     [
-      "# Working with the Aphrody runtime",
+      "# Aphrody Bun extensions",
       rules,
       "## Skills of this plugin",
       all.map(n => `- \`${n}\``).join("\n"),
@@ -473,21 +473,21 @@ export function generate(options: GenerateOptions): Files {
   const version = bunVersion(root);
   const rules = agentRules(root);
   const lspExt = hasCommand(root, "lsp") ? lspExtensions(root) : {};
-  const lsp = Object.keys(lspExt).length > 0;
+  // The servers currently belong to the legacy fork, not upstream Bun.
+  const lsp = false;
   const experimentalTools = new Set(["read_file", "write_file", "edit_file", "shell"]);
   const tools = mcpTools(root).filter(tool => !experimentalTools.has(tool.name));
-  const has = new Set(tools.map(t => t.name));
-  const prefer = PREFER.map(p => ({ ...p, use: p.use.filter(n => has.has(n)) })).filter(p => p.use.length);
+  const prefer: typeof PREFER = [];
   const code = (s: string) => "`" + s + "`";
   const toolsDoc = [
-    `## Tools of ${code("bun mcp")}`,
+    `## Legacy fork tools of ${code("bun mcp")}`,
+    "These tools require a separately selected compatible fork executable. The generated adapters do not register a server by default.",
     tools.length
       ? table(
           tools.map(t => [code(t.name), t.title]),
           ["Tool", "What"],
         )
       : `This checkout has no ${code("bun mcp")} tools.`,
-    ...prefer.map(p => `Prefer ${p.use.map(code).join(", ")} over ${p.instead} for code in a project.`),
     "Experimental native file and shell tools require `BUN_FEATURE_FLAG_EXPERIMENTAL_MCP_NATIVE_TOOLS=1` on the MCP server and a fresh client connection. When tools/list exposes them, use read_file to obtain a revision, write_file/edit_file to preview changes, vfs_apply to commit, and shell for embedded Bun Shell. Host built-in tools remain available.",
     lsp
       ? `${code("bun lsp")} is one language server for ${[...new Set(Object.values(lspExt))].join(", ")} (${Object.keys(lspExt).join(" ")}).`
@@ -498,8 +498,7 @@ export function generate(options: GenerateOptions): Files {
   const entry = skills.find(s => s.name === "bun-aphrody");
   if (entry) entry.files.set("SKILL.md", String(entry.files.get("SKILL.md")).trimEnd() + "\n\n" + toolsDoc + "\n");
   const description =
-    "The Aphrody runtime (aphrody-labs/bun) for coding agents: its MCP server (bun mcp), hooks that run bun, bunx and bun uv " +
-    "instead of node, npm, npx, yarn, pnpm, pip and python, and skills for building, testing and navigating Bun.";
+    "Aphrody agent skills and optional legacy integration for projects using upstream Bun.";
   const keywords = ["bun", "aphrody", "mcp", "runtime", "package-manager", "rust", "skills", "hooks"];
   const skillIndex = skills
     .map(s => {
@@ -606,9 +605,7 @@ export function generate(options: GenerateOptions): Files {
       UserPromptSubmit: [{ hooks: [{ type: "command", command: hook("user-prompt-submit", t, rootVar), timeout: 5 }] }],
     },
   });
-  const mcp = {
-    mcpServers: { [MCP_SERVER.name]: { type: "stdio", command: MCP_SERVER.command, args: MCP_SERVER.args } },
-  };
+  const mcp = { mcpServers: {} };
   files.set(
     "claude/.claude-plugin/plugin.json",
     json({
@@ -659,7 +656,7 @@ export function generate(options: GenerateOptions): Files {
       keywords,
       interface: {
         displayName: DISPLAY_NAME,
-        shortDescription: "Aphrody: MCP, skills",
+        shortDescription: "Aphrody agent skills",
         developerName: AUTHOR.name,
         category: "Developer Tools",
       },
@@ -671,14 +668,7 @@ export function generate(options: GenerateOptions): Files {
   files.set("codex/AGENTS.md", instructions);
   files.set(
     "codex/config.toml",
-    [
-      "# The bun MCP server for ~/.codex/config.toml, for use without the plugin.",
-      `[mcp_servers.${MCP_SERVER.name}]`,
-      `command = ${JSON.stringify(MCP_SERVER.command)}`,
-      `args = ${JSON.stringify(MCP_SERVER.args)}`,
-      "startup_timeout_sec = 30",
-      "",
-    ].join("\n"),
+    "# No MCP server is registered by default.\n",
   );
   files.set(
     ".agents/plugins/marketplace.json",
@@ -704,7 +694,7 @@ export function generate(options: GenerateOptions): Files {
       name: PLUGIN,
       version: pluginVersion,
       contextFileName: "GEMINI.md",
-      mcpServers: { [MCP_SERVER.name]: { command: MCP_SERVER.command, args: MCP_SERVER.args } },
+      mcpServers: {},
     }),
   );
   const geminiHook = (script: string) => ({
@@ -731,7 +721,7 @@ export function generate(options: GenerateOptions): Files {
     "opencode/opencode.json",
     json({
       $schema: "https://opencode.ai/config.json",
-      mcp: { [MCP_SERVER.name]: { type: "local", command: [MCP_SERVER.command, ...MCP_SERVER.args], enabled: true } },
+      mcp: {},
     }),
   );
   files.set(
@@ -744,9 +734,7 @@ export function generate(options: GenerateOptions): Files {
   files.set(
     "local/mcp.json",
     json({
-      mcpServers: {
-        [MCP_SERVER.name]: { command: MCP_SERVER.command, args: MCP_SERVER.args },
-      },
+      mcpServers: {},
     }),
   );
   files.set(
@@ -764,7 +752,7 @@ export function generate(options: GenerateOptions): Files {
   );
   files.set(
     "agy/mcp_config.json",
-    json({ mcpServers: { [MCP_SERVER.name]: { command: MCP_SERVER.command, args: MCP_SERVER.args } } }),
+    json({ mcpServers: {} }),
   );
   const agyHook = (script: string) => ({
     type: "command",
