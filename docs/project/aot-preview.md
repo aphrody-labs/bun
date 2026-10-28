@@ -1,5 +1,7 @@
 # Bun AOT preview
 
+**Upstream status checked 2026-10-28:** PR [oven-sh/bun#45631](https://github.com/oven-sh/bun/pull/45631) has since merged, and the official canary commit includes it. This document's install and benchmark measurements below are from the older preview commit `5b598476cda9537b813459730d9002017aa45b40`; they are not measurements of the current canary. A follow-up remains open. See [the dated upstream PR radar](upstream-pr-radar-2026-10-28.md) for current status.
+
 A build of upstream's ahead-of-time compiler, [oven-sh/bun#45631](https://github.com/oven-sh/bun/pull/45631)
 ("Compile TypeScript to machine code ahead of time: `bun build --compile --aot`"), at commit
 `5b598476cda9537b813459730d9002017aa45b40`. It is upstream Bun 1.4.4 plus that pull request, with none of

@@ -43,3 +43,7 @@
 	url = https://github.com/aphrody-labs/bun-python.git
 	update = none
 	branch = main
+[submodule "plugins/build-essential"]
+	path = plugins/build-essential
+	url = https://github.com/aphrody-labs/bun-build-essential.git
+	branch = main
