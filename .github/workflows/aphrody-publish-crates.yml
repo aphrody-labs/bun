@@ -2,8 +2,9 @@ name: Aphrody publish crates
 
 # Publishes to crates.io with scripts/aphrody/publish-crates.ts: the native
 # plugin SDK as aphrody-bun-macro and aphrody-bun-native-plugin, and the
-# registered browser and Google SDK crates. Internal Oxc, quality and N2B
-# owners are not published. Versions already on
+# registered browser and Google SDK crates, and the standalone leaf crates
+# (`leaf`: bun_vt, no runtime link, so no native release receipts). Internal
+# Oxc, quality and N2B owners are not published. Versions already on
 # crates.io are skipped, so re-running is a no-op.
 
 permissions:
@@ -17,7 +18,7 @@ on:
         type: boolean
         default: false
       only:
-        description: "Subset: sdk, src/browser/crates/ssrf, crates/aphrody-jev (empty: all)"
+        description: "Subset: sdk, leaf, src/browser/crates/ssrf, crates/aphrody-jev (empty: all)"
         type: string
         default: ""
       qualification-tag:
@@ -87,7 +88,7 @@ jobs:
             ${{ runner.temp }}/portable-crate/packages/**
           if-no-files-found: error
       - name: Verify eight native full release receipts before publication
-        if: inputs.dry-run != true && inputs.only != 'crates/aphrody-jev' && inputs.only != 'src/browser/crates/ssrf'
+        if: inputs.dry-run != true && inputs.only != 'crates/aphrody-jev' && inputs.only != 'src/browser/crates/ssrf' && inputs.only != 'leaf'
         env:
           GH_TOKEN: ${{ secrets.APHRODY_SYNC_TOKEN || github.token }}
           QUALIFICATION_TAG: ${{ inputs.qualification-tag || github.ref_name }}

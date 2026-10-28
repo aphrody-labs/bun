@@ -1,5 +1,6 @@
 [package]
 name = "rio-unicode"
+publish = false
 version = "0.5.28"
 edition = "2021"
 description = """

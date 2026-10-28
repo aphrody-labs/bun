@@ -2,9 +2,14 @@
 name = "bun_vt"
 version.workspace = true
 edition.workspace = true
-publish = false
+rust-version.workspace = true
+repository.workspace = true
 license = "Apache-2.0"
 description = "Headless VT/ANSI screen (cell grid, scrollback, cursor) behind Bun.TerminalScreen"
+readme = "README.md"
+homepage = "https://github.com/aphrody-labs/bun/tree/main/src/vt"
+keywords = ["vt100", "terminal", "ansi", "xterm", "emulator"]
+categories = ["command-line-interface", "parser-implementations"]
 
 [lib]
 path = "lib.rs"

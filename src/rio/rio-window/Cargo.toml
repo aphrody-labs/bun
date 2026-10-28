@@ -1,5 +1,6 @@
 [package]
 name = "rio-window"
+publish = false
 authors = [
     "The winit contributors",
     "Pierre Krieger <pierre.krieger1708@gmail.com>",

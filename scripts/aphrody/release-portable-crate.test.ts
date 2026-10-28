@@ -92,7 +92,7 @@ test("publication isolates portable qualification from all other and mixed selec
   expect(steps[prepare].run).not.toContain("configureRustDependencies");
   expect(steps[verify].if).toBe(steps[qualify].if);
   expect(steps.find((step: any) => step.run?.includes("download-verify")).if).toBe(
-    "inputs.dry-run != true && inputs.only != 'crates/aphrody-jev' && inputs.only != 'src/browser/crates/ssrf'",
+    "inputs.dry-run != true && inputs.only != 'crates/aphrody-jev' && inputs.only != 'src/browser/crates/ssrf' && inputs.only != 'leaf'",
   );
   const evidence = steps.find((step: any) => step.name === "Preserve portable qualification evidence");
   expect(evidence.with["include-hidden-files"]).toBe(true);

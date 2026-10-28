@@ -341,7 +341,7 @@
       "submoduleRevision": null,
       "upstream": null,
       "migrationState": "stays",
-      "notes": "Native bun check/lint/fmt backend required by CLAUDE.md; optional would need a feature gate on the CLI commands and a plugin like bun-<name>."
+      "notes": "Native bun check/lint/fmt backend required by CLAUDE.md; optional would need a feature gate on the CLI commands and a plugin like bun-<name>. crates.io (checked 2026-10-29): not published. Its closure (45 workspace crates: bun_linter, the bun_ecma_* Oxc forks, bun_format_*) reaches Bun-internal infrastructure; the oxc_*-derived names are forks of someone else's crates."
     },
     {
       "component": "bun_lint",
@@ -355,7 +355,7 @@
       "submoduleRevision": null,
       "upstream": null,
       "migrationState": "stays",
-      "notes": "Linked by bun lint; same as bun_quality."
+      "notes": "Linked by bun lint; same as bun_quality. crates.io (checked 2026-10-29): not published. Closure of 29 unpublished crates including bun_core, bun_alloc, bun_sys, bun_paths; those names on crates.io belong to putao520 (github.com/putao520/bao), so the closure cannot be published under them."
     },
     {
       "component": "bun_sema",
@@ -369,7 +369,7 @@
       "submoduleRevision": null,
       "upstream": null,
       "migrationState": "stays",
-      "notes": "Type checker behind bun check; same as bun_quality."
+      "notes": "Type checker behind bun check; same as bun_quality. crates.io (checked 2026-10-29): not published; closure of 22 crates rooted at bun_core/bun_sys, whose crates.io names belong to putao520."
     },
     {
       "component": "bun_react_compiler",
@@ -383,7 +383,7 @@
       "submoduleRevision": null,
       "upstream": null,
       "migrationState": "stays",
-      "notes": "Used by the bundler; optional only behind a bundler feature."
+      "notes": "Used by the bundler; optional only behind a bundler feature. crates.io (checked 2026-10-29): not published; closure of 24 crates rooted at bun_core/bun_ast/bun_sys, whose crates.io names belong to putao520."
     },
     {
       "component": "bun_migrate",
@@ -397,7 +397,7 @@
       "submoduleRevision": null,
       "upstream": null,
       "migrationState": "stays",
-      "notes": "bun n2b; could become a plugin (cold CLI subsystem, opt-level z already)."
+      "notes": "bun n2b; could become a plugin (cold CLI subsystem, opt-level z already). crates.io (checked 2026-10-29): bun_migrate is not published (closure of 19 crates: bun_ecma_* Oxc forks, bun_browserslist, bun_estree); the standalone n2b engine is published as aphrody-n2b / aphrody-n2b-core 0.7.0."
     },
     {
       "component": "rio (runtime graph)",
@@ -411,7 +411,7 @@
       "submoduleRevision": null,
       "upstream": null,
       "migrationState": "stays",
-      "notes": "corcovado, rio-fonts, rio-grapheme-width, rio-graphics, rio-unicode, rio-vt, rio-window, sugarloaf, teletypewriter are linked; librio, librio-wasm, libsugarloaf, rio-backend, rio-grid, rio-notifier, rioterm are not and can move with a Bun OS consumer (aphrody-labs/rio fork exists)."
+      "notes": "corcovado, rio-fonts, rio-grapheme-width, rio-graphics, rio-unicode, rio-vt, rio-window, sugarloaf, teletypewriter are linked; librio, librio-wasm, libsugarloaf, rio-backend, rio-grid, rio-notifier, rioterm are not and can move with a Bun OS consumer (aphrody-labs/rio fork exists). crates.io (checked 2026-10-29): the names rio-*, corcovado, sugarloaf, teletypewriter and rioterm are owned by raphamorim, so these manifests carry publish = false; they must never be published from this fork."
     },
     {
       "component": "browser (runtime graph)",
@@ -425,7 +425,7 @@
       "submoduleRevision": null,
       "upstream": null,
       "migrationState": "stays",
-      "notes": "bun_browser_dom, bun_browser_detect, bun_browser_ssrf are linked; src/browser/crates/* (api, cdp, crawl, engine, ...) are standalone and can move."
+      "notes": "bun_browser_dom, bun_browser_detect, bun_browser_ssrf are linked; src/browser/crates/* (api, cdp, crawl, engine, ...) are standalone and can move. crates.io (checked 2026-10-29): bun_browser_ssrf, _dom, _net, _extract, _crawl, _index, _detect are published at 1.4.7 by aphrody-dev. The rest (api, browser, js, render, layout, cdp, mcp, service, engine, frames) need bun_core and friends, whose names belong to putao520, so they stay unpublished."
     },
     {
       "component": "bun:winui / bun:windows",
@@ -439,7 +439,21 @@
       "submoduleRevision": null,
       "upstream": null,
       "migrationState": "stays",
-      "notes": "Rust modules inside bun_runtime; optional would need a cargo feature around the module registration."
+      "notes": "Rust modules inside bun_runtime; optional would need a cargo feature around the module registration. crates.io (checked 2026-10-29): not a crate of its own (a module inside bun_runtime), so there is nothing to publish; bun_windows_sys is Bun-internal (publish = false)."
+    },
+    {
+      "component": "bun_vt",
+      "path": [
+        "src/vt"
+      ],
+      "type": "rust-crate",
+      "kind": "runtime-linked",
+      "destinationRepo": null,
+      "bunOsPath": null,
+      "submoduleRevision": null,
+      "upstream": null,
+      "migrationState": "stays",
+      "notes": "Headless VT/ANSI screen behind Bun.TerminalScreen; std only, Apache-2.0. Published to crates.io as bun_vt from a staged manifest (scripts/aphrody/publish-crates.ts --only leaf, workflow aphrody-publish-crates.yml with only=leaf) once the leaf run succeeds; name was free on crates.io on 2026-10-29. The source stays in the runtime workspace."
     },
     {
       "component": "curl-upstream",

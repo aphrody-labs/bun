@@ -1,5 +1,6 @@
 [package]
 name = "rio-graphics"
+publish = false
 version = "0.5.28"
 authors = ["Raphael Amorim <rapha850@gmail.com>"]
 edition = "2021"
