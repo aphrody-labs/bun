@@ -9,7 +9,7 @@
     "skipLibCheck": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
-    "types": ["bun"],
+    "types": ["@aphrody/bun-types"],
     "declaration": true,
     "resolveJsonModule": true,
     "outDir": "./dist",

@@ -61,12 +61,12 @@
     "jsc:build": "bun scripts/build.ts --profile=release-local --build-dir=build/release-local --target=jsc",
     "jsc:build:debug": "bun scripts/build.ts --profile=debug-local --build-dir=build/debug-local --target=jsc",
     "jsc:build:lto": "bun scripts/build.ts --profile=release-local --lto=on --build-dir=build/release-local-lto --target=jsc",
-    "typecheck": "bun check --noEmit && bun check --noEmit --project test/tsconfig.json",
-    "fmt": "bun fmt",
+    "typecheck": "bun check --no-script --noEmit && bun check --no-script --noEmit --project test/tsconfig.json",
+    "fmt": "bun fmt --no-script",
     "fmt:cpp": "bun run clang-format",
     "fmt:rust": "cargo fmt --all",
-    "lint": "bun lint",
-    "lint:fix": "bun lint --config oxlint.json --fix src/js",
+    "lint": "bun lint --no-script",
+    "lint:fix": "bun lint --no-script --config oxlint.json --fix src/js",
     "test": "bun scripts/runner.node.ts --exec-path ./build/debug/bun-debug",
     "testleak": "BUN_DESTRUCT_VM_ON_EXIT=1 ASAN_OPTIONS=detect_leaks=1 LSAN_OPTIONS=malloc_context_size=100:print_suppressions=1:suppressions=$npm_config_local_prefix/test/leaksan.supp ./build/debug/bun-debug",
     "test:release": "bun scripts/runner.node.ts --exec-path ./build/release/bun",
@@ -116,9 +116,5 @@
     "source-map-js": "1.2.1",
     "typescript": "6.0.2",
     "undici-types": "8.3.0"
-  },
-  "resolutions": {
-    "@types/node": "26.2.0",
-    "bun-types": "workspace:packages/bun-types"
   }
 }
