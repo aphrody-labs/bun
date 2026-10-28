@@ -12,6 +12,28 @@
   },
   "components": [
     {
+      "component": "bun-os-product-crates",
+      "path": [
+        "src/bun-os/git",
+        "src/bun-os/native",
+        "src/bun-os/pkg/core",
+        "src/bun-os/pkg/store",
+        "src/bun-os/pkg/net",
+        "src/bun-os/pkg/cli"
+      ],
+      "type": "rust-crate",
+      "kind": "moved-out",
+      "destinationRepo": "https://github.com/aphrody-labs/bun-os",
+      "forkMount": null,
+      "forkMountUpdate": null,
+      "bunOsPath": "crates/bun-os-{git,native,pkg-core,pkg-store,pkg-net,pkg-cli}",
+      "submoduleRevision": null,
+      "upstream": null,
+      "migrationState": "moved-pr-open",
+      "notes": "Nothing in src/**/Cargo.toml depended on bun_git/bun_native/bun_pkg_*; moved wholesale (no mount back) via aphrody-labs/bun-os#1. Removed from this repo's Cargo.toml workspace members/aliases and git-rm'd. Cargo.lock still has stale entries pending next `cargo check`/`bun bd`.",
+      "bunOsCommit": null
+    },
+    {
       "component": "uv",
       "path": [
         "src/plugins/uv",
