@@ -28,7 +28,7 @@ on:
       - "!**/*.md"
 
 env:
-  BUN_VERSION: "1.4.2"
+  BUN_VERSION: "canary"
 
 jobs:
   bun-plugin-svelte:
@@ -38,7 +38,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Setup Bun
-        uses: ./.github/actions/setup-bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
 
@@ -49,12 +49,12 @@ jobs:
 
       - name: Lint
         run: |
-          bun lint --format github --deny-warnings .
-          bun fmt --config ../../.oxfmtrc.json --check .
+          bun lint --no-script --format github --deny-warnings .
+          bun fmt --no-script --config ../../.oxfmtrc.json --check .
         working-directory: ./packages/bun-plugin-svelte
 
       - name: Check types
-        run: bun check --noEmit
+        run: bun check --no-script --noEmit
         working-directory: ./packages/bun-plugin-svelte
 
       - name: Test

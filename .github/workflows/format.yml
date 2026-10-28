@@ -9,7 +9,7 @@ on:
   pull_request:
   merge_group:
 env:
-  BUN_VERSION: "1.4.2"
+  BUN_VERSION: "canary"
   LLVM_VERSION: "23.1.1"
   LLVM_VERSION_MAJOR: "23"
 
@@ -31,7 +31,7 @@ jobs:
           git config --global core.ignorecase true
           git config --global core.precomposeUnicode true
       - name: Setup Bun
-        uses: ./.github/actions/setup-bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
       - name: Setup Dependencies
@@ -64,7 +64,7 @@ jobs:
           # The plugin is built into Bun. It's only on here: on save, it would remove an import
           # that the next edit is about to use.
           echo "::group::bun fmt"
-          (bun fmt --plugin=prettier-plugin-organize-imports 2>&1 | sed 's/^/[bun fmt] /') &
+          (bun fmt --no-script --plugin=prettier-plugin-organize-imports 2>&1 | sed 's/^/[bun fmt] /') &
           BUN_FMT_PID=$!
 
           # Start clang-format installation and formatting in background with prefixed output

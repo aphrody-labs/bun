@@ -116,7 +116,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/main-runtime"
           cp "${{ matrix.executable }}" "$RUNNER_TEMP/main-runtime/${{ matrix.asset }}"
           # Plugins (scripts/build/plugins.ts) are release assets of their own, fetched on first use.
-          for plugin in uv vpn ssh docker just winmd; do
+          for plugin in uv vpn ssh docker just winmd build-essential; do
             exe="build/release/bun-$plugin"; [ "$RUNNER_OS" = Windows ] && exe="$exe.exe"
             test -s "$exe"
             cp "$exe" "$RUNNER_TEMP/main-runtime/bun-$plugin-${{ matrix.plugin-suffix }}"
@@ -153,7 +153,7 @@ jobs:
           fi
           suffix="${BASH_REMATCH[2]}"
           case "$GITHUB_SHA" in "$suffix"*) ;; *) echo "revision differs: $revision"; exit 1;; esac
-          assets=(bun-linux-x64 bun-windows-x64.exe bun-{uv,vpn,ssh,docker,just,winmd}-linux-x64 bun-{uv,vpn,ssh,docker,just,winmd}-windows-x64.exe)
+          assets=(bun-linux-x64 bun-windows-x64.exe bun-{uv,vpn,ssh,docker,just,winmd,build-essential}-linux-x64 bun-{uv,vpn,ssh,docker,just,winmd,build-essential}-windows-x64.exe)
           sha256sum "${assets[@]}" > SHA256SUMS.txt
           gh release create "$TAG" -R "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
             --title "Aphrody Bun main ${GITHUB_SHA:0:12}" \

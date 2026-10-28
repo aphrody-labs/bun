@@ -20,16 +20,14 @@ jobs:
         with:
           persist-credentials: false
       - name: Setup Bun
-        uses: ./.github/actions/setup-bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
         with:
           bun-version: ${{ env.BUN_VERSION }}
-          # The action's default bucket can be many commits behind for canary.
-          download-url: https://github.com/oven-sh/bun/releases/download
       - name: Setup Dependencies
         run: |
           bun install --frozen-lockfile
       - name: Lint
-        run: bun lint --format=github
+        run: bun lint --no-script --format=github
       - name: Typecheck the build system and the CI scripts
         run: |
           bun check --noEmit --project scripts/build/tsconfig.json
