@@ -1,0 +1,5 @@
+@aphrody/fuzzy
+
+The Bitap scoring, field normalization, weighted keys, long-pattern chunking
+and tie-breaking follow Fuse.js 7.1.0, Copyright 2023 Kiro Risk, licensed under
+the Apache License, Version 2.0. See https://github.com/krisk/Fuse.

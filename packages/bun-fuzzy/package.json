@@ -5,7 +5,9 @@
   "license": "Apache-2.0",
   "files": [
     "src",
-    "README.md"
+    "README.md",
+    "LICENSE",
+    "NOTICE"
   ],
   "type": "module",
   "sideEffects": false,
@@ -16,13 +18,13 @@
     "access": "public"
   },
   "scripts": {
-    "typecheck": "bun check --noEmit",
+    "typecheck": "bun check --no-script --noEmit",
     "test": "bun test",
-    "lint": "bun lint src test scripts",
+    "lint": "bun lint --no-script src test scripts",
     "fixtures": "bun scripts/gen-fixtures.ts"
   },
   "devDependencies": {
-    "@types/bun": "npm:@aphrody/bun-types@1.4.4"
+    "@types/bun": "^1.4.4"
   },
   "engines": {
     "bun": ">=1.4.4"
