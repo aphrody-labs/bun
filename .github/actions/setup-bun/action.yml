@@ -1,10 +1,15 @@
 name: Setup Bun
-description: Installs the aphrody-labs/bun runtime (the fork's own GitHub releases, SHA256SUMS-checked).
+description: Installs Bun. By default the official oven-sh/bun release (canary, latest or X.Y.Z); runtime fork is the explicit legacy opt-in for the aphrody-labs/bun fork releases.
 
 inputs:
+  runtime:
+    type: string
+    description: "'official' (default): oven-sh/bun through oven-sh/setup-bun, nothing fork-only required. 'fork': legacy aphrody-labs/bun release, SHA256SUMS-checked, needed only by steps that run fork-only commands or pin a fork build (aphrody-v* tags, expected-* inputs)."
+    default: official
+    required: false
   bun-version:
     type: string
-    description: "'latest', 'canary' (falls back to latest when the fork has no canary release), an upstream base 'X.Y.Z' (newest aphrody.N build of it, else latest) or a tag 'aphrody-vX.Y.Z-aphrody.N'."
+    description: "official: 'latest', 'canary' or 'X.Y.Z'. fork: 'latest', 'canary' (falls back to latest when the fork has no canary release), an upstream base 'X.Y.Z' (newest aphrody.N build of it, else latest) or a tag 'aphrody-vX.Y.Z-aphrody.N'."
     default: latest
     required: false
   baseline:
@@ -35,7 +40,62 @@ inputs:
 runs:
   using: composite
   steps:
-    - name: Setup Bun
+    - name: Resolve official Bun
+      id: official
+      if: inputs.runtime != 'fork'
+      shell: bash
+      env:
+        BUN_VERSION: ${{ inputs.bun-version }}
+        BUN_BASELINE: ${{ inputs.baseline }}
+        EXPECTED_SHA256: ${{ inputs.expected-sha256 }}
+        EXPECTED_BYTES: ${{ inputs.expected-bytes }}
+        EXPECTED_SOURCE: ${{ inputs.expected-source }}
+        BUN_REPO: ${{ inputs.repo }}
+      run: |
+        set -euo pipefail
+        version="${BUN_VERSION:-latest}"
+        version="${version#bun-}"
+        version="${version#v}"
+        case "$version" in
+          latest | canary | [0-9]*.[0-9]*.[0-9]*) ;;
+          *) echo "::error::bun-version '$BUN_VERSION' is not an official Bun version; the aphrody-labs fork needs 'runtime: fork'"; exit 1;;
+        esac
+        if [ -n "$EXPECTED_SHA256$EXPECTED_BYTES$EXPECTED_SOURCE" ] || [ "$BUN_REPO" != aphrody-labs/bun ]; then
+          echo "::error::expected-* pins and a non-default repo describe a fork release; set 'runtime: fork'"; exit 1
+        fi
+        url=""
+        if [ "$BUN_BASELINE" = true ] || [ "$BUN_BASELINE" = 1 ]; then
+          case "$(uname -s)" in Linux*) os=linux;; Darwin*) os=darwin;; *) os=windows;; esac
+          case "${RUNNER_ARCH:-$(uname -m)}" in ARM64 | arm64 | aarch64) arch=aarch64;; *) arch=x64;; esac
+          case "$version" in
+            latest) base="https://github.com/oven-sh/bun/releases/latest/download";;
+            canary) base="https://github.com/oven-sh/bun/releases/download/canary";;
+            *) base="https://github.com/oven-sh/bun/releases/download/bun-v$version";;
+          esac
+          url="$base/bun-$os-$arch-baseline.zip"
+        fi
+        echo "version=$version" >> "$GITHUB_OUTPUT"
+        echo "url=$url" >> "$GITHUB_OUTPUT"
+    - name: Setup official Bun
+      if: inputs.runtime != 'fork'
+      # oven-sh/setup-bun v2.2.0 (verified 2026-10-29: tag v2.2.0 and v2 resolve to this commit; inputs bun-version, bun-download-url).
+      uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+      with:
+        bun-version: ${{ steps.official.outputs.version }}
+        bun-download-url: ${{ steps.official.outputs.url }}
+        token: ${{ inputs.token }}
+    - name: Verify official Bun provenance
+      if: inputs.runtime != 'fork'
+      shell: bash
+      run: |
+        set -euo pipefail
+        bun -e '
+          if (!process.release.sourceUrl?.startsWith("https://github.com/oven-sh/bun/releases/download/"))
+            throw new Error(`not an official Bun release: ${process.release.sourceUrl}`);
+          console.log(`Bun ${Bun.version} ${Bun.revision} ${process.release.sourceUrl}`);
+        '
+    - name: Setup Bun (legacy aphrody-labs fork)
+      if: inputs.runtime == 'fork'
       shell: bash
       env:
         BUN_VERSION: ${{ inputs.bun-version }}

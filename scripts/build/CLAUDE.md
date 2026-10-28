@@ -1,6 +1,6 @@
 # TypeScript Build System
 
-Use Bun's native `bun check`, `bun lint`, `bun fmt` and `bun n2b` commands directly for type checking, linting, formatting and migration. Do not install or invoke external backends for these commands.
+Use the official Bun canary's native `bun check`, `bun lint` and `bun fmt` directly for type checking, linting and formatting (all three exist in upstream canary 11c367163, verified 2026-10-29). Do not install or invoke external backends for these commands. `bun n2b` is a legacy fork-only command that upstream Bun does not have; use it only with an explicitly selected fork binary.
 
 This directory generates `build.ninja`. The scripts **describe** the build; ninja **performs** it.
 
@@ -153,7 +153,7 @@ Tables: `cpuTargetFlags` (`-march`/`-mcpu`/`-mtune`), `globalFlags` (bun + all d
 
 ### Phase 0 — Entry (`scripts/build.ts`)
 
-1. Windows: if `VSINSTALLDIR` is unset, load the MSVC environment (PATH/INCLUDE/LIB for nested cmake) from the `bun msvc sync` cache, pinned toolset first (`loadNativeMsvcEnv()`).
+1. Windows: if `VSINSTALLDIR` is unset, load the MSVC environment (PATH/INCLUDE/LIB for nested cmake) from the `bun msvc sync` cache, pinned toolset first (`loadNativeMsvcEnv()`); when the running bun has no `msvc` command (upstream Bun has none) the same code runs as the `bun-msvc` binary of vendor/find-msvc-tools through cargo.
 2. Parse CLI: `--profile=<name>`, `--<field>=<value>` overrides, `--target=<ninja-target>`, `-j`/`-v`/`-k` passthrough, bare positionals = exec args for built binary.
 3. Resolve `PartialConfig` from profile + overrides (or `--config-file` for ninja's self-reconfigure).
 

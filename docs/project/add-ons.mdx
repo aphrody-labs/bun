@@ -16,6 +16,7 @@ This repository is upstream [oven-sh/bun](https://github.com/oven-sh/bun) 1.4.4 
 | `docker` | `bun docker`                                         | `plugins/docker`     | [aphrody-labs/bun-docker](https://github.com/aphrody-labs/bun-docker) | `vendor/bun-docker` |
 | `just`   | `bun just`                                           | `plugins/just`       | [aphrody-labs/bun-just](https://github.com/aphrody-labs/bun-just)     | `vendor/bun-just`   |
 | `winmd`  | `bun winmd`                                          | `plugins/winmd`      | [aphrody-labs/bun-winmd](https://github.com/aphrody-labs/bun-winmd)   | `vendor/bun-winmd`  |
+| `build-essential` | `bun-build-essential` (dispatch from `bun` pending) | `plugins/build-essential` | [aphrody-labs/bun-build-essential](https://github.com/aphrody-labs/bun-build-essential) | see the inventory |
 | Video    | `@aphrody/bun-video` package, `Bun.Video` extensions | `packages/bun-video` | [aphrody-labs/bun-video](https://github.com/aphrody-labs/bun-video)   | see the inventory   |
 
 The inventory records, for each add-on, the pinned commit, the upstream it bundles, and whether it has moved yet. It also lists what is still in this tree. PyJS/Python, the UI packages (going to aphrody-labs/bun-ui), the other packages and the distribution material have not moved yet; [fork layout](https://github.com/aphrody-labs/bun/blob/main/docs/project/fork-layout.md) explains the split.
@@ -30,6 +31,7 @@ A plugin is a cold part of Bun built as its own executable, `bun-<name>`. The `b
 - **docker**: the native Docker Engine client. It reaches remote engines through `bun_ssh`, so mount `plugins/ssh` too.
 - **just**: justfile recipes (`vendor/just`, aphrody-labs/just branch `bun`). See [just](/runtime/just).
 - **winmd**: Rust and `bun:ffi` bindings from Windows metadata (windows-bindgen). It uses this checkout's `vendor/find-msvc-tools`. See [msvc](/runtime/msvc).
+- **build-essential**: pinned GNU make, meson, ninja, CMake, pkgconf and C/C++ compiler drivers. The release workflow already builds and uploads `bun-build-essential`; the `bun build-essential` dispatch (`PLUGINS` in `plugin_command.rs`) is still to be added, which the inventory records as `knownDrift`.
 
 ### Install a plugin
 
@@ -106,6 +108,16 @@ cd packages/bun-video && bun install --frozen-lockfile
 ```
 
 It stays mounted here, rather than living only in Bun OS, because the runtime's media release scripts read it. FilmCraft has left this tree: Bun OS owns it, and bun-video pins aphrody-labs/filmcraft `bun-runtime-0.9.0` as `vendor/filmcraft`.
+
+## Adding a plugin or module
+
+`docs/project/fork-inventory.json` is the manifest of everything this checkout keeps beside upstream Bun: plugins, package submodules, crates moved to Bun OS, runtime-linked fork crates, upstream-owned directories and the migration state of each. To add one, write its component there first, then run:
+
+```sh
+bun scripts/aphrody/check-fork-inventory.ts     # or: bun factory inventory
+```
+
+It compares the inventory with `.gitmodules` (path, URL, `update = none`, the pinned gitlink), the plugin lists (`PLUGINS` in `src/runtime/cli/plugin_command.rs`, `plugins` in `scripts/build/plugins.ts`, the loop and asset list of `aphrody-main-runtime.yml`), these docs, and the directories of `packages/`, `plugins/`, `crates/` and `src/`, each of which must belong to a component. It also checks that CI runs on the official Bun canary. `./.github/actions/setup-bun` installs oven-sh/bun by default; only a step that needs a fork build (`aphrody-v*` tag, `expected-*` pins) says `runtime: fork`. Drift that cannot be fixed in the same change is recorded as `knownDrift` on the component and reported as a warning. The check runs in `source-lints.yml`.
 
 ## Releases
 

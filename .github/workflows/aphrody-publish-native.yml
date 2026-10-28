@@ -59,6 +59,7 @@ jobs:
           git submodule update --init --checkout --recursive packages/bun-video
       - uses: ./.github/actions/setup-bun
         with:
+          runtime: fork
           bun-version: ${{ env.BUN_HOST_VERSION }}
       - env:
           ONLY: ${{ inputs.only }}
@@ -113,6 +114,7 @@ jobs:
           git submodule update --init --checkout --recursive packages/bun-video
       - uses: ./.github/actions/setup-bun
         with:
+          runtime: fork
           bun-version: ${{ env.BUN_HOST_VERSION }}
       - name: Download existing factory draft
         run: |

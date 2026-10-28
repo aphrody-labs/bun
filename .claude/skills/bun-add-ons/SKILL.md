@@ -18,6 +18,7 @@ User guide: `docs/project/add-ons.mdx`; split and rationale: `docs/project/fork-
 | docker | `plugins/docker` | aphrody-labs/bun-docker | none; path-depends on `plugins/ssh` |
 | just | `plugins/just` | aphrody-labs/bun-just | `vendor/just`, aphrody-labs/just `bun` |
 | winmd | `plugins/winmd` | aphrody-labs/bun-winmd | none; uses `vendor/find-msvc-tools` here |
+| build-essential | `plugins/build-essential` | aphrody-labs/bun-build-essential | none; dispatch from `bun` pending (`knownDrift`) |
 | Bun Video | `packages/bun-video` | aphrody-labs/bun-video | `vendor/filmcraft`, aphrody-labs/filmcraft `bun-runtime-0.9.0` |
 
 Old in-tree paths (`src/plugins/*`, `src/bun_vpn`, `src/ssh`, `src/docker`, `src/just`,
@@ -92,15 +93,30 @@ workflow and the runtime media release scripts mount `packages/bun-video`.
 
 ## Add a new plugin
 
-Register it everywhere the six are listed:
+The inventory is the manifest. Start there, then let the checker name what is left:
 
-- `PLUGINS` in `src/runtime/cli/plugin_command.rs`, plus its `*_command.rs` dispatch;
-- `plugins` in `scripts/build/plugins.ts`;
-- a `.gitmodules` entry with `update = none` and `branch = main`;
-- the `for plugin in ...` loop of `aphrody-main-runtime.yml`;
-- an inventory entry;
-- the Bun OS mount;
-- `docs/runtime/bun-plugin.mdx` and `docs/project/add-ons.mdx`.
+1. Add the component to `docs/project/fork-inventory.json`: `kind: "plugin"`, `forkMount: "plugins/<name>"`,
+   `forkMountUpdate: "none"`, `destinationRepo`, `submoduleRevision`, `migrationState`, and
+   `plugin: { "cli": "<name>", "cargoPackage": "bun_plugin_<name>" }`.
+2. `bun scripts/aphrody/check-fork-inventory.ts` lists every file that still disagrees. Fix each:
+   - `PLUGINS` in `src/runtime/cli/plugin_command.rs`, plus its `*_command.rs` dispatch;
+   - `plugins` in `scripts/build/plugins.ts` (`nativePluginAssets`, so the release assets, derives from it);
+   - a `.gitmodules` entry with `update = none` and `branch = main`;
+   - the `for plugin in ...` loop and asset list of `aphrody-main-runtime.yml`;
+   - `docs/runtime/bun-plugin.mdx`, `docs/project/add-ons.mdx` and this skill;
+   - the Bun OS mount (not checked: it lives in another repository).
+3. Drift you cannot fix in the same change goes in the component's `knownDrift` (files that still disagree). The
+   checker reports it as a warning and fails when an entry is stale. Anything else it finds is an error.
+
+A package or crate that is not a plugin needs only an inventory component (`kind` `package`, `runtime-linked`,
+`upstream-owned`, `fork-only-optional`; `migrationState` `pending`, `stays`, `moved`, `moved-pr-open` or
+`dead-removed`): the checker fails for any directory of `packages/`, `plugins/`, `crates/` or `src/` that no
+component covers. `bun factory inventory` runs the same check. It also runs in `source-lints.yml`.
+
+CI uses the official Bun canary. `./.github/actions/setup-bun` installs oven-sh/bun through oven-sh/setup-bun by
+default; a step that needs the aphrody-labs fork build (`aphrody-v*` tag, `expected-*` pins) says
+`runtime: fork`, and a workflow that runs a fork-only subcommand (`bun n2b`, `bun mcp`, ...) is listed in
+`ci.forkBinaryWorkflows` or marks the line `legacy`.
 
 Not moved yet (inventory `pending`): PyJS/Python, the UI packages (to aphrody-labs/bun-ui),
 the other packages and the distribution material.

@@ -57,6 +57,7 @@ jobs:
           git submodule update --init --checkout --recursive packages/bun-video
       - uses: ./.github/actions/setup-bun
         with:
+          runtime: fork
           bun-version: ${{ env.BUN_HOST_VERSION }}
       - id: m
         env:
@@ -193,6 +194,7 @@ jobs:
           git submodule update --init --checkout --recursive packages/bun-video
       - uses: ./.github/actions/setup-bun
         with:
+          runtime: fork
           bun-version: ${{ env.BUN_HOST_VERSION }}
       - uses: actions/download-artifact@v7
         with:

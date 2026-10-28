@@ -1,6 +1,6 @@
 # CI machine images
 
-Use Bun's native `bun check`, `bun lint`, `bun fmt` and `bun n2b` commands directly for type checking, linting, formatting and migration. Do not install or invoke external backends for these commands.
+Use the official Bun canary's native `bun check`, `bun lint` and `bun fmt` directly for type checking, linting and formatting (all three exist in upstream canary 11c367163, verified 2026-10-29). Do not install or invoke external backends for these commands. `bun n2b` is a legacy fork-only command that upstream Bun does not have; use it only with an explicitly selected fork binary.
 
 CI's build and test machines start from images baked ahead of time: AWS AMIs for Linux, Azure Compute Gallery images for Windows. Everything about them is in one file, `spec.ts`: what exists, what is on it, how it gets there, and the generator that turns that into the scripts a bake runs. macOS test machines are described there too, but CI does not bake them (see [macOS](#macos)).
 

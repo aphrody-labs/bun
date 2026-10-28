@@ -49,7 +49,11 @@
       "upstream": "https://github.com/astral-sh/uv (0.12.24) via aphrody-labs/uv branch bun-0.12.24 c3c36e2a7b3",
       "migrationState": "moved",
       "notes": "vendor/uv is aphrody-labs/uv bun-0.12.24: upstream tag 0.12.24 plus the fork's tree verbatim. The vestigial uv build dependency (scripts/build/deps/uv.ts) was removed: no runtime crate reads it. packages/buv still points at plugins/uv/vendor/uv until PyJS moves.",
-      "bunOsCommit": "ba1a7c65e0"
+      "bunOsCommit": "ba1a7c65e0",
+      "plugin": {
+        "cli": "uv",
+        "cargoPackage": "bun_plugin_uv"
+      }
     },
     {
       "component": "vpn",
@@ -68,7 +72,11 @@
       "upstream": "https://github.com/mullvad/mullvadvpn-app via aphrody-labs/mullvadvpn-app branch bun-embedded 9096ce027b8 (parent 493198790be)",
       "migrationState": "moved",
       "notes": "GPL-3.0-or-later. WinFw (scripts/build/deps/winfw.ts) builds from plugins/vpn/vendor/mullvad and is enabled only when it is mounted. The source offer of the Linux sidecar names aphrody-labs/bun-vpn, which is public (2026-10-25), as is aphrody-labs/mullvadvpn-app.",
-      "bunOsCommit": "ba1a7c65e0"
+      "bunOsCommit": "ba1a7c65e0",
+      "plugin": {
+        "cli": "vpn",
+        "cargoPackage": "bun_plugin_vpn"
+      }
     },
     {
       "component": "ssh",
@@ -87,7 +95,11 @@
       "upstream": "https://github.com/AspectUnk/russh-sftp 3.0.1 (patched, in-tree)",
       "migrationState": "moved",
       "notes": "scripts/aphrody/publish-vendors.ts stages russh-sftp from plugins/ssh and uv from plugins/uv/vendor/uv (VENDOR_SOURCES).",
-      "bunOsCommit": "ba1a7c65e0"
+      "bunOsCommit": "ba1a7c65e0",
+      "plugin": {
+        "cli": "ssh",
+        "cargoPackage": "bun_plugin_ssh"
+      }
     },
     {
       "component": "docker",
@@ -105,7 +117,11 @@
       "upstream": null,
       "migrationState": "moved",
       "notes": "Path-depends on plugins/ssh/bun_ssh: mount both.",
-      "bunOsCommit": "ba1a7c65e0"
+      "bunOsCommit": "ba1a7c65e0",
+      "plugin": {
+        "cli": "docker",
+        "cargoPackage": "bun_plugin_docker"
+      }
     },
     {
       "component": "just",
@@ -123,7 +139,11 @@
       "upstream": "https://github.com/casey/just via aphrody-labs/just branch bun 5827d90d9ec (parent a6bc306)",
       "migrationState": "moved",
       "notes": "bun_just tests left the native-ci rust-toolchain-test gate; they run in the plugin workspace.",
-      "bunOsCommit": "ba1a7c65e0"
+      "bunOsCommit": "ba1a7c65e0",
+      "plugin": {
+        "cli": "just",
+        "cargoPackage": "bun_plugin_just"
+      }
     },
     {
       "component": "winmd",
@@ -140,7 +160,11 @@
       "upstream": "https://crates.io/crates/windows-bindgen",
       "migrationState": "moved",
       "notes": "Uses the checkout's vendor/find-msvc-tools, which stays (bun_runtime dependency).",
-      "bunOsCommit": "ba1a7c65e0"
+      "bunOsCommit": "ba1a7c65e0",
+      "plugin": {
+        "cli": "winmd",
+        "cargoPackage": "bun_plugin_winmd"
+      }
     },
     {
       "component": "bun-video",
@@ -468,6 +492,354 @@
       "upstream": "curl/curl 3163ec065643ba20709f190111f42c3e1fe95273",
       "migrationState": "moved",
       "notes": "Not in upstream Bun (1.4.4 38afee6c84f and main have no src/runtime/curl). No fork repo needed: curl is a normal pinned github-archive dependency (scripts/build/deps/curl.ts, repo curl/curl at CURL_COMMIT = the curl-8_23_0 release commit (verified 2026-10-29 via api.github.com/repos/curl/curl: latest release curl-8_23_0, published 2026-10-14), fetched to the git-ignored vendor/curl with a .ref stamp like boringssl/zlib/zstd and listed by scripts/prefetch-deps.ts). Only the wrapper project src/runtime/curl/sdk/CMakeLists.txt stays tracked (it receives vendor/curl as CURL_UPSTREAM_DIR); built only when curlNative is on (off by default) for Bun.Curl and the bun curl tool. The untracked src/runtime/curl/upstream checkout, scripts/aphrody/curl-source.ts and the .bun-source.json receipt were removed; a leftover src/runtime/curl/upstream directory may be deleted."
+    },
+    {
+      "type": "rust-workspace",
+      "destinationRepo": "https://github.com/aphrody-labs/bun-build-essential",
+      "forkMount": "plugins/build-essential",
+      "forkMountUpdate": "none",
+      "bunOsPath": null,
+      "submoduleRevision": "238ef648e854d180d2fdb90f60bf2210885bfc80",
+      "upstream": null,
+      "bunOsCommit": null,
+      "component": "build-essential",
+      "path": [
+        "plugins/build-essential"
+      ],
+      "kind": "plugin",
+      "migrationState": "moved",
+      "plugin": {
+        "cli": "build-essential",
+        "cargoPackage": "bun_plugin_build_essential"
+      },
+      "knownDrift": [
+        "scripts/build/plugins.ts",
+        "src/runtime/cli/plugin_command.rs",
+        ".gitmodules(update)"
+      ],
+      "notes": "Seventh plugin, mounted by 050ec748b6e. aphrody-main-runtime.yml already mounts and releases it (loop and asset list), the repository is public with Cargo package bun_plugin_build_essential (bin bun-build-essential), but it is missing from PLUGINS in plugin_command.rs, `plugins` in scripts/build/plugins.ts, the docs and the update = none setting of its .gitmodules entry. knownDrift lists those; check-fork-inventory.ts reports them as warnings until each is fixed and then removed from this list."
+    },
+    {
+      "type": "tree",
+      "destinationRepo": null,
+      "forkMount": null,
+      "forkMountUpdate": null,
+      "bunOsPath": null,
+      "submoduleRevision": null,
+      "upstream": "https://github.com/oven-sh/bun (all sixteen directories exist in upstream main 11c367163, the canary revision)",
+      "bunOsCommit": null,
+      "component": "upstream-packages",
+      "path": [
+        "packages/bun-build-mdx-rs",
+        "packages/bun-debug-adapter-protocol",
+        "packages/bun-error",
+        "packages/bun-inspector-frontend",
+        "packages/bun-inspector-protocol",
+        "packages/bun-lambda",
+        "packages/bun-native-bundler-plugin-api",
+        "packages/bun-native-plugin-rs",
+        "packages/bun-plugin-svelte",
+        "packages/bun-plugin-yaml",
+        "packages/bun-release",
+        "packages/bun-types",
+        "packages/bun-usockets",
+        "packages/bun-uws",
+        "packages/bun-vscode",
+        "packages/h3blast"
+      ],
+      "kind": "upstream-owned",
+      "migrationState": "stays",
+      "notes": "Upstream-Bun-owned: left in place so the fork stays rebasable. bun-types, bun-uws and bun-usockets are linked or typechecked by the runtime build; bun-build-mdx-rs, bun-vscode, bun-inspector-frontend and bun-release have fork publish workflows (aphrody-publish-mdx-rs, vscode-release, aphrody-publish-web-inspector) that stay with the fork. Any fork-only edit inside them belongs upstream or in a patch, not in a new copy."
+    },
+    {
+      "type": "package",
+      "destinationRepo": null,
+      "forkMount": null,
+      "forkMountUpdate": null,
+      "bunOsPath": null,
+      "submoduleRevision": null,
+      "upstream": null,
+      "bunOsCommit": null,
+      "component": "bun-agent-plugin",
+      "path": [
+        "packages/bun-agent-plugin"
+      ],
+      "kind": "package",
+      "migrationState": "pending",
+      "notes": "Fork-only (not in upstream). Runtime-linked at build time, not at run time: src/mcp/build.rs and src/codegen/generate-agent-tools.ts read its skills/memory, src/runtime/cli/agent_plugin_command.rs installs it, scripts/build/codegen.ts generates its plugin bundle, and scripts/aphrody/publish-npm.ts, release-knowledge.ts and release-native-worker.ts publish it as the npm package bun-agent-plugin. Candidate: own repository mounted as an optional submodule once the codegen inputs are read from a fetched copy or the generated bundle is committed to the consumer."
+    },
+    {
+      "type": "package+rust-workspace",
+      "destinationRepo": null,
+      "forkMount": null,
+      "forkMountUpdate": null,
+      "bunOsPath": null,
+      "submoduleRevision": null,
+      "upstream": null,
+      "bunOsCommit": null,
+      "component": "bun-dotnet-native",
+      "path": [
+        "packages/bun-dotnet-native"
+      ],
+      "kind": "runtime-linked",
+      "migrationState": "stays",
+      "notes": "Fork-only. crates/bun-dotnet-host is a non-optional path dependency of bun_runtime (src/runtime/Cargo.toml, src/runtime/dotnet/mod.rs) and a root Cargo member; dotnet.yml tests it. Moves together with packages/bun-dotnet (packages-misc) only after bun:dotnet becomes a plugin."
+    },
+    {
+      "type": "package+rust-workspace",
+      "destinationRepo": null,
+      "forkMount": null,
+      "forkMountUpdate": null,
+      "bunOsPath": null,
+      "submoduleRevision": null,
+      "upstream": null,
+      "bunOsCommit": null,
+      "component": "bun-runtime-sdk",
+      "path": [
+        "packages/bun-runtime-sdk"
+      ],
+      "kind": "package",
+      "migrationState": "pending",
+      "notes": "Fork-only; NOT runtime-linked: nothing in src/**/Cargo.toml depends on yolo-core, yolo-runtime or yolo-pyo3 (src/workspace and src/file_tools/polyglot.rs only name yolo-core's polyglot.rs in a comment/metadata string). It is a root npm workspace and three root Cargo members (Cargo.toml members and default-members), published by publish-npm.ts, runtime-sdk-build.ts and media-sdk-build.ts. Best next lot: move to its own repository (or bun-os crates) and drop the three members and the package.json workspace entry."
+    },
+    {
+      "type": "package",
+      "destinationRepo": null,
+      "forkMount": null,
+      "forkMountUpdate": null,
+      "bunOsPath": null,
+      "submoduleRevision": null,
+      "upstream": null,
+      "bunOsCommit": null,
+      "component": "bun-sql",
+      "path": [
+        "packages/bun-sql"
+      ],
+      "kind": "package",
+      "migrationState": "pending",
+      "notes": "Fork-only npm package @aphrody/bun-sql (Neon and Supabase SDKs over Bun.SQL). Only consumers: the root package.json workspaces entry and scripts/aphrody/bun-video-neon-cutover.ts. Candidate: move with packages/bun-video or to its own repository and drop the workspace entry."
+    },
+    {
+      "type": "tree",
+      "destinationRepo": null,
+      "forkMount": null,
+      "forkMountUpdate": null,
+      "bunOsPath": null,
+      "submoduleRevision": null,
+      "upstream": "https://github.com/oven-sh/bun (each directory exists in upstream main 11c367163)",
+      "bunOsCommit": null,
+      "component": "upstream-src",
+      "path": [
+        "src/analytics",
+        "src/aot",
+        "src/ast",
+        "src/ast_jsc",
+        "src/banned-includes",
+        "src/base64",
+        "src/boringssl",
+        "src/boringssl_sys",
+        "src/brotli",
+        "src/brotli_sys",
+        "src/builtin_sources",
+        "src/bun_alloc",
+        "src/bun_core",
+        "src/bun_core_macros",
+        "src/bun_output_tags",
+        "src/bundler",
+        "src/bundler_jsc",
+        "src/bunfig",
+        "src/cares_sys",
+        "src/clap",
+        "src/clap_macros",
+        "src/codegen",
+        "src/collections",
+        "src/crash_handler",
+        "src/csrf",
+        "src/css",
+        "src/css_derive",
+        "src/css_jsc",
+        "src/dispatch",
+        "src/dns",
+        "src/dotenv",
+        "src/errno",
+        "src/event_loop",
+        "src/exe_format",
+        "src/executable",
+        "src/format",
+        "src/glob",
+        "src/hash",
+        "src/highway",
+        "src/histogram",
+        "src/http",
+        "src/http_jsc",
+        "src/http_types",
+        "src/ini",
+        "src/install",
+        "src/install_jsc",
+        "src/install_types",
+        "src/io",
+        "src/js",
+        "src/js_parser",
+        "src/js_parser_jsc",
+        "src/js_printer",
+        "src/jsc",
+        "src/jsc_macros",
+        "src/libuv_sys",
+        "src/lint",
+        "src/lsquic_sys",
+        "src/md",
+        "src/mimalloc_sys",
+        "src/node-fallbacks",
+        "src/node_path",
+        "src/opaque",
+        "src/options_types",
+        "src/output",
+        "src/parsers",
+        "src/patch",
+        "src/patch_jsc",
+        "src/paths",
+        "src/perf",
+        "src/picohttp",
+        "src/platform",
+        "src/ptr",
+        "src/react_compiler",
+        "src/resolve_builtins",
+        "src/resolver",
+        "src/router",
+        "src/runtime",
+        "src/s3_signing",
+        "src/safety",
+        "src/sema",
+        "src/semver",
+        "src/semver_jsc",
+        "src/sha_hmac",
+        "src/shell_parser",
+        "src/simdutf_sys",
+        "src/sourcemap",
+        "src/sourcemap_jsc",
+        "src/spawn",
+        "src/spawn_sys",
+        "src/sql",
+        "src/sql_jsc",
+        "src/standalone_graph",
+        "src/sys",
+        "src/sys_jsc",
+        "src/tcc_sys",
+        "src/text_diff",
+        "src/threading",
+        "src/transpiler",
+        "src/trim",
+        "src/url",
+        "src/uws",
+        "src/uws_sys",
+        "src/valkey",
+        "src/watcher",
+        "src/which",
+        "src/windows_sys",
+        "src/wyhash",
+        "src/yarr",
+        "src/zlib",
+        "src/zlib_sys",
+        "src/zstd"
+      ],
+      "kind": "upstream-owned",
+      "migrationState": "stays",
+      "notes": "Top-level src/ directories that exist in upstream Bun. Left alone so rebases stay cheap. Fork edits inside them are the fork's patch set, not separate components."
+    },
+    {
+      "type": "rust-crate",
+      "destinationRepo": null,
+      "forkMount": null,
+      "forkMountUpdate": null,
+      "bunOsPath": null,
+      "submoduleRevision": null,
+      "upstream": null,
+      "bunOsCommit": null,
+      "component": "fork-agent-tooling-crates",
+      "path": [
+        "src/agent_tools",
+        "src/mcp",
+        "src/lsp",
+        "src/graph",
+        "src/vfs",
+        "src/host",
+        "src/workspace",
+        "src/file_tools",
+        "src/workflow",
+        "crates/aphrody-jev"
+      ],
+      "kind": "runtime-linked",
+      "migrationState": "stays",
+      "notes": "Fork-only. bun_mcp, bun_lsp, bun_graph, bun_host and bun_workspace are non-optional dependencies of bun_runtime (mcp_command.rs, lsp_command.rs, graph_native.rs, host_command.rs, bin_entry/workspace_command.rs); bun_agent_tools, bun_vfs and aphrody-jev hang off bun_mcp (aphrody-jev also off bun_runtime yolo/); src/file_tools and src/workflow are no crates but #[path] modules of bun_workspace (src/workspace/lib.rs). Becoming optional means a cargo feature on those CLI commands plus the bun-<name> plugin route; no dependents outside the runtime."
+    },
+    {
+      "type": "rust-crate",
+      "destinationRepo": null,
+      "forkMount": null,
+      "forkMountUpdate": null,
+      "bunOsPath": null,
+      "submoduleRevision": null,
+      "upstream": null,
+      "bunOsCommit": null,
+      "component": "fork-runtime-cli-crates",
+      "path": [
+        "src/adblock",
+        "src/coreutils",
+        "src/cosmic",
+        "src/env_cookie",
+        "src/google",
+        "src/privacy",
+        "src/readability",
+        "src/system_tools",
+        "src/vt"
+      ],
+      "kind": "runtime-linked",
+      "migrationState": "stays",
+      "notes": "Fork-only crates each with a single bun_runtime dependent: bun_adblock (runtime/adblock, js/bun/adblock.ts), bun_coreutils (cli/mod.rs, shell Cmd.rs), bun_cosmic (runtime/cosmic), bun_env_cookie (cli/env_command.rs, cookie_command.rs), bun_google (cli/search_command.rs), bun_privacy (runtime/privacy.rs), bun_readability (api/HTMLReadability.rs), bun_system_tools (cli/tools_command.rs, also path dependency of every plugin), bun_vt (api/terminal_screen.rs). Candidates for plugins only after the corresponding Bun API or CLI command is feature-gated."
+    },
+    {
+      "type": "rust-crate",
+      "destinationRepo": null,
+      "forkMount": null,
+      "forkMountUpdate": null,
+      "bunOsPath": null,
+      "submoduleRevision": null,
+      "upstream": null,
+      "bunOsCommit": null,
+      "component": "fork-core-support-crates",
+      "path": [
+        "src/hpack",
+        "src/libarchive",
+        "src/no_window",
+        "src/zlib_rs"
+      ],
+      "kind": "runtime-linked",
+      "migrationState": "stays",
+      "notes": "Fork crates that upstream-owned crates depend on: bun_hpack (bun_http, bun_uws_sys, runtime h2), bun_libarchive (bun_install, bun_standalone_graph, runtime; upstream replaced it by src/archive and src/tar, so this is the main upstream-drift to resolve on the next rebase), bun_no_window (bun_core, bun_sys, bun_spawn, bun_crash_handler, bun_install, browser and every plugin) and zlib-rs (bun_zlib, bun_zlib_sys; plugins path-depend on it). Cannot move without a rebase onto upstream's own owners."
+    },
+    {
+      "type": "rust-crate",
+      "destinationRepo": null,
+      "forkMount": null,
+      "forkMountUpdate": null,
+      "bunOsPath": null,
+      "submoduleRevision": null,
+      "upstream": null,
+      "bunOsCommit": null,
+      "component": "fork-standalone-crates",
+      "path": [
+        "src/wasm",
+        "src/x"
+      ],
+      "kind": "fork-only-optional",
+      "migrationState": "pending",
+      "notes": "Fork-only crates with NO dependent: bun_wasm (cdylib, a release-matrix product only: scripts/aphrody/release-matrix.ts, docs/project/release-matrix.mdx) and bun_x (X/Twitter module; only packages/bun-x docs and native-ci.ts name it, no Cargo.toml depends on it). Both are root Cargo members and default-members, so they are compiled on every workspace build for nothing. Best next lot after the 15 packages: move both to aphrody-labs/bun-os crates (like bun_git/bun_pkg_*) and drop them from Cargo.toml members, default-members and the workspace dependency table."
     }
-  ]
+  ],
+  "ci": {
+    "forkBinaryWorkflows": [
+      "dotnet.yml"
+    ],
+    "notes": "Workflows (file names under .github/workflows) whose steps run a fork-built bun and may use subcommands upstream Bun lacks (bun dotnet). Every other workflow runs on the official Bun canary: setup-bun with runtime official (default), oven-sh/setup-bun, or a step that says legacy. A setup-bun step that installs the aphrody-labs runtime says runtime: fork. check-fork-inventory.ts enforces both."
+  }
 }

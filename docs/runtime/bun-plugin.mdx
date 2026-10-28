@@ -3,7 +3,7 @@ title: bun plugin
 description: Cold parts of Bun shipped as separate executables, fetched on first use.
 ---
 
-Some commands of Bun run in a separate executable, a plugin, so the `bun` executable stays small and starts fast. `bun uv`, `uv`, `uvx` and Python compilation run the `uv` plugin, `bun-uv`; `bun vpn` runs `bun-vpn`; `bun ssh` and `bun rsync --native` run `bun-ssh`; `bun docker` runs `bun-docker`; `bun just` runs `bun-just`; `bun winmd` runs `bun-winmd`.
+Some commands of Bun run in a separate executable, a plugin, so the `bun` executable stays small and starts fast. `bun uv`, `uv`, `uvx` and Python compilation run the `uv` plugin, `bun-uv`; `bun vpn` runs `bun-vpn`; `bun ssh` and `bun rsync --native` run `bun-ssh`; `bun docker` runs `bun-docker`; `bun just` runs `bun-just`; `bun winmd` runs `bun-winmd`. The `build-essential` plugin (`bun-build-essential`) is built and released with the others but not yet dispatched by `bun`.
 
 A plugin is looked up, in order:
 

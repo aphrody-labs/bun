@@ -48,6 +48,7 @@ jobs:
           git submodule update --init --checkout --recursive packages/bun-video
       - uses: ./.github/actions/setup-bun
         with:
+          runtime: fork
           bun-version: ${{ env.BUN_HOST_VERSION }}
       - name: Verify eight native full release receipts before publication
         if: inputs.dry-run != true

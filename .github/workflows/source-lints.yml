@@ -28,6 +28,11 @@ on:
       - ".buildkite/scripts/upload-release.sh"
       - "packages/bun-release/src/platform.ts"
       - "rust-toolchain.toml"
+      - "docs/project/fork-inventory.json"
+      - ".gitmodules"
+      - "scripts/aphrody/check-fork-inventory.*"
+      - ".github/workflows/**"
+      - "plugins/**"
       - "bun.lock"
       - "test/bun.lock"
       - "test/harness.ts"
@@ -57,6 +62,11 @@ on:
       - ".buildkite/scripts/upload-release.sh"
       - "packages/bun-release/src/platform.ts"
       - "rust-toolchain.toml"
+      - "docs/project/fork-inventory.json"
+      - ".gitmodules"
+      - "scripts/aphrody/check-fork-inventory.*"
+      - ".github/workflows/**"
+      - "plugins/**"
       - "bun.lock"
       - "test/bun.lock"
       - "test/harness.ts"
@@ -95,3 +105,7 @@ jobs:
       # bare checkout is sufficient.
       - name: Run source lints
         run: bun test test/internal/source-lints/
+      # The plugin and module factory: docs/project/fork-inventory.json against .gitmodules, the plugin lists,
+      # the docs and the CI runtime (official Bun canary unless a step says `runtime: fork`).
+      - name: Fork inventory
+        run: bun scripts/aphrody/check-fork-inventory.ts
