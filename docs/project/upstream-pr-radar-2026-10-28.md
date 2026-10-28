@@ -4,7 +4,7 @@ This is a dated snapshot of upstream `oven-sh/bun`, checked against GitHub on 20
 
 ## Current upstream baseline
 
-The official [canary release](https://github.com/oven-sh/bun/releases/tag/canary) resolves to commit `11c367163a4baa77d3627d14764c376c856a630a`, which is also the latest commit found by the repository's GitHub commit search during this check. `Bun.revision` and `process.release.sourceUrl` must still be checked on each host; a matching version string is not provenance evidence.
+The official [canary release](https://github.com/oven-sh/bun/releases/tag/canary) resolves to commit `11c367163a4baa77d3627d14764c376c856a630a`, which is also the latest commit found by the repository's GitHub commit search during this check. On the Windows workstation, the official installer reported `1.4.4-canary.1+11c367163`; `bun agent-plugin doctor --json` identified the executable as upstream and not Aphrody. A smoke build with `bun build --compile --aot` produced and ran `AOT:42`. The canary executable's `process.release.sourceUrl` currently names the official `bun-v1.4.4` asset, while `--revision` reports the canary revision, so record both fields and installer output on each host. A matching version string alone is not provenance evidence.
 
 ## AOT
 
