@@ -31,7 +31,7 @@ The recorded upstream baseline commit `38afee6c84fcf48c0edb2466aa4b27d287a59c30`
 | rio (runtime graph) | src/rio |  |  | stays |
 | browser (runtime graph) | src/browser |  |  | stays |
 | bun:winui / bun:windows | src/runtime/windows |  |  | stays |
-| curl-upstream | src/runtime/curl/upstream |  |  | pending |
+| curl-upstream | vendor/curl |  |  | moved |
 
 ## Package manifests found
 

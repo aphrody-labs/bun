@@ -14,7 +14,7 @@ libraries/headers it provides.
 
 That's it. For most deps you're done. A dep with several libraries, its own
 generators or helper executables adds `groups` and `steps` to the same
-`direct` spec — see `webkit.ts`. The fork's curl (`curlNative`) is still built
+`direct` spec — see `webkit.ts`. The fork's curl (`curlNative`) is fetched like any github-archive dep (vendor/curl) but built
 by its own cmake, `kind: "nested-cmake"`: see `NestedCmakeBuild` in `../source.ts`.
 
 **`name` must match the directory on disk** (`vendor/<name>/`). If your repo

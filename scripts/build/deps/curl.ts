@@ -1,28 +1,31 @@
+/**
+ * curl/curl — libcurl and the curl tool behind `Bun.Curl` and `bun curl`
+ * (`curlNative`, off by default).
+ *
+ * The source is the plain upstream archive at CURL_COMMIT, fetched to
+ * vendor/curl like every other dep. It is built by its own cmake through the
+ * project in src/runtime/curl/sdk, which wraps upstream's CMakeLists.txt
+ * (named by CURL_UPSTREAM_DIR) into the BunCurlTool and libcurl_static
+ * archives. Pinned to the curl-8_23_0 release commit; to bump curl, change CURL_COMMIT.
+ */
 import { resolve } from "node:path";
-import { readFileSync } from "node:fs";
 import type { Dependency } from "../source.ts";
 import { depBuildDir, depSourceDir } from "../source.ts";
 
-export const CURL_TAG = "d0386aa3e805543ce464c993e1eb31b4d92c6356";
-export const CURL_COMMIT = "01346829096c61b372692f6dc43ffa778c6caccd";
+export const CURL_COMMIT = "3163ec065643ba20709f190111f42c3e1fe95273";
 
 export const curl: Dependency = {
   name: "curl",
   enabled: cfg => cfg.curlNative,
-  source: cfg => {
-    const path = resolve(cfg.cwd, "src/runtime/curl");
-    const receipt = JSON.parse(readFileSync(resolve(path, "upstream/.bun-source.json"), "utf8"));
-    if (receipt.revision !== CURL_COMMIT || receipt.repository !== "curl/curl")
-      throw new Error("Curl source must match the explicit pinned bootstrap receipt");
-    return { kind: "local", path, hint: "Bootstrap the pinned upstream with bun scripts/aphrody/curl-source.ts" };
-  },
+  source: () => ({ kind: "github-archive", repo: "curl/curl", commit: CURL_COMMIT }),
   buildDeps: ["boringssl", "zlib", "brotli", "zstd"],
   build: cfg => ({
     kind: "nested-cmake",
-    sourceSubdir: "sdk",
+    sourceSubdir: resolve(cfg.cwd, "src/runtime/curl/sdk"),
     targets: ["BunCurlTool", "libcurl_static"],
     pic: true,
     args: {
+      CURL_UPSTREAM_DIR: depSourceDir(cfg, "curl"),
       CURL_USE_SCHANNEL: cfg.windows ? "ON" : "OFF",
       CURL_USE_OPENSSL: cfg.windows ? "OFF" : "ON",
       CURL_USE_LIBPSL: "OFF",
@@ -67,6 +70,6 @@ export const curl: Dependency = {
   }),
   provides: cfg => ({
     libs: [`${cfg.libPrefix}BunCurlTool${cfg.libSuffix}`, `${cfg.libPrefix}curl${cfg.libSuffix}`],
-    includes: ["upstream/include"],
+    includes: ["include"],
   }),
 };

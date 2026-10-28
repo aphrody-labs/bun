@@ -255,9 +255,8 @@ src/runtime/hawk_root.rs
 # Local Cloudflare request/TLS cache
 /packages/bun-cloudflare/app/.wrangler/
 
-# Native command receipts and explicitly bootstrapped Curl sources stay local.
+# Native command receipts stay local.
 /var/
-/src/runtime/curl/upstream/
 
 # Rendered test outputs of the vendored bun-video packages are regenerated per run.
 /packages/bun-video/packages/*/packages/*/tests/**/output/

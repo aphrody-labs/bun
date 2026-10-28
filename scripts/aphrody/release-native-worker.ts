@@ -884,7 +884,6 @@ async function produce(input: WorkerInput, component: "media" | "runtime" = "med
   if (!(await Bun.file(join(diagnostics, "avio-qualification.json")).exists()))
     await qualifyNativeMediaAVIO(target.sdkTarget as MediaSDKTarget, input.root, prefix, diagnostics);
   process.env.BUN_MEDIA_PREFIX = prefix;
-  await run("curl-source", [process.execPath, "--no-env-file", "scripts/aphrody/curl-source.ts"], 300_000);
   const sysroot =
     target.os === "linux"
       ? (target.abi === "musl" ? locations.muslSysroot : locations.glibcSysroot)[target.arch]
@@ -1456,12 +1455,6 @@ if (import.meta.main) {
       await mkdir(diagnostics, { recursive: true });
       await sourceIdentity(input, diagnostics);
       await prepareNativeRuntimeToolchain(input, diagnostics);
-      await command(
-        [process.execPath, "--no-env-file", "scripts/aphrody/curl-source.ts"],
-        input.root,
-        join(diagnostics, "curl-source.log"),
-        { timeout: 300_000 },
-      );
       const result = await prepareNativeRuntimeCore(input, diagnostics);
       await Bun.write(
         join(diagnostics, "core-preparation.json"),

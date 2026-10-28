@@ -419,7 +419,8 @@ export interface NestedCmakeBuild {
   /**
    * Subdirectory within the SOURCE dir containing CMakeLists.txt.
    * E.g. zstd's cmake files live at `build/cmake/`, not the repo root.
-   * Becomes the `-S` arg to cmake. Default: source root.
+   * Becomes the `-S` arg to cmake. Default: source root. May be absolute, for
+   * a wrapper project kept in this repo (curl: src/runtime/curl/sdk).
    */
   sourceSubdir?: string;
   /**
