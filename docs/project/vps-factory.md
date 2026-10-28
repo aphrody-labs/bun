@@ -53,25 +53,24 @@ bun factory sync|gen|build|all chromium [--config release] [--dry-run]
 
 `builds` in `tools/config/fusion-factory.json` splits the 12 CPUs into 3 slots
 of 4 (`"mode": "multi"`). Slot 0 is `heavy.lock` (CPUs 0-3), slot 1
-`heavy.1.lock` (4-7), slot 2 `heavy.2.lock` (8-11). A step takes the first free
-slots it needs and every other free one, so a build alone uses all 12 CPUs.
+`heavy.1.lock` (4-7), slot 2 `heavy.2.lock` (8-11). The factory can allocate
+multiple free slots, but the current owner policy reserves at most one slot per
+concurrent lane shared by Bun runtime, Bun OS and Web OS.
 It runs under `taskset` on the CPUs of its slots, so `nproc`, ninja and cargo
 see only those, with `BUN_FACTORY_JOBS`, `CARGO_BUILD_JOBS` and
-`CMAKE_BUILD_PARALLEL_LEVEL` set to their jobs; a build started later takes
-what is left, or waits for its fewest slots. Locks are
+`CMAKE_BUILD_PARALLEL_LEVEL` set to their jobs. A build waits if its required
+slots are unavailable. Locks are
 always taken in ascending order, so concurrent builds cannot deadlock. A target
-needs at least `"slots": n` and at most `"maxSlots": n`; Chromium builds in
-exactly 2 slots (8 jobs), so one slot always stays free for Bun.
+needs at least `"slots": n` and at most `"maxSlots": n`. Target configuration
+may specify different limits; apply the current owner policy when scheduling.
 Scripts that still `flock heavy.lock` directly hold slot 0.
 
 ```sh
 bun factory slots                          # which slots are taken
-bun factory run -- bun bd                  # every free slot, 12 CPUs when alone
-bun factory run --slots 2 -- cargo build   # at least two slots
-bun factory run --max-slots 1 -- bun bd    # one slot, 4 CPUs
-BUN_FACTORY_MODE=single bun factory build chromium   # one exclusive build, 12 jobs
+bun factory run --max-slots 1 -- bun bd    # at most one slot, 4 CPUs
 ```
 
 Each slot has about 12 GiB of RAM once `resources.reserveMemoryGiB` is kept
-free; give memory-heavy links two slots. The caches may grow to
+free. A job that cannot run within the current lane budget needs a separately
+coordinated scheduling decision. The caches may grow to
 `builds.sccacheGiB` (150) and `builds.ccacheGiB` (100) under `~/build`.
