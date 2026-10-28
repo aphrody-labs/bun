@@ -1,11 +1,10 @@
 ---
 title: Install dependencies with Bun in GitHub Actions
 sidebarTitle: Install Bun in GitHub Actions
-description: Install Bun and project dependencies in a GitHub Actions workflow.
 mode: center
 ---
 
-Use the [`setup-bun`](https://github.com/aphrody-labs/bun/blob/main/.github/actions/setup-bun/action.yml) action of aphrody-labs/bun to install `bun` in your GitHub Actions runner. It installs a release of aphrody-labs/bun and checks it against the release's `SHA256SUMS.txt`.
+Use the official [`setup-bun`](https://github.com/oven-sh/setup-bun) GitHub Action to install `bun` in your GitHub Actions runner. Set `bun-version: canary` for this project; pin the action to a reviewed commit in production workflows.
 
 ```yaml workflow.yml icon="file-code"
 name: my-workflow
@@ -16,7 +15,7 @@ jobs:
     steps:
       # ...
       - uses: actions/checkout@v4
-      - uses: aphrody-labs/bun/.github/actions/setup-bun@main # [!code ++]
+      - uses: oven-sh/setup-bun@v2 # [!code ++]
 
       # run any `bun` or `bunx` command
       - run: bun install # [!code ++]
@@ -34,11 +33,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       # ...
-      - uses: aphrody-labs/bun/.github/actions/setup-bun@main
+      - uses: oven-sh/setup-bun@v2
         with: # [!code ++]
-          bun-version: "latest" # or "1.4.5", or a tag such as "bun-v1.4.5" # [!code ++]
+          bun-version: "latest" # or "canary" # [!code ++]
 ```
 
 ---
 
-See the [`setup-bun` action](https://github.com/aphrody-labs/bun/blob/main/.github/actions/setup-bun/action.yml).
+See the [`setup-bun` README](https://github.com/oven-sh/setup-bun).

@@ -1,4 +1,3 @@
-import Nginx from "bun:nginx";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 
@@ -75,10 +74,21 @@ ${c.upstream ? `    proxy_cache_path cache/edge levels=1:2 keys_zone=edge:64m ma
 `;
 }
 
-export async function startEdge(c: EdgeConfig, binary = "/usr/sbin/nginx") {
+export interface EdgeController {
+  validate(): Promise<unknown>;
+  start(): Promise<unknown>;
+  close(): Promise<unknown>;
+}
+
+export interface EdgeAdapter {
+  create(options: { binary: string; prefix: string; configFile: string; timeoutMs: number }): Promise<EdgeController>;
+}
+
+export async function startEdge(c: EdgeConfig, binary = "/usr/sbin/nginx", adapter?: EdgeAdapter) {
+  if (!adapter) throw new Error("NGINX controller adapter required; pass one explicitly or set BUN_EDGE_ADAPTER for the CLI");
   for (const d of ["logs", "temp", "cache"]) mkdirSync(join(c.prefix, d), { recursive: true });
   writeFileSync(join(c.prefix, "nginx.conf"), edgeConfig(c));
-  const nginx = await Nginx.create({ binary, prefix: c.prefix, configFile: "nginx.conf", timeoutMs: 15_000 });
+  const nginx = await adapter.create({ binary, prefix: c.prefix, configFile: "nginx.conf", timeoutMs: 15_000 });
   await nginx.validate();
   await nginx.start();
   return nginx;
@@ -87,7 +97,10 @@ export async function startEdge(c: EdgeConfig, binary = "/usr/sbin/nginx") {
 if (import.meta.main) {
   const [file, binary] = process.argv.slice(2);
   if (!file) throw new Error("Usage: bun edge.ts <edge.json> [nginx-binary]");
-  const nginx = await startEdge(JSON.parse(readFileSync(file, "utf8")) as EdgeConfig, binary);
+  const modulePath = process.env.BUN_EDGE_ADAPTER;
+  if (!modulePath) throw new Error("Set BUN_EDGE_ADAPTER to an adapter module exporting a default EdgeAdapter");
+  const adapter = (await import(modulePath)).default as EdgeAdapter;
+  const nginx = await startEdge(JSON.parse(readFileSync(file, "utf8")) as EdgeConfig, binary, adapter);
   const stop = () => void nginx.close().finally(() => process.exit(0));
   process.on("SIGTERM", stop);
   process.on("SIGINT", stop);

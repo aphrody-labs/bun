@@ -1,7 +1,11 @@
 import { closeSync, mkdirSync, openSync, renameSync } from "node:fs";
 import { resolve } from "node:path";
-import type windows from "bun:windows";
 import type { RestartPolicy } from "./supervisor";
+
+export interface ProcessJob {
+  assign(pid: number): void;
+  close(): void;
+}
 
 export interface ServiceDefinition {
   id: string;
@@ -27,6 +31,8 @@ export interface ServiceSupervisorOptions {
   drainMs?: number;
   backoff?: { baseMs?: number; maxMs?: number; stableMs?: number };
   signals?: boolean;
+  /** Optional process-tree ownership provider, such as a Windows Job adapter. */
+  createJob?: () => ProcessJob;
   log?: (event: ServiceEvent) => void;
 }
 
@@ -49,12 +55,11 @@ export interface ServiceStatus {
   state: "pending" | "running" | "backoff" | "paused" | "exited" | "stopped";
 }
 
-type Job = InstanceType<typeof windows.Job>;
 type Child = ReturnType<typeof Bun.spawn>;
 interface Entry extends ServiceStatus {
   definition: ServiceDefinition;
   child?: Child;
-  job?: Job;
+  job?: ProcessJob;
 }
 interface Control {
   paused: boolean;
@@ -279,8 +284,17 @@ export class ServiceSupervisor {
 
   async #initialize(): Promise<void> {
     try {
-      const WindowsJob = process.platform === "win32" ? (await import("bun:windows")).default.Job : undefined;
       if (this.#abort.signal.aborted) return;
+      let createJob = this.#options.createJob;
+      if (!createJob && process.platform === "win32") {
+        const specifier = "bun:windows";
+        try {
+          const { default: windows } = await import(specifier);
+          createJob = () => new windows.Job({ killOnClose: true });
+        } catch (error) {
+          if (!(error instanceof Error) || !('code' in error) || error.code !== "ERR_MODULE_NOT_FOUND" || !error.message.includes(specifier)) throw error;
+        }
+      }
       if (this.#options.logDirectory) mkdirSync(this.#options.logDirectory, { recursive: true });
       if (this.#options.healthPort !== undefined) {
         this.#server = Bun.serve({
@@ -316,7 +330,7 @@ export class ServiceSupervisor {
         process.on("SIGINT", this.#signal);
         process.on("SIGTERM", this.#signal);
       }
-      this.#runs = this.#entries.map(entry => this.#supervise(entry, WindowsJob));
+      this.#runs = this.#entries.map(entry => this.#supervise(entry, createJob));
       this.#timer = setInterval(() => {
         void this.probe().catch(error => this.#log({ event: "probe-failed", error: String(error) }));
       }, this.#probeInterval);
@@ -336,7 +350,7 @@ export class ServiceSupervisor {
     }
   }
 
-  async #supervise(entry: Entry, WindowsJob: typeof windows.Job | undefined): Promise<void> {
+  async #supervise(entry: Entry, createJob: (() => ProcessJob) | undefined): Promise<void> {
     let failures = 0;
     const control = this.#controls.get(entry)!;
     while (!this.#abort.signal.aborted) {
@@ -361,7 +375,7 @@ export class ServiceSupervisor {
       const started = Date.now();
       try {
         if (this.#options.logDirectory) fd = openSync(resolve(this.#options.logDirectory, `${entry.id}.log`), "a");
-        if (WindowsJob) entry.job = new WindowsJob({ killOnClose: true });
+        if (createJob) entry.job = createJob();
         child = Bun.spawn({
           cmd: entry.definition.command,
           cwd: entry.definition.cwd ?? this.#options.cwd,

@@ -1,5 +1,8 @@
 import { expect, test } from "bun:test";
-import { edgeConfig } from "./edge";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { edgeConfig, startEdge } from "./edge";
 
 const roots = [
   { host: "cdn.example", root: "/srv/cdn" },
@@ -41,4 +44,28 @@ test("release roots proxy the release surfaces with a static fallback", () => {
   });
   expect(conf).toContain("upstream edge_release { server 127.0.0.1:8798;");
   expect(conf).toContain("error_page 502 503 504 = @static;");
+});
+
+test("starting requires an explicit adapter and validates before starting", async () => {
+  const prefix = mkdtempSync(join(tmpdir(), "bun-edge-"));
+  const events: string[] = [];
+  try {
+    const config = { prefix, roots };
+    await expect(startEdge(config)).rejects.toThrow("adapter required");
+    const controller = await startEdge(config, "/custom/nginx", {
+      async create(options) {
+        expect(options.binary).toBe("/custom/nginx");
+        expect(readFileSync(join(prefix, options.configFile), "utf8")).toContain("server_name cdn.example;");
+        return {
+          async validate() { events.push("validate"); },
+          async start() { events.push("start"); },
+          async close() { events.push("close"); },
+        };
+      },
+    });
+    await controller.close();
+    expect(events).toEqual(["validate", "start", "close"]);
+  } finally {
+    rmSync(prefix, { recursive: true, force: true });
+  }
 });

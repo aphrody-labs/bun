@@ -1,4 +1,5 @@
-# One service, one executable built with `bun build --compile`.
+# One service, one executable built on its target platform with upstream `bun compile`.
+# Qualify AOT compatibility before deploying; `bun build --compile` is an alternative.
 # Install as /etc/systemd/system/app.service, then: systemctl daemon-reload && systemctl enable --now app
 # Sizes below assume 6 CPUs and 11.4 GB of RAM. Adjust MemoryHigh and MemoryMax to your host.
 [Unit]

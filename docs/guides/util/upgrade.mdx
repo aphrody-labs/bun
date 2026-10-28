@@ -1,7 +1,6 @@
 ---
 title: Upgrade Bun to the latest version
 sidebarTitle: Upgrade Bun
-description: Upgrade Bun with the built-in bun upgrade command or install a specific version.
 mode: center
 ---
 
@@ -11,7 +10,7 @@ Bun upgrades itself with the built-in `bun upgrade` command.
 bun upgrade
 ```
 
-`bun upgrade` downloads and installs the latest release of [aphrody-labs/bun](https://github.com/aphrody-labs/bun/releases), checks it against the release's `SHA256SUMS.txt`, and replaces the currently installed version. Set `APHRODY_BUN_REPO` to download releases from another repository.
+`bun upgrade` downloads and installs the latest stable version of Bun, replacing the currently installed version. If you're on a canary build, `bun upgrade` installs the latest canary build instead.
 
 <Note>To see the current version of Bun, run `bun --version`.</Note>
 
@@ -34,7 +33,7 @@ bun --revision
 
 ## Upgrade to canary builds
 
-`bun upgrade --canary` installs the release tagged `canary`. When the repository has no such release, the command reports that no canary build exists.
+Canary builds are published automatically from the `main` branch once a commit's CI tests pass. They're useful for trying new features or verifying bug fixes before a release.
 
 ```bash terminal icon="terminal"
 bun upgrade --canary
@@ -56,15 +55,18 @@ bun upgrade --stable
 
 ## Install a specific version
 
-To install a specific version, pass a version or an exact release tag to the install script:
+To install a specific version of Bun, use the install script with a version tag:
 
 <Tabs>
   <Tab title="macOS & Linux">
-    ```bash terminal icon="terminal" curl -fsSL https://bun.aphrody.app/install.sh | bash -s bun-v1.4.5 ```
+    ```bash terminal icon="terminal"
+    curl -fsSL https://bun.sh/install | bash -s "bun-v1.3.3"
+    ```
   </Tab>
   <Tab title="Windows">
-    ```powershell PowerShell icon="windows" & ([scriptblock]::Create((irm https://bun.aphrody.app/install.ps1)))
-    -Version 1.4.5 ```
+    ```powershell PowerShell icon="windows"
+    iex "& {$(irm https://bun.sh/install.ps1)} -Version 1.3.3"
+    ```
   </Tab>
 </Tabs>
 
@@ -75,8 +77,12 @@ To install a specific version, pass a version or an exact release tag to the ins
 If you installed Bun with a package manager, upgrade with that package manager instead of `bun upgrade` to avoid conflicts.
 
 <Tip>
-  **npm users** <br />
-  Use `npm install -g @aphrody/bun-runtime@latest` instead.
+**Homebrew users** <br />
+Use `brew upgrade bun` instead.
+
+**Scoop users** <br />
+Use `scoop update bun` instead.
+
 </Tip>
 
 ---

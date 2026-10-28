@@ -1,9 +1,14 @@
 {
   "name": "@aphrody/supervisor",
   "version": "1.4.7",
-  "private": false,
+  "private": true,
   "description": "Cross-platform command supervision, Windows Jobs, health probes, and systemd notification, watchdog and memory budgets for Bun",
-  "license": "MIT",
+  "license": "UNLICENSED",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aphrody-labs/bun.git",
+    "directory": "packages/bun-supervisor"
+  },
   "files": [
     "src",
     "systemd"
@@ -18,6 +23,6 @@
     "./package.json": "./package.json"
   },
   "engines": {
-    "bun": ">=1.4.4"
+    "bun": ">=1.4.4-0"
   }
 }

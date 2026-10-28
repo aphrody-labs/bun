@@ -14,6 +14,8 @@
 
 ### [Read the docs →](https://bun.aphrody.app/docs)
 
+> **Runtime transition:** Use the official [Bun upstream canary](https://bun.com/docs/installation) as the default runtime. Aphrody-specific features are being migrated to optional modules and plugins; the fork-specific APIs and installers described below document the existing implementation and are not automatically available in upstream Bun. Migration and compatibility are not yet complete.
+
 ## What is Bun OS?
 
 Bun OS brings the [Bun](https://github.com/oven-sh/bun) toolkit and Aphrody's native integrations together in the `bun` executable. Run JavaScript and TypeScript, install packages, test applications and bundle code with the same command. The runtime uses Rust and JavaScriptCore, with C++ bindings to WebKit.
@@ -47,37 +49,13 @@ Read the [Bun.Video reference](https://bun.aphrody.app/docs/runtime/video) for c
 
 Source version: **1.4.4**. Immutable release source: [852e68acc5d64a6f688961e91ea150d67dceb254](https://github.com/aphrody-labs/bun/tree/852e68acc5d64a6f688961e91ea150d67dceb254). Published downloads and checksums identify available executables. This source revision requires its own native factory and runtime qualification.
 
-## Install
+## Install and compile
 
-The installers select an already published runtime for your platform. Check [downloads and checksums](https://bun.aphrody.app/downloads) for available targets; these commands do not publish or qualify this source revision.
+Install the official [upstream Bun](https://bun.com/docs/installation) for your platform, then select its latest canary with `bun upgrade --canary`. Package-manager installations should follow their own update procedure. Check `bun --revision` and the release source to confirm which executable is running.
 
-```sh
-# Linux and macOS
-curl -fsSL https://bun.aphrody.app/install | bash
+The canary's experimental `bun compile ./app.ts` compiles a supported application ahead of time into a standalone executable. Build on the target platform, check compatibility and measure the actual application before relying on its performance.
 
-# Windows (PowerShell)
-powershell -c "irm bun.aphrody.app/install.ps1 | iex"
-
-# Published runtime package
-bun add --global @aphrody/bun-runtime
-```
-
-The [Windows installer](https://github.com/aphrody-labs/bun/tree/852e68acc5d64a6f688961e91ea150d67dceb254/scripts/aphrody/install.ps1) accepts `-BinDir` or `APHRODY_BUN_BIN_DIR`. User state and caches live under `BUN_INSTALL`.
-
-### Upgrade
-
-```sh
-bun upgrade
-```
-
-Upgrades select published Bun OS releases. Build the checkout with `bun bd` and test its executable with `bun bd test <file>` when working on Bun OS itself.
-
-## Native quality and migration
-
-Use `bun check`, `bun lint`, `bun fmt` and `bun n2b` directly for type checking, lint, formatting and migration. These commands use their linked native owners; external subprocess backends, standalone Oxc tools, tsgo/tsc and external n2b are not permitted for these tasks. Package scripts may expose these native commands but must not wrap or replace them; `bunx` is reserved for unrelated packages.
-
-Qualify checkout changes with `bun bd check`, `bun bd lint`, `bun bd fmt` and `bun bd n2b`. Native failures must be corrected in their owner.
-
+This repository still contains the historical Aphrody fork and its native integrations. Its build, release and plugin instructions apply to that implementation during migration; they do not establish that the same APIs or commands exist in upstream Bun. Components move to optional modules and plugins as their owners are migrated and verified.
 ## Packages and native imports
 
 Dedicated SDK catalogs: [Google REST and Cloud Code](packages/bun-google/README.md),

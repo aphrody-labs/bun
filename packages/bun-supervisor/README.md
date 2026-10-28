@@ -42,15 +42,17 @@ by the caller. No credentials, environment flags or private paths are injected.
 Restart policies are `always` (default), `on-failure`, and `never`. Exponential
 backoff uses configurable `baseMs`, `maxMs` and `stableMs`. `stop()` cancels
 backoff/probes, removes signal handlers, drains children up to `drainMs`, then
-kills remaining children and awaits their exit. Windows lazily loads
-`bun:windows` and assigns every child to a kill-on-close Job, including its
-descendants. On other platforms shutdown owns direct children; applications
-must arrange descendant cleanup themselves. Signal handling does not exit the
+kills remaining children and awaits their exit. On Windows the legacy
+`bun:windows` module is used automatically when available to assign each child
+to a kill-on-close Job, including its descendants. An optional `createJob`
+adapter overrides this provider and must implement `assign(pid)` and `close()`.
+Upstream Bun does not supply `bun:windows`; without an adapter shutdown owns
+direct children only, so applications must arrange descendant cleanup. Signal handling does not exit the
 parent application; disable it with `signals: false` to use your own lifecycle.
 Instances cannot be restarted after stopping. Log callbacks are observers;
 their exceptions do not interrupt cleanup.
 
-`await supervisor.pause(id)` terminates that service, closes its Windows Job,
+`await supervisor.pause(id)` terminates that service, closes its Job if present,
 and waits for cleanup while peers continue running. Its status becomes `paused`
 and health reports it unavailable. `await supervisor.resume(id)` starts it again
 without counting the intentional pause as a restart. Pausing cancels pending
@@ -78,5 +80,6 @@ runtime installation and boot-catalog changes are separate deployment concerns.
 The command-supervision, Windows Job and atomic-status design was migrated
 from [aphrody-labs/omar](https://github.com/aphrody-labs/omar/blob/d565a5a67d570e3648c091c351698781fb24bf54/server/supervisor.ts),
 pinned at `d565a5a67d570e3648c091c351698781fb24bf54`. Host provisioning and private
-service manifests remain outside this public API. See the preserved upstream
-source and notices in `vendor/omar` and the repository license.
+service manifests remain outside this API. The source repository is private and
+its pinned tree has no license or notice file. Publication is blocked until the
+rights holder confirms the applicable license and distribution permission.

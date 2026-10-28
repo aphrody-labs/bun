@@ -62,7 +62,7 @@ export function planInstall(o: {
       items.push({ dest: at(join(lib, f)), content: read(f), mode: 0o644 });
     for (const u of ["aphrody-deploy-clean.service", "aphrody-deploy-clean.timer"]) {
       const content = read("systemd", u)
-        .replaceAll("@BUN@", o.bun ?? "/home/ubuntu/.local/bin/bun")
+        .replaceAll("@BUN@", o.bun ?? process.execPath)
         .replaceAll("@ROOT@", o.root);
       items.push({ dest: at(join("/etc/systemd/system", u)), content, mode: 0o644 });
     }

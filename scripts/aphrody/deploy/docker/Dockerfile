@@ -1,5 +1,5 @@
-# Image complète du fork Bun : Ubuntu 26.04 (même OS et glibc que les hôtes vps et dbfr), Bun de la release GitHub
-# (somme vérifiée contre SHA256SUMS.txt), git, openssh, gh, rsync et le pipeline de déploiement (scripts/aphrody/deploy).
+# Image de déploiement : Ubuntu 26.04, Bun upstream canary et outils de déploiement.
+# Pour revenir à une release historique du fork, définir les trois arguments BUN_REPO, BUN_RELEASE et BUN_SUMS.
 # Un seul point d'entrée, trois rôles :
 #   build  file de déploiement (queue.ts), build des apps puis transfert et activation sur l'hôte de prod par ssh
 #   prod   exécute $APP_BIN de la release courante, ou `bun $APP_SCRIPT`, sinon la sonde probe.ts
@@ -9,12 +9,14 @@
 ARG UBUNTU_TAG=26.04
 
 FROM ubuntu:${UBUNTU_TAG} AS bun
-ARG BUN_RELEASE=bun-v1.4.4
+ARG BUN_REPO=oven-sh/bun
+ARG BUN_RELEASE=canary
+ARG BUN_SUMS=SHASUMS256.txt
 RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates curl unzip && rm -rf /var/lib/apt/lists/*
 RUN set -eu; \
-    base="https://github.com/aphrody-labs/bun/releases/download/${BUN_RELEASE}"; \
-    curl -fsSLO "${base}/bun-linux-x64.zip"; curl -fsSLO "${base}/SHA256SUMS.txt"; \
-    tr -d '\r' < SHA256SUMS.txt | grep "  bun-linux-x64.zip$" | sha256sum -c -; \
+    base="https://github.com/${BUN_REPO}/releases/download/${BUN_RELEASE}"; \
+    curl -fsSLO "${base}/bun-linux-x64.zip"; curl -fsSL "${base}/${BUN_SUMS}" -o sums.txt; \
+    tr -d '\r' < sums.txt | grep -E '  \*?bun-linux-x64.zip$' | sha256sum -c -; \
     unzip -q bun-linux-x64.zip; \
     install -D -m 0755 bun-linux-x64/bun /out/bun
 

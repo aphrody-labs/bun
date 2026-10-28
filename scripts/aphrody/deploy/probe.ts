@@ -1,4 +1,4 @@
-// Sonde HTTP loopback du fork Bun : charge utile du service Windows AphrodyBun et du rôle prod de l'image par défaut.
+// Sonde HTTP loopback : charge utile du service Windows AphrodyBun et du rôle prod de l'image par défaut.
 //   GET /healthz -> 200 "ok"      GET /version -> { version, revision, pid, uptimeSec, host }
 import { hostname } from "node:os";
 

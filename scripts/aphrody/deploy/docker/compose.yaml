@@ -6,12 +6,14 @@
 services:
   bun-build:
     profiles: [build]
-    image: ${IMAGE:-ghcr.io/aphrody-labs/bun:1.4.4}
+    image: ${IMAGE:-aphrody-deploy:upstream-canary}
     build:
       context: ..
       dockerfile: docker/Dockerfile
       args:
-        BUN_RELEASE: ${BUN_RELEASE:-bun-v1.4.4}
+        BUN_REPO: ${BUN_REPO:-oven-sh/bun}
+        BUN_RELEASE: ${BUN_RELEASE:-canary}
+        BUN_SUMS: ${BUN_SUMS:-SHASUMS256.txt}
     command: ["build"]
     restart: unless-stopped
     environment:
@@ -27,7 +29,7 @@ services:
     mem_limit: 8g
   bun-prod:
     profiles: [prod]
-    image: ${IMAGE:-ghcr.io/aphrody-labs/bun:1.4.4}
+    image: ${IMAGE:-aphrody-deploy:upstream-canary}
     container_name: aphrody-bun-prod-1
     pull_policy: never
     command: ["prod"]
