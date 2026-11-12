@@ -44,6 +44,26 @@ var Uint8ArrayPrototypeIncludes = Uint8Array.prototype.includes;
 
 const MAX_BUFFER = 1024 * 1024;
 
+// Stand-in for Node's `Pipe` handle on piped child stdio. Consumers read
+// `stream._handle.fd` and call `setBlocking(true)` for synchronous fd-based
+// IPC through fs.readSync/fs.writeSync (TypeScript 7 dist/api/syncChannel.js).
+// The native stream owns the fd; `fd` is -1 once it is closed and on Windows.
+class StdioPipeHandle {
+  #getFd: () => number | null | undefined;
+  constructor(getFd: () => number | null | undefined) {
+    this.#getFd = getFd;
+  }
+  get fd(): number {
+    const fd = this.#getFd();
+    return typeof fd === "number" && fd >= 0 ? fd : -1;
+  }
+  setBlocking(blocking: boolean): boolean {
+    const fd = this.fd;
+    if (fd < 0 || process.platform === "win32") return false;
+    return $bindgen("node_process.bind.ts", "setStdioBlocking")(fd, !!blocking) === 0;
+  }
+}
+
 interface ExecException extends Error {
   cmd?: string;
 }
@@ -1268,6 +1288,24 @@ class ChildProcess extends EventEmitter {
             }
             const result = require("internal/fs/streams").writableFromFileSink(stdin as $Node.FileSink);
             result.readable = false;
+            result._handle = new StdioPipeHandle(() => (stdin as any)._getFd());
+            // Node's child.stdin is a net.Socket: forward ref/unref to the FileSink,
+            // edge-triggered like a Socket (the sink starts ref'd).
+            let refed = true;
+            result.ref = function ref() {
+              if (!refed) {
+                refed = true;
+                (stdin as any).ref();
+              }
+              return this;
+            };
+            result.unref = function unref() {
+              if (refed) {
+                refed = false;
+                (stdin as any).unref();
+              }
+              return this;
+            };
             return result;
           }
           case "inherit":
@@ -1309,6 +1347,9 @@ class ChildProcess extends EventEmitter {
               value as ReadableStream,
               {},
             );
+            // A pipe already drained to a buffer has a Blob source without getFd.
+            const ptr = (pipe as any).$bunNativePtr;
+            if (ptr) pipe._handle = new StdioPipeHandle(() => ptr.getFd?.());
             this.#closesNeeded++;
             pipe.once("close", () => this.#maybeClose());
             if (autoResume) pipe.resume();
@@ -1781,7 +1822,7 @@ function streamFdOf(item): number | undefined {
 
   const handle = item._handle;
   const handleFd = handle ? handle.fd : undefined;
-  if (typeof handleFd === "number") return handleFd;
+  if (typeof handleFd === "number" && handleFd >= 0) return handleFd;
 
   if (item.destroyed) return undefined;
 
