@@ -64,6 +64,8 @@ export const FileInternalReadableStreamSource = b.class({
     drain: members.drain,
     isClosed: members.isClosed,
     pull: members.pull,
+    /** The parent-end fd for `child_process` `stream._handle.fd`; `-1` once closed or on Windows. */
+    getFd: { returns: b.i32 },
     setFlowing: { args: { flag: b.any }, capability: "js" },
     setRawMode: { args: { flag: b.any }, returns: b.any.returning("object", "undefined"), capability: "js" },
     start: members.start,

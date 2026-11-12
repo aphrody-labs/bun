@@ -1545,6 +1545,16 @@ impl crate::webcore::sink::ControlledSink for FileSink {
 
 impl FileSink {
     fn get_fd(&self) -> i32 {
+        // `self.fd` is never cleared when the writer closes, and `end()` closes the
+        // fd without setting `done`: gate on both, or `child.stdin._handle.fd`
+        // leaks a stale number.
+        if self.done.get() {
+            return -1;
+        }
+        #[cfg(not(windows))]
+        if self.writer.get().is_done {
+            return -1;
+        }
         #[cfg(windows)]
         {
             match self.fd.get().decode_windows() {
