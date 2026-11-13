@@ -1,4 +1,5 @@
-//! Extracts tar archives to disk. The format itself is `bun_tar`'s.
+//! Extracts tar archives to disk. The format itself is `bun_tar`'s. [`zip`] reads
+//! entries out of ZIP archives in memory.
 #![warn(unused_must_use)]
 
 use bun_alloc::AllocError;
@@ -16,6 +17,7 @@ use bun_sys::{self, Fd, FdExt, File};
 use bun_wyhash::hash;
 
 pub mod error;
+pub mod zip;
 pub use error::{Error, ReadDataError, Result};
 mod npm_path;
 pub use npm_path::normalize_npm_entry_path;
