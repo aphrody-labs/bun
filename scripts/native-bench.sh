@@ -63,14 +63,26 @@ done
 echo >> "$out"
 
 if [ -n "${OHA:-}" ]; then
-  { echo "### http (Bun.serve, oha -z 10s -c 64)"; echo; echo "| name | req/s | p99 ms |"; echo "|---|---|---|"; } >> "$out"
-  for i in "${!bins[@]}"; do
-    "${bins[$i]}" serve.ts & pid=$!
-    for _ in $(seq 50); do curl -sf localhost:3901 > /dev/null && break; sleep 0.1; done
-    "$OHA" -z 10s -c 64 --no-tui --output-format json http://localhost:3901/ > oha.json 2>/dev/null
-    kill $pid; wait $pid 2>/dev/null
-    echo "| ${names[$i]} | $(jq -r '.summary.requestsPerSec|floor' oha.json) | $(jq -r '.latencyPercentiles.p99*100000|floor/100' oha.json) |" >> "$out"
+  # Five rounds, the order rotated each round so no binary always runs first or last; the median round is kept.
+  rounds=${HTTP_ROUNDS:-5}; n=${#bins[@]}
+  for r in $(seq 0 $((rounds - 1))); do
+    for k in $(seq 0 $((n - 1))); do
+      i=$(( (k + r) % n ))
+      "${bins[$i]}" serve.ts & pid=$!
+      for _ in $(seq 50); do curl -sf localhost:3901 > /dev/null && break; sleep 0.1; done
+      "$OHA" -z 8s -c 64 --no-tui --output-format json http://localhost:3901/ > oha.json 2>/dev/null
+      kill $pid; wait $pid 2>/dev/null
+      echo "$i $(jq -r ".summary.requestsPerSec|floor" oha.json) $(jq -r ".latencyPercentiles.p99*100000|floor/100" oha.json)" >> http.txt
+      sleep 1
+    done
   done
+  { echo "### http (Bun.serve, oha -z 8s -c 64, median of $rounds rotated rounds)"; echo; echo "| name | req/s median | req/s min-max | p99 ms median |"; echo "|---|---|---|---|"; } >> "$out"
+  for i in "${!bins[@]}"; do
+    rps=$(awk -v i=$i "\$1==i{print \$2}" http.txt | sort -n); p99=$(awk -v i=$i "\$1==i{print \$3}" http.txt | sort -n)
+    med() { awk "{a[NR]=\$1} END{print a[int((NR+1)/2)]}"; }
+    echo "| ${names[$i]} | $(echo "$rps" | med) | $(echo "$rps" | head -1)-$(echo "$rps" | tail -1) | $(echo "$p99" | med) |" >> "$out"
+  done
+  rm -f http.txt
   echo >> "$out"
 fi
 
