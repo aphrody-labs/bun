@@ -538,7 +538,7 @@ mod host {
 
         // Like the launcher, read the file right after `base` so a relative `bin_path` is in place.
         buf[..base.len()].copy_from_slice(base);
-        let file: &mut [u8] = bytemuck::cast_slice_mut(&mut buf[base.len()..]);
+        let file: &mut [u8] = bun_core::cast_slice_mut::<u16, u8>(&mut buf[base.len()..]);
         let Ok(file_len) = bunx.read(file) else {
             return false;
         };
