@@ -7,7 +7,7 @@ set -uo pipefail
 out=$1; shift
 here=$(cd "$(dirname "$0")" && pwd)
 work=$(mktemp -d)
-cp -r "$here/fixtures/." "$work/"
+cp -r "$here/native-bench/fixtures/." "$work/"
 cd "$work"
 
 declare -a names bins
@@ -44,6 +44,23 @@ hf shell "{B} shell.ts"
 hf ffi "{B} ffi.ts"
 hf test-runner "{B} test ./runner.test.ts"
 RUNS=10 hf install-warm "{B} install" --prepare "rm -rf node_modules bun.lock"
+
+# Startup profile of `-e 0`: resident set and page faults (GNU time), counters (perf stat when the kernel allows it).
+{ echo "### startup profile (bun -e 0, 30 runs)"; echo; echo "| name | max RSS KiB | minor faults | task-clock ms | instructions | cycles |"; echo "|---|---|---|---|---|---|"; } >> "$out"
+for i in "${!bins[@]}"; do
+  b=${bins[$i]}; rss=0; flt=0
+  /usr/bin/time -f "%M %R" true > /dev/null 2>&1 || { rss=-30; flt=-30; }
+  [ $rss = 0 ] && for _ in $(seq 30); do
+    r=$(/usr/bin/time -f '%M %R' "$b" -e 0 2>&1 >/dev/null | tail -1)
+    rss=$((rss + ${r% *})); flt=$((flt + ${r#* }))
+  done
+  tc= ins= cyc=
+  if command -v perf > /dev/null && perf stat -x, -r 30 -e task-clock,instructions,cycles -o perf.csv "$b" -e 0 > /dev/null 2>&1; then
+    tc=$(awk -F, '$3=="task-clock"{printf "%.2f",$1}' perf.csv); ins=$(awk -F, '$3 ~ /^instructions/{print $1}' perf.csv); cyc=$(awk -F, '$3 ~ /^cycles/{print $1}' perf.csv)
+  fi
+  echo "| ${names[$i]} | $((rss / 30)) | $((flt / 30)) | ${tc:--} | ${ins:--} | ${cyc:--} |" >> "$out"
+done
+echo >> "$out"
 
 if [ -n "${OHA:-}" ]; then
   { echo "### http (Bun.serve, oha -z 10s -c 64)"; echo; echo "| name | req/s | p99 ms |"; echo "|---|---|---|"; } >> "$out"
