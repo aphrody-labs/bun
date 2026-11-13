@@ -57,12 +57,22 @@ jobs:
             linux-x64-gnu)  args="--os=linux --arch=x64 --abi=gnu" ;;
             windows-x64)    args="--os=windows --arch=x64" ;;
           esac
+          # Upstream's CI links gnu with the order file the previous main build traced
+          # (scripts/build/ci.ts inheritOrderFile; flags.ts --symbol-ordering-file). Without it
+          # the startup functions are scattered over .text. Take the one canary shipped with.
+          if [ "$t" = linux-x64-gnu ]; then
+            mkdir -p build/$t
+            curl -fsSL -o prof.zip https://github.com/oven-sh/bun/releases/download/canary/bun-linux-x64-profile.zip
+            unzip -p prof.zip bun-linux-x64-profile/linker.order > build/$t/linker.order
+            unzip -p prof.zip bun-linux-x64-profile/features.json | jq -r '"order file from canary " + .revision'
+            grep -vc '^#' build/$t/linker.order; rm prof.zip
+          fi
           docker run --rm -v "$PWD:/src" -w /src debian:13 sh -c "
             set -e
-            sh .github/native/host.sh > /tmp/host.log 2>&1 || { tail -80 /tmp/host.log; exit 1; }
+            sh scripts/native-host.sh > /tmp/host.log 2>&1 || { tail -80 /tmp/host.log; exit 1; }
             . /etc/profile.d/bun-ci.sh
             git config --global --add safe.directory /src
-            nice -n 19 node scripts/build.ts --profile=release $args --build-dir=build/$t -j4
+            nice -n 19 node scripts/build.ts --profile=release --trimmable=on $args --build-dir=build/$t -j4
             chown -R $(id -u):$(id -g) build
           "
       - name: Collect
@@ -98,7 +108,8 @@ jobs:
           path: art
       - name: Tools and reference binaries
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq hyperfine jq > /dev/null
+          sudo apt-get update -qq && sudo apt-get install -y -qq hyperfine jq time "linux-tools-$(uname -r)" > /dev/null || sudo apt-get install -y -qq hyperfine jq time > /dev/null
+          sudo sysctl -q kernel.perf_event_paranoid=-1 || true
           curl -fsSL -o oha https://github.com/hatoo/oha/releases/download/v1.16.0/oha-linux-amd64 && chmod +x oha && sudo mv oha /usr/local/bin/
           mkdir -p ref
           get() { curl -fsSL -o ref/$1.zip https://github.com/oven-sh/bun/releases/download/$2/$3.zip && unzip -q -o ref/$1.zip -d ref/$1 && mv ref/$1/$3/bun ref/$1/bun; }
@@ -113,18 +124,18 @@ jobs:
           bins=(stable=$PWD/ref/stable/bun canary=$PWD/ref/canary/bun)
           [ -x art/bun-native-linux-x64-gnu/bun ] && bins+=(fork-gnu=$PWD/art/bun-native-linux-x64-gnu/bun)
           echo "# native bench $(git rev-parse --short HEAD), glibc" > bench-gnu.md
-          OHA=/usr/local/bin/oha TESTS_DIR=$PWD bash .github/native/bench.sh $PWD/bench-gnu.md "${bins[@]}"
+          OHA=/usr/local/bin/oha TESTS_DIR=$PWD bash scripts/native-bench.sh $PWD/bench-gnu.md "${bins[@]}"
           cat bench-gnu.md >> $GITHUB_STEP_SUMMARY
       - name: Bench musl (alpine:3.23)
         run: |
           bins="canary-musl=/w/ref/canary-musl/bun"
           [ -x art/bun-native-linux-x64-musl/bun ] && bins="$bins fork-musl=/w/art/bun-native-linux-x64-musl/bun"
           echo "# native bench $(git rev-parse --short HEAD), musl" > bench-musl.md
-          docker run --rm --network host -v "$PWD:/w" -v /usr/local/bin/oha:/usr/local/bin/oha:ro -w /w alpine:3.23 sh -c "
-            apk add -q bash hyperfine jq curl file coreutils procps libstdc++ libgcc gcompat > /dev/null
+          docker run --rm --network host --security-opt seccomp=unconfined --cap-add PERFMON -v "$PWD:/w" -v /usr/local/bin/oha:/usr/local/bin/oha:ro -w /w alpine:3.23 sh -c "
+            apk add -q bash hyperfine jq curl file coreutils procps libstdc++ libgcc gcompat perf time > /dev/null || apk add -q bash hyperfine jq curl file coreutils procps libstdc++ libgcc gcompat > /dev/null
             # what the binary needs beyond musl itself
             for b in $bins; do echo \"\$b\"; ldd \${b#*=} | sed 's/^/  /'; done > /w/musl-ldd.txt 2>&1
-            OHA=/usr/local/bin/oha TESTS_DIR=/w bash .github/native/bench.sh /w/bench-musl.md $bins
+            OHA=/usr/local/bin/oha TESTS_DIR=/w bash scripts/native-bench.sh /w/bench-musl.md $bins
           "
           { echo; echo '### musl runtime dependencies (ldd)'; echo; echo '```'; cat musl-ldd.txt; echo '```'; } >> bench-musl.md
           cat bench-musl.md >> $GITHUB_STEP_SUMMARY
