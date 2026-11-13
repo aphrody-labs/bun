@@ -195,7 +195,7 @@ impl InstallCompletionsCommand {
         // POSIX shells on Windows (Git Bash, MSYS2, Cygwin) set $SHELL too. It is
         // read only here: `bun add -g` keeps printing PowerShell-style PATH hints.
         #[cfg(windows)]
-        let shell = bun_core::getenv_z(bun_core::ZStr::from_static(b"SHELL\0"))
+        let shell = bun_core::getenv_z(bun_core::zstr!("SHELL"))
             .map_or(Shell::Unknown, Shell::from_env);
 
         let cwd_len = match bun_sys::getcwd(&mut cwd_buf) {
