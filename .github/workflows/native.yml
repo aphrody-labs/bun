@@ -1,0 +1,157 @@
+name: native
+
+# Release build of this fork (ThinLTO across Rust, C++ and the -lto WebKit prebuilt; every
+# feature of the release profile), cross-compiled from one debian-13 aarch64 host like
+# upstream's Buildkite lanes, then measured against upstream stable and canary.
+
+on:
+  workflow_dispatch:
+    inputs:
+      targets:
+        description: "JSON list of targets"
+        default: '["linux-x64-musl","linux-x64-gnu","windows-x64"]'
+  push:
+    branches: [main]
+    paths: [".github/workflows/native.yml", ".github/native/**"]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: native-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: build ${{ matrix.target }}
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJSON(inputs.targets || '["linux-x64-musl","linux-x64-gnu","windows-x64"]') }}
+    steps:
+      - name: Free disk, add swap
+        run: |
+          sudo rm -rf /usr/local/lib/android /usr/share/dotnet /opt/ghc /opt/hostedtoolcache /usr/local/.ghcup /usr/share/swift || true
+          sudo docker image prune -af > /dev/null || true
+          sudo swapoff -a || true
+          sudo fallocate -l 24G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile > /dev/null && sudo swapon /swapfile
+          nproc; free -g; df -h /
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Generate the host script
+        run: |
+          curl -fsSL -o bun.zip https://github.com/oven-sh/bun/releases/download/bun-v1.4.4/bun-linux-aarch64.zip
+          unzip -q bun.zip && ./bun-linux-aarch64/bun scripts/build/ci-images/spec.ts linux-aarch64-debian
+          rm -rf bun.zip bun-linux-aarch64
+      - name: Build
+        run: |
+          t=${{ matrix.target }}
+          case $t in
+            linux-x64-musl) args="--os=linux --arch=x64 --abi=musl" ;;
+            linux-x64-gnu)  args="--os=linux --arch=x64 --abi=gnu" ;;
+            windows-x64)    args="--os=windows --arch=x64" ;;
+          esac
+          docker run --rm -v "$PWD:/src" -w /src debian:13 sh -c "
+            set -e
+            sh .github/native/host.sh > /tmp/host.log 2>&1 || { tail -80 /tmp/host.log; exit 1; }
+            . /etc/profile.d/bun-ci.sh
+            git config --global --add safe.directory /src
+            nice -n 19 node scripts/build.ts --profile=release $args --build-dir=build/$t -j4
+            chown -R $(id -u):$(id -g) build
+          "
+      - name: Collect
+        run: |
+          t=${{ matrix.target }}
+          mkdir -p out
+          for f in bun bun.exe bun-profile bun-profile.exe; do
+            [ -f build/$t/$f ] && cp build/$t/$f out/
+          done
+          ls -l out
+          file out/* || true
+      - uses: actions/upload-artifact@v7
+        with:
+          name: bun-native-${{ matrix.target }}
+          path: out/
+          retention-days: 30
+
+  bench:
+    needs: build
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: bun-native-linux-*
+          path: art
+      - name: Tools and reference binaries
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq hyperfine jq musl > /dev/null
+          curl -fsSL -o oha https://github.com/hatoo/oha/releases/download/v1.16.0/oha-linux-amd64 && chmod +x oha && sudo mv oha /usr/local/bin/
+          mkdir -p ref
+          for v in bun-v1.4.4:stable canary:canary; do
+            tag=${v%%:*}; n=${v##*:}
+            curl -fsSL -o ref/$n.zip https://github.com/oven-sh/bun/releases/download/$tag/bun-linux-x64.zip
+            unzip -q -o ref/$n.zip -d ref/$n
+          done
+          curl -fsSL -o ref/canary-musl.zip https://github.com/oven-sh/bun/releases/download/canary/bun-linux-x64-musl.zip
+          unzip -q -o ref/canary-musl.zip -d ref/canary-musl
+          chmod +x ref/*/*/bun art/*/bun* || true
+          ls -l ref/*/*/bun art/*/*
+      - name: Bench
+        run: |
+          set -x
+          bins=(stable=$PWD/ref/stable/bun-linux-x64/bun canary=$PWD/ref/canary/bun-linux-x64/bun canary-musl=$PWD/ref/canary-musl/bun-linux-x64-musl/bun)
+          [ -x art/bun-native-linux-x64-gnu/bun ] && bins+=(fork-gnu=$PWD/art/bun-native-linux-x64-gnu/bun)
+          [ -x art/bun-native-linux-x64-musl/bun ] && bins+=(fork-musl=$PWD/art/bun-native-linux-x64-musl/bun)
+          echo "# native bench $(git rev-parse --short HEAD)" > bench.md
+          bash .github/native/bench.sh $PWD/bench.md "${bins[@]}"
+          cat bench.md >> $GITHUB_STEP_SUMMARY
+      - name: Upstream test subset
+        run: |
+          cd test && ../ref/canary/bun-linux-x64/bun install > /dev/null 2>&1 || true
+          cd ..
+          echo "## test subset (test/js/bun/shell, test/js/bun/ffi, test/js/bun/http/serve.test.ts, test/cli/run)" > tests.md
+          echo "| name | pass | fail | skip |" >> tests.md; echo "|---|---|---|---|" >> tests.md
+          for kv in stable=ref/stable/bun-linux-x64/bun canary=ref/canary/bun-linux-x64/bun fork-gnu=art/bun-native-linux-x64-gnu/bun fork-musl=art/bun-native-linux-x64-musl/bun; do
+            n=${kv%%=*}; b=$PWD/${kv#*=}; [ -x "$b" ] || continue
+            timeout 1800 "$b" test test/js/bun/shell test/js/bun/ffi test/js/bun/http/serve.test.ts test/cli/run > "t-$n.log" 2>&1 || true
+            p=$(grep -Eo '^ *[0-9]+ pass' "t-$n.log" | tail -1 | grep -Eo '[0-9]+'); f=$(grep -Eo '^ *[0-9]+ fail' "t-$n.log" | tail -1 | grep -Eo '[0-9]+'); s=$(grep -Eo '^ *[0-9]+ skip' "t-$n.log" | tail -1 | grep -Eo '[0-9]+')
+            echo "| $n | ${p:-?} | ${f:-?} | ${s:-0} |" >> tests.md
+          done
+          cat tests.md >> $GITHUB_STEP_SUMMARY
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: bench
+          path: |
+            bench.md
+            tests.md
+            t-*.log
+
+  release:
+    needs: build
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: bun-native-*
+          path: art
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls art 2>/dev/null | grep -q . || { echo "no artifact"; exit 0; }
+          tag=native-$(date -u +%Y%m%d)-${GITHUB_SHA::10}
+          cd art && for d in */; do (cd "$d" && zip -q -r "../${d%/}.zip" .); done; ls -l *.zip; sha256sum *.zip > SHA256SUMS
+          gh release create "$tag" -R "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
+            --title "$tag" --notes "Release build (ThinLTO) of $GITHUB_SHA, cross-compiled on ubuntu-24.04-arm (debian:13)." *.zip SHA256SUMS
