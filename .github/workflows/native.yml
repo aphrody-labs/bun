@@ -131,6 +131,8 @@ jobs:
         run: |
           bins=(stable=$PWD/ref/stable/bun canary=$PWD/ref/canary/bun)
           [ -x art/bun-native-linux-x64-gnu/bun ] && bins+=(fork-gnu=$PWD/art/bun-native-linux-x64-gnu/bun)
+          # Control: canary again, copied to another file and run last, measures the position bias of the bench.
+          mkdir -p ref/canary-again && cp ref/canary/bun ref/canary-again/bun && bins+=(canary-again=$PWD/ref/canary-again/bun)
           echo "# native bench $(git rev-parse --short HEAD), glibc" > bench-gnu.md
           OHA=/usr/local/bin/oha TESTS_DIR=$PWD bash scripts/native-bench.sh $PWD/bench-gnu.md "${bins[@]}"
           cat bench-gnu.md >> $GITHUB_STEP_SUMMARY
