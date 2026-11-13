@@ -116,7 +116,7 @@ jobs:
           path: art/bun-native-linux-x64-musl
       - name: Tools and reference binaries
         run: |
-          sudo apt-get update -qq && sudo apt-get install -y -qq hyperfine jq time "linux-tools-$(uname -r)" > /dev/null || sudo apt-get install -y -qq hyperfine jq time > /dev/null
+          sudo apt-get update -qq && sudo apt-get install -y -qq hyperfine jq time strace "linux-tools-$(uname -r)" > /dev/null || sudo apt-get install -y -qq hyperfine jq time strace > /dev/null
           sudo sysctl -q kernel.perf_event_paranoid=-1 || true
           curl -fsSL -o oha https://github.com/hatoo/oha/releases/download/v1.16.0/oha-linux-amd64 && chmod +x oha && sudo mv oha /usr/local/bin/
           mkdir -p ref
