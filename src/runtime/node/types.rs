@@ -1042,16 +1042,22 @@ impl PathLikeExt for PathLike<'_> {
                 let buf_u16 = bun_core::cast_slice_mut::<u8, u16>(&mut buf[..]);
                 return Ok(strings::to_kernel32_path(buf_u16, normal));
             }
-            // Handle "." specially since normalizeStringBuf strips it to an empty string
-            if s.len() == 1 && s[0] == b'.' {
-                let buf_u16 = bun_core::cast_slice_mut::<u8, u16>(&mut buf[..]);
-                return Ok(strings::to_kernel32_path(buf_u16, b"."));
-            }
-            let normal = bun_paths::resolve_path::normalize_string_buf::<
+            let normal_len = bun_paths::resolve_path::normalize_string_buf::<
                 true,
                 bun_paths::platform::Windows,
                 false,
-            >(s, &mut b[..]);
+            >(s, &mut b[..])
+            .len();
+            // ".", "./", "sub/.." normalize to nothing: that is the cwd.
+            let normal_len = if normal_len == 0 && !s.is_empty() {
+                match bun_sys::getcwd(&mut b[..]) {
+                    Ok(len) => len,
+                    Err(_) => return Err(NameTooLong),
+                }
+            } else {
+                normal_len
+            };
+            let normal = &b[..normal_len];
             if !strings::fits_in_wide_path_buffer(normal) {
                 return Err(NameTooLong);
             }
