@@ -10,16 +10,13 @@ on:
       targets:
         description: "JSON list of targets"
         default: '["linux-x64-musl","linux-x64-gnu"]'
-  push:
-    branches: [main]
-    paths: [".github/workflows/native.yml", ".github/native/**"]
 
 permissions:
   contents: write
 
 concurrency:
   group: native-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
