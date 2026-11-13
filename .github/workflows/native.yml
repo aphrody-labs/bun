@@ -13,9 +13,6 @@ on:
       artifacts_run:
         description: "Bench only: reuse the build artifacts of this run id"
         default: ""
-      artifacts_run:
-        description: "Bench only: reuse the build artifacts of this run id"
-        default: ""
 
 permissions:
   contents: write
