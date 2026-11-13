@@ -50,6 +50,8 @@ jobs:
           unzip -q bun.zip && ./bun-linux-aarch64/bun scripts/build/ci-images/spec.ts linux-aarch64-debian
           rm -rf bun.zip bun-linux-aarch64
       - name: Build
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           t=${{ matrix.target }}
           case $t in
@@ -57,15 +59,24 @@ jobs:
             linux-x64-gnu)  args="--os=linux --arch=x64 --abi=gnu" ;;
             windows-x64)    args="--os=windows --arch=x64" ;;
           esac
-          # Upstream's CI links gnu with the order file the previous main build traced
-          # (scripts/build/ci.ts inheritOrderFile; flags.ts --symbol-ordering-file). Without it
-          # the startup functions are scattered over .text. Take the one canary shipped with.
+          # Upstream's CI links gnu with the order file that the trace-order step of an earlier
+          # main build traced (scripts/build/ci.ts inheritOrderFile; flags.ts --symbol-ordering-file).
+          # Same here: the newest native release's bun-linux-x64.order, traced on this fork's own
+          # bun-profile by the trace-order job; canary's when there is none yet. Rust symbol names
+          # carry crate hashes, so canary's file misses the functions of every crate the fork changes.
           if [ "$t" = linux-x64-gnu ]; then
             mkdir -p build/$t
-            curl -fsSL -o prof.zip https://github.com/oven-sh/bun/releases/download/canary/bun-linux-x64-profile.zip
-            unzip -p prof.zip bun-linux-x64-profile/linker.order > build/$t/linker.order
-            unzip -p prof.zip bun-linux-x64-profile/features.json | jq -r '"order file from canary " + .revision'
-            grep -vc '^#' build/$t/linker.order; rm prof.zip
+            tag=$(gh release list -R "$GITHUB_REPOSITORY" -L 20 --json tagName --jq '.[].tagName' | grep '^native-' | while read -r r; do
+              gh release view "$r" -R "$GITHUB_REPOSITORY" --json assets --jq '.assets[].name' | grep -qx bun-linux-x64.order && { echo "$r"; break; }; done)
+            if [ -n "$tag" ] && gh release download "$tag" -R "$GITHUB_REPOSITORY" -p bun-linux-x64.order -O build/$t/linker.order; then
+              echo "order file traced on this fork, release $tag"
+            else
+              curl -fsSL -o prof.zip https://github.com/oven-sh/bun/releases/download/canary/bun-linux-x64-profile.zip
+              unzip -p prof.zip bun-linux-x64-profile/linker.order > build/$t/linker.order
+              unzip -p prof.zip bun-linux-x64-profile/features.json | jq -r '"order file from canary " + .revision'
+              rm prof.zip
+            fi
+            grep -vc '^#' build/$t/linker.order
           fi
           docker run --rm -v "$PWD:/src" -w /src debian:13 sh -c "
             set -e
@@ -158,8 +169,46 @@ jobs:
             musl-ldd.txt
             t-*.log
 
-  release:
+  trace-order:
+    # .buildkite/ci.ts getTraceOrderStep: run the unstripped bun-profile under scripts/orderfile/generate.ts
+    # on the target architecture; the next build links with what it wrote. Soft-fail like upstream.
     needs: build
+    if: always()
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+      - uses: actions/download-artifact@v8
+        with:
+          name: bun-native-linux-x64-gnu
+          run-id: ${{ inputs.artifacts_run || github.run_id }}
+          github-token: ${{ github.token }}
+          path: bun-linux-x64-profile
+      - name: Trace
+        run: |
+          chmod +x bun-linux-x64-profile/bun-profile
+          ./bun-linux-x64-profile/bun-profile scripts/orderfile/generate.ts --build-dir=bun-linux-x64-profile --out=bun-linux-x64.order
+          grep -vc '^#' bun-linux-x64.order
+      - uses: actions/upload-artifact@v7
+        with:
+          name: order-linux-x64-gnu
+          path: bun-linux-x64.order
+      - name: Publish the order file of a reused build
+        # The release job publishes it with the binaries; a bench-only run has no release job.
+        if: inputs.artifacts_run != ''
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag=native-order-${{ inputs.artifacts_run }}
+          gh release create "$tag" -R "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --title "$tag" \
+            --notes "bun-linux-x64.order traced on the bun-profile of run ${{ inputs.artifacts_run }}." bun-linux-x64.order
+
+  release:
+    needs: [build, trace-order]
     if: always() && inputs.artifacts_run == ''
     runs-on: ubuntu-24.04
     steps:
@@ -173,12 +222,17 @@ jobs:
         with:
           name: bun-native-linux-x64-musl
           path: art/bun-native-linux-x64-musl
+      - uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
+          name: order-linux-x64-gnu
+          path: order
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
           ls art/*/bun > /dev/null 2>&1 || { echo "no artifact"; exit 0; }
           tag=native-$(date -u +%Y%m%d)-${GITHUB_SHA::10}
-          cd art && for d in */; do [ -n "$(ls -A "$d")" ] || continue; (cd "$d" && zip -q -r "../${d%/}.zip" .); done; ls -l *.zip; sha256sum *.zip > SHA256SUMS
+          cd art && for d in */; do [ -n "$(ls -A "$d")" ] || continue; (cd "$d" && zip -q -r "../${d%/}.zip" .); done; ls -l *.zip; cp ../order/bun-linux-x64.order . 2>/dev/null || true; sha256sum *.zip $(ls *.order 2>/dev/null) > SHA256SUMS
           gh release create "$tag" -R "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
-            --title "$tag" --notes "Release build (ThinLTO) of $GITHUB_SHA, cross-compiled on ubuntu-24.04-arm (debian:13)." *.zip SHA256SUMS
+            --title "$tag" --notes "Release build (ThinLTO) of $GITHUB_SHA, cross-compiled on ubuntu-24.04-arm (debian:13)." *.zip $(ls *.order 2>/dev/null) SHA256SUMS
