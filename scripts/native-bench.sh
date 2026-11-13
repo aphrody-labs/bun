@@ -42,8 +42,23 @@ hf startup-e "{B} -e 0"
 hf startup-version "{B} --version"
 hf shell "{B} shell.ts"
 hf ffi "{B} ffi.ts"
-hf test-runner "{B} test ./runner.test.ts"
+RUNS=100 hf test-runner "{B} test ./runner.test.ts"
 RUNS=10 hf install-warm "{B} install" --prepare "rm -rf node_modules bun.lock"
+
+# Syscalls of the test runner and of -e 0 (strace -c -f): a binary that does more work outside its own code shows here.
+if command -v strace > /dev/null; then
+  { echo "### syscalls (strace -f -c)"; echo; echo "| name | command | syscalls | errors | top 6 (count) |"; echo "|---|---|---|---|---|"; } >> "$out"
+  for i in "${!bins[@]}"; do
+    for c in "-e 0" "test ./runner.test.ts"; do
+      strace -f -c -o st.txt "${bins[$i]}" $c > /dev/null 2>&1
+      # columns: % time, seconds, usecs/call, calls, [errors], syscall
+      tot=$(awk '$NF == "total" { print $4, (NF == 6 ? $5 : 0) }' st.txt)
+      top=$(awk '$1 ~ /^[0-9.]+$/ && $NF != "total" { print $NF, $4 }' st.txt | sort -k2 -nr | head -6 | awk '{ printf "%s %s, ", $1, $2 }')
+      echo "| ${names[$i]} | $c | ${tot% *} | ${tot#* } | ${top%, } |" >> "$out"
+    done
+  done
+  rm -f st.txt; echo >> "$out"
+fi
 
 # Startup profile of `-e 0`: resident set and page faults (GNU time), counters (perf stat when the kernel allows it).
 { echo "### startup profile (bun -e 0, 30 runs)"; echo; echo "| name | max RSS KiB | minor faults | task-clock ms | instructions | cycles |"; echo "|---|---|---|---|---|---|"; } >> "$out"
