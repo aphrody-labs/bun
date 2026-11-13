@@ -101,11 +101,19 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
       - uses: actions/download-artifact@v8
+        continue-on-error: true
         with:
-          pattern: bun-native-linux-*
+          name: bun-native-linux-x64-gnu
           run-id: ${{ inputs.artifacts_run || github.run_id }}
           github-token: ${{ github.token }}
-          path: art
+          path: art/bun-native-linux-x64-gnu
+      - uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
+          name: bun-native-linux-x64-musl
+          run-id: ${{ inputs.artifacts_run || github.run_id }}
+          github-token: ${{ github.token }}
+          path: art/bun-native-linux-x64-musl
       - name: Tools and reference binaries
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq hyperfine jq time "linux-tools-$(uname -r)" > /dev/null || sudo apt-get install -y -qq hyperfine jq time > /dev/null
@@ -116,8 +124,8 @@ jobs:
           get stable bun-v1.4.4 bun-linux-x64
           get canary canary bun-linux-x64
           get canary-musl canary bun-linux-x64-musl
-          chmod +x ref/*/bun art/*/bun* || true
-          ls -l ref/*/bun art/*/*
+          chmod +x ref/*/bun; chmod +x art/*/bun* 2>/dev/null || true
+          ls -l ref/*/bun art/*/* || true
           (cd test && ./../ref/canary/bun install > /dev/null 2>&1 || true)
       - name: Bench glibc (host)
         run: |
@@ -154,15 +162,21 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/download-artifact@v8
+        continue-on-error: true
         with:
-          pattern: bun-native-*
-          path: art
+          name: bun-native-linux-x64-gnu
+          path: art/bun-native-linux-x64-gnu
+      - uses: actions/download-artifact@v8
+        continue-on-error: true
+        with:
+          name: bun-native-linux-x64-musl
+          path: art/bun-native-linux-x64-musl
       - name: Publish
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          ls art 2>/dev/null | grep -q . || { echo "no artifact"; exit 0; }
+          ls art/*/bun > /dev/null 2>&1 || { echo "no artifact"; exit 0; }
           tag=native-$(date -u +%Y%m%d)-${GITHUB_SHA::10}
-          cd art && for d in */; do (cd "$d" && zip -q -r "../${d%/}.zip" .); done; ls -l *.zip; sha256sum *.zip > SHA256SUMS
+          cd art && for d in */; do [ -n "$(ls -A "$d")" ] || continue; (cd "$d" && zip -q -r "../${d%/}.zip" .); done; ls -l *.zip; sha256sum *.zip > SHA256SUMS
           gh release create "$tag" -R "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
             --title "$tag" --notes "Release build (ThinLTO) of $GITHUB_SHA, cross-compiled on ubuntu-24.04-arm (debian:13)." *.zip SHA256SUMS
