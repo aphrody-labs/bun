@@ -265,7 +265,7 @@ impl Entry<'_> {
             }
             METHOD_DEFLATED => {
                 bun_libdeflate_sys::libdeflate::load();
-                let mut decompressor = OwnedDecompressor::new().ok_or(ZipError::OutOfMemory)?;
+                let decompressor = OwnedDecompressor::new().ok_or(ZipError::OutOfMemory)?;
                 let result = decompressor.decompress_to_vec(raw, &mut out, Encoding::Deflate);
                 match result.status {
                     Status::Success if out.len() == size => {}
