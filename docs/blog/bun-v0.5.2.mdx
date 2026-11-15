@@ -1,0 +1,359 @@
+---
+title: "Bun v0.5.2"
+description: MongoDB support, `github:` dependencies in `bun install`, faster `Buffer`, `bun run` for WebAssembly, express' `body-parser` package, and many bug fixes.
+date: "2023-01-31T03:43:44+00:00"
+author: jarred
+thumbText: v0.5.2
+---
+
+{% callout %}
+We're hiring [C/C++ and Zig engineers](/careers) to build the future of JavaScript!
+{% /callout %}
+
+Bun v0.5.2 adds support for `github:` dependencies in `bun install` and fixes several bugs in `bun install`. `Buffer` is faster and passes more Node.js tests. `bun run` now supports executing WebAssembly binaries, including WASI support. WebAssembly performance has improved thanks to JavaScriptCore and work from @Constellation. The remaining `node:dns` resolve functions are implemented. The `body-parser` package from Express works in Bun. MongoDB works in Bun.
+
+```bash
+# Install Bun
+curl https://bun.sh/install | bash
+
+# Upgrade to latest release of Bun
+bun upgrade
+```
+
+You can install bun with npm (thanks to [@Electroid](https://github.com/Electroid)):
+
+```bash
+npm install -g bun
+```
+
+## GitHub dependencies
+
+`bun install` now supports adding GitHub repositories as a dependency using the `github:` prefix.
+
+`package.json`:
+
+```json
+{
+  "name": "zoddy",
+  "dependencies": {
+    "zod": "github:colinhacks/zod"
+  }
+}
+```
+
+`index.ts`:
+
+```js
+import { z } from "zod";
+console.log(z.string().parse("hello"));
+```
+
+Output:
+
+```js
+❯ bun index.ts
+{ success: true, error: undefined, value: 'hello' }
+```
+
+This is also supported by `npm`, `yarn`, and other package managers.
+
+## More stability for `bun install`
+
+This release includes a few important bug fixes that make `bun install` more stable. Thanks to [@alexlamsl](https://github.com/alexlamsl) for fixing these issues!
+
+- Bun would sometimes show "failed to resolve" errors when installing packages with unusual combinations of build/pre tags due to a bug in the semver comparison code. https://github.com/oven-sh/bun/pull/1854
+- `bun link` failed with scoped packages, e.g. `@scope/name`. https://github.com/oven-sh/bun/pull/1892
+- `bun install <package>` didn't handle `file://` or `link://` prefixes correctly. https://github.com/oven-sh/bun/pull/1895
+- `npm:` aliases, which were introduced in v0.5.1, had some edge-cases that were not correctly handled. https://github.com/oven-sh/bun/pull/1927
+- Certain edge-cases would cause a segfault when installing a package, and have been fixed.
+
+## MongoDB support
+
+MongoDB now works in Bun, thanks to [@cirospaciari](https://github.com/cirospaciari). You can now use Bun to build web applications with MongoDB.
+
+```js
+import { MongoClient } from "mongodb";
+
+const client = new MongoClient("mongodb://localhost:27017");
+await client.connect();
+const db = client.db("test");
+const collection = db.collection("test");
+await collection.insertOne({ hello: "world" });
+const result = await collection.findOne({ hello: "world" });
+
+console.log(result);
+// { _id: 60a7b5b0b9c3b8b5b8b5b9c3, hello: 'world' }
+```
+
+## Support for `body-parser`
+
+The `body-parser` package for Express now works in Bun. Previously, this package would throw an error due to a bug in Bun's `StringDecoder` implementation.
+
+```js
+import express from "express";
+import bodyParser from "body-parser";
+
+const app = express();
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+
+app.get("/", (req, res) => {
+  res.send("Hello World!");
+});
+
+app.post("/echo", (req, res) => {
+  res.send(req.body);
+});
+
+app.listen(3000, () => {
+  console.log("Example app listening at http://localhost:3000");
+});
+```
+
+Output:
+
+```bash
+curl -X POST -d '{"hello":"world"}' -H "Content-Type: application/json" http://localhost:3000/echo
+{"hello":"world"}
+```
+
+## Run WebAssembly files with `bun run`
+
+`bun run` now supports executing WebAssembly binaries, and also includes WASI support.
+
+```bash
+❯ bun run hello.wasm
+"Hello, World!"
+```
+
+Bun also supports the [`node:wasi`](https://nodejs.org/api/wasi.html#webassembly-system-interface-wasi) module. Bun's implementation is based on great work from [wasi-js](https://github.com/sagemathinc/cowasm/tree/main/packages/wasi-js#wasi-js) by [@williamstein](https://github.com/williamstein), which is a fork of [wasmer-js](https://github.com/wasmerio/wasmer-js) by the @wasmerio team, which is a fork of [node-wasi](https://github.com/devsnek/node-wasi) by [@devsnek](https://github.com/devsnek).
+
+## Faster and more compliant `Buffer`
+
+`Buffer.from()` is up to 2x faster with typed arrays.
+
+Before:
+
+```js
+cpu: Apple M1 Max
+runtime: bun 0.5.1 (arm64-darwin)
+
+Buffer.from(ArrayBuffer(100))                   76.48 ns/iter  (68.83 ns … 375.76 ns)  73.46 ns 247.37 ns 262.24 ns
+Buffer.from(Uint8Array(100))                    54.28 ns/iter  (49.57 ns … 192.52 ns)  52.21 ns 107.67 ns 118.02 ns
+Buffer.from(Uint8Array(0))                      51.29 ns/iter  (48.58 ns … 127.98 ns)  50.54 ns  95.97 ns 109.26 ns
+```
+
+After:
+
+```js
+cpu: Apple M1 Max
+runtime: bun 0.5.2 (arm64-darwin)
+
+Buffer.from(ArrayBuffer(100))                   33.91 ns/iter  (27.52 ns … 343.25 ns)  31.03 ns 203.33 ns 219.75 ns
+Buffer.from(Uint8Array(100))                    31.67 ns/iter  (28.72 ns … 103.17 ns)  30.07 ns  78.78 ns  82.05 ns
+Buffer.from(Uint8Array(0))                      27.88 ns/iter  (25.95 ns … 185.95 ns)  27.24 ns  67.63 ns  77.94 ns
+```
+
+The Node.js tests for `Buffer.write()` and `Buffer.byteLength` also now pass. We've added the deprecated `parent` and `offset` properties, along with several bug fixes. Compatibility isn't 100% there yet, but it's getting much closer.
+
+We've also fixed a bug where Bun would erroneously report "invalid encoding" that occurred in Bun v0.5.1.
+
+## More `node:dns` support
+
+`node:dns` now supports more methods, thanks to [@cirospaciari](https://github.com/cirospaciari).
+
+```js
+import dns from "node:dns";
+
+dns.resolveCname("example.com");
+// ...
+// dns.resolveMx();
+// dns.resolveNs();
+// dns.resolveTxt();
+// dns.resolveSrv();
+// dns.resolvePtr();
+// dns.resolveSoa();
+```
+
+## Node.js compatibility fixes
+
+- Bun supports `process.execArgv` and `process.argv0` which is used by many packages, including Vite.
+
+- A slow `node:zlib` polyfill has been added. We will add a faster implementation in the future.
+
+- A bug causing the `this` value in `EventEmitter` callbacks to be `undefined` has been fixed.
+
+- Node-API's `napi_create_symbol` didn't handle symbol descriptions properly, which is now fixed. https://github.com/oven-sh/bun/commit/aa456805ddc9fd44152d73888ecb8733b60f34b9
+
+- Node-API's `napi_define_properties` implementation didn't support symbols, which is now fixed. https://github.com/oven-sh/bun/commit/4570ff77807a334f7bcd23e4b69b758d365b82a0
+
+- `node:http`'s `address()` function was missing and the `onListen` callback wasn't handling every case. https://github.com/oven-sh/bun/commit/befd97a891d7de50ae130cdf262b2bf6d5ac69bc
+
+- A bug in `fs.stat()` with non-ascii paths has also been fixed. https://github.com/oven-sh/bun/issues/1887
+
+## Bug fixes
+
+- `bun --hot`'s filesystem watcher previously didn't work reliably on Linux or when text editors saved with swapfiles or atomic files. This has been fixed. It also didn't report exceptions when hot reloaded modules threw exceptions. This has been fixed as well. https://github.com/oven-sh/bun/commit/421588d63119fb15cd4db06838bb7058d72cc727
+- Bun's `WebSocket` client sometimes caused a hang. Thanks to [@dylan-conway](https://github.com/dylan-conway) for fixing this. https://github.com/oven-sh/bun/pull/1910
+- Bun's `WebSocket` client didn't work when the body size exceeded 65536 bytes. Thanks to [@cirospaciari](https://github.com/cirospaciari) for fixing this. https://github.com/oven-sh/bun/pull/1909
+- Query string parameters can now be used in import specifiers which will invalidate the module resolution cache for that folder.
+- Using nginx as a reverse proxy to Bun previously required specifying `proxy_http_version 1.1` in the nginx config. Now it works with `proxy_http_version 1.0` as well, which is the default. Thanks to [@cirospaciari](https://github.com/cirospaciari) for investigating and fixing.
+- A SQLite client bug that affected complex queries using `query.get()` or `query.run()` has been fixed. https://github.com/oven-sh/bun/issues/1366
+- A TypeScript transpiler bug with constructor property accessors has been fixed. https://github.com/oven-sh/bun/pull/1883
+- A TypeScript transpiler bug with declare inside classes has been fixed.
+
+## Changelog
+
+{% table %}
+
+- [`#1867`](https://github.com/oven-sh/bun/pull/1867)
+- Constructor parameter properties are lowered in class expressions by [@dylan-conway](https://github.com/dylan-conway)
+
+---
+
+- [`#1854`](https://github.com/oven-sh/bun/pull/1854)
+- Fix parsing of semver `^` & `~` expressions by [@alexlamsl](https://github.com/alexlamsl)
+
+---
+
+- [`#1869`](https://github.com/oven-sh/bun/pull/1869)
+- Minor clean-ups by [@alexlamsl](https://github.com/alexlamsl)
+
+---
+
+- [`#1870`](https://github.com/oven-sh/bun/pull/1870)
+- Implement resolveSrv by [@cirospaciari](https://github.com/cirospaciari)
+
+---
+
+- [`#1862`](https://github.com/oven-sh/bun/pull/1862)
+- Merge parameters from request parameter with the second parameter for fetch, move verbose and proxy options to cond parameter, add non-TLS tests for fetch by [@cirospaciari](https://github.com/cirospaciari)
+
+---
+
+- [`#1883`](https://github.com/oven-sh/bun/pull/1883)
+- Fix constructor statement order by [@dylan-conway](https://github.com/dylan-conway)
+
+---
+
+- [`#1884`](https://github.com/oven-sh/bun/pull/1884)
+- Fix child process node test hang by [@dylan-conway](https://github.com/dylan-conway)
+
+---
+
+- [`#1881`](https://github.com/oven-sh/bun/pull/1881)
+- Fix arguments in buffer.write, fix size returned from buffer.write for utf16, fix size calc for base64, fix calc for hex te size by [@cirospaciari](https://github.com/cirospaciari)
+
+---
+
+- [`#1874`](https://github.com/oven-sh/bun/pull/1874)
+- `npm install bun` by [@Electroid](https://github.com/Electroid)
+
+---
+
+- [`#1892`](https://github.com/oven-sh/bun/pull/1892)
+- Support `bun link` of scoped packages by [@alexlamsl](https://github.com/alexlamsl)
+
+---
+
+- [`#1875`](https://github.com/oven-sh/bun/pull/1875)
+- Support GitHub URLs as dependencies by [@alexlamsl](https://github.com/alexlamsl)
+
+---
+
+- [`#1894`](https://github.com/oven-sh/bun/pull/1894)
+- Add FileSystemRouter + React example by [@scally](https://github.com/scally)
+
+---
+
+- [`#1895`](https://github.com/oven-sh/bun/pull/1895)
+- Parse package-spec from CLI correctly by [@alexlamsl](https://github.com/alexlamsl)
+
+---
+
+- [`#1909`](https://github.com/oven-sh/bun/pull/1909)
+- Fix large packages receive for WS client by [@cirospaciari](https://github.com/cirospaciari)
+
+---
+
+- [`#1910`](https://github.com/oven-sh/bun/pull/1910)
+- Fix websocket hang by [@dylan-conway](https://github.com/dylan-conway)
+
+---
+
+- [`#1903`](https://github.com/oven-sh/bun/pull/1903)
+- Implement all pending resolve methods in DNS by [@cirospaciari](https://github.com/cirospaciari)
+
+---
+
+- [`#1914`](https://github.com/oven-sh/bun/pull/1914)
+- Express.js try to use function as hostname by [@cirospaciari](https://github.com/cirospaciari)
+
+---
+
+- [`#1917`](https://github.com/oven-sh/bun/pull/1917)
+- Ensure name is allocated with `toSliceClone` by [@dylan-conway](https://github.com/dylan-conway)
+
+---
+
+- [`#1911`](https://github.com/oven-sh/bun/pull/1911)
+- Append GitHub package after fully parsed by [@alexlamsl](https://github.com/alexlamsl)
+
+---
+
+- [`#1923`](https://github.com/oven-sh/bun/pull/1923)
+- Fix if condition always being true by [@u9g](https://github.com/u9g)
+
+---
+
+- [`#1927`](https://github.com/oven-sh/bun/pull/1927)
+- Fix corner cases with aliased dependencies by [@alexlamsl](https://github.com/alexlamsl)
+
+---
+
+- [`#1924`](https://github.com/oven-sh/bun/pull/1924)
+- Normalise `bun add` package specifiers by [@alexlamsl](https://github.com/alexlamsl)
+
+---
+
+- [`#1926`](https://github.com/oven-sh/bun/pull/1926)
+- Parse as GitHub URLs by [@alexlamsl](https://github.com/alexlamsl)
+
+---
+
+- [`#1929`](https://github.com/oven-sh/bun/pull/1929)
+- Support running WASI (WebAssembly) files using `bun run` by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#1930`](https://github.com/oven-sh/bun/pull/1930)
+- Fix more corner cases in bun add by [@alexlamsl](https://github.com/alexlamsl)
+
+---
+
+- [`#1934`](https://github.com/oven-sh/bun/pull/1934)
+- Update README.md by [@Ygnys](https://github.com/Ygnys)
+
+---
+
+- [`#1937`](https://github.com/oven-sh/bun/pull/1937)
+- Fix version parsing in bunx by [@alexlamsl](https://github.com/alexlamsl)
+
+---
+
+- [`#1938`](https://github.com/oven-sh/bun/pull/1938)
+- Report invalid input file as test failure by [@alexlamsl](https://github.com/alexlamsl)
+
+---
+
+- [`#1941`](https://github.com/oven-sh/bun/pull/1941)
+- Fix `assert()` crash by [@alexlamsl](https://github.com/alexlamsl)
+
+---
+
+- [`#1943`](https://github.com/oven-sh/bun/pull/1943)
+- Fix utf16le fill and utf8 partial write of utf16 by [@cirospaciari](https://github.com/cirospaciari)
+
+---
+
+{% /table %}

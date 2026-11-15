@@ -1,0 +1,666 @@
+---
+title: Bun v0.5.8
+description: Introducing `expect()` snapshots in `bun test`, preloading modules using `bun --preload`, basic glob star support in bun install, improvements to Web & Node.js compatibility, lots of bug fixes, and a teaser of what's next.
+date: "2023-03-18T00:00:00+00:00"
+author: ashcon
+thumbText: v0.5.8
+---
+
+Bun v0.5.8 introduces `expect()` snapshots in `bun test`, preloading modules using `bun --preload`, improvements to Web API & Node.js compatibility, lots of bug fixes, and a teaser of what's next.
+
+{% codetabs %}
+
+```sh#curl
+$ curl -fsSL https://bun.sh/install | bash
+```
+
+```sh#npm
+$ npm install -g bun
+```
+
+```sh#brew
+$ brew tap oven-sh/bun
+$ brew install bun
+```
+
+```sh#docker
+$ docker pull oven/bun
+$ docker run --rm --init --ulimit memlock=-1:-1 oven/bun
+```
+
+{% /codetabs %}
+
+{% raw %}
+<br>
+{% /raw %}
+
+To upgrade Bun:
+
+```sh
+$ bun upgrade
+```
+
+{% callout %}
+We're hiring [C/C++ and Zig engineers](/careers) to build the future of JavaScript!
+{% /callout %}
+
+## Snapshot testing with `bun test`
+
+[`bun test`](/docs/cli/test) aims to be a high-performance, drop-in replacement for Jest. Now it has support for snapshot testing, using [`expect(value).toMatchSnapshot()`](https://jestjs.io/docs/snapshot-testing#snapshot-testing-with-jest), which supports the same snapshot format as Jest. Here's how it works:
+
+First, create a test.
+
+```ts#snapshot.test.ts
+import { test, expect } from "bun:test"; // "bun:test" imports are optional
+
+test("can test a snapshot", async () => {
+  const response = await fetch("https://example.com/");
+  const body = await response.text();
+  expect(body).toMatchSnapshot();
+});
+```
+
+Then, run the test file using `bun test`.
+
+```sh
+$ bun test snapshot.test.ts
+```
+
+Next, you'll see the following output in your terminal.
+
+{% raw %}
+
+<pre><code>
+snapshot.test.ts:<br>
+<span style="color:#0A0">✓</span><b> can test a snapshot</b><br>
+<br>
+<span style="color:#0A0"> 1 pass</span><br>
+<span style="color:#808080"> 0 fail</span><br>
+<span style="color:#808080"> snapshots: </span><b>+1 added</b><br>
+&nbsp;1 expect() calls<br>
+Ran 1 tests across 1 files <span style="color:#808080">[<b>48.00ms</b>]</span>
+</code></pre>
+
+{% /raw %}
+
+Finally, you'll see there is a newly-generated snapshot file. Bun uses the same snapshot format as Jest, which means **you don't need to re-generate your snapshots when migrating from Jest to [`bun test`](/docs/cli/test).**
+
+```ts#__snapshots__/snapshot.test.ts.snap
+exports[`can test a snapshot 1`] = `
+"<!doctype html>
+<html>
+<head>
+    <title>Example Domain</title>
+</head>
+</html>
+"
+`;
+```
+
+If you need to update your snapshots, you can pass the `--update-snapshots` flag, which will update snaphots for every test file that is run.
+
+```sh
+$ bun test --update-snapshots
+```
+
+In addition to `toMatchSnapshot()`, Bun now supports these new matchers:
+
+- [`toThrow(RegExp)`](https://jestjs.io/docs/expect#tothrowerror) (in addition to `toThrow(string|Error)`)
+- [`toBeInstanceOf()`](https://jestjs.io/docs/expect#tobeinstanceofclass) (thanks to [@zhiyuang](https://github.com/zhiyuang))
+- [`toMatch()`](https://jestjs.io/docs/expect#tomatchregexp--string) (thanks to [@zhiyuang](https://github.com/zhiyuang))
+
+We also added a flag to re-run a test file multiple times, to help with reproducing errors in flaky tests.
+
+```sh
+bun test --rerun-each=5
+```
+
+This reruns each test file 5 times.
+
+## `bun --preload <preload> [command]`
+
+Bun can now preload files before running a file or a test suite. This behavior is analogous to [`node --require`](https://nodejs.org/api/cli.html#-r---require-module).
+
+To preload a file via the `--preload` flag:
+
+```bash
+$ bun --preload ./preload.ts run ./index.ts
+```
+
+To configure a list of files to `preload` in `bunfig.toml`:
+
+```toml#bunfig.toml
+preload = ["./preload.ts"]
+```
+
+This is useful for registering [`plugins`](https://bun.sh/docs/runtime/plugins#usage), injecting globals, or performing setup tasks without cluttering your scripts or entrypoints with extra `import()` or `require()` statements.
+
+Here's an example of how to preload a `Bun.plugin()` to load `.yml` files.
+
+{% codetabs %}
+
+```ts#index.ts
+import config from "./config.yml";
+
+console.log(config);
+```
+
+```yaml#config.yml
+enabled: true
+```
+
+```ts#yaml.plugin.ts
+import { plugin } from "bun";
+
+plugin({
+  name: "YAML",
+  async setup(build) {
+    const { load } = await import("js-yaml");
+    const { readFileSync } = await import("fs");
+
+    // when a .yaml file is imported...
+    build.onLoad({ filter: /\.(yaml|yml)$/ }, (args) => {
+
+      // read and parse the file
+      const text = readFileSync(args.path, "utf8");
+      const exports = load(text) as Record<string, any>;
+
+      // and returns it as a module
+      return {
+        exports: {default: exports, ...exports},
+        loader: "object", // special loader for JS objects
+      };
+    });
+  },
+});
+```
+
+{% /codetabs %}
+
+You can now import `.yml` files from your entrypoint:
+
+```sh
+$ bun --preload ./yaml.plugin.ts index.ts
+{
+  enabled: true
+}
+```
+
+To avoid the `--preload` flag, configure `bunfig.toml`:
+
+```toml#bunfig.toml
+preload = ["./yaml.plugin.ts"]
+```
+
+Running `bun test` or `bun run` will now preload the plugin automatically.
+
+```sh
+$ bun run index.ts
+{
+  enabled: true
+}
+```
+
+{% /codetabs %}
+
+## Partial glob support in `bun install` `workspaces`
+
+The following pattern is now supported in `"workspaces"` with bun install:
+
+```jsonc
+{
+  "name": "myWorkspace",
+  "workspaces": [
+    // Make all folders with a package.json and a name in packages/ part of the workspace
+    "packages/*"
+  ]
+}
+```
+
+You can use a `/*` to add all folders matching the prefix into your workspace. This is useful for monorepos that have many packages.
+
+> For now, only a single glob pattern at the very end (`foo/*`) is supported. We plan to improve our glob support in the future. In the meantime, we also added better error messages when a glob pattern isn't implemented yet.
+
+## Web Compatibility
+
+Thanks to improvements to Bun's test coverage, we've fixed a number of bugs in Bun's Web API compatibility.
+
+### `request.bodyUsed` & `response.bodyUsed`
+
+[`request.bodyUsed`](https://developer.mozilla.org/en-US/docs/Web/API/Request/bodyUsed) and [`response.bodyUsed`](https://developer.mozilla.org/en-US/docs/Web/API/Response/bodyUsed) were inconsistent with the spec when using `null` or `undefined` bodies.
+
+```js
+const response = new Response(null);
+
+await response.arrayBuffer();
+
+console.log(response.bodyUsed);
+
+/*
+
+Incorrect:
+
+   Bun v0.5.7: true
+
+Correct:
+
+   Bun v0.5.8: false
+       Chrome: false
+       Safari: false
+*/
+```
+
+### Consuming `Request` & `Response` bodies
+
+`null` or `undefined` [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) & [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) bodies can now be consumed multiple times, which aligns the behavior with Chrome & Safari.
+
+Previously, Bun would throw an error when trying to consume a `null` or `undefined` body twice:
+
+```bash
+$ bun-0.5.7 response.js
+1 | const response = new Response(null);
+2 | await response.arrayBuffer();
+3 | console.log(await response.arrayBuffer());
+                ^
+error: Body already used
+```
+
+Now `.arrayBuffer()` on `null` or `undefined` body returns an empty [`ArrayBuffer`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/ArrayBuffer) instead:
+
+```bash
+$ bun response.js
+
+ArrayBuffer(0) [ ]
+
+/*
+
+Incorrect:
+
+   Bun v0.5.7: <error> "Body already used"
+
+Correct:
+
+   Bun v0.5.8: ArrayBuffer(0) [ ]
+       Chrome: ArrayBuffer(0) [ ]
+       Safari: ArrayBuffer(0) [ ]
+*/
+```
+
+Similarly, [`Response.prototype.body`](https://developer.mozilla.org/en-US/docs/Web/API/Response/body) is supposed to return `null` when there is no body, but Bun was returning an empty [`ReadableStream`](https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream) instead.
+
+```js
+const response = new Response(null);
+console.log(response.body);
+
+/*
+
+Incorrect:
+
+   Bun v0.5.7: ReadableStream { ... }
+
+Correct:
+
+   Bun v0.5.8: null
+       Chrome: null
+       Safari: null
+*/
+```
+
+### `blob.slice()` `contentType` argument
+
+[`blob.slice`](https://developer.mozilla.org/en-US/docs/Web/API/Blob/slice) accepts an optional third argument for the `type` of the new [`Blob`](https://developer.mozilla.org/en-US/docs/Web/API/Blob). Previously, Bun didn't support this argument.
+
+```ts
+const blob = new Blob(["Hello, world!"], { type: "text/plain" });
+const slice = blob.slice(0, 5, "text/html; charset=utf-8");
+console.log(slice.type); // "text/html; charset=utf-8"
+
+/*
+
+Incorrect:
+
+   Bun v0.5.7: ""
+
+Correct:
+
+   Bun v0.5.8: "text/html; charset=utf-8"
+       Chrome: "text/html; charset=utf-8"
+       Safari: "text/html; charset=utf-8"
+*/
+```
+
+### `Request` constructor
+
+The [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) constructor in Bun had a couple bugs.
+
+When given two arguments, it always expected the first argument to be a string, which is incorrect.
+
+```js
+// This didn't work: (inconsistent with the spec)
+new Request(new Request("https://example.com"), {});
+
+// But any of these did:
+new Request(new Request("https://example.com"));
+new Request("https://example.com", { method: "POST" });
+new Request("https://example.com", {});
+```
+
+That has been fixed, and now the first argument can be a string or a [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) object.
+
+```js
+// This works now:
+console.log(new Request(new Request("https://example.com"), {}).url);
+
+// "https://example.com"
+```
+
+Another bug: the `url` argument was not being validated correctly (validated in `fetch()` but not in `new Request()`)
+
+```ts
+// this is supposed to throw:
+const request = new Request("", { method: "POST" });
+```
+
+Now it (correctly) throws an error:
+
+```bash
+$ bun /tmp/app.js
+1 | const request = new Request("", { method: "POST" });
+                   ^
+error: Failed to construct 'Request': url is required.
+```
+
+Bun's test coverage for the `Request` constructor was lacking and Bun's implementation of `fetch` (which does validate) doesn't use the same code path as the `Request` constructor.
+
+## Node.js compatibility
+
+Bun continues to make improvements to Node.js compatibility. Here's what has changed since the last release.
+
+- [Dramatically](https://github.com/oven-sh/bun/pull/2341) improved [`Buffer`](https://nodejs.org/api/buffer.html#buffer) implementation and is now passing many more Node.js tests
+- Implemented [`os.cpus()`](https://nodejs.org/api/os.html#oscpus) for macOS (previously, was only supported on Linux)
+- Implemented [`os.networkInterfaces()`](https://nodejs.org/api/os.html#osnetworkinterfaces)
+- Added [`AbortSignal`](https://developer.mozilla.org/en-US/docs/Web/API/AbortSignal) support to [`http.Server`](https://nodejs.org/api/http.html#class-httpserver) and [`http.ClientRequest`](https://nodejs.org/api/http.html#class-httpclientrequest)
+- `node:net`'s server function `listen` callback now fires after the server is listening, instead of sometimes firing before the server is listening
+- `node:zlib` was missing the export for `constants`
+
+## `Bun.sleepSync()`
+
+To fix an inconsistency issue between [`Bun.sleep()`](/docs/api/utils#bun-sleep) and `Bun.sleepSync()`, there is a **breaking change** where `Bun.sleepSync()` now accepts milliseconds, instead of seconds. Using code search on GitHub, we found that most usages were already assuming the units were milliseconds.
+
+```ts
+Bun.sleepSync(1); // sleep for 1 ms (not recommended)
+await Bun.sleep(1); // sleep for 1 ms (recommended)
+```
+
+## What's next?
+
+For Bun v0.6, you can expect big changes, including a brand new bundler!
+
+{% raw %}
+
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">smaller bundle size than webpack (after minification) <a href="https://t.co/OptyA2TSCY">pic.twitter.com/OptyA2TSCY</a></p>&mdash; Jarred Sumner (@jarredsumner) <a href="https://twitter.com/jarredsumner/status/1636597984480862213?ref_src=twsrc%5Etfw">March 17, 2023</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+{% /raw %}
+
+Bun's upcoming bundler intends to make building modern, full-stack JavaScript and TypeScript apps a lot simpler (and faster).
+
+Of course, we continue to make progress towards our priorities of Node.js compatibility, overall stability, and performance as Bun inches closer to a 1.0 release. To measure progress towards these goals we've dramatically increased our test coverage of Bun, Node.js, and standard-Web APIs. Stay tunned.
+
+## Changelog
+
+{% table %}
+
+---
+
+- [`#2156`](https://github.com/oven-sh/bun/pull/2156)
+- Fixed `{Request,Response}.body` not being null by [@cirospaciari](https://github.com/cirospaciari)
+
+---
+
+- [`#2115`](https://github.com/oven-sh/bun/pull/2115)
+- Implemented `os.cpus()` for macOS by [@jwhear](https://github.com/jwhear)
+
+---
+
+- [`#2161`](https://github.com/oven-sh/bun/pull/2161)
+- Fixed `HTMLRewriter.onDocument()` not being run by [@jwhear](https://github.com/jwhear)
+
+---
+
+- [`#2144`](https://github.com/oven-sh/bun/pull/2144)
+- Fixed incorrect return value for `dns.{resolve4,resolve6}()` by [@cirospaciari](https://github.com/cirospaciari)
+
+---
+
+- [`599f63c`](https://github.com/oven-sh/bun/commit/599f63c2047b5adcc3cd774a8ad89a52150d24b2)
+- Supported older releases of macOS, including 10.15 by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`0a7309c`](https://github.com/oven-sh/bun/commit/0a7309c8f27e5e3344b3b121559168b98dd33fee)
+- Improved performance of `EventEmitter` by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`eb94e5b`](https://github.com/oven-sh/bun/commit/eb94e5b990577e752f6f07aa7014f985c9dcce91)
+- Changed BoringSSL to use heap from mimalloc by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#2192`](https://github.com/oven-sh/bun/pull/2192)
+- Improved stability of `bun pm ls` by [@alexlamsl](https://github.com/alexlamsl)
+
+---
+
+- [`693be3d`](https://github.com/oven-sh/bun/commit/693be3d1c2fe63cb5961a0023ad4c301209495bc)
+- Improved performance of ASCII case-insensitive comparisons by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#2202`](https://github.com/oven-sh/bun/pull/2202)
+- Fixed ANSI escape codes not being piped from stdout to a file by [@alexlamsl](https://github.com/alexlamsl)
+
+---
+
+- [`5d296f6`](https://github.com/oven-sh/bun/commit/5d296f6228175097e59848416b1a3844bde940b1)
+- Fixed an issue where shasum was being parsed twice by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#2213`](https://github.com/oven-sh/bun/pull/2213)
+- Fixed an issue with `bun install` and duplicate dependencies by [@alexlamsl](https://github.com/alexlamsl)
+
+---
+
+- [`#2142`](https://github.com/oven-sh/bun/pull/2142)
+- Implemented `os.networkInterfaces()` by [@jwhear](https://github.com/jwhear)
+
+---
+
+- [`#2191`](https://github.com/oven-sh/bun/pull/2191)
+- Fixed incorrect port for `bun dev` by [@xjmdoo](https://github.com/xjmdoo)
+
+---
+
+- [`#2143`](https://github.com/oven-sh/bun/pull/2143)
+- Fixed issues with `fetch({ signal })` on shutdown by [@cirospaciari](https://github.com/cirospaciari)
+
+---
+
+- [`#2223`](https://github.com/oven-sh/bun/pull/2223)
+- Implemented `http.listen({ signal })` by [@cirospaciari](https://github.com/cirospaciari)
+
+---
+
+- [`#2222`](https://github.com/oven-sh/bun/pull/2222)
+- Implemented `http.get({ signal })` by [@cirospaciari](https://github.com/cirospaciari)
+
+---
+
+- [`#2226`](https://github.com/oven-sh/bun/pull/2226)
+- Removed transient error when sqlite was given an empty statement by [@ThatOneBro](https://github.com/ThatOneBro)
+
+---
+
+- [`#2231`](https://github.com/oven-sh/bun/pull/2231)
+- Implemented `bun --preload <file>` by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#2249`](https://github.com/oven-sh/bun/pull/2249)
+- Fixed issue with `Bun.file().arrayBuffer()` on an empty file by [@cirospaciari](https://github.com/cirospaciari)
+
+---
+
+- [`#2258`](https://github.com/oven-sh/bun/pull/2258)
+- Fixed bug where `http.request()` did not accept `URL`s by [@ThatOneBro](https://github.com/ThatOneBro)
+
+---
+
+- [`#2262`](https://github.com/oven-sh/bun/pull/2262)
+- Improved compatibility of `http.request()` when method is GET or HEAD and has a body by [@ThatOneBro](https://github.com/ThatOneBro)
+
+---
+
+- [`#2242`](https://github.com/oven-sh/bun/pull/2242)
+- **[BREAKING]** `Bun.sleepSync()` now takes milliseconds, instead of seconds by [@jwhear](https://github.com/jwhear)
+
+---
+
+- [`#2276`](https://github.com/oven-sh/bun/pull/2276)
+- Fixed `os.tmpdir()` from removing trailing slashing by [@cirospaciari](https://github.com/cirospaciari)
+
+---
+
+- [`#2285`](https://github.com/oven-sh/bun/pull/2285)
+- Fixed `request.url` not including search params in `node:http` by [@zhiyuang](https://github.com/zhiyuang)
+
+---
+
+- [`#2295`](https://github.com/oven-sh/bun/pull/2295)
+- Changed `bunx` without parameters to show a help page by [@Zeko369](https://github.com/Zeko369)
+
+---
+
+- [`#2288`](https://github.com/oven-sh/bun/pull/2288)
+- Fixed headers not being lowercase in `node:http` by [@ThatOneBro](https://github.com/ThatOneBro)
+
+---
+
+- [`#2293`](https://github.com/oven-sh/bun/pull/2293)
+- Fixed `bunx` from not being able to find scoped npm packages by [@Zeko369](https://github.com/Zeko369)
+
+---
+
+- [`#2302`](https://github.com/oven-sh/bun/pull/2302)
+- Fixed an issue where "latest" would not be considered in semver range by [@alexlamsl](https://github.com/alexlamsl)
+
+---
+
+- [`#2307`](https://github.com/oven-sh/bun/pull/2307)
+- Fixed `bun install` not reporting connection errors to the npm registry by [@alexlamsl](https://github.com/alexlamsl)
+
+---
+
+- [`#2314`](https://github.com/oven-sh/bun/pull/2314)
+- Implemented `expect().toThrow(RegExp)` by [@alexlamsl](https://github.com/alexlamsl)
+
+---
+
+- [`#2315`](https://github.com/oven-sh/bun/pull/2315)
+- Fixed error messages for `Blob` on Linux by [@alexlamsl](https://github.com/alexlamsl)
+
+---
+
+- [`#2320`](https://github.com/oven-sh/bun/pull/2320)
+- Implemented some of `tty.WriteStream` for `process.{stdout,stderr}` by [@ThatOneBro](https://github.com/ThatOneBro)
+
+---
+
+- [`0a9cb0e`](https://github.com/oven-sh/bun/commit/0a9cb0e13aba18c51eebcd4e246ac2620fac2fbc)
+- Fixed issues when `HTMLRewriter` would receive an empty string by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#2331`](https://github.com/oven-sh/bun/pull/2331)
+- Fixed parameter errors with `crypto.scryptSync()` by [@dylan-conway](https://github.com/dylan-conway)
+
+---
+
+- [`#2341`](https://github.com/oven-sh/bun/pull/2341)
+- Improved `Buffer` compatibility with Node.js by [@alexlamsl](https://github.com/alexlamsl)
+
+---
+
+- [`e16053c`](https://github.com/oven-sh/bun/commit/e16053c39ed18fb7024159d7e8bc58e5120bbf34)
+- Fixed an issue where `crypto.createHash().update("binary")` would not work by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#2340`](https://github.com/oven-sh/bun/pull/2340)
+- Improved spec-compliance of `Blob.type` by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#2371`](https://github.com/oven-sh/bun/pull/2371)
+- Fixed error when `require.resolve()` argument is empty by [@paperclover](https://github.com/paperclover)
+
+---
+
+- [`#2337`](https://github.com/oven-sh/bun/pull/2337)
+- Implemented unix socket support in `net.Server` by [@cirospaciari](https://github.com/cirospaciari)
+
+---
+
+- [`4c38798`](https://github.com/oven-sh/bun/commit/4c3879814289f79d81aef30e55c4bad9145c2af8)
+- Fixed incorrect encoding of `Socket.remoteAddress` by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`27f5012`](https://github.com/oven-sh/bun/commit/27f5012f50b998fec5b45531de2439a11a72eaa2)
+- Fixed `node:https` from being readonly by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#2389`](https://github.com/oven-sh/bun/pull/2389)
+- Implemented `expect().toBeInstanceOf()` by [@zhiyuang](https://github.com/zhiyuang)
+
+---
+
+- [`e613b50`](https://github.com/oven-sh/bun/commit/e613b501e218737cd9fc7a957f3ab65aee58a156)
+- Implemented missing `constants` in `node:zlib` by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#2294`](https://github.com/oven-sh/bun/pull/2294)
+- Implemented `expect().toMatchSnapshot()` by [@dylan-conway](https://github.com/dylan-conway)
+
+---
+
+- [`#2397`](https://github.com/oven-sh/bun/pull/2397)
+- Fixed an issue where parsing a malformed `bun.lockb` by [@alexlamsl](https://github.com/alexlamsl)
+
+---
+
+- [`#2400`](https://github.com/oven-sh/bun/pull/2400)
+- Fixed an issue where `Bun.serve()` could not listen on IPv6 by [@cirospaciari](https://github.com/cirospaciari)
+
+---
+
+- [`9a5f78f`](https://github.com/oven-sh/bun/commit/9a5f78fa3bdc7d841067332480a37b9faa7ff70e)
+- Fixed `console.log()` not showing `[Getter]` values by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#2404`](https://github.com/oven-sh/bun/pull/2404)
+- Implemented `expect().toMatch(RegExp)` by [@zhiyuang](https://github.com/zhiyuang)
+
+---
+
+===================
+
+{% /table %}
+
+Also, if you haven't heard, [Bun has docs now!](/docs)
+
+A huge thanks to [@colinhacks](https://github.com/colinhacks), as well as the many folks that have contributed since the last release: [@jakeboone02](https://github.com/jakeboone02), [@charliermarsh](https://github.com/charliermarsh), [@BrettBlox](https://github.com/BrettBlox), [@damianstasik](https://github.com/damianstasik), [@Sheraff](https://github.com/Sheraff), [@johnnyreilly](https://github.com/johnnyreilly), [@fdaciuk](https://github.com/fdaciuk), [@akash-joshi](https://github.com/akash-joshi), [@TommasoAmici](https://github.com/TommasoAmici), [@raxityo](https://github.com/raxityo), [@DreierF](https://github.com/DreierF), [@rmorey](https://github.com/rmorey), [@cunzaizhuyi](https://github.com/cunzaizhuyi), [@rodoabad](https://github.com/rodoabad), [@gaurishhs](https://github.com/gaurishhs), [@maor-benami](https://github.com/maor-benami), [@aabccd021](https://github.com/aabccd021), [@pfgithub](https://github.com/pfgithub), [@bushuai](https://github.com/bushuai), [@Zeko369](https://github.com/Zeko369), [@noahmarro](https://github.com/noahmarro), [@harisvsulaiman](https://github.com/harisvsulaiman), [@nskins](https://github.com/nskins), [@milesj](https://github.com/milesj), and [@jsoref](https://github.com/jsoref).

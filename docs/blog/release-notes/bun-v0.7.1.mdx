@@ -1,0 +1,415 @@
+---
+title: Bun v0.7.1
+description: Node.js compatibility improvements for Vite & frameworks. Better workspace support in bun installl & a bugfix for private registries. ES Modules load 30% faster. `vite dev` starts 90% faster on Linux. Transpiler bugfixes. fetch() file urls. MessagePort & MessageChannel.
+date: "2023-07-29T00:57:49+00:00"
+author: jarred
+draft: false
+---
+
+Bun v0.7.1 improves Node.js compatiblity with Vite and frameworks, improves ES Modules load times, and fixes a few transpiler bugs.
+
+{% callout %}
+We're hiring C/C++ and Zig engineers to build the future of JavaScript! [Join our team →](/careers)
+{% /callout %}
+
+Bun is an incredibly fast JavaScript runtime, bundler, transpiler, and package manager &mdash; all in one. Over the past couple months, we've been releasing a lot of changes to Bun recently, here's a recap in case you missed it:
+
+- [`v0.6.11`](/blog/bun-v0.6.10) - Addressed a release build issue from `v0.6.10`.
+- [`v0.6.12`](/blog/bun-v0.6.12) - Sourcemap support in `Error.stack`, `Bun.file().exists()`, and Node.js bug fixes.
+- [`v0.6.13`](/blog/bun-v0.6.13) - Implemented mock `Date`, faster base64 encoding, and fixes for `WebSocket` and `node:tls`.
+- [`v0.6.14`](/blog/bun-v0.6.14) - `process.memoryUsage()`, `process.cpuUsage()`, `process.on('beforeExit', cb)`, `process.on('exit', cb)` and crash fixes
+- [`v0.7.0`](/blog/bun-v0.7.0) - Web Workers, --smol, structuredClone(), WebSocket reliability improvements, node:tls fixes, and more.
+
+To install Bun:
+
+{% codetabs %}
+
+```sh#curl
+$ curl -fsSL https://bun.sh/install | bash
+```
+
+```sh#npm
+$ npm install -g bun
+```
+
+```sh#brew
+$ brew tap oven-sh/bun
+$ brew install bun
+```
+
+```sh#docker
+$ docker pull oven/bun
+$ docker run --rm --init --ulimit memlock=-1:-1 oven/bun
+```
+
+{% /codetabs %}
+
+To upgrade Bun:
+
+```sh
+$ bun upgrade
+```
+
+## ES Modules load 30% - 250% faster
+
+Bun's transpiler now runs in paralell, which yields significant performance improvements to ES Module load times.
+
+{% codetabs %}
+
+```ts#benchmark
+❯ hyperfine "bun index.mjs" "~/.bun/bin/bun index.mjs"
+Benchmark 1: bun index.mjs # New
+  Time (mean ± σ):     237.3 ms ±   8.9 ms    [User: 603.5 ms, System: 129.1 ms]
+  Range (min … max):   220.3 ms … 253.4 ms    12 runs
+
+Benchmark 2: ~/.bun/bin/bun index.mjs # Bun v0.7.0
+  Time (mean ± σ):     606.7 ms ±  52.9 ms    [User: 554.1 ms, System: 79.7 ms]
+  Range (min … max):   565.4 ms … 744.1 ms    10 runs
+
+Benchmark 3: node ./index.mjs # Node.js v20.4.0
+  Time (mean ± σ):     640.7 ms ±  42.2 ms    [User: 744.6 ms, System: 212.2 ms]
+  Range (min … max):   619.3 ms … 759.0 ms    10 runs
+
+Summary
+  'bun index.mjs' ran
+    2.56 ± 0.24 times faster than '~/.bun/bin/bun index.mjs'
+    2.70 ± 0.20 times faster than 'node ./index.mjs'
+
+```
+
+```js#index.mjs
+// Importing 10 copies of Three.js
+console.log("Hello! #1");
+export * as Three1 from "./node_modules/three1/src/Three.js";
+export * as Three2 from "./node_modules/three2/src/Three.js";
+export * as Three3 from "./node_modules/three3/src/Three.js";
+export * as Three4 from "./node_modules/three4/src/Three.js";
+export * as Three5 from "./node_modules/three5/src/Three.js";
+export * as Three6 from "./node_modules/three6/src/Three.js";
+export * as Three7 from "./node_modules/three7/src/Three.js";
+export * as Three8 from "./node_modules/three8/src/Three.js";
+export * as Three9 from "./node_modules/three9/src/Three.js";
+export * as Three10 from "./node_modules/three10/src/Three.js";
+console.log("Hello! #2");
+```
+
+{% /codetabs %}
+
+### Concurrent transpiler
+
+We made ES Modules load faster by making Bun's transpiler run concurrently. This change impacts `bun test` as well as bun's runtime.
+
+Bun transpiles every file. While Bun's transpiler is quite fast, after many modules are imported, the cost of reading files from disk, parsing JavaScript, TypeScript, or JSX, printing output code and generating a sourcemap becomes significant.
+
+This change helps Bun scale to larger projects.
+
+There are limited conditions where transpilation is concurrent, currently:
+
+- Import statements
+- Dynamic imports
+
+CommonJS `require` expressions are not concurrent yet. CommonJS modules imported via `import` may be concurrent, but none of their dependencies will be. We might tweak the specifics of this behavior in the future some more.
+
+Concurrency is based on the first import of a module (basically: "does this way of loading code allow Promises?")
+
+An interesting side effect of this change is that module resolution now only happens once. Previously, Bun would run module resolution twice for every import statement. The first time at parse time, and the second time at runtime. Now, module resolution only happens at runtime. Module resolution is cached so I wouldn't expect that to have a significant impact on performance, but it's interesting nonetheless.
+
+## `vite dev` starts 90% faster on Linux
+
+A series of patches made `vite dev` start 90% faster on Linux!
+
+{% image src="https://github.com/Jarred-Sumner/bun-releases-for-updater/assets/709451/837f823b-3c72-4172-8908-85d90320d96a" caption="90% faster start on Linux" /%}
+
+macOS start performance has improvements as well, but there's still more work to be done there.
+
+## bun:sqlite gets 10% faster at returning data
+
+We've landed optimizations to object creation in `bun:sqlite` and that led to a 10% performance improvement on our sqlite benchmarks.
+
+{% raw %}
+
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">In the next version of Bun<br><br>bun:sqlite gets 10% faster at returning data <a href="https://t.co/QUUxvMO9mv">pic.twitter.com/QUUxvMO9mv</a></p>&mdash; Jarred Sumner (@jarredsumner) <a href="https://twitter.com/jarredsumner/status/1683419167784054784?ref_src=twsrc%5Etfw">July 24, 2023</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+{% /raw %}
+
+## Workspace packages can have npm version in dependencies now
+
+`bun install` now supports workspace packages in `dependencies` that specifies an npm version range to match against.
+
+{% codetabs %}
+
+```json#packages/react-query/package.json
+{
+  "name": "@tanstack/react-query",
+  "version": "4.32.0",
+  "dependencies": {
+    "@tanstack/query-core": "^4.32.0"
+  }
+}
+```
+
+```json#packages/query-core/package.json
+{
+  "name": "@tanstack/query-core",
+  "version": "4.32.0",
+}
+```
+
+```json#package.json
+{
+  "name": "@tanstack/monorepo",
+  "version": "4.32.0",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
+}
+```
+
+{% /codetabs %}
+
+This lets library authors have the same package.json for local development and publishing to npm. When the workspace member package in the local repository matches the npm version range, Bun will use the local workspace package. Otherwise, it will use the remote npm package.
+
+## Improved support for private registries & Verdaccio
+
+Previously, Bun's http client would sometimes fail to connect to hostnames that worked in Node.js. This was caused by not passing the same options to `getaddrinfo` as Node.js does and by only checking the first address returned by `getaddrinfo` instead of all of them.
+
+This bug most often manifested as Bun being unable to connect to a private npm registry, since those are more often in a private network with interesting DNS configurations.
+
+[Verdaccio](https://verdaccio.org/) is a popular private npm proxy registry server and thanks to fixing this bug, you can use it as the registry for `bun install`.
+
+## Bugfix for `/absolute/path/to/bun.lockb`
+
+Bun's lockfile is a binary format. To make it easier to inspect, Bun marks it as executable and you can run `./bun.lockb` to get a Yarn v1 style lockfile printed.
+
+However, there was a bug where passing an absolute path this way wouldn't work. This is now fixed.
+
+Before:
+
+```sh
+$ /Users/jarred/Code/bun/bun.lockb
+lockfile not found:
+```
+
+After:
+
+```sh
+$ /Users/jarred/Code/bun/bun.lockb
+# THIS IS AN AUTOGENERATED FILE. DO NOT EDIT THIS FILE DIRECTLY.
+# yarn lockfile v1
+# bun ./bun.lockb --hash: BB257457B48409D5-2e33f90ba679b81f-4C68A5605FDDA532-9220e96d0851dbdf
+
+...
+```
+
+## Node.js compatiblity improvements
+
+We are hard at work on making Bun more compatible with Vite-powered frameworks.
+
+### fs.watch reliability improvements
+
+@cirospaciari shipped several patches that improve the reliability and performance of `fs.watch`.
+
+- Previosuly, `vite dev` would spin up 11 threads to watch files. Now, it only needs 1 thread.
+- A crash when a permissions error occurred was fixed.
+- on macOS, a symlink to a directory would not always be watched. This is now fixed.
+- on macOS, the watcher would sometimes panic when watching a directory persistently. This has been fixed.
+- `fs.promises.watch` no longer causes the process to stay alive forever
+
+### path.format bugfix
+
+A bug in `path.format` caused `vite build` to output `undefined` for css files.
+
+@paperclover fixed this in [#3734](https://github.com/oven-sh/bun/pull/3734/files)
+
+### path.join latin1 encoding issue
+
+A bug in `path.join` when passed non-ascii latin1 strings could potentially return incorrectly encoded paths.
+
+### path.dirname returned '.' for root paths
+
+`path.dirname` returned `'.'` for root paths, which caused some packages to not work with Bun.
+
+Thanks to [@Hanaasagi](https://github.com/Hanaasagi) for fixing this.
+
+### StringDecoder toString latin1 bugfix
+
+The following code snippet produced different output in Bun and Node.js:
+
+```js
+const { StringDecoder } = require("string_decoder");
+const assert = require("assert");
+
+const buf = Buffer.from("dd", "hex");
+
+const sd = new StringDecoder("latin1");
+
+const s = sd.write(buf);
+
+console.log(s);
+
+assert.strictEqual(s, "Ý");
+```
+
+This was incorrect and has been fixed, thanks to [@Hanaasagi](https://github.com/Hanaasagi).
+
+### fs.readdir() crash bugfix when returning a very large number of files
+
+Previously, `fs.readdir()` would crash when the number of strings was around 1000 or so. This bug was caused by incorrectly creating `Array` in native code, in a way that would cause garbage collection to free the array before it was returned to JavaScript.
+
+### async fs.readdir(), fs.stat, fs.lstat, fs.readFile
+
+The following `node:fs` functions will now use Bun's thread pool to perform their work:
+
+Promises:
+
+- `fs.promises.readdir()`
+- `fs.promises.stat()`
+- `fs.promises.lstat()`
+- `fs.promises.readFile()`
+
+Callbacks:
+
+- `fs.readdir()`
+- `fs.stat()`
+- `fs.lstat()`
+- `fs.readFile()`
+
+Previously, Bun would make them return the expected values without actually performing the work on a separate thread. This helped improve the start time of `vite dev` a little.
+
+### child_process.fork() is partially implemented
+
+`child_process.fork()` is partially implemented, thanks to [@sirenkovladd](https://github.com/sirenkovladd). IPC support is not implemented yet and will be added in a future release.
+
+### stat() on large files
+
+Previously, `fs.stat()` on large files would truncate the extra signed integer bytes, returning incorrect values. This has been fixed.
+
+```js
+import { statSync } from "fs";
+
+// Before:
+statSync("./8gb-file.txt").size; // -635437056
+
+// After:
+statSync("./8gb-file.txt").size; // 8589934592
+```
+
+### Missing final byte in fs.createReadStream() bugfix
+
+An off-by-one error caused some incorrect behavior in `fs.createReadStream()`. This has been fixed, thanks to [@Hanaasagi](https://github.com/Hanaasagi).
+
+This most frequently came up with the `compression` npm package when used with Express.
+
+## Web Platform API compatiblity improvements
+
+Previously, Bun was not using WebKit's URL parser in `fetch()` and the HTTP client to parse & normalize URLs. This led to some incompatibilities and bugs. Bun now uses WebKit's URL parser in `fetch()` and the HTTP client. This also applies to `bun install`.
+
+### `MessagePort` & `MessageChannel` are now supported
+
+The [`MessagePort`](https://developer.mozilla.org/en-US/docs/Web/API/MessagePort) and [`MessageChannel`](https://developer.mozilla.org/en-US/docs/Web/API/MessageChannel) APIs are new globals supported in Bun. Thanks to [@dylan-conway](https://github.com/dylan-conway) for getting this working, and for WebKit/Safari's team for the implementation.
+
+```js
+const { port1, port2 } = new MessageChannel();
+
+port1.onmessage = (e) => {
+  console.log(e.data); // "hello!"
+};
+
+port2.postMessage("hello!");
+```
+
+One of the reasons why Bun bet on JavaScriptCore instead of embracing the server-side V8 monoculture is because JavaScriptCore and WebKit/Safari are strongly tied together. This means that Bun can often use implementations of Web APIs from WebKit/Safari directly, without having to reimplement them. This is a great example of that.
+
+### fetch() supports file: URLs now
+
+You can now use `fetch()` to load files from the local filesystem.
+
+```js
+const res = await fetch(new URL("hello!.jpg", import.meta.url));
+await res.arrayBuffer();
+```
+
+Internally, this is roughly equivalent to:
+
+```js
+import { join } from "path";
+const arrayBuffer = await Bun.file(
+  join(import.meta.dir, "hello!.jpg"),
+).arrayBuffer();
+```
+
+### Web Crypto API keeps the event loop alive now
+
+Previously, the following code would never log "finished":
+
+```js
+crypto.subtle.digest("SHA-256", new Uint8Array([1, 2, 3])).then(() => {
+  console.log("finished");
+});
+```
+
+Since the promise returned by `crypto.subtle.digest` was never awaited, Bun's event loop would exit before the Web Crypto API could finish its work. This bug has been fixed. Now the above code will log "finished" as expected.
+
+## WebAssembly & Atomics bugfixes
+
+Bun's event loop will now wait for WebAssembly to finish loading before exiting the process.
+
+Previously, the following snippet would previously never log:
+
+```js
+import Parser from "web-tree-sitter";
+
+const main = async () => {
+  console.log("start");
+  await Parser.init();
+  console.log("finished");
+};
+
+main();
+```
+
+You had to `await main()`. Whether or not you prefer it to work this way, the status quo was a bug because other runtimes do not behave that way. This caused various packages wouldn't work. This bug impacted SolidStart, for example.
+
+A similar bug existed for `Atomics.wait()`.
+
+We made a small modification to JavaScriptCore to push tasks to our event loop. Of async work originating from JavaScriptCore, only WebAssembly and Atomics are affected. We do not wait for FinalizationRegistry to execute its callbacks before exiting the process (as FinalizationRegistry is not guranteed to be called to begin with).
+
+## `Bun.isMainThread` and `Promise.withResolvers()`
+
+You can now use `Bun.isMainThread` to check if you are in the main thread.
+
+```ts
+import { isMainThread } from "bun";
+
+console.log("isMainThread", isMainThread);
+
+if (isMainThread) {
+  const worker = new Worker(import.meta.url);
+  const { promise, resolve } = Promise.withResolvers();
+
+  worker.addEventListener("open", () => {
+    resolve();
+  });
+
+  await promise;
+}
+```
+
+You can also use `Promise.withResolvers()` to create a promise and its resolvers. This is a [TC39 stage3 proposal](https://github.com/tc39/proposal-promise-with-resolvers).
+
+## expect(arg).pass() and expect(arg).fail()
+
+The jest-extended matcher `expect(arg).pass()` and `expect(arg).fail()` are now supported in `bun:test`, thanks to [@TiranexDev](https://github.com/TiranexDev).
+
+```ts
+import { expect, test } from "bun";
+
+test("expect().pass()", () => {
+  expect(1).pass("I have passed!");
+});
+```
+
+## Changelog
+
+[View the complete changelog](https://github.com/oven-sh/bun/compare/bun-v0.7.0...bun-v0.7.1)

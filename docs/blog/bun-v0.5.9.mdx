@@ -1,0 +1,238 @@
+---
+title: Bun v0.5.9
+description: Introducing watch mode using `bun --watch`, tarball dependencies in `bun install`, and lots of bug fixes and compatibility improvements.
+date: "2023-04-04T00:00:00+00:00"
+author: ashcon
+thumbText: v0.5.9
+---
+
+Bun v0.5.9 introduces watch mode using `bun --watch`, adds support for tarball dependencies in `bun install`, and fixes lots of bugs to improve stability and compatibility.
+
+{% codetabs %}
+
+```sh#curl
+$ curl -fsSL https://bun.sh/install | bash
+```
+
+```sh#npm
+$ npm install -g bun
+```
+
+```sh#brew
+$ brew tap oven-sh/bun
+$ brew install bun
+```
+
+```sh#docker
+$ docker pull oven/bun
+$ docker run --rm --init --ulimit memlock=-1:-1 oven/bun
+```
+
+{% /codetabs %}
+
+{% raw %}
+<br>
+{% /raw %}
+
+To upgrade Bun:
+
+```sh
+$ bun upgrade
+```
+
+## Watch mode
+
+Bun now supports watch mode using [`bun --watch`](/docs/runtime/hot#watch-mode), which auto-restarts your application when you make a change to your files. This is useful in development to quickly see changes you've made to your code. It's a builtin replacement for [`nodemon`](https://github.com/remy/nodemon) that is noticeably faster.
+
+Run a file with `bun --watch`
+
+{% raw %}
+
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">&quot;bun --watch ./watchy.tsx&quot; <a href="https://t.co/qi7zCvx37p">pic.twitter.com/qi7zCvx37p</a></p>&mdash; Jarred Sumner (@jarredsumner) <a href="https://twitter.com/jarredsumner/status/1640916618460172288?ref_src=twsrc%5Etfw">March 29, 2023</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+{% /raw %}
+
+Run tests with `bun test --watch`
+
+{% raw %}
+
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">&quot;bun test --watch url&quot; in a large folder with multiple files that start with &quot;url&quot; <a href="https://t.co/aZV9BP4eFu">pic.twitter.com/aZV9BP4eFu</a></p>&mdash; Jarred Sumner (@jarredsumner) <a href="https://twitter.com/jarredsumner/status/1640890850535436288?ref_src=twsrc%5Etfw">March 29, 2023</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+{% /raw %}
+
+Bun still supports [`bun --hot`](/docs/runtime/hot#hot-mode), which attempts to reload your application code without restarting the whole process. This is particularly useful when [developing a server](https://bun.sh/docs/api/http#bun-serve) with `Bun.serve`, especially one long-lived connections like WebSockets. But in most cases `--watch` is a better general purpose tool.
+
+## Tarball dependencies
+
+You can now use tarball dependencies in your `package.json`. Bun will download and install the package from the specified tarball URL, rather than from npm (or whichever package registry you have configured).
+
+```json#package.json
+{
+  "dependencies": {
+    "zod": "https://registry.npmjs.org/zod/-/zod-3.21.4.tgz"
+  }
+}
+```
+
+Use tarball URLs to include a dependency that is not in a registry or privately hosted.
+
+## Squashed bugs
+
+We fixed a lot of bugs this release, here are a few interesting highlights.
+
+- The [`url.origin`](https://developer.mozilla.org/en-US/docs/Web/API/URL/origin) property is to `"null"` when the protocol is non-HTTP.
+
+```js
+test("url.origin is null when protocol is non-http", () => {
+  expect(new URL("https://example.com")).toHaveProperty(
+    "origin",
+    "https://example.com",
+  );
+  expect(new URL("file://path/to/file")).toHaveProperty("origin", "null");
+  expect(new URL("about:blank")).toHaveProperty("origin", "null");
+});
+```
+
+- `Set-Cookie` headers are no longer de-duplicated.
+
+```js
+test("headers can handle duplicate set-cookie headers", () => {
+  const headers = new Headers([["Set-Cookie", "foo=bar"]]);
+  headers.append("set-Cookie", "foo=baz");
+  expect([...headers]).toEqual([
+    ["set-cookie", "foo=bar"],
+    ["set-cookie", "foo=baz"],
+  ]);
+});
+```
+
+- An invalid `Date` now `console.log()` as "Invalid Date".
+
+```js
+test("invalid date inspects as 'Invalid Date'", () => {
+  expect(Bun.inspect(new Date("hello world"))).toBe("Invalid Date");
+});
+```
+
+- Node.js' `util.isError()` function now works for objects that are "Error-like".
+
+```js
+test("util.isError() works for non-native errors", () => {
+  const actual = util.isError({ name: "Error", message: "an error occurred" });
+  expect(actual).toBe(true);
+});
+```
+
+- We also improved the Error messages when you import a Node.js module that has not been implemented yet in Bun, like `node:http2` and `node:vm`.
+
+{% raw %}
+
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">made errors for not implemented yet node.js builtins better <a href="https://t.co/U9VQK5Yk1q">pic.twitter.com/U9VQK5Yk1q</a></p>&mdash; Jarred Sumner (@jarredsumner) <a href="https://twitter.com/jarredsumner/status/1642323508087906304?ref_src=twsrc%5Etfw">April 2, 2023</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+{% /raw %}
+
+## Looking ahead
+
+A [new JavaScript bundler](https://github.com/oven-sh/bun/pull/2312) is coming, including builtin support for [server components](https://react.dev/blog/2020/12/21/data-fetching-with-react-server-components).
+
+{% raw %}
+
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">server components is coming in Bun v0.6.0 <a href="https://t.co/ZfcIewP3HE">pic.twitter.com/ZfcIewP3HE</a></p>&mdash; Jarred Sumner (@jarredsumner) <a href="https://twitter.com/jarredsumner/status/1642821108402630657?ref_src=twsrc%5Etfw">April 3, 2023</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+{% /raw %}
+
+## Changelog
+
+{% table %}
+
+---
+
+- [`#2425`](https://github.com/oven-sh/bun/pull/2425)
+- Improved `zsh` completions to include directories by [@JacksonKearl](https://github.com/JacksonKearl)
+
+---
+
+- [`#2429`](https://github.com/oven-sh/bun/pull/2429)
+- Updated `moduleResolution` to be "bundler" in tsconfig.json by [@johnnyreilly](https://github.com/johnnyreilly)
+
+---
+
+- [`#2414`](https://github.com/oven-sh/bun/pull/2414)
+- Improved types for `EventEmitter` to be type-safe by [@gaurishhs](https://github.com/gaurishhs)
+
+---
+
+- [`58a5c2a`](https://github.com/oven-sh/bun/commit/58a5c2a3aa3a3717b814366f088c249f7314820c)
+- Fixed crash with `export namespace ns { export class F {} }` by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#2458`](https://github.com/oven-sh/bun/pull/2458)
+- Fixed various failing tests by [@dylan-conway](https://github.com/dylan-conway)
+
+---
+
+- [`#2459`](https://github.com/oven-sh/bun/pull/2459)
+- Fixed tests for `undici` by [@ThatOneBro](https://github.com/ThatOneBro)
+
+---
+
+- [`#2463`](https://github.com/oven-sh/bun/pull/2463)
+- Fixed issue with npm registries that end with a "/" by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#2490`](https://github.com/oven-sh/bun/pull/2490)
+- Fixed incorrect port with HTTPS requests from `http.request()` by [@cirospaciari](https://github.com/cirospaciari)
+
+---
+
+- [`#2497`](https://github.com/oven-sh/bun/pull/2497)
+- Implemented tarball URL support in `bun install` by [@alexlamsl](https://github.com/alexlamsl)
+
+---
+
+- [`#2486`](https://github.com/oven-sh/bun/pull/2486)
+- Fixed more bugs, including `escapeHTML()` and `util.isError()` by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#2500`](https://github.com/oven-sh/bun/pull/2500)
+- Implemented watch mode: `bun --watch` by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#2501`](https://github.com/oven-sh/bun/pull/2501)
+- Fixed a crash from `request.json()` with a `FormData` body by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#2506`](https://github.com/oven-sh/bun/pull/2506)
+- Improved compatibility of yarn lockfile printer by [@Validark](https://github.com/Validark)
+
+---
+
+- [`#2474`](https://github.com/oven-sh/bun/pull/2474)
+- Fixed bug with "Invalid Date" format by [@adrien-zinger](https://github.com/adrien-zinger)
+
+---
+
+- [`#2519`](https://github.com/oven-sh/bun/pull/2519)
+- Fixed bug when re-installing a git dependency using `bun install` by [@alexlamsl](https://github.com/alexlamsl)
+
+---
+
+- [`#2534`](https://github.com/oven-sh/bun/pull/2534)
+- Added stubs for various unimplemented node modules, including `v8`, `trace_events`, `repl`, `inspector`, `http2`, `diagnostics_channel`, `dgram`, and `cluster` by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#2536`](https://github.com/oven-sh/bun/pull/2536)
+- Reduced concurrent HTTP connections during `bun install` by [@alexlamsl](https://github.com/alexlamsl)
+
+---
+
+{% /table %}
+
+## Contributors
+
+And finally, thank you to all the contributors from the community that helped improve Bun this release: [@jq170727](https://github.com/jq170727), [@JacksonKearl](https://github.com/JacksonKearl), [@johnnyreilly](https://github.com/johnnyreilly), [@gaurishhs](https://github.com/gaurishhs), [@Fire-The-Fox](https://github.com/Fire-The-Fox), [@bnzone](https://github.com/bnzone), [@JokerQyou](https://github.com/JokerQyou), [@andres039](https://github.com/andres039), [@Validark](https://github.com/Validark), [@adrien-zinger](https://github.com/adrien-zinger), [@jakeboone02](https://github.com/jakeboone02)

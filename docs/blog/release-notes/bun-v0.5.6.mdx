@@ -1,0 +1,147 @@
+---
+title: "Bun v0.5.6"
+description: Support for `Bun.sleep`, improved Docker support, and improvements to Node.js and npm compatibility
+date: "2023-02-09T01:19:03+00:00"
+author: ashcon
+thumbText: v0.5.6
+---
+
+Bun v0.5.6 introduces `Bun.sleep`, improves Docker support, and makes various improvements to Node.js and npm compatibility.
+
+```bash
+# Install using curl
+curl -fsSL https://bun.sh/install | bash
+
+# Install using npm
+npm install -g bun
+
+# Install using Docker (New!)
+docker pull oven/bun:latest
+
+# Upgrade
+bun upgrade
+```
+
+## `Bun.sleep`
+
+Bun now supports `Bun.sleep()`. This provides a quick and easy API to defer execution without using [`setTimeout()`](https://developer.mozilla.org/en-US/docs/Web/API/setTimeout).
+
+```ts
+// This:
+await Bun.sleep(100);
+
+// Instead of this:
+await new Promise((resolve) => {
+  setTimeout(resolve, 100);
+});
+```
+
+You can also specify a [`Date`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date), which will sleep until the given date.
+
+```ts
+const date = new Date(2024, 01, 01);
+await Bun.sleep(date); // sleep until next year
+```
+
+## Docker image: `oven/bun`
+
+Bun has a new and improved Docker image: [`oven/bun`](https://hub.docker.com/r/oven/bun) The base image is Debian and supports both x64 and arm64 architectures.
+
+Here's an example of a [`Dockerfile`](https://docs.docker.com/engine/reference/builder/) that uses Bun.
+
+```docker
+FROM oven/bun
+
+ADD src src
+ADD package.json package.json
+ADD bun.lockb bun.lockb
+RUN bun install
+
+CMD bun src/index.js
+```
+
+## Node.js compatibility improvements
+
+- Implemented [`isDeepStrictEqual`](https://nodejs.org/api/util.html#utilisdeepstrictequalval1-val2) in `node:util`
+- Implemented [`os.cpus()`](https://nodejs.org/api/os.html#oscpus) on Linux, thanks to [@jwhear](https://github.com/jwhear)
+- Fixed [`fs.Dirent`](https://nodejs.org/api/fs.html#class-fsdirent) and [`fs.Stats`](https://nodejs.org/api/fs.html#class-fsstats) not being exported as classes, thanks to [@michalwarda](https://github.com/michalwarda)
+- Fixed an issue when importing [`node:perf_hooks`](https://nodejs.org/api/perf_hooks.html) using `require()`
+- Fixed an issue when importing WebCrypto from [`node:crypto`](https://nodejs.org/api/webcrypto.html)
+
+## `bun install` improvements
+
+- Fixed issues when hoisting [`peerDependencies`](https://docs.npmjs.com/cli/v9/configuring-npm/package-json#peerdependencies)
+- Fixed binaries not being linked when the package was in a workspace
+- Fixed an issue where `bun install` would download the last modified tag, instead of the latest tag
+- Fixed an issue when installing packages with the `npm:` prefix
+- Changed workspaces to not resolve recursively (matches what `npm` does)
+
+Thanks to [@alexlamsl](https://github.com/alexlamsl) fixing these issues!
+
+## Changelog
+
+{% table %}
+
+---
+
+- [`b7c96bf`](https://github.com/oven-sh/bun/commit/b7c96bfaae1d5c49cbebdfe5fcd3befacbfaede4)
+- Fixed "illegal instruction" when using `db.prepare()` in `bun:sqlite`
+
+---
+
+- [`#2000`](https://github.com/oven-sh/bun/pull/2000)
+- Fixed corner cases with aliases dependencies by [@alexlamsl](https://github.com/alexlamsl)
+
+---
+
+- [`#2011`](https://github.com/oven-sh/bun/pull/2011)
+- Fixed issues when hoisting `peerDependencies` by [@alexlamsl](https://github.com/alexlamsl)
+
+---
+
+- [`#2016`](https://github.com/oven-sh/bun/pull/2016)
+- Fixed the latest tag being incorrect on `bun install` by [@alexlamsl](https://github.com/alexlamsl)
+
+---
+
+- [`#2003`](https://github.com/oven-sh/bun/pull/2003)
+- Fixed various bugs in `bun-types` by [@colinhacks](https://github.com/colinhacks)
+
+---
+
+- [`#1972`](https://github.com/oven-sh/bun/pull/1972)
+- Fixed more bugs in `bun-types` by [@gaurishhs](https://github.com/gaurishhs)
+
+---
+
+- [`#1998`](https://github.com/oven-sh/bun/pull/1998)
+- Exposed `fs.Dirent` and `fs.Stats` by [@michalwarda](https://github.com/michalwarda)
+
+---
+
+- [`b12762a`](https://github.com/oven-sh/bun/commit/7ddbbc53b48b32b7a78f6654facfe8d7dd88a229)
+- Made `fs.Stat` functions faster by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#1982`](https://github.com/oven-sh/bun/pull/1982)
+- Added types for `node:console` and `node:perf_hooks` by [@colinhacks](https://github.com/colinhacks)
+
+---
+
+- [`#1997`](https://github.com/oven-sh/bun/pull/1997)
+- Fixed URL of wasi-js by [@TerrorJack](https://github.com/TerrorJack)
+
+---
+
+- [`#1996`](https://github.com/oven-sh/bun/pull/1996)
+- Fixed bug with uWebSockets by [@cirospaciari](https://github.com/cirospaciari)
+
+---
+
+- [`#2013`](https://github.com/oven-sh/bun/pull/2013)
+- Fixed incorrect version being printed by [@RobViren](https://github.com/RobViren)
+
+---
+
+{% /table %}

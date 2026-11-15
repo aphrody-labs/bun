@@ -1,0 +1,54 @@
+---
+title: Bun v1.1.42
+description: "Fixes 1 regression from Bun v1.1.41 involving 'use strict' in empty files that impacted Prisma"
+date: "2024-12-21T13:57:57.212Z"
+author: jarred
+---
+
+{% callout %}
+We're hiring [systems engineers](/careers) in San Francisco to build the future of JavaScript!
+{% /callout %}
+
+This release fixes 1 regression from Bun v1.1.41 involving `"use strict"` in empty files and impacting Prisma.
+
+#### To install Bun
+
+{% codetabs %}
+
+```sh#curl
+$ curl -fsSL https://bun.sh/install | bash
+```
+
+```sh#npm
+$ npm install -g bun
+```
+
+```sh#powershell
+$ powershell -c "irm bun.sh/install.ps1|iex"
+```
+
+```sh#scoop
+$ scoop install bun
+```
+
+```sh#brew
+$ brew tap oven-sh/bun
+$ brew install bun
+```
+
+```sh#docker
+$ docker pull oven/bun
+$ docker run --rm --init --ulimit memlock=-1:-1 oven/bun
+```
+
+{% /codetabs %}
+
+#### To upgrade Bun
+
+```sh
+$ bun upgrade
+```
+
+## Fixed: `"use strict"` regression
+
+Bun v1.1.41 introduced a regression where `"use strict"` in otherwise empty files could cause a crash. We've added regression tests to ensure this doesn't happen again.

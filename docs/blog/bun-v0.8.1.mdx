@@ -1,0 +1,310 @@
+---
+title: Bun v0.8.1
+description: Bun.serve() gets unix domain socket support, a performance regression has been fixed, and bugs in bun install, node:http and napi have been fixed
+date: "2023-08-26T00:21:35.514Z"
+author: jarred
+draft: false
+---
+
+Bun v0.8.1 adds unix domain socket support for Bun.serve(), fixes a performance regression, and fixes bugs in bun install, node:http and napi.
+
+{% callout %}
+Bun 1.0 is coming on September 7th! Register for the launch stream at [https://bun.sh/1.0](https://bun.sh/1.0).
+{% /callout %}
+
+Bun is an incredibly fast JavaScript runtime, bundler, transpiler, and package manager &mdash; all in one. We've been releasing a lot of changes to Bun recently. Here's a recap of the last few releases. In case you missed it:
+
+- [`v0.7.0`](/blog/bun-v0.7.0) - Web Workers, `--smol`, `structuredClone()`, WebSocket reliability improvements, `node:tls` fixes, and more.
+- [`v0.7.1`](/blog/bun-v0.7.1) - ES Modules load 30-250% faster, `fs.watch` fixes, and lots of `node:fs` compatibility improvements.
+- [`v0.7.2`](/blog/bun-v0.7.1) - Implements `node:worker_threads`, `node:diagnostics_channel`, and [`BroadcastChannel`](https://developer.mozilla.org/en-US/docs/Web/API/BroadcastChannel).
+- [`v0.7.3`](/blog/bun-v0.7.1) - Coverage reporting in `bun test`, plus test filtering with `bun test -t`.
+- [`v0.8.0`](/blog/bun-v0.8.0) - Debugger support, fetch streaming, and `bun update`. ReadStream and WriteStream from `node:tty` are implemented, including raw mode on `process.stdin`. SvelteKit support
+
+To install Bun:
+
+{% codetabs %}
+
+```sh#curl
+$ curl -fsSL https://bun.sh/install | bash
+```
+
+```sh#npm
+$ npm install -g bun
+```
+
+```sh#brew
+$ brew tap oven-sh/bun
+$ brew install bun
+```
+
+```sh#docker
+$ docker pull oven/bun
+$ docker run --rm --init --ulimit memlock=-1:-1 oven/bun
+```
+
+{% /codetabs %}
+
+To upgrade Bun:
+
+```sh
+$ bun upgrade
+```
+
+## Start an HTTP server on a unix domain socket with Bun.serve()
+
+`Bun.serve()` now supports [unix domain sockets](https://en.wikipedia.org/wiki/Unix_domain_socket), which let you point a socket to a file on your filesystem instead of a network host/port. This is useful when you want to run a server that's only accessible from the same machine, sometimes containers or proxies.
+
+```ts#server.ts
+const server = Bun.serve({
+  unix: "/tmp/my-socket.sock", // <-- new option
+  fetch(req){
+    console.log(req.url);
+    return new Response("Hello world!");
+  }
+});
+
+console.log(`Listening on unix:///tmp/my-socket.sock!`);
+```
+
+To start the server, run `bun ./server.ts`.
+
+```sh
+$ bun ./server.ts
+Listening on unix:///tmp/my-socket.sock!
+```
+
+Then, you can use `curl` to make a request to the socket.
+
+```sh
+$ curl --unix-socket /tmp/my-socket.sock http://localhost/my-path
+Hello world!
+```
+
+## Performance regression in reading request bodies fixed
+
+Bun v0.8.0 (released yesterday) introduced a performance regression in reading request bodies. This has been fixed in v0.8.1.
+
+The following script:
+
+```js
+Bun.serve({
+  port: 3000,
+  async fetch(request) {
+    await request.json();
+    return new Response();
+  },
+});
+```
+
+Bun v0.8.1:
+
+```js
+❯ oha http://localhost:3000 -m POST -d '{"a": 123}' -n 200000
+Summary:
+  Success rate:	1.0000
+  Total:	1.8099 secs
+  Slowest:	0.0068 secs
+  Fastest:	0.0000 secs
+  Average:	0.0005 secs
+  Requests/sec:	110505.0574
+```
+
+Bun v0.8.0:
+
+```js
+❯ oha http://localhost:3000 -m POST -d '{"a": 123}' -n 200000
+Summary:
+  Success rate:	1.0000
+  Total:	5.1787 secs
+  Slowest:	0.0121 secs
+  Fastest:	0.0002 secs
+  Average:	0.0013 secs
+  Requests/sec:	38619.4133
+```
+
+That's a 2.8x regression!
+
+The problem was microtask scheduling.
+
+### Microtask scheduling
+
+In Bun v0.8, we fixed a longstanding inefficiency in event loop scheduling with the HTTP server & sockets, but missed one case that caused this regression.
+
+JavaScript's event loop has two types of tasks: microtasks and tasks.
+
+| Task                                   | Microtask                                               |
+| -------------------------------------- | ------------------------------------------------------- |
+| `setTimeout`, `setInterval`, async I/O | `queueMicrotask`, `Promise.resolve`, `process.nextTick` |
+
+Microtasks are scheduled with `queueMicrotask()`, `Promise.resolve()`, `process.nextTick`, and a few other APIs.
+
+Tasks are scheduled with `setTimeout()`, `setInterval()`, or by async I/O (such as the HTTP server). Tasks keep the process alive, and microtasks are drained at the end of each task.
+
+You can think of JavaScript's event loop as being a more complicated version of this:
+
+```js
+let task;
+while ((task = getNextTask())) {
+  task();
+
+  do {
+    let microtask;
+    while ((microtask = getNextMicrotask())) {
+      microtask();
+    }
+  } while (hasMicrotasks());
+}
+```
+
+Each task potentially schedules many more microtasks and tasks. Microtasks are drained at the end of each task, and tasks are drained at the end of each event loop iteration.
+
+Bun's event loop previously worked something more like this:
+
+```js
+while (true) {
+  let task;
+  while ((task = getNextTask())) {
+    task();
+
+    do {
+      let microtask;
+      while ((microtask = getNextMicrotask())) {
+        microtask();
+      }
+    } while (hasMicrotasks());
+  }
+
+  while ((task = getAsyncIOTask())) {
+    task();
+
+    // where's the microtask draining? 🤔
+  }
+}
+```
+
+For async IO, we were not draining microtasks! This led to a lot of unnecessary
+microtask scheduling, which caused excessive memory usage and delays in certain
+cases.
+
+But that was not the cause of the performance regression after v0.8.0.
+
+The performance regression was because we forgot to drain microtasks when
+reading request bodies.
+
+This meant that for every request body, we would schedule a microtask to read
+the body, and then only drain it sometime later when the next task was
+scheduled. In < Bun v0.8.0, microtasks created in the HTTP server were drained
+only after all other tasks completed. That meant that missing microtask draining
+was consistent everywhere. In Bun v0.8.0, microtasks created in the HTTP server
+were drained after the current request completed, which means skipping it in
+this case (reading request bodies) would be unbalanced. It caused this
+performance regression.
+
+## bun install bugfix in malformed version name
+
+The `^0.0.2rc1` verison specifier is invalid, but exists in the wild in npm. Previously, Bun would crash when given this input and that has been fixed.
+
+## Statically-known failing `require` mistakenly inlined at runtime
+
+Bun's bundler automatically inlines failing `require()` calls when it knows that they will fail at runtime and are inside a try/catch block. This is useful for bundling code that uses optional dependencies.
+
+Input:
+
+```js
+try {
+  require("i-dont-exist-but-thats-okay");
+} catch (e) {
+  console.log("I don't exist, but that's okay!");
+}
+```
+
+Output:
+
+```js
+try {
+  (() => {
+    // the bug! it shouldn't be inlined here. it should only be inlined when bundling.
+    throw new Error(`Cannot require module "i-dont-exist-but-thats-okay"`);
+  })();
+} catch (e) {
+  console.log("I don't exist, but that's okay!");
+}
+```
+
+This feature was mistakenly enabled at runtime, not just when bundling. This
+broke some packages that rely on checking for the existence of a module or
+checking for the specific `code` property exposed by Node.js. That has been
+fixed. Bun's runtime no longer inlines failing `require()` calls (bundler still does, which is correct)
+
+This bug mostly impacted napi.
+
+## Reduced memory usage when there are lots of Headers & Blob objects
+
+Bun's `Headers` and `Blob` implementations were not reporting their size to the
+garbage collector. Since Bun implements many classes in native code, the garbage
+collector cannot always see how much memory is really being used by a class.
+When `Headers` or `Blob` are large enough, this can cause the garbage collector
+to not run as often as it should be.
+
+Now Bun reports the size of `Headers` and `Blob` to the garbage collector.
+
+## fetch() memory reporting bugfix
+
+Currently, every call to `fetch()` uses about 3 KB of memory. This memory is
+used in native code, which means it wasn't visible to the garbage collector. Now Bun
+reports this memory to the garbage collector, which means that the garbage
+collector will run more often when there are lots of `fetch()` calls.
+
+## bun install bugfix with stale package.json scripts
+
+`bun install`'s lockfile is binary, which lets us store more data than usual in
+a lockfile. One of the things we store is the `package.json` scripts.
+Previously, if you ran `bun install` and then changed the `package.json`
+scripts, `bun install` would not always pick up the changes. This has been
+fixed.
+
+## Sourcemap bugfix in `bun --inspect`
+
+Since Bun transpiles every file, Bun must also keep a sourcemap for every file.
+This is used to make `Error.prototype.stack` produce sourcemapped stacktraces
+and `console.log` to report accurate line numbers.
+
+Sourcemaps unfortunately cost a lot of memory. Instead of storing the entire
+sourcemap in memory, we store a more compact version until it's first used. The
+first 24 bytes of the compact version contains extra metadata (such as, the
+number of lines the original input source code had). This 24 byte header was
+mistakenly being included in the inline sourcemaps used in `bun --inspect`,
+leading to invalid input in the first 24 bytes or so of the JSON sourcemap.
+Surprisingly, this didn't consistently break sourcemaps. Only sometimes.
+Regardless, it has been fixed and now Bun includes the sourcemap bytes as
+expected, without the extra metadata.
+
+## Proxy URL with node:http bug has been fixed
+
+When the following script was run with a `http_proxy` environment variable set, an error was thrown:
+
+Script:
+
+```js
+import axios from "axios";
+
+const res = await axios.get("https://httpbin.org/get?answer=42");
+
+console.log(res.data.args);
+```
+
+Run:
+
+```sh
+$ http_proxy=http://127.0.0.1:1087 https_proxy=http://127.0.0.1:1087 bun run index.ts
+```
+
+Error:
+
+```js
+TypeError: fetch() URL is invalid
+      at node:http:839
+
+```
+
+This error shouldn't have happened. It has been fixed, thanks to [@Hanaasagi](https://github.com/Hanaasagi).

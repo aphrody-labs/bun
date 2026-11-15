@@ -1,0 +1,95 @@
+---
+title: Bun v0.1.5
+description: Release notes for Bun v0.1.5
+date: "2022-07-23T02:11:34Z"
+author: jarred
+thumbText: v0.1.5
+---
+
+To upgrade:
+
+```bash
+bun upgrade
+```
+
+{% details summary="If you have any problems upgrading" %}
+
+Run this:
+
+```bash
+curl https://bun.sh/install | bash
+```
+
+{% /details %}
+
+This release is mostly just bug fixes. There is also a Linux arm64 build available (not for Android arm64 yet, but this should work for raspberry pi's)
+
+### Bug fixes:
+
+- Fix `require` is not defined bug
+- Fix one of the reasons why `bun install` hangs
+- Fix segfault in console.log (double free) @sno2 in https://github.com/oven-sh/bun/pull/793
+- Fix exception in `"url"` polyfill @SheetJSDev in https://github.com/oven-sh/bun/pull/772
+- Fix(env_loader): Off by one error by [@FinnRG](https://github.com/FinnRG) in https://github.com/oven-sh/bun/pull/668
+- Add `node:http` server polyfill (this is not optimized yet, do not expect good performance from this version) by [@evanwashere](https://github.com/evanwashere) in https://github.com/oven-sh/bun/pull/572
+- Fix `bun add @scoped/package` @alexkuz in https://github.com/oven-sh/bun/pull/760
+- Fix setting port in `bun install` with `BUN_CONFIG_REGISTRY` @SheetJSDev in https://github.com/oven-sh/bun/pull/823
+
+#### New features
+
+Two new flags added to `bun install`:
+
+```
+--no-progress              	Disable the progress bar
+--no-verify                	Skip verifying integrity of newly downloaded packages
+```
+
+- Implement some of the missing stat functions in `node:fs` @sno2 in https://github.com/oven-sh/bun/pull/807
+
+Misc:
+
+- Create github workflow to publish releases on dockerhub by [@Wulfre](https://github.com/Wulfre) in https://github.com/oven-sh/bun/pull/716
+- Add a way to test wiptest by [@thislooksfun](https://github.com/thislooksfun) in https://github.com/oven-sh/bun/pull/699
+- added mystery-box example macro by [@SheetJSDev](https://github.com/SheetJSDev) in https://github.com/oven-sh/bun/pull/787
+- fix/clean-up-bun-error by [@JohnDaly](https://github.com/JohnDaly) in https://github.com/oven-sh/bun/pull/753
+
+Other:
+
+- chore(workflows): labeler, label sync by [@xHyroM](https://github.com/xHyroM) in https://github.com/oven-sh/bun/pull/701
+- Use Jarred-Sumner/vscode-zig march18 in devcontainer by [@hnakamur](https://github.com/hnakamur) in https://github.com/oven-sh/bun/pull/266
+- chore(workflows): dont run on forks by [@xHyroM](https://github.com/xHyroM) in https://github.com/oven-sh/bun/pull/734
+- Added readme file for `blank template` by [@foyzulkarim](https://github.com/foyzulkarim) in https://github.com/oven-sh/bun/pull/727
+- fix(README): Remove unused troubleshooting link by [@FinnRG](https://github.com/FinnRG) in https://github.com/oven-sh/bun/pull/736
+- minor edit: Makefile by [@travispulley](https://github.com/travispulley) in https://github.com/oven-sh/bun/pull/672
+- Fix documentation of `atob` and `btoa` by [@thislooksfun](https://github.com/thislooksfun) in https://github.com/oven-sh/bun/pull/748
+- fixed some licenses in README by [@pathei-kosmos](https://github.com/pathei-kosmos) in https://github.com/oven-sh/bun/pull/758
+- Bumped hono version number by [@LoiLock](https://github.com/LoiLock) in https://github.com/oven-sh/bun/pull/746
+- fix printing message for thrown non-error objects by [@alexkuz](https://github.com/alexkuz) in https://github.com/oven-sh/bun/pull/764
+- chore(benchmark): fix deno console.log benchmark by [@sh4hids](https://github.com/sh4hids) in https://github.com/oven-sh/bun/pull/771
+- chore(vscode): set tab size and tab format by [@sno2](https://github.com/sno2) in https://github.com/oven-sh/bun/pull/810
+- Improvement reactjs example readme file by [@sakibhasancse](https://github.com/sakibhasancse) in https://github.com/oven-sh/bun/pull/783
+
+## New Contributors
+
+- @connorlurring made their first contribution in https://github.com/oven-sh/bun/pull/825
+- @backflip made their first contribution in https://github.com/oven-sh/bun/pull/669
+- @Kapsonfire-DE made their first contribution in https://github.com/oven-sh/bun/pull/649
+- @Omer-Shahar made their first contribution in https://github.com/oven-sh/bun/pull/611
+- @fabiofdsantos made their first contribution in https://github.com/oven-sh/bun/pull/670
+- @wobsoriano made their first contribution in https://github.com/oven-sh/bun/pull/714
+- @0xflotus made their first contribution in https://github.com/oven-sh/bun/pull/706
+- @mustafahasankhan made their first contribution in https://github.com/oven-sh/bun/pull/280
+- @ytkg made their first contribution in https://github.com/oven-sh/bun/pull/633
+- @rubinj30 made their first contribution in https://github.com/oven-sh/bun/pull/627
+- @SaltyAom made their first contribution in https://github.com/oven-sh/bun/pull/708
+- @Wulfre made their first contribution in https://github.com/oven-sh/bun/pull/716
+- @foyzulkarim made their first contribution in https://github.com/oven-sh/bun/pull/727
+- @travispulley made their first contribution in https://github.com/oven-sh/bun/pull/672
+- @JohnDaly made their first contribution in https://github.com/oven-sh/bun/pull/753
+- @pathei-kosmos made their first contribution in https://github.com/oven-sh/bun/pull/758
+- @LoiLock made their first contribution in https://github.com/oven-sh/bun/pull/746
+- @sh4hids made their first contribution in https://github.com/oven-sh/bun/pull/771
+- @Wallunen made their first contribution in https://github.com/oven-sh/bun/pull/745
+- @sakibhasancse made their first contribution in https://github.com/oven-sh/bun/pull/783
+
+[**Full Changelog**](https://github.com/oven-sh/bun/compare/bun-v0.1.4...bun-v0.1.5)

@@ -1,0 +1,92 @@
+---
+title: Bun v0.1.6
+description: Release notes for Bun v0.1.6
+date: "2022-08-01T23:29:18Z"
+author: jarred
+thumbText: v0.1.6
+---
+
+To upgrade:
+
+```bash
+bun upgrade
+```
+
+{% details summary="If you have any problems upgrading" %}
+
+Run this:
+
+```bash
+curl https://bun.sh/install | bash
+```
+
+{% /details %}
+
+## What's new
+
+- No more "Illegal Instruction" error on start for those using CPUs which don't support AVX/AVX2 instructions! Thanks to Bun's new `baseline` builds, these are separate builds of bun for Linux x64 and macOS x64 which do not use AVX/AVX2 instructions. You can install with the install script. This was one of the most common issues people ran into.
+- Add `util.TextEncoder` by [@soneymathew](https://github.com/soneymathew) in https://github.com/oven-sh/bun/pull/844
+- fix(ffi): double-free segfault with symbols object by [@sno2](https://github.com/sno2) in https://github.com/oven-sh/bun/pull/919
+- `-profile` builds of bun include debug symbols
+- Update bun-framework-next for Compatibility with Next 12.2+ by [@TiKevin83](https://github.com/TiKevin83) in https://github.com/oven-sh/bun/pull/920
+
+Thanks to upgrading WebKit:
+
+- 3.5x faster JSON.stringify (thanks @darinadler)
+- 396x faster TypedArray.from (thanks @Constellation)
+- 1.5x faster Uint8Array.slice() (thanks @Constellation)
+- Up to 2% faster JS execution on Linux due to enabling new memory allocator (libpas, thanks @Constellation)
+
+## Commits
+
+- doc: added an helper for the huge Makefile by [@Sanix-Darker](https://github.com/Sanix-Darker) in https://github.com/oven-sh/bun/pull/804
+- fix install script colors for light background by [@alexkuz](https://github.com/alexkuz) in https://github.com/oven-sh/bun/pull/800
+- Fix mistake in Next.js Example README. by [@AadiTheCodecerer](https://github.com/AadiTheCodecerer) in https://github.com/oven-sh/bun/pull/827
+- feat: add .PHONY on makefile targets by [@Sanix-Darker](https://github.com/Sanix-Darker) in https://github.com/oven-sh/bun/pull/847
+- ci: add docker caching to ci workflows by [@HarshCasper](https://github.com/HarshCasper) in https://github.com/oven-sh/bun/pull/846
+- feat: added info, info_bod and success method to wrap type of messages by [@Sanix-Darker](https://github.com/Sanix-Darker) in https://github.com/oven-sh/bun/pull/845
+- [Bun.js] support for util.TextEncoder by [@soneymathew](https://github.com/soneymathew) in https://github.com/oven-sh/bun/pull/844
+- fix(examples/hono): refine Hono example by [@yusukebe](https://github.com/yusukebe) in https://github.com/oven-sh/bun/pull/773
+- Change bun-types to latest by [@LoiLock](https://github.com/LoiLock) in https://github.com/oven-sh/bun/pull/766
+- fix(release): Remove the `${{}}` from the `if` block in GHA by [@rgoomar](https://github.com/rgoomar) in https://github.com/oven-sh/bun/pull/863
+- feat: clean/factorize ARGS in the Dockerfile by [@Sanix-Darker](https://github.com/Sanix-Darker) in https://github.com/oven-sh/bun/pull/839
+- Use 'ADD' instead of running wget to make docker compare checksums on… by [@mikeswann](https://github.com/mikeswann) in https://github.com/oven-sh/bun/pull/864
+- Increasing test coverage for node compatibility for util by [@soneymathew](https://github.com/soneymathew) in https://github.com/oven-sh/bun/pull/854
+- chore(installer): use this repository instead release-for-updater by [@xHyroM](https://github.com/xHyroM) in https://github.com/oven-sh/bun/pull/582
+- fix(types): add missing types for WebSocket by [@xHyroM](https://github.com/xHyroM) in https://github.com/oven-sh/bun/pull/578
+- Add 'scripts/nproc' helper script by [@penberg](https://github.com/penberg) in https://github.com/oven-sh/bun/pull/623
+- Support for completion in Bash by [@zombieleet](https://github.com/zombieleet) in https://github.com/oven-sh/bun/pull/403
+- #609 Don't truncate ascii buffers to 7-bit by [@szatkus](https://github.com/szatkus) in https://github.com/oven-sh/bun/pull/775
+- docs(macos): Improve MacOS Development Instructions by [@rgoomar](https://github.com/rgoomar) in https://github.com/oven-sh/bun/pull/836
+- landing/docs: make Bun naming consistent by [@holic](https://github.com/holic) in https://github.com/oven-sh/bun/pull/906
+- chore(ci): add segfault label by [@sno2](https://github.com/sno2) in https://github.com/oven-sh/bun/pull/916
+- docs: fix broken ffi benchmark link by [@xHyroM](https://github.com/xHyroM) in https://github.com/oven-sh/bun/pull/914
+- fix(ffi): double-free segfault with symbols object by [@sno2](https://github.com/sno2) in https://github.com/oven-sh/bun/pull/919
+- Update bun-framework-next for Compatibility with Next 12.2+ by [@TiKevin83](https://github.com/TiKevin83) in https://github.com/oven-sh/bun/pull/920
+- fix(makefile): devcontainer install by [@paperclover](https://github.com/paperclover) in https://github.com/oven-sh/bun/pull/933
+- Fix/react accessibility by [@chasm](https://github.com/chasm) in https://github.com/oven-sh/bun/pull/932
+- refactor(bunjs/bindings): code readability fix `functionLazyLoadStrea… by [@ryanrussell](https://github.com/ryanrussell) in https://github.com/oven-sh/bun/pull/926
+- chore: fix labeler by [@xHyroM](https://github.com/xHyroM) in https://github.com/oven-sh/bun/pull/899
+- Fix: move bun, Webkit and zig urls from Jarred-Sumner to oven-sh. by [@oransimhony](https://github.com/oransimhony) in https://github.com/oven-sh/bun/pull/944
+- chore: migrate deprecated `@vscode/dev-container-cli` by [@kidonng](https://github.com/kidonng) in https://github.com/oven-sh/bun/pull/912
+
+## New Contributors
+
+- @Sanix-Darker made their first contribution in https://github.com/oven-sh/bun/pull/804
+- @AadiTheCodecerer made their first contribution in https://github.com/oven-sh/bun/pull/827
+- @HarshCasper made their first contribution in https://github.com/oven-sh/bun/pull/846
+- @soneymathew made their first contribution in https://github.com/oven-sh/bun/pull/844
+- @yusukebe made their first contribution in https://github.com/oven-sh/bun/pull/773
+- @rgoomar made their first contribution in https://github.com/oven-sh/bun/pull/863
+- @mikeswann made their first contribution in https://github.com/oven-sh/bun/pull/864
+- @penberg made their first contribution in https://github.com/oven-sh/bun/pull/623
+- @zombieleet made their first contribution in https://github.com/oven-sh/bun/pull/403
+- @szatkus made their first contribution in https://github.com/oven-sh/bun/pull/775
+- @holic made their first contribution in https://github.com/oven-sh/bun/pull/906
+- @TiKevin83 made their first contribution in https://github.com/oven-sh/bun/pull/920
+- @paperclover made their first contribution in https://github.com/oven-sh/bun/pull/933
+- @chasm made their first contribution in https://github.com/oven-sh/bun/pull/932
+- @oransimhony made their first contribution in https://github.com/oven-sh/bun/pull/944
+- @kidonng made their first contribution in https://github.com/oven-sh/bun/pull/912
+
+**Full Changelog**: https://github.com/oven-sh/bun/compare/bun-v0.1.5...bun-v0.1.6

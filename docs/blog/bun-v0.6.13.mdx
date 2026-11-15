@@ -1,0 +1,337 @@
+---
+title: Bun v0.6.13
+description: Mock `Date`, 10x faster base64 encoding, WebSocket client reliability improvements, support for postgres tls and nodemailer, and various bug fixes.
+date: "2023-07-04T10:00:00+00:00"
+author: ashcon
+draft: false
+---
+
+{% callout %}
+We're hiring C/C++ and Zig engineers to build the future of JavaScript! [Join our team →](/careers)
+{% /callout %}
+
+As a reminder: Bun is an incredibly fast JavaScript runtime, bundler, transpiler, and package manager &mdash; all in one.
+
+We've been releasing a lot of changes to Bun recently, here's a recap in case you missed it:
+
+- [`v0.6.0`](/blog/bun-bundler) - Introducing `bun build`, Bun's new JavaScript bundler.
+- [`v0.6.2`](/blog/bun-v0.6.2) - Performance boosts: 20% faster `JSON.parse`, up to 2x faster `Proxy` and `arguments`.
+- [`v0.6.3`](/blog/bun-v0.6.3) - Implemented `node:vm`, lots of fixes to `node:http` and `node:tls`.
+- [`v0.6.4`](/blog/bun-v0.6.4) - Implemented `require.cache`, `process.env.TZ`, and 80% faster `bun test`.
+- [`v0.6.5`](/blog/bun-v0.6.5) - Native support for CommonJS modules (_previously, Bun did CJS to ESM transpilation_),
+- [`v0.6.6`](/blog/bun-v0.6.6) - `bun test` improvements, including Github Actions support, `test.only()`, `test.if()`, `describe.skip()`, and 15+ more `expect()` matchers; also streaming file uploads using `fetch()`.
+- [`v0.6.7`](/blog/bun-v0.6.7) - Node.js compatibility improvements to unblock Discord.js, Prisma, and Puppeteer
+- [`v0.6.8`](/blog/bun-v0.6.8) - Introduced `Bun.password`, mocking in `bun test`, and `toMatchObject()`
+- [`v0.6.9`](/blog/bun-v0.6.9) - Less memory usage and support for non-ascii filenames
+- [`v0.6.10`](/blog/bun-v0.6.10) - `fs.watch()`, `bun install` bug fixes, `bun test` features, and improved CommonJS support
+- [`v0.6.11`](/blog/bun-v0.6.10) - Addressed a release build issue from `v0.6.10`.
+- [`v0.6.12`](/blog/bun-v0.6.12) - Sourcemap support in `Error.stack`, `Bun.file().exists()`, and Node.js bug fixes.
+
+To install Bun:
+
+{% codetabs %}
+
+```sh#curl
+$ curl -fsSL https://bun.sh/install | bash
+```
+
+```sh#npm
+$ npm install -g bun
+```
+
+```sh#brew
+$ brew tap oven-sh/bun
+$ brew install bun
+```
+
+```sh#docker
+$ docker pull oven/bun
+$ docker run --rm --init --ulimit memlock=-1:-1 oven/bun
+```
+
+{% /codetabs %}
+
+{% raw %}
+<br>
+{% /raw %}
+
+To upgrade Bun:
+
+```sh
+$ bun upgrade
+```
+
+## Mock `Date` in `bun test`
+
+You can now mock the value of `new Date()` in Bun's test runner. This will affect any API that can retreive the system time, including: [`Date.now()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/now), [`new Date()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/Date), and [`Intl.DateTimeFormat().format()`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Intl/DateTimeFormat).
+
+```js
+import { test, expect, setSystemTime } from "bun:test";
+
+test("time travel", () => {
+  const past = new Date("2022-07-05");
+  setSystemTime(past);
+
+  expect(new Date()).toBe(past);
+  expect(Date.now()).toBe(past.getTime());
+  expect(new Intl.DateTimeFormat("en-US").format()).toBe("07/05/2022");
+
+  setSystemTime(); // resets
+  expect(Date.now()).toBeGreaterThan(past.getTime());
+});
+```
+
+Unlike in Jest, the `Date` object doesn't mutate when you mock the time. This prevents a whole class of confusing test-only bugs.
+
+```js
+import { test, expect } from "bun:test";
+
+test("Date.prototype", () => {
+  const OriginalDate = Date;
+  setSystemTime(new Date("2022-07-05"));
+
+  // both pass in Bun, but fail in Jest
+  expect(OriginalDate).toBe(Date);
+  expect(OriginalDate.now).toBe(Date.now);
+});
+```
+
+## 10x faster `Buffer.toString("base64")`
+
+{% raw %}
+
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">In the next version of Bun<br><br>buffer.toString(&#39;base64&#39;) gets 10x faster <a href="https://t.co/4vAiZF60oK">pic.twitter.com/4vAiZF60oK</a></p>&mdash; Jarred Sumner (@jarredsumner) <a href="https://twitter.com/jarredsumner/status/1675339288270225410?ref_src=twsrc%5Etfw">July 2, 2023</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+{% /raw %}
+
+## Improvements to `node:tls` and `node:net`
+
+@cirospaciari made lots of improvements to Bun's implementation of `node:tls` and `node:net`. This unlocks various npm packages that were dependent on these changes.
+
+### Postgres with TLS works
+
+You can now use [`postgres`](https://github.com/porsager/postgres) package to connect to a Postgres database using TLS. Previously, you could connect without TLS, but there were some outstanding issues that prevented TLS from working.
+
+```js
+import { postgres } from "postgres";
+
+const sql = postgres(process.env.DATABASE_URI);
+const name = "ThePrimeagen",
+  age = 69;
+const users = await sql`
+  select
+    name,
+    age
+  from users
+  where
+    name like ${name + "%"}
+    and age > ${age}
+`;
+console.log(users); // [{ name: "ThePrimeagen", age: 69 }]
+```
+
+### Nodemailer works
+
+You can now use the [`nodemailer`](https://github.com/nodemailer/nodemailer) package to send emails.
+
+```js
+import nodemailer from "nodemailer";
+
+nodemailer.createTestAccount(async (err, account) => {
+  const transporter = nodemailer.createTransport({
+    host: account.smtp.host,
+    port: account.smtp.port,
+    secure: account.smtp.secure,
+    debug: true,
+    auth: {
+      user: account.user,
+      pass: account.pass,
+    },
+  });
+
+  let info = await transporter.sendMail({
+    from: '"Fred Foo 👻" <foo@example.com>',
+    to: "example@gmail.com",
+    subject: "Hello ✔",
+    text: "Hello world?",
+    html: "<b>Hello world?</b>",
+  });
+
+  console.log("Message sent: %s", info.messageId);
+  // Message sent: <b658f8ca-6296-ccf4-8306-87d57a0b4321@example.com>
+
+  console.log("Preview URL: %s", nodemailer.getTestMessageUrl(info));
+  // Preview URL: https://ethereal.email/message/WaQKMgKddxQDoou...
+});
+```
+
+## `.isUtf8()` and `.isAscii()`
+
+You can now use [`isUtf8()`](https://nodejs.org/api/buffer.html#bufferisutf8input) and [`isAscii()`](https://nodejs.org/api/buffer.html#bufferisasciiinput) from Node's `buffer` module.
+
+```js
+import { test, expect } from "bun:test";
+import { isUtf8, isAscii } from "node:buffer";
+
+test("isUtf8 and isAscii", () => {
+  expect(isUtf8(new Buffer("What did the 🦊 say?"))).toBeTrue();
+  expect(isAscii(new Buffer("What did the 🦊 say?"))).toBeFalse();
+});
+```
+
+## Slightly less memory for HTTP requests
+
+Bun now uses [8 less bytes](https://github.com/oven-sh/bun/pull/3483/files#diff-e9484fda309708f80db81a125281dd0b9fdadaf3d2400ae8e78a2b8fc14d85ebR1003-R1025) per HTTP request thanks to Zig's [packed struct](https://ziglang.org/documentation/master/#packed-struct). This allows us to store the same information in a more memory efficient layout.
+
+In the example below, each `bool` is stored as 1 byte.
+
+```zig
+const Request = struct {
+  is_transfer_encoding: bool,
+  is_waiting_body: bool,
+  // ...
+  aborted: bool,
+};
+```
+
+Now, with a packed struct, each `bool` is stored as 1 _bit_.
+
+```zig
+const Request = struct {
+  const Flags = packed struct {
+    is_transfer_encoding: bool,
+    is_waiting_body: bool,
+    // ...
+    aborted: bool,
+  };
+  flags: Flags,
+};
+```
+
+## WebSocket client reliability improvements
+
+This release fixes a number of bugs in Bun's [`WebSocket`](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket) client implementation.
+
+### Zero-length messages are supported
+
+Did you know that you can send & receive zero-length messages with WebSockets? Previously, Bun would ignore those, but now they're supported.
+
+```js
+const ws = new WebSocket("wss://ws.postman-echo.com/raw");
+ws.onopen = () => {
+  ws.send("");
+  ws.send(new ArrayBuffer(0));
+};
+
+ws.onmessage = (event) => {
+  console.log(event.data); // ""
+  console.log(event.data); // ArrayBuffer(0)
+};
+```
+
+### Initial payload race condition fix
+
+Previously, when the initial HTTP response was received and contained websocket message(s) were sent in the same event loop tick, Bun would sometimes ignore the messages. This is now fixed.
+
+Similarly, there was an edgecase where the initial message could be dispatched after a subsequent mesage was received (the 2nd message would appear before the 1st message). This has also been fixed.
+
+## Bug fixes
+
+### [Changed](https://github.com/oven-sh/bun/pull/3484) `.toEqual()` to now ignore private properties (prefixed with `#`).
+
+```js
+import { test, expect } from "bun:test";
+
+test("toEqual() with #property", () => {
+  class Foo {
+    bar = 1;
+    #baz = "";
+  }
+  class Bar {
+    bar = 1;
+  }
+  expect(new Foo()).toEqual(new Bar());
+});
+```
+
+### [Fixed](https://github.com/oven-sh/bun/pull/3474) crash with `workspace:` dependency in package.json.
+
+Previously, if you ran `bun add` with the following `package.json`, Bun would crash. This is now fixed.
+
+```json#package.json
+{
+  "dependencies": {
+    "foo": "workspace:bar"
+  }
+}
+```
+
+### [Fixed](https://github.com/oven-sh/bun/pull/3496) zero-length environment variables not working.
+
+Previously, if you ran `bun run` with the following `.env` file, Bun would not detect the environment variable. This is now fixed.
+
+```#.env
+FOO=
+```
+
+### [Fixed](https://github.com/oven-sh/bun/pull/3490) wrong text decoding from `HTMLRewriter`.
+
+Previously, if you can the following code in Bun, it would output the wrong result. This is now fixed.
+
+```js
+new HTMLRewriter()
+  .on("p", {
+    element(element) {
+      console.log(element.getAttribute("id"));
+    },
+  })
+  .transform(new Response('<p id="Šžõäöü"></p>'));
+
+// Before fix: Å Å¾ÃµÃ¤Ã¶Ã¼
+// After fix: Šžõäöü
+```
+
+### [Fixed](https://github.com/oven-sh/bun/pull/3467) overloads for `Buffer.toString()`.
+
+Previously, if you used `toString()` on a Node.js `Buffer`, Bun would not properly handle the 2nd overload. The 1st overload specifies a start and end, whereas the 2nd overload specified an offset and _length_ instead of end.
+
+```ts
+interface Buffer {
+  toString(encoding?: BufferEncoding, start?: number, end?: number): string;
+  toString(offset: number, length: number, encoding?: BufferEncoding): string;
+}
+```
+
+```js
+const { Buffer } = require("node:buffer");
+const buf = Buffer.from("hello world", "latin1");
+
+console.log(buf.toString("latin1", 1, 2));
+console.log(buf.toString(1, 2, "latin1"));
+```
+
+Thanks to [@Hanaasagi](https://github.com/Hanaasagi) for fixing!
+
+### [Fixed](https://github.com/oven-sh/bun/pull/3470) missing export from `node:http` module.
+
+We were missing two exports. Oops!
+
+```diff
+var defaultObject = {
+   globalAgent,
++  ClientRequest,
++  OutgoingMessage,
+   [Symbol.for("CommonJS")]: 0,
+};
+```
+
+Thanks to [@stijnvanhulle](https://github.com/stijnvanhulle) for fixing!
+
+### Other bug fixes
+
+- [Fixed](https://github.com/oven-sh/bun/commit/983039a18afccb2f7d78dfdb06724d1ea58edde6) utf-8 decoding for some Node-APIs.
+
+- [Fixed](https://github.com/oven-sh/bun/pull/3487) file descriptors leaking when a new JavaScript file is loaded.
+
+## Changelog
+
+[See the changelog on GitHub](https://github.com/oven-sh/bun/compare/bun-v0.6.12...bun-v0.6.13)

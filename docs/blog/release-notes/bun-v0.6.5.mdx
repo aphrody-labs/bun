@@ -1,0 +1,250 @@
+---
+title: Bun v0.6.5
+description: Native CommonJS support, $npm_lifecycle_event, bugfix for Bun.serve() with streaming files, bugfix for Node.js createConnection and a bundler bugfix
+date: "2023-05-29T00:00:00.000Z"
+author: jarred
+draft: false
+---
+
+{% callout %}
+We're hiring C/C++ and Zig engineers to build the future of JavaScript! [Join our team →](/careers)
+{% /callout %}
+
+Last week, we launched our new JavaScript [bundler](/blog/bun-bundler) in Bun [v0.6.0](/blog/bun-v0.6.0).
+
+Today, we are introducing native runtime support for CommonJS, smarter CommonJS -> ES Module conversion in `Bun.build()`, `$npm_lifecycle_event` in bun run, a bugfix for Bun.serve() with streaming files, a bugfix for `createConnection` (in `node:net`) and more
+
+{% codetabs %}
+
+```sh#curl
+$ curl -fsSL https://bun.sh/install | bash
+```
+
+```sh#npm
+$ npm install -g bun
+```
+
+```sh#brew
+$ brew tap oven-sh/bun
+$ brew install bun
+```
+
+```sh#docker
+$ docker pull oven/bun
+$ docker run --rm --init --ulimit memlock=-1:-1 oven/bun
+```
+
+{% /codetabs %}
+
+{% raw %}
+<br>
+{% /raw %}
+
+To upgrade Bun:
+
+```sh
+$ bun upgrade
+```
+
+## Native CommonJS runtime support
+
+We've reimplemented CommonJS support in Bun from being transpiler-only into natively supported in the runtime. This fixes many bugs that blocked npm packages from working in Bun, and improves compatibility with Node.js.
+
+Here are 3 packages this unblocks:
+
+### Vue
+
+Previously, importing Vue would report a missing export error. Thanks to native CommonJS support, Vue now works out of the box.
+
+In Bun v0.6.5:
+
+{% codetabs %}
+
+```sh#output
+3.3.4
+```
+
+```js#input.js
+import {version} from "vue";
+console.log(version);
+```
+
+{% /codetabs %}
+
+In Bun v0.6.4 and earlier:
+
+```js
+import {version} from "vue";
+console.log(version);
+
+> SyntaxError: Import named 'version' not found in module './node_modules/vue/index.mjs'.
+```
+
+### Winston logger
+
+Previously, Bun would throw an error when trying to use Winston logger. Now, it works out of the box.
+
+In Bun v0.6.5:
+
+{% codetabs %}
+
+```sh#output
+info: What time is the testing at? {"service":"user-service"}
+```
+
+```js#input.js
+
+import winston from "winston";
+
+const logger = winston.createLogger({
+  level: "info",
+  format: winston.format.json(),
+  defaultMeta: { service: "user-service" },
+  transports: [
+    //
+    // - Write all logs with importance level of `error` or less to `error.log`
+    // - Write all logs with importance level of `info` or less to `combined.log`
+    //
+    new winston.transports.File({ filename: "error.log", level: "error" }),
+    new winston.transports.File({ filename: "combined.log" }),
+  ],
+});
+
+//
+// If we're not in production then log to the `console` with the format:
+// `${info.level}: ${info.message} JSON.stringify({ ...rest }) `
+//
+logger.add(
+  new winston.transports.Console({
+    format: winston.format.simple(),
+  })
+);
+
+logger.log({
+  level: "info",
+  message: "What time is the testing at?",
+});
+```
+
+{% /codetabs %}
+
+In Bun v0.6.4 and earlier:
+
+```js
+1 | import winston from "winston";
+2 |
+3 | winston.format.json();
+   ^
+TypeError: undefined is not an object (evaluating 'winston.format.json')
+      input.js:3:0
+```
+
+### Viem
+
+Previously, importing `"viem"` would throw `ReferenceError`. Thanks to native CommonJS support, viem now loads as expected.
+
+In Bun v0.6.5
+
+{% codetabs %}
+
+```sh#output
+[Function: createClient]
+```
+
+```js#input.js
+import { createClient } from "viem";
+console.log(createClient);
+```
+
+{% /codetabs %}
+
+In Bun v0.6.4 and earlier:
+
+```js
+11 |   if (param.type.startsWith("tuple"))
+12 |     return `(${formatAbiParams(param.components, { includeName })})${param.type.slice(5)}`;
+13 |   return param.type + (includeName && param.name ? ` ${param.name}` : "");
+14 | };
+15 |
+16 | var {InvalidDefinitionTypeError} = import.meta.require("viem/dist/esm/errors/abi.js");
+   ^
+ReferenceError: Cannot access uninitialized variable.
+        input.js:16:0
+```
+
+### What changed specifically?
+
+Previously Bun would transpile CommonJS modules into ES Modules shaped like this:
+
+```js
+// Bun v0.6.4 and earlier wrapper:
+import { cjs2ESM } from "bun:wrap";
+export default cjs2ESM((module, exports) => {
+  /* ...code */
+});
+```
+
+Separately, all `import` of these modules were rewritten to check if it was a CommonJS module, and if so, call the function and return the CommonJS exports instead of the ES Module exports.
+
+That step was buggy. We don't always know if a module is CommonJS until we've parsed the source code. `package.json` has some hints, but it also lies a lot.
+
+In Node.js, statically-known CommonJS exports become named ES Module exports. For example, `module.exports = { a: 'b' }` becomes `export const a = 'b'`. We neglected to do this in Bun and instead used the transpiler to rewrite usages of CommonJS modules to use the `module.exports` directly. That approach didn't handle `export * from` or `export * as` correctly. And sometimes we failed to detect a CommonJS module (or incorrectly assumed an ES Module was CommonJS).
+
+So we re-implemented how all that works from scratch.
+
+Now, when Bun's JavaScript runtime detects a CommonJS module:
+
+1. Wrap the module in a function that takes `module` and `exports` as arguments.
+
+```js
+(function (module, exports, require) {
+  /* ...code */
+})(module, exports, require);
+```
+
+2. Evaluate the generated function
+
+3. Append the properties of `exports` as named ES Module exports.
+
+This means that `export * from '...'` and `export * as ...` work as expected. Also, packages that rely on "sloppy mode" features like `with` and implicit global variable assignment are now supported in Bun. As before, you can continue to use `import` and `require` in ES Modules.
+
+## Smarter CommonJS -> ESM conversion in the bundler
+
+Unrelated to the runtime CommonJS changes, we've also made `Bun.build()` smarter about converting from CommonJS modules into ES Modules.
+
+{% raw %}
+
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">In the next version of Bun<br><br>CommonJS -&gt; ESM conversion in &quot;bun build&quot; gets a little smarter. <br><br>It handles &quot;module.exports = { a: &#39;b&#39; }&quot; now <a href="https://t.co/6wv23buf1t">pic.twitter.com/6wv23buf1t</a></p>&mdash; Jarred Sumner (@jarredsumner) <a href="https://twitter.com/jarredsumner/status/1662943256353837059?ref_src=twsrc%5Etfw">May 28, 2023</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+{% /raw %}
+
+## $npm_lifecycle_event in bun run
+
+You can now access `$npm_lifecycle_event` in `bun run` scripts. The `$npm_lifecycle_event` environment variable is set to the name of the script that was run. This is useful for detecting which package.json script was run.
+
+{% codetabs %}
+
+```sh#output
+$ bun run hey
+hey
+```
+
+```js#input.js
+console.log(process.env.npm_lifecycle_event);
+```
+
+{% /codetabs %}
+
+Thanks to [@TiranexDev](https://github.com/TiranexDev) for this contribution!
+
+## Bugfix for Bun.serve() with streaming files
+
+Bun now globally ignores `SIGPIPE` signals, which fixes a bug where Bun could crash when using `new Response(Bun.file(path))` to stream files on Linux when the client disconnects early.
+
+## Bugfix for `createConnection` in `node:net`
+
+This fixes an arguments parsing issue in `node:net` that caused `createConnection` to fail in some cases. Thanks to [@cirospaciari](https://github.com/cirospaciari) for this contribution!
+
+## Transpiler & bundler bugfix
+
+Bun was incorrectly transpiling `Symbol["for"]` and a few dozen other global side-effect free getters accessed via statically-known computed property string literal to `undefined`. This has been fixed. This bug was introduced in Bun v0.6.0, and began impacting Bun's JavaScript runtime in v0.6.4. Thanks to [@zloirock](https://github.com/zloirock) for reporting this issue.

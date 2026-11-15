@@ -1,0 +1,721 @@
+---
+title: Compile and run C in JavaScript
+description: "Bun now supports compiling and running C from JavaScript to make using systems libraries easier."
+date: "2024-09-18T14:36:14.482Z"
+author: jarred
+---
+
+From compression to cryptography to networking to the web browser you're reading this on, the world runs on C. If it's not written in C, it speaks the C ABI (C++, Rust, Zig, etc) and is available as a C library. C and the C ABI are the past, present, and future of systems programming.
+
+**That's why in Bun v1.1.28, we introduced experimental support for compiling and running native C from JavaScript**
+
+{% codetabs %}
+
+```c#hello.c
+#include <stdio.h>
+
+void hello() {
+  printf("You can now compile & run C in Bun!\n");
+}
+```
+
+```ts#hello.ts
+import { cc } from "bun:ffi";
+
+export const {
+  symbols: { hello },
+} = cc({
+  source: "./hello.c",
+  symbols: {
+    hello: {
+      returns: "void",
+      args: [],
+    },
+  },
+});
+
+hello();
+```
+
+{% /codetabs %}
+
+On Twitter, many people asked the same question:
+
+> "Why would I want to compile and run C programs from JavaScript?"
+
+Previously, you had two options for using systems libraries from JavaScript:
+
+1. Writing a N-API (napi) addon or V8 C++ API library addon
+2. Compiling to WASM/WASI via emscripten or wasm-pack
+
+## What's wrong with N-API (napi)?
+
+N-API (napi) is a runtime agnostic C API for exposing native libraries to JavaScript. Bun and Node.js implement it. Before napi, native addons mostly used the V8 C++ API which meant potentially breaking changes each time Node.js updated V8.
+
+### Compiling native addons breaks CI
+
+Native addons usually rely on a `"postinstall"` script to compile N-API addons with `node-gyp`. `node-gyp` depends on Python 3 and a recent C++ compiler.
+
+For many, needing to install Python 3 and a C++ compiler in CI to build a frontend JavaScript app is an unwelcome surprise.
+
+{% image href="https://github.com/oven-sh/bun/issues/9807" src="https://github.com/user-attachments/assets/5af47e38-aa0f-4e43-8447-34e4497ea020" /%}
+
+### Compiling native addons is complicated for maintainers
+
+To address this, some libraries prebuild their packages leveraging the [`"os"`](https://docs.npmjs.com/cli/v10/configuring-npm/package-json/#os) and [`"cpu"`](https://docs.npmjs.com/cli/v10/configuring-npm/package-json/#cpu) fields in package.json. Moving that complexity from users to maintainers is good for the ecosystem, but maintaining a build matrix of 10 different build targets is not simple.
+
+```json#@napi-rs/canvas/package.json
+"optionalDependencies": {
+  "@napi-rs/canvas-win32-x64-msvc": "0.1.55",
+  "@napi-rs/canvas-darwin-x64": "0.1.55",
+  "@napi-rs/canvas-linux-x64-gnu": "0.1.55",
+  "@napi-rs/canvas-linux-arm-gnueabihf": "0.1.55",
+  "@napi-rs/canvas-linux-x64-musl": "0.1.55",
+  "@napi-rs/canvas-linux-arm64-gnu": "0.1.55",
+  "@napi-rs/canvas-linux-arm64-musl": "0.1.55",
+  "@napi-rs/canvas-darwin-arm64": "0.1.55",
+  "@napi-rs/canvas-android-arm64": "0.1.55"
+}
+```
+
+### JavaScript &rarr; N-API function calls: 3x overhead
+
+In exchange for more complicated builds, what do we get?
+
+| JavaScript &rarr; Native call overhead | Mechanism                            |
+| -------------------------------------- | ------------------------------------ |
+| 7ns - 15ns                             | N-API                                |
+| 2ns                                    | JavaScriptCore C++ API (lower bound) |
+
+Using the JavaScriptCore C++ API, a simple noop function costs 2ns per call. Using N-API, a noop function costs 7ns per call.
+
+**Why are we paying a 3x performance hit for this?**
+
+Unfortunately, this is an API design issue in napi. To make napi runtime-agnostic, simple operations like reading an integer from a JavaScript value involve a dynamic library function call. To make napi language-agnostic, runtime type-checking for arguments happens in every dynamic library function call. More complicated operations involve many memory allocations (or GC'd object allocations) and multiple layers of pointer indirection. N-API was never designed to be fast.
+
+JavaScript is the world's most popular programming language. Can we do better?
+
+## What about WebAssembly?
+
+To workaround the N-API build complexity and performance issues, some projects choose to compile their native addon to WebAssembly and import it in JavaScript.
+
+Since JavaScript engines can inline function calls crossing the WebAssembly <> JavaScript boundary, this can work.
+
+However, for system libraries, **WebAssembly's isolated memory model comes with serious tradeoffs**.
+
+#### Isolation means no system calls
+
+WebAssembly can only access functions the runtime exposes to it. Usually, that's JavaScript.
+
+What about libraries that depend on system APIs like the [macOS Keychain API](https://developer.apple.com/documentation/security/keychain-services) (for securely storing/retrieving passwords) or [audio recording](https://learn.microsoft.com/en-us/windows/win32/directshow/audio-capture)? What if your CLI wants to use the Windows Registry?
+
+#### Isolation means clone everything
+
+Modern processors support about 280 TB of addressible memory (48 bits). WebAssembly is 32-bit and can only access its own memory.
+
+That means by default, passing strings and binary data JavaScript <=> WebAssembly must clone every time. For many projects, this negates any performance gain from leveraging WebAssembly.
+
+---
+
+What if N-API and WebAssembly weren't the only options for server-side JavaScript? What if we could compile and run native C from JavaScript with shared memory, and near-zero call overhead?
+
+## Compile and run native C from JavaScript
+
+Here's a quick example that compiles a random number generator in C and runs it in JavaScript.
+
+```c#myRandom.c
+#include <stdio.h>
+#include <stdlib.h>
+
+int myRandom() {
+    return rand() + 42;
+}
+```
+
+The JavaScript code that compiles and runs C:
+
+```ts#main.js
+import { cc } from "bun:ffi";
+
+export const {
+  symbols: { myRandom },
+} = cc({
+  source: "./myRandom.c",
+  symbols: {
+    myRandom: {
+      returns: "int",
+      args: [],
+    },
+  },
+});
+
+console.log("myRandom() =", myRandom());
+```
+
+And finally, the output:
+
+```sh
+$ bun ./main.js
+myRandom() = 43
+```
+
+### How does this work?
+
+`bun:ffi` uses TinyCC to compile, link, and relocate C programs in-memory. From there, it generates inline function wrappers that convert JavaScript primitive types <=> C primitive types.
+
+For example, to convert an `int` in C to JavaScriptCore's EncodedJSValue representation, the code essentially does this:
+
+```c
+static int64_t int32_to_js(int32_t input) {
+  return 0xfffe000000000000ll | (uint32_t)input;
+}
+```
+
+Unlike N-API, these type conversions happen automatically and with zero dynamic dispatch overhead. Since these wrappers are generated at C compile time, we can safely inline type conversions without worrying about compatibility issues and without sacrificing performance.
+
+### `bun:ffi` compiles quickly
+
+If you've used `clang` or `gcc` before, you might be thinking:
+
+> **clang/gcc user**: "great 🙄 now I have to wait 10 seconds to compile C every time I run this JS."
+
+Let's measure how long this takes to compile with `bun:ffi`:
+
+```ts-diff#main.js
+import { cc } from "bun:ffi";
+
++console.time("Compile ./myRandom.c");
+export const {
+  symbols: { myRandom },
+} = cc({
+  source: "./myRandom.c",
+  symbols: {
+    myRandom: {
+      returns: "int",
+      args: [],
+    },
+  },
+});
++console.timeEnd("Compile ./myRandom.c");
+```
+
+And the output:
+
+```sh
+$ bun ./main.js
+[5.16ms] Compile ./myRandom.c
+myRandom() = 43
+```
+
+That's 5.16ms. Thanks to [TinyCC](https://bellard.org/tcc/), compiling C in Bun is fast. We wouldn't be comfortable shipping this if it took 10 seconds to compile.
+
+### `bun:ffi` is low-overhead
+
+Foreign Function Interface (FFI) has a reputation for being slow. In Bun, things are different.
+
+Before we measure it in Bun, let's understand an upper-bound of how fast it could get. For simplicity, let's use Google's benchmark library (which requires a .cpp file):
+
+```c#bench.cpp
+#include <stdio.h>
+#include <stdlib.h>
+#include <benchmark/benchmark.h>
+
+int myRandom() {
+    return rand() + 42;
+}
+
+static void BM_MyRandom(benchmark::State& state) {
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(myRandom());
+  }
+}
+BENCHMARK(BM_MyRandom);
+
+BENCHMARK_MAIN();
+```
+
+And the output:
+
+```sh
+$ clang++ ./bench.cpp -L/opt/homebrew/lib -l benchmark -O3 -I/opt/homebrew/include -o bench
+$ ./bench
+------------------------------------------------------
+Benchmark            Time             CPU   Iterations
+------------------------------------------------------
+BM_MyRandom       4.67 ns         4.66 ns    150144353
+```
+
+So that's 4 nanoseconds per call in C/C++. This represents the ceiling of how fast it could possibly get.
+
+How long does it take with `bun:ffi`?
+
+```js#bench.js
+import { bench, run } from 'mitata';
+import { myRandom } from './main';
+
+bench('myRandom', () => {
+  myRandom();
+});
+
+run();
+```
+
+On my machine, the result is:
+
+```sh
+$ bun ./bench.js
+cpu: Apple M3 Max
+runtime: bun 1.1.28 (arm64-darwin)
+
+benchmark      time (avg)             (min … max)       p75       p99      p999
+------------------------------------------------- -----------------------------
+myRandom     6.26 ns/iter    (6.16 ns … 17.68 ns)   6.23 ns   7.67 ns  10.17 ns
+```
+
+6 nanoseconds. So, `bun:ffi` has a per-call overhead of only 6ns - 4ns = 2ns.
+
+## What can you build with this?
+
+bun:ffi can use dynamically-linked shared libraries.
+
+#### Convert short videos with ffmpeg 3x faster
+
+By avoiding the overhead of spawning a new process and allocating a lot of memory for each video, you can convert short videos 3x faster.
+
+{% codetabs %}
+
+```js#ffmpeg.js
+import { cc, ptr } from "bun:ffi";
+import source from "./mp4.c" with {type: 'file'};
+import { basename, extname, join } from "path";
+
+console.time(`Compile ./mp4.c`);
+const {
+  symbols: { convert_file_to_mp4 },
+} = cc({
+  source,
+  library: ["c", "avcodec", "swscale", "avformat"],
+  symbols: {
+    convert_file_to_mp4: {
+      returns: "int",
+      args: ["cstring", "cstring"],
+    },
+  },
+});
+console.timeEnd(`Compile ./mp4.c`);
+const outname = join(
+  process.cwd(),
+  basename(process.argv.at(2), extname(process.argv.at(2))) + ".mp4"
+);
+const input = Buffer.from(process.argv.at(2) + "\0");
+const output = Buffer.from(outname + "\0");
+for (let i = 0; i < 10; i++) {
+  console.time(`Convert ${process.argv.at(2)} to ${outname}`);
+  const result = convert_file_to_mp4(ptr(input), ptr(output));
+  if (result == 0) {
+    console.timeEnd(`Convert ${process.argv.at(2)} to ${outname}`);
+  }
+}
+
+```
+
+```c#mp4.c
+#include <dlfcn.h>
+#include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
+#include <libavutil/avutil.h>
+#include <libavutil/imgutils.h>
+#include <libavutil/opt.h>
+#include <libswscale/swscale.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+int to_mp4(void *buf, size_t buflen, void **out, size_t *outlen) {
+  AVFormatContext *input_ctx = NULL, *output_ctx = NULL;
+  AVIOContext *input_io_ctx = NULL, *output_io_ctx = NULL;
+  uint8_t *output_buffer = NULL;
+  int ret = 0;
+  int64_t *last_dts = NULL;
+
+  // Register all codecs and formats
+
+  // Create input IO context
+  input_io_ctx = avio_alloc_context(buf, buflen, 0, NULL, NULL, NULL, NULL);
+  if (!input_io_ctx) {
+    ret = AVERROR(ENOMEM);
+    goto end;
+  }
+
+  // Allocate input format context
+  input_ctx = avformat_alloc_context();
+  if (!input_ctx) {
+    ret = AVERROR(ENOMEM);
+    goto end;
+  }
+
+  input_ctx->pb = input_io_ctx;
+
+  // Open input
+  if ((ret = avformat_open_input(&input_ctx, NULL, NULL, NULL)) < 0) {
+    goto end;
+  }
+
+  // Retrieve stream information
+  if ((ret = avformat_find_stream_info(input_ctx, NULL)) < 0) {
+    goto end;
+  }
+
+  // Allocate output format context
+  avformat_alloc_output_context2(&output_ctx, NULL, "mp4", NULL);
+  if (!output_ctx) {
+    ret = AVERROR(ENOMEM);
+    goto end;
+  }
+
+  // Create output IO context
+  ret = avio_open_dyn_buf(&output_ctx->pb);
+  if (ret < 0) {
+    goto end;
+  }
+
+  // Copy streams
+  for (int i = 0; i < input_ctx->nb_streams; i++) {
+    AVStream *in_stream = input_ctx->streams[i];
+    AVStream *out_stream = avformat_new_stream(output_ctx, NULL);
+    if (!out_stream) {
+      ret = AVERROR(ENOMEM);
+      goto end;
+    }
+
+    ret = avcodec_parameters_copy(out_stream->codecpar, in_stream->codecpar);
+    if (ret < 0) {
+      goto end;
+    }
+    out_stream->codecpar->codec_tag = 0;
+  }
+
+  // Write header
+  ret = avformat_write_header(output_ctx, NULL);
+  if (ret < 0) {
+    goto end;
+  }
+
+  // Allocate last_dts array
+  last_dts = calloc(input_ctx->nb_streams, sizeof(int64_t));
+  if (!last_dts) {
+    ret = AVERROR(ENOMEM);
+    goto end;
+  }
+
+  // Copy packets
+  AVPacket pkt;
+  while (1) {
+    ret = av_read_frame(input_ctx, &pkt);
+    if (ret < 0) {
+      break;
+    }
+
+    AVStream *in_stream = input_ctx->streams[pkt.stream_index];
+    AVStream *out_stream = output_ctx->streams[pkt.stream_index];
+
+    // Convert timestamps
+    pkt.pts =
+        av_rescale_q_rnd(pkt.pts, in_stream->time_base, out_stream->time_base,
+                         AV_ROUND_NEAR_INF | AV_ROUND_PASS_MINMAX);
+    pkt.dts =
+        av_rescale_q_rnd(pkt.dts, in_stream->time_base, out_stream->time_base,
+                         AV_ROUND_NEAR_INF | AV_ROUND_PASS_MINMAX);
+    pkt.duration =
+        av_rescale_q(pkt.duration, in_stream->time_base, out_stream->time_base);
+
+    // Ensure monotonically increasing DTS
+    if (pkt.dts <= last_dts[pkt.stream_index]) {
+      pkt.dts = last_dts[pkt.stream_index] + 1;
+      pkt.pts = FFMAX(pkt.pts, pkt.dts);
+    }
+    last_dts[pkt.stream_index] = pkt.dts;
+
+    pkt.pos = -1;
+
+    ret = av_interleaved_write_frame(output_ctx, &pkt);
+    if (ret < 0) {
+      char errbuf[AV_ERROR_MAX_STRING_SIZE];
+      av_strerror(ret, errbuf, AV_ERROR_MAX_STRING_SIZE);
+      fprintf(stderr, "Error writing frame: %s\n", errbuf);
+      break;
+    }
+    av_packet_unref(&pkt);
+  }
+
+  // Write trailer
+  ret = av_write_trailer(output_ctx);
+  if (ret < 0) {
+    goto end;
+  }
+
+  // Get the output buffer
+  *outlen = avio_close_dyn_buf(output_ctx->pb, &output_buffer);
+  *out = output_buffer;
+  output_ctx->pb = NULL; // Set to NULL to prevent double free
+
+  ret = 0; // Success
+
+end:
+  if (input_ctx) {
+    avformat_close_input(&input_ctx);
+  }
+  if (output_ctx) {
+    avformat_free_context(output_ctx);
+  }
+  if (input_io_ctx) {
+    av_freep(&input_io_ctx->buffer);
+    av_freep(&input_io_ctx);
+  }
+
+  return ret;
+}
+
+int convert_file_to_mp4(const char *input_filename,
+                        const char *output_filename) {
+  FILE *input_file = NULL;
+  FILE *output_file = NULL;
+  uint8_t *input_buffer = NULL;
+  uint8_t *output_buffer = NULL;
+  size_t input_size = 0;
+  size_t output_size = 0;
+  int ret = 0;
+
+  // Open the input file
+  input_file = fopen(input_filename, "rb");
+  if (!input_file) {
+    perror("Could not open input file");
+    return -1;
+  }
+
+  // Get the size of the input file
+  fseek(input_file, 0, SEEK_END);
+  input_size = ftell(input_file);
+  fseek(input_file, 0, SEEK_SET);
+
+  // Allocate memory for the input buffer
+  input_buffer = (uint8_t *)malloc(input_size);
+  if (!input_buffer) {
+    perror("Could not allocate input buffer");
+    ret = -1;
+    goto cleanup;
+  }
+
+  // Read the input file into the buffer
+  if (fread(input_buffer, 1, input_size, input_file) != input_size) {
+    perror("Could not read input file");
+    ret = -1;
+    goto cleanup;
+  }
+
+  // Call the to_mp4 function to convert the buffer
+  ret = to_mp4(input_buffer, input_size, (void **)&output_buffer, &output_size);
+  if (ret < 0) {
+    fprintf(stderr, "Error converting to MP4\n");
+    goto cleanup;
+  }
+
+  // Open the output file
+  output_file = fopen(output_filename, "wb");
+  if (!output_file) {
+    perror("Could not open output file");
+    ret = -1;
+    goto cleanup;
+  }
+
+  // Write the output buffer to the file
+  if (fwrite(output_buffer, 1, output_size, output_file) != output_size) {
+    perror("Could not write output file");
+    ret = -1;
+    goto cleanup;
+  }
+
+cleanup:
+
+  if (output_buffer) {
+    av_free(output_buffer);
+  }
+  if (input_file) {
+    fclose(input_file);
+  }
+  if (output_file) {
+    fclose(output_file);
+  }
+
+  return ret;
+}
+
+// for running it standalone
+int main(const int argc, const char **argv) {
+
+  if (argc != 3) {
+    printf("Usage: %s <input_file> <output_file>\n", argv[0]);
+    return -1;
+  }
+
+  const char *input_filename = argv[1];
+  const char *output_filename = argv[2];
+
+  int result = convert_file_to_mp4(input_filename, output_filename);
+  if (result == 0) {
+    printf("Conversion successful!\n");
+  } else {
+    printf("Conversion failed!\n");
+  }
+  return result;
+}
+```
+
+{% /codetabs %}
+
+#### Securely save & load passwords with the macOS Keychain API
+
+macOS has a builtin Keychain API for securely storing & retrieving passwords, but this isn't exposed to JavaScript. Instead of figuring out how to wrap this with N-API, getting CMake configured with node-gyp, what if you could just write a few lines of C in your JS project and be done with it?
+
+{% codetabs %}
+
+```js#keychain.js
+import { cc, ptr, CString } from "bun:ffi";
+const {
+  symbols: { setPassword, getPassword, deletePassword },
+} = cc({
+  source: "./keychain.c",
+  flags: [
+    "-framework",
+    "Security",
+    "-framework",
+    "CoreFoundation",
+    "-framework",
+    "Foundation",
+  ],
+  symbols: {
+    setPassword: {
+      args: ["cstring", "cstring", "cstring"],
+      returns: "i32",
+    },
+    getPassword: {
+      args: ["cstring", "cstring", "ptr", "ptr"],
+      returns: "i32",
+    },
+    deletePassword: {
+      args: ["cstring", "cstring"],
+      returns: "i32",
+    },
+  },
+});
+
+var service = Buffer.from("com.bun.test.keychain\0");
+
+var account = Buffer.from("bun\0");
+var password = Buffer.alloc(1024);
+password.write("password\0");
+var passwordPtr = new BigUint64Array(1);
+passwordPtr[0] = BigInt(ptr(password));
+var passwordLength = new Uint32Array(1);
+
+setPassword(ptr(service), ptr(account), ptr(password));
+
+passwordLength[0] = 1024;
+password.fill(0);
+getPassword(ptr(service), ptr(account), ptr(passwordPtr), ptr(passwordLength));
+const result = new CString(
+  Number(passwordPtr[0]),
+  0,
+  passwordLength[0]
+);
+console.log(result);
+```
+
+```c#keychain.c
+#include <Security/Security.h>
+#include <stdio.h>
+#include <string.h>
+
+// Function to set a password in the keychain
+OSStatus setPassword(const char* service, const char* account, const char* password) {
+    SecKeychainItemRef item = NULL;
+    OSStatus status = SecKeychainFindGenericPassword(
+        NULL,
+        strlen(service), service,
+        strlen(account), account,
+        NULL, NULL,
+        &item
+    );
+
+    if (status == errSecSuccess) {
+        // Update existing item
+        status = SecKeychainItemModifyAttributesAndData(
+            item,
+            NULL,
+            strlen(password),
+            password
+        );
+        CFRelease(item);
+    } else if (status == errSecItemNotFound) {
+        // Add new item
+        status = SecKeychainAddGenericPassword(
+            NULL,
+            strlen(service), service,
+            strlen(account), account,
+            strlen(password), password,
+            NULL
+        );
+    }
+
+    return status;
+}
+
+// Function to get a password from the keychain
+OSStatus getPassword(const char* service, const char* account, char** password, UInt32* passwordLength) {
+    return SecKeychainFindGenericPassword(
+        NULL,
+        strlen(service), service,
+        strlen(account), account,
+        passwordLength, (void**)password,
+        NULL
+    );
+}
+
+// Function to delete a password from the keychain
+OSStatus deletePassword(const char* service, const char* account) {
+    SecKeychainItemRef item = NULL;
+    OSStatus status = SecKeychainFindGenericPassword(
+        NULL,
+        strlen(service), service,
+        strlen(account), account,
+        NULL, NULL,
+        &item
+    );
+
+    if (status == errSecSuccess) {
+        status = SecKeychainItemDelete(item);
+        CFRelease(item);
+    }
+
+    return status;
+}
+```
+
+{% /codetabs %}
+
+## What is this good for?
+
+This is a low-boilerplate way to use C libraries and system libraries from JavaScript. The same project that runs the JavaScript can also run the C without a separate build step.
+
+It's good for glue code that binds C or C-like libraries to JavaScript. Sometimes, you want to use a C library or system API from JavaScript, and that library was never meant to be used from JavaScript.
+
+Writing some C to wrap that sort of code into a JavaScript-friendly API is usually the easiest way to go because:
+
+- The examples are in C, not in JavaScript through FFI.
+- Using FFI means you have to mentally translate between JavaScript and C. It's easier to use pointers in C than to use pointers in FFI through typed arrays in JavaScript. So, why not make it easier on yourself?
+
+#### What is this not for?
+
+Every tool has tradeoffs.
+
+- You probably don't want to use this to compile large C projects like PostgresSQL or SQLite. TinyCC compiles to decently performant C, but it won't do advanced optimizations that Clang or GCC does like autovectorization or very specialized CPU instructions.
+- You probably won't get much of a performance gain from micro-optimizing small parts of your codebase through C, but happy to be proven wrong!

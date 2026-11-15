@@ -1,0 +1,215 @@
+---
+title: The Bun Shell
+description: "The Bun Shell is a cross-platform shell that allows you to run shell scripts in JavaScript & TypeScript"
+date: "2024-01-20T05:17:49.267Z"
+author: jarred
+draft: false
+---
+
+JavaScript is the world's most popular scripting language.
+
+So why is it hard to run shell scripts in JavaScript?
+
+```js
+import { spawnSync } from "child_process";
+
+// this is a lot more work than it could be
+const { status, stdout, stderr } = spawnSync("ls", ["-l", "*.js"], {
+  encoding: "utf8",
+});
+```
+
+You could use APIs to do something similar:
+
+```js
+import { readdir } from "fs/promises";
+
+(await readdir(".", { withFileTypes: true })).filter((a) =>
+  a.name.endsWith(".js"),
+);
+```
+
+But, that's still not quite as simple as a shell script:
+
+```sh
+$ ls *.js
+```
+
+## Why existing shells don't work in JavaScript
+
+Shells like `bash` or `sh` have been around for decades.
+
+> Shells are a solved problem!!
+>
+> - Hacker News Commenter, probably.
+
+But, they don't work well in JavaScript. Why?
+
+macOS (zsh), Linux (bash), and Windows (cmd) all have slightly different shells with different syntaxes and different commands. The commands available on each platform are different, and even the same command can have different flags and behaviors.
+
+To date, npm's solution is to rely on the community to polyfill missing commands with JavaScript implementations.
+
+### `rm -rf` doesn't work on Windows
+
+`rimraf`, the cross-platform JavaScript implementation of `rm -rf`, is downloaded 60 million times per week:
+
+{% image src="https://github.com/oven-sh/bun/assets/709451/a201e61c-2131-4982-9be6-ffdf2a37db7e" /%}
+
+### Environment variables like `FOO=bar <script>` doesn't work on Windows
+
+Setting an environment variable is different on each platform. Instead of running `FOO=bar`, you probably use & install `cross-env`:
+
+{% image width="398" alt="image" src="https://github.com/oven-sh/bun/assets/709451/ab42d9b3-0fa7-4abe-beae-ca26a48e9d75" /%}
+
+### `which` is `where` on Windows
+
+Thus, another package with 60 million weekly downloads was born:
+
+{% image width="413" alt="image" src="https://github.com/oven-sh/bun/assets/709451/e6659440-f322-47a8-99fe-ec9e3bec104e" /%}
+
+### Shells also take too long to start
+
+How long does it take to spawn a shell?
+
+On a Linux x64 Hetzner Arch Linux machine, it takes about 7ms:
+
+```shell
+$ hyperfine --warmup 3 'bash -c "echo hello"' 'sh -c "echo hello"' -N
+
+Benchmark 1: bash -c 'echo hello'
+  Time (mean ± σ):       7.3 ms ±   1.5 ms    [User: 5.1 ms, System: 1.9 ms]
+  Range (min … max):     1.7 ms …   9.4 ms    529 runs
+
+Benchmark 2: sh -c 'echo hello'
+  Time (mean ± σ):       7.2 ms ±   1.6 ms    [User: 4.8 ms, System: 2.1 ms]
+  Range (min … max):     1.5 ms …   9.6 ms    327 runs
+```
+
+If your intent is to run a single command, starting the shell can take longer than running the command itself. If you're running many commands in a loop, that gets expensive quickly.
+
+You could try embedding a shell, but that's really complicated and their license may not be compatible with your project.
+
+## Are all these polyfills really necessary?
+
+In the world of 2009 - 2016, when JavaScript was still relatively new and experimental, relying on the community to polyfill missing functionality made a lot of sense. But it's 2024 now. JavaScript on the server is mature and widely adopted. The JavaScript ecosystem understands the requirements today in a way nobody did in 2009.
+
+We can do better.
+
+## Introducing the Bun Shell
+
+The Bun Shell is a new experimental embedded language and interpreter in Bun that allows you to run cross-platform shell scripts in JavaScript & TypeScript.
+
+```js
+import { $ } from "bun";
+
+// to stdout:
+await $`ls *.js`;
+
+// to string:
+const text = await $`ls *.js`.text();
+```
+
+You can use JavaScript variables in your shell scripts:
+
+```js
+import { $ } from "bun";
+
+const resp = await fetch("https://example.com");
+
+const stdout = await $`gzip -c < ${resp}`.arrayBuffer();
+```
+
+For security, all **template variables are escaped**:
+
+```js
+const filename = "foo.js; rm -rf /";
+
+// This will run `ls 'foo.js; rm -rf /'`
+const results = await $`ls ${filename}`;
+
+console.log(results.exitCode); // 1
+console.log(results.stderr.toString()); // ls: cannot access 'foo.js; rm -rf /': No such file or directory
+```
+
+Using Bun Shell feels like regular JavaScript. You can redirect stdout to buffers:
+
+```js
+import { $ } from "bun";
+
+const buffer = Buffer.alloc(1024);
+
+await $`ls *.js > ${buffer}`;
+
+console.log(buffer.toString("utf8"));
+```
+
+You can redirect stdout to a file:
+
+```js
+import { $, file } from "bun";
+
+// as a file()
+await $`ls *.js > ${file("output.txt")}`;
+
+// or as a file path string, if you prefer:
+await $`ls *.js > output.txt`;
+await $`ls *.js > ${"output.txt"}`;
+```
+
+You can pipe stdout to another command:
+
+```js
+import { $ } from "bun";
+
+await $`ls *.js | grep foo`;
+```
+
+You can even use `Response` as stdin:
+
+```js
+import { $ } from "bun";
+
+const buffer = new Response("bar\n foo\n bar\n foo\n");
+
+await $`grep foo < ${buffer}`;
+```
+
+Builtin commands like `cd`, `echo`, and `rm` are available:
+
+```js
+import { $ } from "bun";
+
+await $`cd .. && rm -rf node_modules/rimraf`;
+```
+
+It works on Windows, macOS, and Linux. We've implemented many common commands and features like globbing, environment variables, redirection, piping, and more.
+
+It's designed as a drop-in replacement for simple shell scripts. In Bun for Windows, it will power `package.json` "scripts" in `bun run`.
+
+For fun, you can also use it as a standalone shell script interpreter:
+
+```sh
+$ echo "cat package.json" > script.bun.sh
+$ bun script.bun.sh
+```
+
+### How do I install it?
+
+**Bun Shell is built into Bun**. If you already have Bun v1.0.24 or later installed, you can use it today:
+
+```sh
+$ bun --version
+1.0.24
+```
+
+If you don't have Bun installed, you can install it with curl:
+
+```sh
+$ curl -fsSL https://bun.sh/install | bash
+```
+
+Or with npm:
+
+```sh
+npm install -g bun
+```

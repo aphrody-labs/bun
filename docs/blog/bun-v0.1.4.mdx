@@ -1,0 +1,71 @@
+---
+title: Bun v0.1.4
+description: Release notes for Bun v0.1.4
+date: "2022-07-13T08:49:38Z"
+author: jarred
+thumbText: v0.1.4
+---
+
+To upgrade:
+
+```bash
+bun upgrade
+```
+
+{% details summary="If you have any problems upgrading" %}
+
+Run this:
+
+```bash
+curl https://bun.sh/install | bash
+```
+
+{% /details %}
+
+### Bug fixes
+
+- Fixed a GC bug with `fetch(url)` that frequently caused crashes
+- fix(env_loader): Ignore spaces before equals sign by [@FinnRG](https://github.com/FinnRG) in https://github.com/oven-sh/bun/pull/602
+
+### Misc:
+
+- Create share image for social media by [@gabrnunes](https://github.com/gabrnunes) in https://github.com/oven-sh/bun/pull/629
+- feat(landing): create github action rebuilding the site on changes by [@pnxdxt](https://github.com/pnxdxt) in https://github.com/oven-sh/bun/pull/651
+- cleanup benchmarks folder by [@evanwashere](https://github.com/evanwashere) in https://github.com/oven-sh/bun/pull/587
+
+Typos, README, examples:
+
+- Fixed broken links on the Bun.serve benchmark by [@BE-CH](https://github.com/BE-CH) in https://github.com/oven-sh/bun/pull/590
+- updated README.md by [@rudrakshkarpe](https://github.com/rudrakshkarpe) in https://github.com/oven-sh/bun/pull/599
+- chore(docs): add comma by [@josesilveiraa](https://github.com/josesilveiraa) in https://github.com/oven-sh/bun/pull/580
+- Added note of AVX2 requirement and mentioned Intel SDE workaround in README.md by [@deijjji303](https://github.com/deijjji303) in https://github.com/oven-sh/bun/pull/346
+- builtin -> built-in by [@boehs](https://github.com/boehs) in https://github.com/oven-sh/bun/pull/585
+- docs(various): `.md` readability improvements by [@ryanrussell](https://github.com/ryanrussell) in https://github.com/oven-sh/bun/pull/597
+- docs: remove double v of version by [@pnxdxt](https://github.com/pnxdxt) in https://github.com/oven-sh/bun/pull/601
+- Updated logLevel to include `debug` in readme by [@biw](https://github.com/biw) in https://github.com/oven-sh/bun/pull/189
+- refactor(exports.zig): Fix WebSocketHTTPSClient var name by [@ryanrussell](https://github.com/ryanrussell) in https://github.com/oven-sh/bun/pull/598
+- fix: Support specifying a JSON response type in bun.d.ts by [@rbargholz](https://github.com/rbargholz) in https://github.com/oven-sh/bun/pull/563
+- hono example with typescript by [@Jesse-Lucas1996](https://github.com/Jesse-Lucas1996) in https://github.com/oven-sh/bun/pull/577
+- fix `blank` template by [@SheetJSDev](https://github.com/SheetJSDev) in https://github.com/oven-sh/bun/pull/523
+- fix(examples/hono): Update package name by [@FinnRG](https://github.com/FinnRG) in https://github.com/oven-sh/bun/pull/620
+- chore(landing): build changes by [@pnxdxt](https://github.com/pnxdxt) in https://github.com/oven-sh/bun/pull/626
+- Fix "coercion" spelling by [@Bellisario](https://github.com/Bellisario) in https://github.com/oven-sh/bun/pull/628
+- fix benchmark urls on landing page by [@evanwashere](https://github.com/evanwashere) in https://github.com/oven-sh/bun/pull/636
+- fix #638 by [@adi611](https://github.com/adi611) in https://github.com/oven-sh/bun/pull/639
+- fix #640 by [@adi611](https://github.com/adi611) in https://github.com/oven-sh/bun/pull/641
+
+## New Contributors
+
+- @BE-CH made their first contribution in https://github.com/oven-sh/bun/pull/590
+- @rudrakshkarpe made their first contribution in https://github.com/oven-sh/bun/pull/599
+- @josesilveiraa made their first contribution in https://github.com/oven-sh/bun/pull/580
+- @deijjji303 made their first contribution in https://github.com/oven-sh/bun/pull/346
+- @pnxdxt made their first contribution in https://github.com/oven-sh/bun/pull/601
+- @biw made their first contribution in https://github.com/oven-sh/bun/pull/189
+- @rbargholz made their first contribution in https://github.com/oven-sh/bun/pull/563
+- @Jesse-Lucas1996 made their first contribution in https://github.com/oven-sh/bun/pull/577
+- @SheetJSDev made their first contribution in https://github.com/oven-sh/bun/pull/523
+- @adi611 made their first contribution in https://github.com/oven-sh/bun/pull/639
+- @gabrnunes made their first contribution in https://github.com/oven-sh/bun/pull/629
+
+[**Full Changelog**](https://github.com/oven-sh/bun/compare/bun-v0.1.3...bun-v0.1.4)

@@ -1,0 +1,397 @@
+---
+title: "How Bun supports V8 APIs without using V8 (part 2)"
+description: "Rearranging JavaScriptCore types to match V8 code's assumptions"
+date: "2024-11-05T00:00-07:00"
+author: ben
+shareImage: /images/v8-jsc-layout-comparison.png
+---
+
+{% callout %}
+We're hiring [systems engineers](/careers) in San Francisco to build the future of JavaScript!
+{% /callout %}
+
+In [the first part of this series](/blog/how-bun-supports-v8-apis-without-using-v8-part-1), we compared the C++ APIs used to interact with JavaScriptCore and V8, which are the JavaScript engines used by Bun and Node.js respectively. At the end we saw an overview of the memory layout used by V8 to represent the objects in a program:
+
+```cpp
+void foo(const FunctionCallbackInfo<Value>& info) {
+    Isolate* isolate = info.GetIsolate();
+    HandleScope foo_scope(isolate);
+    Local<String> foo_string = String::NewFromUtf8(isolate, "hello").ToLocalChecked();
+    bar(isolate);
+}
+
+void bar(Isolate* isolate) {
+    Local<Number> bar_number = Number::New(isolate, 2.0);
+    baz(isolate);
+}
+
+void baz(Isolate* isolate) {
+    HandleScope baz_scope(isolate);
+    Local<Number> baz_number = Number::New(isolate, 3.5);
+}
+```
+
+![Diagram of memory layout in the previous C++ program. Each function's local variables hold the addresses of handles in a handle scope. The handle for foo_string contains a strong pointer to a string on the heap. The handle for bar_number contains an integer. The handle for baz_number contains a strong pointer to a heap number. Each heap object starts with a pointer to its map, one for each type. Each map has a pointer to the map used by maps, which points to itself.](/images/v8layout.drawio.svg)
+
+Since V8's API contains a lot of inline functions that assume a layout like this is used, we'll need to arrange our JSC types in a similar way to ensure that native modules precompiled for the V8 API still work.
+
+## Mimicking V8 Representation in JSC
+
+So how can we create a layout that looks like V8's while using JSC types? Let's recap the important properties that inline V8 functions expect:
+
+- Every `Local` contains a pointer into memory managed by the currently-active `HandleScope`
+- The `HandleScope` contains tagged pointers, which either store a signed 32-bit integer inline or point to an object on the heap
+- Each object on the heap begins with a tagged pointer to its map
+- Each map has an instance type at offset 12
+
+### Tagged Pointers
+
+To start, we need to represent tagged pointers. Recall that a tagged pointer is a 64-bit address which can represent either a 32-bit signed integer (a "Smi"), a strong pointer, or a weak pointer. I wrote a simple `struct` that wraps a `uintptr_t` and is used to represent tagged pointers, so that we can add helper methods and constructors. [The implementation is not too complicated](https://github.com/oven-sh/bun/blob/1385f9f68653ca632fe9abd2f977381dfdfcfd5c/src/bun.js/bindings/v8/shim/TaggedPointer.h). You can construct a tagged pointer from a pointer or a Smi (both of which handle setting the tag bits correctly), query what type it is, and access it as pointer or Smi.
+
+Now we could actually implement `v8::Number` in the case where the number is a Smi without too much extra work. All we'd need is a handle scope to provide memory where these tagged pointers can be allocated. However, the more difficult case for objects is still lurking, so let's tackle that first (also, it will end up affecting how we implement handle scopes).
+
+### Maps
+
+V8 and JSC use `Map` and `Structure` respectively for an important optimization: if two JavaScript objects have the same property names and types, they can be represented as something more like a C `struct`, with properties at fixed offsets one after the other, rather than as a completely dynamic hash table. This makes property accesses much faster and makes it easier for JIT compilers to generate code that accesses properties. Hence, these classes both get dynamically allocated and instantiated many times as JavaScript is running. Fortunately, for our V8 functionality we don't need a 1:1 association with a fake `Map` set up to match every `Structure`. We only need `Map`s to cover the cases where inline V8 functions expect something from the instance type. For instance, we have one `Map` shared by all objects whose only purpose is to force V8 to call `SlowGetInternalField` instead of trying to look up internal fields directly. There are a few other `Map`s we create for various reasons, but we don't need to create any of them dynamically, so they're all just static constants.
+
+Here's the rough definition of `Map`:
+
+```cpp#Map.h
+enum class InstanceType : uint16_t {
+    // ...
+};
+
+struct Map {
+    // the structure of the map itself (always points to map_map)
+    TaggedPointer m_metaMap;
+    // TBD whether we need to put anything here to please inlined V8 functions
+    uint32_t m_unused;
+    InstanceType m_instanceType;
+
+    // the map used by maps
+    static const Map map_map;
+    // other Map declarations follow...
+
+    Map(InstanceType instance_type)
+        : m_metaMap(const_cast<Map*>(&map_map))
+        , m_unused(0xaaaaaaaa)
+        , m_instanceType(instance_type)
+    {
+    }
+};
+
+const Map Map::map_map(InstanceType::Object);
+```
+
+### Objects
+
+To please V8, we need to keep a tagged pointer to the `Map` in the first 8 bytes of each object. However, JSC also stores metadata at the start of each `JSCell` object. Those can't both occupy the same memory. How can we rectify this?
+
+We could create a new type of object, not visible to JSC's garbage collector, which combines a map pointer for V8 as well as a `JSCell` pointer so that our code can find the JSC object:
+
+```cpp
+struct ObjectLayout {
+    TaggedPointer tagged_map;
+    JSCell* ptr;
+};
+```
+
+This would work, but we'd have to allocate a new `ObjectLayout` for every V8 object. Not only would this be inefficient, it'd be error-prone because we'd need to manage the memory for all these objects ourselves without help from the garbage collector.
+
+Instead, what if we stored both these fields inside the handle scope? We already need to set aside 8 bytes in the handle scope for each V8 value, to store the tagged pointer. If we set aside 24 bytes instead, we can store the handle, the map pointer, and the JSC object pointer all next to each other.
+
+```cpp#Handle.h
+struct ObjectLayout {
+    TaggedPointer m_taggedMap;
+    JSCell* m_ptr;
+};
+
+struct Handle {
+    TaggedPointer m_toV8Object;
+    ObjectLayout m_object;
+};
+```
+
+With this scheme, `Local`s hold a pointer to the `to_v8_object` field. If `to_v8_object` is an integer, then the `ObjectLayout` is ignored. If it's a pointer, it points to the `tagged_map` field of the `ObjectLayout` so that V8 code can find the map pointer where it expects.
+
+Here's how the layout of this will look when we're done, using the same program at the top of this article:
+
+![Diagram of memory layout in the previous C++ program. Each function's local variables hold the addresses of handles in a handle scope. The handle for foo_string contains a pointer to the object layout stored inside that handle. The object layout for foo_string points to a JSString. The handle for bar_number contains an integer. The handle for baz_number contains a pointer to the object layout stored inside that handle. The object layout for baz_number stores the number 3.5. Each object layout starts with a pointer to its map, one for each type. Each map has a pointer to the map used by maps, which points to itself.](/images/jsclayout.drawio.svg)
+
+The main difference with how the layout works under V8 is that the contents of `ObjectLayout`, which in V8 were a separate heap allocation (and included the object's actual fields, like the string contents), are now stored in memory managed by the handle scopes. But you can also see how, from the perspective of V8 code, our layout should _appear_ similar. For instance, that code can still follow the `to_v8_object` tagged pointer to find an object that has a `Map` pointer as its first field. It doesn't matter that `to_v8_object` happens to always point forward by 8 bytes.
+
+The following diagram shows the pointers that are followed in order to look up the instance type from a `Local` handle, in either the V8 layout (above) or the fake V8 layout we have implemented in Bun (below). While the instance types are different in this case, both are considered strings which is all we care about.
+
+![Comparison of the memory layout in V8 vs. in Bun's implementation of V8. Both have a local variable foo_string which points to a handle. In V8, the handle points to a separate string object, which points to a map used by strings. In Bun, the handle points to the object layout which is inside the handle, and also points to the string map.](/images/v8-jsc-layout-comparison.drawio.svg)
+
+`Handle` has a few different constructors. The invariant that must be maintained is that if `to_v8_object` is not a Smi, it must contain the address of `object`. I implemented the C++ copy constructor and assignment operator to help ensure this:
+
+```cpp#Handle.cpp
+Handle::Handle(const Handle& that)
+{
+    *this = that;
+}
+
+Handle& Handle::operator=(const Handle& that)
+{
+    object = that.object;
+    if (that.m_toV8Object.tag() == TaggedPointer::Tag::Smi) {
+        m_toV8Object = that.m_toV8Object;
+    } else {
+        // calls TaggedPointer(void*), which also sets up the tag bit
+        m_toV8Object = &this->m_object;
+    }
+    return *this;
+}
+```
+
+What about our handle scope? It has to act as a growable array of `Handle`s, and it has to mark itself as the current handle scope in its constructor and restore the previous handle scope in its destructor. Remember that unlike the other V8 types we've been looking at, `HandleScope` is stack-allocated and has a size of 24 bytes. This is actually just the right size to store:
+
+- A pointer to the `Isolate` (what even is an `Isolate` when we are using JSC? I'll address that later)
+- A pointer to the previous `HandleScope`
+- A pointer to a class implementing the actual storage of handles, `HandleScopeBuffer`
+
+The only trick to implementing `HandleScopeBuffer` is that we expect every handle to have an active pointer to it somewhere on the stack. If some code creates a lot of handles, we need to be able to grow the array without moving any of our existing handles. We'll solve this in a scalable way later. For now, we can make `HandleScopeBuffer` hold a fixed-size array of `Handle`s, track how many are used, and crash if we run out of room. This is enough for simple tests of other V8 functionality to work.
+
+## Implementing V8 Functions, Second Attempt
+
+### New `Local`
+
+The first thing we'll do is change the definition of `Local` slightly so it's clearer what it actually represents:
+
+```cpp-diff#V8Local.h
+  template<class T>
+  class Local final {
+  public:
+-     T* ptr;
++     TaggedPointer* m_location;
++     Local(TaggedPointer* slot)
++         : m_location(slot)
++     {
++     }
+
+-     T* operator*() const { return ptr; }
++     T* operator*() const { return reinterpret_cast<T*>(m_location); }
+};
+```
+
+We'll have to be wary when implementing functions on V8 classes, because `this` will not actually point to an instance of the class. Fortunately, the V8 classes don't actually contain any fields, so it's not possible for us to accidentally dereference `this` by referring to a field. V8 uses separate internal classes to store the actual data for these types, and that's what I've done too.
+
+### `v8::Number` Implementation
+
+Let's think about how to implement those `v8::Number` functions again:
+
+```cpp#V8Number.h
+class Number : public Primitive {
+public:
+    BUN_EXPORT static Local<Number> New(Isolate* isolate, double value);
+
+    BUN_EXPORT double Value() const;
+};
+```
+
+Additionally, let's only worry about Smi numbers. We'll start with `Value()` which is simpler. Remember that it'll be called with `this` being a pointer to the tagged pointer stored in the handle. So we need to:
+
+- Dereference `this` to get the tagged pointer
+- Check that the tagged pointer is a Smi
+- Convert the Smi representation to a native integer, and then to a `double`
+
+Let's try it:
+
+```cpp#V8Number.cpp
+double Number::Value() const {
+    TaggedPointer tagged = *reinterpret_cast<const TaggedPointer*>(this);
+    int32_t smi;
+    ASSERT(tagged.getSmi(smi));
+    return smi;
+}
+```
+
+And... it works! Well, we can't really see it working without `Number::New`, so you'll have to trust me. The version actually used in Bun is similar, but uses helper functions for a lot of those operations and supports doubles (we'll see how later).
+
+Now, what do we need to do in `Number::New()`?
+
+1. Assert that the provided `double value` fits in the range of `int32_t` (since full `double` values are a different case that we're not trying to handle yet)
+2. Figure out the currently-active handle scope in `isolate`
+3. Create a new handle
+4. Set the handle's tagged pointer value (`to_v8_object`) to a Smi representing `value` (the handle will have space in it for a map pointer and `JSCell` pointer too, but we don't need to set those)
+5. Return a `Local` containing a pointer to the tagged pointer in the handle
+
+Before we can do this we'll have to figure out what an `Isolate` should be. Many V8 functions, especially those that allocate new objects, are passed a pointer to an `Isolate`. So we should make it be something that is useful for our own implementations that use JSC. Before I even started at Bun, [some basic V8 functions had been implemented](https://github.com/oven-sh/bun/blob/fe5e19da596840ca14e1665f284a6929acfeb3e5/src/bun.js/bindings/v8.cpp) using a pointer to the global object for both the isolate and the context, so I stuck with that while initially getting more of the V8 API up.
+
+Now we need a way to get the current handle scope from the global object. We could add a field directly, but since I was adding lots of fields for V8, I put them all in a `v8::GlobalInternals` class to keep track of state specific to Bun's V8 API support. This ensures that we don't bloat the global object too much if the V8 API is not used. The global object just has a lazily-initialized pointer to the global internals.
+
+With those details in mind, we can finally implement the correct version of `Number::New()`:
+
+```cpp#V8Number.cpp
+Local<Number> Number::New(Isolate* isolate, double value) {
+    // 1.
+    double int_part;
+    // check that there is no fractional part
+    RELEASE_ASSERT_WITH_MESSAGE(std::modf(value, &int_part) == 0.0, "TODO handle doubles in Number::New");
+    // check that the integer part fits in the range of int32_t
+    RELEASE_ASSERT_WITH_MESSAGE(int_part >= INT32_MIN && int_part <= INT32_MAX, "TODO handle doubles in Number::New");
+    int32_t smi = static_cast<int32_t>(value);
+
+    // 2.
+    Zig::GlobalObject* globalObject = reinterpret_cast<Zig::GlobalObject*>(isolate);
+    HandleScope* handleScope = globalObject->V8GlobalInternals()->currentHandleScope();
+
+    // 3.
+    Handle& handle = handleScope->createEmptyHandle();
+
+    // 4.
+    handle.to_v8_object = TaggedPointer(smi);
+
+    // 5.
+    return Local<Number>(&handle.to_v8_object);
+}
+```
+
+And this works! This code does the same thing as Bun's current implementation, except the actual version is simpler due to the use of helper functions.
+
+### Some `v8::Object` functions
+
+I'm not going to wade through the implementation of every single V8 function. However, let's at least look at some of the functions that work with objects, because those are what caused us so much trouble last time and forced us to reconsider how to represent V8 values in JSC.
+
+#### Representing objects with internal fields
+
+Remember internal fields from earlier? To recap: objects can be created with a fixed number of fields that can be quickly accessed with an integer index. These fields are only visible to native code, and can be used by native addons to associate internal state with JavaScript objects without letting JavaScript code mess with that state.
+
+Normal V8 objects don't have internal fields by default. The only way to create a V8 object with internal fields is to configure the internal field count on an `ObjectTemplate`, which will apply to all the objects you create using that template. This is lucky for us, as it means we don't need to support internal fields on every JSC object. Instead, we can just create a special class for an object that has internal fields, and have the `ObjectTemplate` implementation create that kind of object.
+
+```cpp#InternalFieldObject.h
+class InternalFieldObject : public JSC::JSDestructibleObject {
+public:
+    // ...
+    using FieldContainer = WTF::Vector<JSC::JSValue, 2>;
+
+    FieldContainer* internalFields() { return &m_fields; }
+    // ...
+private:
+    FieldContainer m_fields;
+};
+```
+
+We use a `JSValue` to represent each internal field. This is better than using V8 types like `Local`, because each `Local` is only valid as long as the handle scope it was created in exists. We need to make sure that values inside objects don't get deleted, as a common use case for internal fields is to assign them on an object that you are returning to JavaScript, and then read them later in a different native function that the object is passed into.
+
+As for the container type, `WTF::Vector` is a dynamic array with a fixed inline capacity. So in this case, it can hold up to 2 `JSValue`s without allocating, or it will allocate space on the heap if we need to store more.
+
+#### Accessing internal fields
+
+Now let's look at how to expose internal fields to native modules. These are the functions we need to implement:
+
+```cpp#V8Object.h
+namespace v8 {
+
+class Object : public Value {
+public:
+    // ...
+    BUN_EXPORT void SetInternalField(int index, Local<Data> data);
+private:
+    BUN_EXPORT Local<Data> SlowGetInternalField(int index);
+};
+
+}
+```
+
+[`Data`](https://v8.github.io/api/head/classv8_1_1Data.html) is V8's base class for anything on the heap. V8 declares `SlowGetInternalField` as `private` since it only exists to be called by the inline `GetInternalField` that [caused us so much trouble](/blog/how-bun-supports-v8-apis-without-using-v8-part-1#problems). Our implementation actually has to be private too because otherwise the [mangled symbol name](https://en.wikipedia.org/wiki/Name_mangling) would be wrong on Windows:
+
+```
+// public: class v8::Local<class v8::Data> __cdecl v8::Object::SlowGetInternalField(int) __ptr64
+// (incorrect)
+?SlowGetInternalField@Object@v8@@QEAA?AV?$Local@VData@v8@@@2@H@Z
+                                 ^
+// private: class v8::Local<class v8::Data> __cdecl v8::Object::SlowGetInternalField(int) __ptr64
+// (correct)
+?SlowGetInternalField@Object@v8@@AEAA?AV?$Local@VData@v8@@@2@H@Z
+                                 ^
+```
+
+On Linux and macOS, the mangled name is `_ZN2v86Object20SlowGetInternalFieldEi` no matter what, which does not include visibility or return type information.
+
+Let's see the [implementation of `SetInternalField`](https://github.com/oven-sh/bun/blob/babc907bfe5ff2825e3e98d5544a49150920796e/src/bun.js/bindings/v8/V8Object.cpp#L63-L69):
+
+```cpp#V8Object.cpp
+void Object::SetInternalField(int index, Local<Data> data)
+{
+    FieldContainer* fields = getInternalFieldsContainer(this);
+    RELEASE_ASSERT(fields, "object has no internal fields");
+    RELEASE_ASSERT(index >= 0 && index < fields->size(), "internal field index is out of bounds");
+    fields->at(index) = data->localToJSValue(Isolate::GetCurrent()->globalInternals());
+}
+```
+
+We call a helper function to access the vector of internal fields, which I'll show in a second. It returns `nullptr` if the object does not have one (that is, if the object is not an instance of `InternalFieldObject`). In V8, _setting_ internal fields that don't exist is a fatal error, so we include assertions to check for that case.
+
+If the index is correct, we call `Data::localToJSValue` on `data` so that we have a `JSValue` that we can store in the internal field. That's a function I implemented which, assuming it was called on a `Local`, handles the different V8 types and produces a `JSValue`. This is used in many, many places, and it can be easily called from within our implementations of V8 types as they all subclass `Data`. Here's the initial version which could only handle integers or pointers (the real implementation is more complex now):
+
+```cpp#V8Data.h
+class Data {
+    JSC::JSValue localToJSValue(GlobalInternals* globalInternals) const
+    {
+        // access the tagged pointer that the Local contains a pointer to
+        TaggedPointer root = *reinterpret_cast<const TaggedPointer*>(this);
+        if (root.tag() == TaggedPointer::Tag::Smi) {
+            // integer
+            return JSC::jsNumber(root.getSmiUnchecked());
+        } else {
+            // pointer, so we have to skip over the V8 map pointer to find the actual JSCell pointer
+            ObjectLayout* v8_object = root.getPtr<ObjectLayout>();
+            return JSC::JSValue(v8_object->ptr);
+        }
+    }
+};
+```
+
+What about [`SlowGetInternalField`](https://github.com/oven-sh/bun/blob/babc907bfe5ff2825e3e98d5544a49150920796e/src/bun.js/bindings/v8/V8Object.cpp#L76-L86)?
+
+```cpp#V8Object.cpp
+Local<Data> Object::SlowGetInternalField(int index)
+{
+    FieldContainer* fields = getInternalFieldsContainer(this);
+    JSObject* js_object = localToObjectPointer<JSObject>();
+    HandleScope* handleScope = Isolate::fromGlobalObject(JSC::jsDynamicCast<Zig::GlobalObject*>(js_object->globalObject()))->currentHandleScope();
+    if (fields && index >= 0 && index < fields->size()) {
+        JSValue field = fields->at(index);
+        return handleScope->createLocal<Data>(field);
+    }
+    return handleScope->createLocal<Data>(JSC::jsUndefined());
+}
+```
+
+This one is supposed to return `undefined` according to V8 if the object has no internal fields, or the index is out-of-bounds. We'll look at how to represent JavaScript values like `undefined` soon.
+
+For the rest of the function, there's a lot of indirection which makes things look complicated, but the actual operations aren't too tricky. The template `localToObjectPointer` gives us a pointer to a specific `JSCell` subclass, in this case an object. From there we can access the global object (which is a generic `JSGlobalObject`), cast it to Bun's specific global object, cast _that_ to an `Isolate` which is an easy way to access information needed by V8 functions, and get the current handle scope. We need the handle scope so that this function can return a `Local` allocated within that handle scope. Once we have the fields container and the handle scope, we perform a bounds check, access the `JSValue` version of this field, and use the handle scope to turn it into a `Local`.
+
+In case it helps, here's a diagram of the pointers that this function traverses in order to find the `InternalFieldObject` and the `HandleScope`:
+
+![this points to the to_v8_object field at the start of a Handle object. to_v8_object points to the object layout stored inside that same Handle. The object layout's contents points to an InternalFieldObject. The InternalFieldObject points to the global object. The global object points to the V8 global internals. The V8 global internals point to the current handle scope.](/images/slowgetinternalfield-layout.drawio.svg)
+
+This is the first time we're seeing the function `HandleScope::createLocal`. Lots of the current V8 APIs use this function to generate their return values. It handles a few cases based on the type of `JSValue` passed in:
+
+- For 32-bit integers, it creates a handle where the tagged pointer is a Smi
+- For pointers to objects, it sets up a handle with one of a couple different `Map`s depending on the type of the object. Then it stores the actual JSC object pointer after the `Map` pointer, and makes the tagged pointer at the start of the handle point to the map field as V8 expects.
+- We'll discuss later how doubles, `true`, `false`, `null`, and `undefined` get represented.
+
+Once the handle has been set up, `createLocal` returns a pointer to that handle, wrapped in the `Local` class.
+
+## Node.js-style Module Registration
+
+At this point, I was able to start implementing many more V8 functions on basic types. But all the tests were still using an odd hybrid configuration, with functions registered via Node-API but calling the specific V8 functions instead of Node-API functions. Remember that Node-API is the engine-agnostic way to write native addons, instead of using the V8 API directly. To fix this situation I added support for registering a native addon the same way it's done in Node.js, which both makes the structure of the tests cleaner and is also of course necessary for any real V8 module to work.
+
+I won't get into the implementation of that, because it's not very different from Node-API, but for posterity I'll describe how a Node.js native module gets loaded. There are two ways:
+
+- Modules may expose a function called `node_register_module_vXYZ`, where `XYZ` is the ABI version of Node.js the module was compiled for (see [this table](https://github.com/nodejs/node/blob/main/doc/abi_version_registry.json); Bun currently uses 127 to match Node.js 22). This function is passed three parameters: `Local<Object> exports` and `Local<Value> module`, which correspond to `exports` and `module` in a CommonJS module, and `Local<Context> context`, which allows modules to access the current context (and by extension the isolate) if they need it. Most modules simply use `v8::Object` functions to assign properties onto `exports`.
+- Modules may use a _static constructor_, which is a function that's automatically called by the system's dynamic linker while the module is being loaded. This is a feature that exists to support calling constructors on `static` instances of C++ classes to initialize them correctly. When this static constructor is called, it in turn calls `void node_module_register(void* mod)`, a function exposed by Node.js and now by Bun. The static constructor passes into `node_module_register` a pointer to a `struct module`, to describe details of the module being loaded and provide the implementation. That struct contains:
+
+  - An `int` indicating the expected ABI version (loading a module compiled for the wrong version throws a JavaScript exception)
+  - The name of the source file where the module was declared, and the name of the module itself
+  - Two function pointers, as modules can be registered with or without passing the context into the registration function. The `exports` and `module` parameters are the same as in the `node_register_module_vXYZ` version, the `context` is omitted in one of the function signatures, and both also have a `void *priv` which allows passing extra data into the registration function
+  - An opaque pointer, which is passed into the registration function to allow extra data to be carried around
+
+Most native modules don't deal with the gory details above themselves; instead, they use [macros from Node.js's public headers](https://github.com/nodejs/node/blob/v22.6.0/src/node.h#L1224-L1241), which happen to use the static constructor version instead of the predetermined function name. As such, so far I've only implemented the static constructor path to load modules, although it won't be very difficult to add support for the other way as well.
+
+## Coming up
+
+That's all we have time for today! In the final part of this series, we'll look at how to play nice with JSC's garbage collector (spoiler: the implementation I've shown so far is deeply broken), how to represent other JavaScript values like doubles, booleans, `null`, and `undefined`, and some other miscellaneous parts of the V8 compatibility layer. See you then.

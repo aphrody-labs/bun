@@ -1,0 +1,255 @@
+---
+title: "Bun's new text-based lockfile"
+description: "We're introducing a new text-based lockfile format for bun install. It's GitHub & git-friendly, and makes it easier for teams to migrate from npm, yarn, and pnpm to bun install"
+date: "2024-12-17T11:28:30.574Z"
+author: jarred
+---
+
+`bun install` is a fast npm-compatible package manager you can use with Node.js or Bun.
+
+The most common piece of feedback teams migrating from npm, pnpm, or yarn to `bun install` share is about Bun's `bun.lockb` binary lockfile format. Binary lockfiles are tricky to review in pull requests. Merge conflicts get harder to resolve. Tooling can't easily read a binary lockfile.
+
+To help with that, we previously added support for `bun ./bun.lockb` to generate a `yarn.lock`-compatible lockfile, but this wasn't enough. The source of truth was still the binary lockfile. You had to run `bun` on the binary lockfile in order to get the yarn's lockfile. This doesn't work well with Github, with tools or with merge conflicts.
+
+That's why in Bun v1.1.39, we're introducing a `bun.lock` - a new text-based lockfile format for `bun install`:
+
+```bash
+bun install --save-text-lockfile
+```
+
+Instead of saving the binary `bun.lockb` file, this flag makes Bun save a text-based `bun.lock` file. In Bun v1.2, we're planning to make this the default.
+
+<!-- prettier-ignore -->
+```jsonc#bun.lock
+{
+  "lockfileVersion": 0,
+  "workspaces": {
+    "": {
+      "dependencies": {
+        "uWebSocket.js": "uNetworking/uWebSockets.js#v20.51.0",
+      },
+    },
+  },
+  "packages": {
+    "uWebSocket.js": ["uWebSockets.js@github:uNetworking/uWebSockets.js#6609a88", {}, "uNetworking-uWebSockets.js-6609a88"],
+  }
+}
+```
+
+If a `bun.lockb` file or `package-lock.json` file exists the first time you run `bun install --save-text-lockfile`, bun will use the existing lockfile to generate the `bun.lock` file, preserving resolutions and metadata.
+
+## Cached `bun install` gets 30% faster
+
+**Some projects start out being faster than alternatives, and then get slower as they add missing features and fix bugs. Bun is _not_ one of those projects**. We don't accept performance regressions.
+
+In Bun v1.1.39, we made cached `bun install` using the text lockfile 30% faster compared to cached `bun install` with the binary lockfile in Bun v1.1.38.
+
+{% codetabs %}
+
+```js#cached-no-op-install
+# --warmup=10
+Benchmark 1: bun install --cwd=./with-text # Text-based lockfile
+  Time (mean ± σ):      45.8 ms ±   2.2 ms    [User: 17.4 ms, System: 34.7 ms]
+  Range (min … max):    43.8 ms …  55.1 ms    60 runs
+
+Benchmark 2: bun-1.1.38 install --cwd=./with-binary # Binary lockfile
+  Time (mean ± σ):      60.4 ms ±   2.1 ms    [User: 14.8 ms, System: 52.1 ms]
+  Range (min … max):    58.3 ms …  69.9 ms    44 runs
+
+Benchmark 3: cd with-pnpm && pnpm install
+  Time (mean ± σ):     709.5 ms ±   3.7 ms    [User: 914.5 ms, System: 318.7 ms]
+  Range (min … max):   705.3 ms … 716.1 ms    10 runs
+
+Benchmark 4: cd with-yarn && yarn install
+  Time (mean ± σ):     243.1 ms ±   3.0 ms    [User: 415.9 ms, System: 24.2 ms]
+  Range (min … max):   240.6 ms … 248.4 ms    12 runs
+
+Benchmark 5: cd with-npm && npm install
+  Time (mean ± σ):      1.525 s ±  0.174 s    [User: 1.459 s, System: 0.119 s]
+  Range (min … max):    1.275 s …  1.709 s    10 runs
+
+Summary
+  bun install --cwd=./with-text # Text-based lockfile ran
+    1.32 ± 0.08 times faster than bun-1.1.38 install --cwd=./with-binary # Binary lockfile
+    5.31 ± 0.27 times faster than cd with-yarn && yarn install
+   15.49 ± 0.76 times faster than cd with-pnpm && pnpm install
+   33.28 ± 4.13 times faster than cd with-npm && npm install
+```
+
+```js#no-node-modules-install
+# --warmup=2 --prepare="rm -rf ./with-{text,binary,pnpm,yarn,npm}/node_modules"
+Benchmark 1: bun install --cwd=./with-text --ignore-scripts # Text-based lockfile
+  Time (mean ± σ):      1.590 s ±  0.029 s    [User: 0.018 s, System: 0.809 s]
+  Range (min … max):    1.546 s …  1.651 s    10 runs
+
+Benchmark 2: bun-1.1.38 install --cwd=./with-binary --ignore-scripts # Binary lockfile
+  Time (mean ± σ):      1.749 s ±  0.024 s    [User: 0.015 s, System: 0.882 s]
+  Range (min … max):    1.719 s …  1.788 s    10 runs
+
+Benchmark 3: cd with-pnpm && pnpm install --ignore-scripts
+  Time (mean ± σ):     11.303 s ±  0.142 s    [User: 4.093 s, System: 107.544 s]
+  Range (min … max):   10.926 s … 11.442 s    10 runs
+
+  Warning: Statistical outliers were detected. Consider re-running this benchmark on a quiet system without any interferences from other programs.
+
+Benchmark 4: cd with-yarn && yarn install --ignore-scripts
+  Time (mean ± σ):      6.372 s ±  0.104 s    [User: 5.980 s, System: 17.191 s]
+  Range (min … max):    6.286 s …  6.603 s    10 runs
+
+Benchmark 5: cd with-npm && npm install --ignore-scripts
+  Time (mean ± σ):      8.309 s ±  0.081 s    [User: 8.598 s, System: 9.838 s]
+  Range (min … max):    8.194 s …  8.418 s    10 runs
+
+Summary
+  bun install --cwd=./with-text --ignore-scripts # Text-based lockfile ran
+    1.10 ± 0.02 times faster than bun-1.1.38 install --cwd=./with-binary --ignore-scripts # Binary lockfile
+    4.01 ± 0.10 times faster than cd with-yarn && yarn install --ignore-scripts
+    5.23 ± 0.11 times faster than cd with-npm && npm install --ignore-scripts
+    7.11 ± 0.16 times faster than cd with-pnpm && pnpm install --ignore-scripts
+```
+
+```json#package.json
+{
+  "name": "desktop",
+  "type": "module",
+  "module": "index.ts",
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.6.2"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.32.1",
+    "@babel/core": "^7.26.0",
+    "@octokit/rest": "^21.0.2",
+    "@sentry/bun": "^8.37.1",
+    "date-fns": "^4.1.0",
+    "debug": "^4.3.7",
+    "express": "^4.21.1",
+    "gatsby": "^5.14.0",
+    "ink": "^5.0.1",
+    "isbot": "^5.1.17",
+    "next": "^15.1.0",
+    "postgres": "^3.4.5",
+    "puppeteer": "^23.10.4",
+    "ts552": "npm:typescript@5.5.2",
+    "ts562": "npm:typescript@5.6.2",
+    "vite": "^5.4.9"
+  }
+}
+```
+
+{% /codetabs %}
+
+### What makes bun install fast?
+
+`bun install` is fast because we try really hard to make it fast. There's no "one thing" like a binary lockfile format that makes it fast.
+
+#### Structure of Arrays
+
+We do a lot of work to avoid O(N^3) memory allocations. When you have many dependent and nested objects/structs to serialize (such as packages, their dependencies, their dependencies' dependencies, and the resolutions), how do you avoid allocating each object/struct separately? You use indices into linearly-serializable arrays instead of pointers/objects.
+
+In TypeScript, the slow but relatively common approach to storing packages in a package manager would look something like this:
+
+```ts#slow.ts
+interface SlowPackage {
+  name: string;
+  version: string;
+  dependencies: Record<string, Dependency>;
+
+  /// ... more fields ...
+}
+
+interface Workspace {
+  packages: Record<string, Package>;
+  root: Package;
+}
+```
+
+The fast (and overly simplified) version would look something like this:
+
+```ts#fast.ts
+interface Package {
+  /** Index into strings array */
+  name: number;
+  /** Index into strings array */
+  version: number;
+  /** Index into dependencies array */
+  dependenciesStart: number;
+  /** Length of dependencies array */
+  dependenciesCount: number;
+  /** Start offset into resolutions array */
+  resolutionsStart: number;
+  /** Length of resolutions array */
+  resolutionsCount: number;
+}
+
+interface Workspace {
+  packages: Package[];
+  dependencies: Dependency[];
+  resolutions: number[];
+  strings: string[];
+}
+```
+
+Instead of arrays for each element inside of an array, we use one big array for each type and append to it. This is usually called a [Structure of Arrays](https://en.wikipedia.org/wiki/AoS_and_SoA).
+
+#### Small string optimizations
+
+When you have lots of usually-tiny strings (such as package names or versions), instead of allocating each string separately, you could store tiny strings in the same space used to reference them. In higher-level languages like JavaScript, strings are abstracted away from you, but in Zig, C++, or Rust, ["small string optimizations"](https://devblogs.microsoft.com/oldnewthing/20230803-00/?p=108532) are [well-known](https://fasterthanli.me/articles/small-strings-in-rust).
+
+In Zig, our `semver.String` struct optimizes for small strings:
+
+```rust
+pub const String = extern struct {
+    pub const max_inline_len: usize = 8;
+    /// This is three different types of string.
+    /// 1. Empty string. If it's all zeroes, then it's an empty string.
+    /// 2. If the final bit is set, then it's a string that is stored inline.
+    /// 3. If the final bit is not set, then it's a string that is stored in an external buffer.
+    bytes: [max_inline_len]u8 = [8]u8{ 0, 0, 0, 0, 0, 0, 0, 0 },
+};
+```
+
+#### Careful I/O
+
+We pay close attention to what system calls are used. We avoid opening directories and reading files unless we need to. We use extremely specific, sometimes uncommon platform-specific system calls like `clonefile`, `sendfile`, `faccessat`, `memfd_create`, etc to avoid unnecessary work.
+
+I could rant for a really long time about all the optimizations we make in `bun install`, but you get the idea. It was never the binary lockfile format. We just try really hard to make it fast, and all that work applies to the text-based lockfile format too.
+
+## Not a breaking change
+
+We're planning to make `bun.lock` the default in Bun v1.2.0. In the meantime, we continue to support the binary `bun.lockb` format and will do so for awhile.
+
+Until Bun v1.2, the `bun install --save-text-lockfile` flag will be required to generate the text-based lockfile. When a `bun.lock` file exists, `bun install` will use the text-based lockfile and ignore the binary lockfile. Otherwise, it will generate the binary lockfile.
+
+## Tooling compatibility
+
+The `bun.lock` file is JSONC (like tsconfig.json)
+
+### Visual Studio Code
+
+VSCode will syntax highlight the `bun.lock` file for you, thanks to [@remcohaszing](https://github.com/remcohaszing).
+
+{% raw %}
+
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">In the next version of <a href="https://twitter.com/code?ref_src=twsrc%5Etfw">@Code</a><br><br>`bun.lock` gets syntax highlighting, thanks to <a href="https://twitter.com/remcohaszing?ref_src=twsrc%5Etfw">@remcohaszing</a> <a href="https://t.co/TFXv5KuhZi">pic.twitter.com/TFXv5KuhZi</a></p>&mdash; Bun (@bunjavascript) <a href="https://twitter.com/bunjavascript/status/1867486870458052726?ref_src=twsrc%5Etfw">December 13, 2024</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+{% /raw %}
+
+### GitHub & git
+
+GitHub renders `bun.lock` in diffs, which is important when reviewing code.
+
+{% image src="https://github.com/user-attachments/assets/bc77ae27-b076-43ed-8958-857bd6034ff9" caption="GitHub showing the text-based bun.lock file" /%}
+
+Previously, GitHub didn't render the binary `bun.lockb` file.
+
+{% image src="https://github.com/user-attachments/assets/2ee313b4-b997-4cd3-9474-e26d15d90a7c" caption="GitHub showing the binary bun.lockb file" /%}
+
+### Dependabot
+
+At the time of writing, Dependabot's [#1 most upvoted feature request](https://github.com/dependabot/dependabot-core/issues/6528) is to support `bun`. A text-based lockfile makes this a lot easier for the Dependabot team to add support for.
+
+{% image href="https://github.com/dependabot/dependabot-core/issues/6528" src="https://github.com/user-attachments/assets/01338a02-1869-4be1-b05f-6b4d7e701858" caption="Dependabot's most upvoted feature request" /%}

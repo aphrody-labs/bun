@@ -1,0 +1,418 @@
+---
+title: Bun v0.6.8
+description: Password hashing, function mocking, debugging, and bug squashing
+date: "2023-06-09T12:00:00.000Z"
+author: colin
+draft: false
+---
+
+{% callout %}
+We're hiring C/C++ and Zig engineers to build the future of JavaScript! [Join our team →](/careers)
+{% /callout %}
+
+We've been releasing a lot of changes to Bun recently, here's a recap in case you missed it:
+
+- [`v0.6.0`](/blog/bun-bundler) - Introducing `bun build`, Bun's new JavaScript bundler.
+- [`v0.6.2`](/blog/bun-v0.6.2) - Performance boosts: 20% faster `JSON.parse`, up to 2x faster `Proxy` and `arguments`.
+- [`v0.6.3`](/blog/bun-v0.6.3) - Implemented `node:vm`, lots of fixes to `node:http` and `node:tls`.
+- [`v0.6.4`](/blog/bun-v0.6.4) - Implemented `require.cache`, `process.env.TZ`, and 80% faster `bun test`.
+- [`v0.6.5`](/blog/bun-v0.6.5) - Native support for CommonJS modules (_previously, Bun did CJS to ESM transpilation_),
+- [`v0.6.6`](/blog/bun-v0.6.6) - `bun test` improvements, including Github Actions support, `test.only()`, `test.if()`, `describe.skip()`, and 15+ more `expect()` matchers; also streaming file uploads using `fetch()`.
+- [`v0.6.7`](/blog/bun-v0.6.7) - Node.js compatibility improvements to unblock Discord.js, Prisma, and Puppeteer
+
+This release implements a top-level `Bun.password` API for secure password hashing, function mocking & `toMatchObject` in `bun test`, and an experimental `inspector` mode in `Bun.serve()`, in addition to a range of bugfixes and stability improvements. We have also made a breaking change to `bun:sqlite`.
+
+To install Bun:
+{% codetabs %}
+
+```sh#curl
+$ curl -fsSL https://bun.sh/install | bash
+```
+
+```sh#npm
+$ npm install -g bun
+```
+
+```sh#brew
+$ brew tap oven-sh/bun
+$ brew install bun
+```
+
+```sh#docker
+$ docker pull oven/bun
+$ docker run --rm --init --ulimit memlock=-1:-1 oven/bun
+```
+
+{% /codetabs %}
+
+{% raw %}
+<br>
+{% /raw %}
+
+To upgrade Bun:
+
+```sh
+$ bun upgrade
+```
+
+## `Bun.password`
+
+Bun now exposes the `Bun.password` API for conveniently hashing passwords in a cryptographically secure way.
+
+```ts
+const password = "super-secure-pa$$word";
+
+const hash = await Bun.password.hash(password);
+// => $argon2id$v=19$m=65536,t=2,p=1$tFq+9AVr1bfPxQdh6E8DQRhEXg/M/SqYCNu6gVdRRNs$GzJ8PuBi+K+BVojzPfS5mjnC8OpLGtv8KJqF99eP6a4
+```
+
+The hashing algorithm and its parameters are encoded into the returned hash, so hashes can be verified with `Bun.password.verify` with no additional metadata provided.
+
+```ts
+const password = "super-secure-pa$$word";
+
+const hash = await Bun.password.hash(password);
+const isMatch = await Bun.password.verify(password, hash);
+// => true
+```
+
+The default algoritm is `argon2` but `bcrypt` is also supported. Both algorithms can be configured as needed.
+
+```ts
+const password = "super-secure-pa$$word";
+
+// use argon2 (default)
+const argonHash = await Bun.password.hash(password, {
+  algorithm: "argon2id", // "argon2id" | "argon2i" | "argon2d"
+  memoryCost: 4, // memory usage in kibibytes
+  timeCost: 3, // the number of iterations
+});
+
+// use bcrypt
+const bcryptHash = await Bun.password.hash(password, {
+  algorithm: "bcrypt",
+  cost: 4, // number between 4-31
+});
+```
+
+{% callout %}
+
+When using `bcrypt`, the returned hash is encoded in [Modular Crypt Format](https://passlib.readthedocs.io/en/stable/modular_crypt_format.html) for compatibility with most existing `bcrypt` implementations; with `argon2` the result is encoded in the newer [PHC format](https://github.com/P-H-C/phc-string-format/blob/master/phc-sf-spec.md). Under the hood `Bun.password` uses the `std.crypto.pwhash` module from Zig's standard library.
+{% /callout %}
+
+Refer to [API > Hashing > `Bun.password`](https://bun.sh/docs/api/hashing#bun-password) for complete documentation.
+
+## Function mocking in `bun test`
+
+Bun's test runner now supports function mocking and a couple related `expect()` matchers.
+
+```ts
+import { test, expect, mock } from "bun:test";
+const random = mock(() => Math.random());
+
+test("random", async () => {
+  const val = random();
+  expect(val).toBeGreaterThan(0);
+  expect(random).toHaveBeenCalled();
+  expect(random).toHaveBeenCalledTimes(1);
+});
+```
+
+The result of `mock()` is a new function that's decorated with some additional properties and methods.
+
+```ts#mocking
+import { mock } from "bun:test";
+const random = mock((multiplier: number) => multiplier * Math.random());
+
+random(2);
+random(10);
+
+random.mock.calls;
+// [[ 2 ], [ 3 ]]
+
+random.mock.results;
+//  [
+//    { type: "return", value: 0.6533907460954099 },
+//    { type: "return", value: 0.6452713933037312 }
+//  ]
+```
+
+Creating mocks in bun:test is low-overhead and fast. In a benchmark creating 100,000 mocks, bun:test was 80x faster than Jest and 100x faster than Vitest.
+
+{% raw %}
+
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">Creating 100,000 mocks<br><br>bun:test: 5ms<br>jest: 418ms (80x slower)<br>vitest: 786ms (100x slower) <a href="https://t.co/a3tjwrdT9u">pic.twitter.com/a3tjwrdT9u</a></p>&mdash; Jarred Sumner (@jarredsumner) <a href="https://twitter.com/jarredsumner/status/1667018982472155139?ref_src=twsrc%5Etfw">June 9, 2023</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+{% /raw %}
+
+### `jest.spyOn` support
+
+Support has been added for Jest's `spyOn` functionality as well. This provides a mechanism for tracking and introspecting method calls.
+
+```ts
+import { test, expect, spyOn } from "bun:test";
+
+const ringo = {
+  name: "Ringo",
+  sayHi() {
+    console.log(`Hello I'm ${this.name}`);
+  },
+};
+
+const hiMock = spyOn(ringo, "sayHi");
+
+test("spyon", () => {
+  expect(hiMock).toHaveBeenCalledTimes(0);
+  ringo.sayHi();
+  expect(hiMock).toHaveBeenCalledTimes(1);
+});
+```
+
+For ease of migration, a polyfill for the `jest` global is exported from `bun:test`. This polyfill implements `jest.fn` and `jest.spyOn` for codebases that already rely on Jest-style syntax.
+
+```ts
+import { test, expect, jest } from "bun:test";
+
+const mockFn = jest.fn(() => {});
+
+const mockMethod = jest.spyOn(
+  {
+    random() {
+      return Math.random();
+    },
+  },
+  "random",
+);
+```
+
+Support has been added for the `.toHaveBeenCalled()` and `.toHaveBeenCalledTimes()` matchers. Contributors are welcome to submit PRs for additional matchers like `.toHaveBeenCalledWith()` and `.toHaveBeenLastCalledWith()`.
+
+We haven't added support for module mocks yet. Stay tuned for that in a future release, though I'm pretty sure we can make it work for both CommonJS and ES Modules using the same API.
+
+### toMatchObject
+
+The `toMatchObject` matcher has been added to `bun:test`. This matcher is useful for asserting that an object contains a subset of properties.
+
+```ts
+import { test, expect } from "bun:test";
+
+test("toMatchObject", () => {
+  const obj = {
+    a: 1,
+    b: 2,
+    c: 3,
+  };
+
+  expect(obj).toMatchObject({
+    a: 1,
+    b: 2,
+  });
+  expect(obj).not.toMatchObject({
+    c: 4,
+  });
+});
+```
+
+You can also use `toMatchObject` with asymmetric matchers like `expect.stringContaining` and `expect.any(Number)`:
+
+```ts
+import { test, expect } from "bun:test";
+
+test("toMatchObject", () => {
+  const obj = {
+    a: "hello",
+    b: "world",
+  };
+
+  expect(obj).toMatchObject({
+    a: expect.stringContaining("ell"),
+    b: expect.any(String),
+  });
+});
+```
+
+## (breaking) bun:sqlite's `.values()` method now returns `[]` instead of `null`
+
+Previously, the following returned `null` due to no matching rows:
+
+```js
+db.query("SELECT * FROM foo WHERE id > 9999").values();
+// null
+```
+
+As of Bun v0.6.8, it returns `[]`:
+
+```js
+db.query("SELECT * FROM foo WHERE id > 9999").values();
+// []
+```
+
+This [aligns with the behavior](https://github.com/drizzle-team/drizzle-orm/issues/711) of other functions and other SQLite3 libraries.
+
+```js
+db.query("SELECT * FROM foo WHERE id > 9999").all(); // []
+db.query("SELECT * FROM foo WHERE id > 9999").values(); // [] (previously: null)
+```
+
+We conducted a Twitter poll and 75% voted in favor of the breaking change.
+
+{% raw %}
+
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">calling .values() on a bun:sqlite query with 0 results returns `null` instead of `[]`<br><br>keep the confusing API the same or make the breaking change?</p>&mdash; Jarred Sumner (@jarredsumner) <a href="https://twitter.com/jarredsumner/status/1665938390091706369?ref_src=twsrc%5Etfw">June 6, 2023</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+{% /raw %}
+
+## Experimental `inspector` mode in `Bun.serve`
+
+Bun's HTTP server now provides an "inspector" mode. To enable it, set `inspector: true`. Setting `NODE_ENV=production` disables inspector mode, regardless of the value passed into `Bun.serve`.
+
+```ts
+Bun.serve({
+  inspector: true,
+  fetch(req) {
+    // handle request
+  },
+});
+```
+
+This mounts a WebSocket-based debugger at `localhost:$PORT/bun:inspect` that can process messages conforming to WebKit's debugger protocol. This is a first step towards a more advanced browser-side debugging experience when developing full-stack applications with Bun.
+
+[This gist](https://gist.github.com/Jarred-Sumner/c4dc26ac5d61588992e4f5b61c12cfb4) provides a simple but functional implementation of an in-browser "REPL" that can execute code server-side and retrieve the results over WebSockets.
+
+{% image src="https://github.com/oven-sh/bun/assets/3084745/66acd880-fc79-45d6-93c2-10cdf130b5cf"  caption="A simple over-the-wire REPL." /%}
+
+To make it easier to develop tooling that targets the WebKit debugger protocol, we've published [`bun-devtools`](https://www.npmjs.com/package/bun-devtools) to `npm`, which provides auto-generated Typecript types for the protocol's actions, logs, and more.
+
+```ts
+import { JSC } from "bun-devtools";
+```
+
+## Transpiler & Bundler bugfixes
+
+We fixed a few things in the bundler & transpiler
+
+### lodash-es/isBuffer failed to bundle
+
+The `lodash-es` export `isBuffer` was failing to run due to an edgecase with CommonJS and ES Module interop.
+
+The following from `lodash-es/isBuffer.js`:
+
+```js
+import root from "./_root.js";
+import stubFalse from "./stubFalse.js";
+
+var freeExports =
+  typeof exports == "object" && exports && !exports.nodeType && exports;
+
+var freeModule =
+  freeExports &&
+  typeof module == "object" &&
+  module &&
+  !module.nodeType &&
+  module;
+
+var moduleExports = freeModule && freeModule.exports === freeExports;
+var Buffer = moduleExports ? root.Buffer : undefined;
+var nativeIsBuffer = Buffer ? Buffer.isBuffer : undefined;
+
+var isBuffer = nativeIsBuffer || stubFalse;
+
+export default isBuffer;
+```
+
+The `typeof` check for `module` and `exports` is incorrect because the module is always an ES Module, so `module` and `exports` are always undefined. The usage of CommonJS identifiers caused Bun to treat it as a CommonJS module, which caused a runtime exception. That has been fixed.
+
+However, the `isBuffer` function in `lodash-es` remains broken in both Node.js & Bun (it always returns `false`). We have filed an issue with [`lodash-es`](https://github.com/lodash/lodash/issues/5660).
+
+### \r\n normalization in tagged template literals
+
+Bun was incorrectly normalizing Windows newlines in tagged template literals in certain cases. This has been fixed.
+
+### `v` flag in RegExp
+
+Bun was incorrectly throwing a syntax error when the `v` flag was used in a RegExp literal. The `v` flag is a [stage4 TC39 proposal](https://github.com/tc39/proposal-regexp-v-flag).
+
+## bun install bugfix for workspace lifecycle scripts
+
+bun install now runs lifecycle scripts for workspace packages. Previously, only the root package's lifecycle scripts were run.
+
+Thanks to [@alexlamsl](https://github.com/alexlamsl) for the fix!
+
+## console.log(myBuffer) shows Buffer instead of Uint8Array
+
+Previously, `console.log` would show `Uint8Array` instead of `Buffer` for `Buffer` instances. This has been fixed.
+
+```js
+const buf = Buffer.from("hello world");
+console.log(buf);
+```
+
+Previously:
+
+```sh
+Uint8Array(11) [ 104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100 ]
+```
+
+Now:
+
+```sh
+Buffer(11) [ 104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100 ]
+```
+
+## Changelog
+
+{% table %}
+
+---
+
+- [`#3209`](https://github.com/oven-sh/bun/pull/3209)
+- [Transpiler] Fix normalizing \r\n in tagged template string literals by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#3208`](https://github.com/oven-sh/bun/pull/3208)
+- `removeAllListeners` return `this` by [@dylan-conway](https://github.com/dylan-conway)
+
+---
+
+- [`#3204`](https://github.com/oven-sh/bun/pull/3204)
+- Implement `Bun.password` and `Bun.passwordSync` by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#3215`](https://github.com/oven-sh/bun/pull/3215)
+- [transpiler] Fix new length for raw template contents by [@dylan-conway](https://github.com/dylan-conway)
+
+---
+
+- [`#3213`](https://github.com/oven-sh/bun/pull/3213)
+- allow `v` flag in regexp literal by [@dylan-conway](https://github.com/dylan-conway)
+
+---
+
+- [`#3220`](https://github.com/oven-sh/bun/pull/3220)
+- console.log(Buffer.from('a')) -> `Buffer(1) [...` instead of `Uint8Array(1) [...` by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#3219`](https://github.com/oven-sh/bun/pull/3219)
+- [breaking][bun:sqlite] `.values()` returns `[]` instead of `null` by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#3254`](https://github.com/oven-sh/bun/pull/3254)
+- replace `sudo` usage in GitHub Actions by [@alexlamsl](https://github.com/alexlamsl)
+
+---
+
+- [`#3231`](https://github.com/oven-sh/bun/pull/3231)
+- Fix to retain a newline after removing a package by [@ytakhs](https://github.com/ytakhs)
+
+---
+
+- [`#3252`](https://github.com/oven-sh/bun/pull/3252)
+- Implement mocks in bun:test by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+{% /table %}
+
+[**View Full Changelog**](https://github.com/oven-sh/bun/compare/bun-v0.6.7...bun-v0.6.8)

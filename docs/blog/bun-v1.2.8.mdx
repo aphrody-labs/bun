@@ -1,0 +1,165 @@
+---
+title: Bun v1.2.8
+description: "Fixes 18 bugs (addressing 18 👍). napi improvements make node-sdl 100x faster. Headers.get() is 2x faster. Several node:http bugfixes. node:fs improvements. `bun install --frozen-lockfile` now works with `overrides`. `bun pack` now handles directory-specific pattern exclusion."
+date: "2025-03-31T08:46:20.217Z"
+author: jarred
+---
+
+This release fixes 18 bugs (addressing 18 👍). napi improvements make node-sdl 100x faster. Headers.get() is 2x faster. Several node:http bugfixes. node:fs improvements. `bun install --frozen-lockfile` now works with `overrides`. `bun pack` now handles directory-specific pattern exclusion.
+
+#### To install Bun
+
+{% codetabs %}
+
+```sh#curl
+$ curl -fsSL https://bun.sh/install | bash
+```
+
+```sh#npm
+$ npm install -g bun
+```
+
+```sh#powershell
+$ powershell -c "irm bun.sh/install.ps1|iex"
+```
+
+```sh#scoop
+$ scoop install bun
+```
+
+```sh#brew
+$ brew tap oven-sh/bun
+$ brew install bun
+```
+
+```sh#docker
+$ docker pull oven/bun
+$ docker run --rm --init --ulimit memlock=-1:-1 oven/bun
+```
+
+{% /codetabs %}
+
+#### To upgrade Bun
+
+```sh
+$ bun upgrade
+```
+
+## NAPI improvement makes node-sdl 100x faster
+
+Fixed an issue where `napi_create_double` was encoding all values as double-precision floating point numbers in JSC, which could lead to performance degradation.
+
+{% raw %}
+
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">1 line diff makes node-sdl 100x faster in the next version of Bun <a href="https://t.co/b8PN43Eon4">pic.twitter.com/b8PN43Eon4</a></p>&mdash; Jarred Sumner (@jarredsumner) <a href="https://twitter.com/jarredsumner/status/1905748951531434139?ref_src=twsrc%5Etfw">March 28, 2025</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+{% /raw %}
+
+Thanks to @dylan-conway for the contribution!
+
+## 2x faster headers.get()
+
+[`Headers.prototype.get()`](https://developer.mozilla.org/en-US/docs/Web/API/Headers/get), [`Headers.prototype.has()`](https://developer.mozilla.org/en-US/docs/Web/API/Headers/has), and [`Headers.prototype.delete()`](https://developer.mozilla.org/en-US/docs/Web/API/Headers/delete) get 2x faster for common header names like "Content-Type".
+
+```js
+const headers = new Headers({ "Content-Type": "text/plain" });
+// These operations are now 2x faster in Bun
+headers.get("Content-Type"); // ~16ns vs ~31ns in 1.2.5
+headers.has("Content-Type"); // ~15ns vs ~30ns in 1.2.5
+headers.delete("Content-Type"); // ~16ns vs ~31ns in 1.2.5
+```
+
+<!-- https://github.com/oven-sh/bun/commit/accccbfdaf4e4c69ae5fde404675a3debbb9b6d7 -->
+
+## Fixed: node:http regressions from v1.2.5
+
+In Bun v1.2.5, we rewrote node:http to improve compatibility with Node.js. This introduced some regressions that are now fixed:
+
+- Fixed a regression where `socket.end()` could cause unexpected errors like `ECONNRESET` and `ERR_STREAM_WRITE_AFTER_END`.
+- Fixed a regression where HTTP POST requests could fail in certain cases with frameworks like Astro, Nuxt, Koa, and Next.js.
+- Fixed a regression where `http.request()` could incorrectly include `Transfer-Encoding: chunked` header in empty requests leading to hanging requests.
+
+Please let us know if you run into any more issues with `node:http`.
+
+Thanks to @cirospaciari & @heimskr for the contribution!
+
+## node:fs compatibility improvements
+
+- Fixed a bug where `Object.assign()` couldn't correctly copy properties from `StatFs` class instances to target objects. This issue was specific to Bun and didn't occur in Node.js.
+
+```js
+import { statfsSync } from "node:fs";
+
+const target = { existingProp: "value" };
+const stats = statfsSync("/");
+
+// Now works correctly
+const result = Object.assign(target, stats);
+console.log(result); // Contains values from the StatFs object
+```
+
+Thanks to @dylan-conway for the contribution!
+
+<!-- https://github.com/oven-sh/bun/commit/c3be6732d1e96c4ef78de09111314f0f6dd49af2 -->
+
+## Fixed: `bun install --frozen-lockfile` bug when using `overrides`
+
+Fixed handling of overrides in the lockfile generation, addressing two specific issues:
+
+1. Overrides are now sorted consistently before comparing
+2. Even unused overrides are included in the text lockfile
+
+<!-- https://github.com/oven-sh/bun/commit/c7edb24520abd643b3a270fb550c3dc4bbc6b063 -->
+
+Thanks to @dylan-conway for the contribution!
+
+## `Bun.write()` improvements
+
+- `Bun.write()` now correctly throws an error when called on a `Blob` created from a `Buffer` or `TypedArray`. Blobs created from bytes are always read-only.
+- `Bun.write()` now properly handles creating directory trees when writing an empty file. This fixes an issue where writing an empty string or writing to a non-existent directory would fail with misleading error messages.
+
+```js
+// Now works properly - creates directory and file
+await Bun.write("./new/directory/empty.txt", "");
+```
+
+Thanks to @DonIsaac for the contribution!
+
+<!-- https://github.com/oven-sh/bun/commit/a1ab2a4780e6c649521f8884847b170dd5189d7f -->
+
+## TypeScript Declaration Improvements
+
+This release includes several improvements to Bun's TypeScript type definitions:
+
+- Fixed AbortSignal static methods (`timeout()`, `abort()`, and `any()`) to work properly in environments where the DOM is missing, also fixing BroadcastChannel issues in non-DOM environments.
+- Fixed TypeScript declarations so that types declared in `Bun.Env` correctly apply to `process.env`, ensuring consistent typing across both access methods.
+- Improved `URLSearchParams` type definitions for better compatibility with `@types/node`, working correctly whether `lib.dom` is enabled or disabled.
+- Fixed generic type parameters for `ReadableStream` and `WritableStream`, updated S3 documentation, and corrected server interface types to properly handle unix sockets and optional properties.
+
+Thanks to @alii for the contribution!
+
+## Fixed: `bun pack` directory-specific pattern exclusion
+
+`bun pack` now correctly handles excluding entries that are nested within included directories. Previously, exclusion patterns only worked at the top level, but now you can properly exclude specific files or subdirectories within an included path.
+
+```js
+// Example: Pack a project but exclude nested test files
+bun pack --exclude "src/**/test/**" --include "src/**"
+```
+
+Thanks to @DonIsaac for the contribution!
+
+<!-- https://github.com/oven-sh/bun/commit/f0dfa109bb52c1cee0376bf14ab1642c2bcdd88a -->
+
+## Thanks to 10 contributors!
+
+- [@alii](https://github.com/alii)
+- [@cirospaciari](https://github.com/cirospaciari)
+- [@donisaac](https://github.com/donisaac)
+- [@dylan-conway](https://github.com/dylan-conway)
+- [@hahalosah](https://github.com/hahalosah)
+- [@heimskr](https://github.com/heimskr)
+- [@jarred-sumner](https://github.com/jarred-sumner)
+- [@nanome203](https://github.com/nanome203)
+- [@paperclover](https://github.com/paperclover)
+- [@pfgithub](https://github.com/pfgithub)

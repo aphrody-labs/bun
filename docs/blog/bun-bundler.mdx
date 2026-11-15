@@ -1,0 +1,669 @@
+---
+title: The Bun Bundler
+description: The Bun toolkit gets a new addition. Bun's fast native bundler is now in beta.
+date: "2023-05-16T12:01:00+00:00"
+author: jarred
+shareImage: /images/bundler-speed-banner.png
+draft: false
+---
+
+Bun's fast native bundler is now in beta. It can be used via the `bun build` CLI command or the new `Bun.build()` JavaScript API.
+
+{% image src="/images/bundler-speed.png" caption="Bundling 10 copies of three.js from scratch, with sourcemaps and minification" /%}
+
+Use the bundler to build frontend apps with the built-in `Bun.build()` function or the `bun build` CLI command.
+
+{% codetabs %}
+
+```ts#JavaScript
+Bun.build({
+  entrypoints: ['./src/index.tsx'],
+  outdir: './build',
+  minify: true,
+  // additional config
+});
+```
+
+```bash#CLI
+$ bun build ./src/index.tsx --outdir ./build --minify
+```
+
+{% /codetabs %}
+
+## Reducing complexity in JavaScript
+
+JavaScript started as autofill for form fields, and today it powers the instruments that launch rockets to space.
+
+Unsurprisingly, the JavaScript ecosystem has exploded in complexity. How do you run TypeScript files? How do you build/bundle your code for production? Does that package work with ESM? How do you load local-only configuration? Do I need to install peer dependencies? How do I get sourcemaps working?
+
+Complexity costs time, usually spent glueing together tools or waiting for things to finish. Installing npm packages takes too long. Running tests should take seconds (or less). Why does it take minutes to deploy software in 2023 when it took milliseconds to upload files to an FTP server in 2003?
+
+For years, I’ve been frustrated by how slow everything around JavaScript is. When the iteration cycle time from saving a file to testing changes gets long enough to instinctively check Hacker News, something is wrong.
+
+There are good reasons for the complexity. Bundlers & minifiers make websites load faster. TypeScript’s in-editor interactive documentation makes developers more productive. Type safety helps catch bugs before they ship to users. Dependencies as versioned packages are usually easier to maintain than copying files.
+
+The Unix philosophy of “do one thing well” breaks down when that “one thing” is split between so many isolated tools.
+
+This is why we're building Bun, and why today we're excited to introduce the Bun bundler.
+
+<!-- JavaScript was initially created to autofill form fields, but today it powers instruments that launch rockets to space.
+
+Unsurprisingly, the JavaScript ecosystem has exploded in complexity. How do you run TypeScript files? How do you bundle your code for production? Does that package work with ESM? How should I set or load environment variables? Are my peer dependencies auto-installed? How do I get sourcemaps working?
+
+Complexity costs time, usually spent glueing together tools or waiting for things to finish. Installing npm packages, running tests, and deploying projects just takes too long. Why does it take minutes to deploy an app in 2023 when it took milliseconds to upload files to an FTP server in 2003? If I'm tempted to open Hacker News while waiting for my dependencies to install, something is wrong.
+
+There are good reasons for the complexity. Bundlers & minifiers make websites load faster. TypeScript’s type safety helps catch bugs before they ship to users. Dependency versioning via npm is a heck of a lot better than manually downloading and copying code.
+
+But are these things inherently complex? Or did just make them really complicated? The Unix philosophy of “do one thing well” breaks down when the duct tape between the tools becomes more complicated than the tools themselves. Bun aims to de-complicate the process of building with JavaScript, without giving up any of the technologies we love.
+
+This is why we're building Bun, and why today we're excited to introduce the Bun bundler. -->
+
+## Yes, a new bundler
+
+With the new bundler, bundling is now a first-class element of the Bun ecosystem, complete with a `bun build` CLI command, a new top-level `Bun.build` function, and a stable plugin system.
+
+There are a few reasons we decided Bun needed its own bundler.
+
+### Cohesiveness
+
+Bundlers are the meta-tool that orchestrates and enables all other tools, like JSX, TypeScript, CSS modules, and server components—all things that require bundler integration to work.
+
+Today, bundlers are a source of immense complexity in the JavaScript ecosystem. By bringing bundling into the JavaScript runtime, we think we can make shipping frontend & full-stack code simpler and faster.
+
+- **Fast plugins.** Plugins are executed in a lightweight Bun process that starts fast.
+- **No redundant transpilation**. With `target: "bun"`, the bundler generates pre-transpiled files that are optimized for Bun's runtime, improving running performance and avoiding unnecessary re-transpilations.
+- **Unified plugin API**. Bun provides a unified plugin API that works with both the bundler _and_ the runtime. Any plugin that extends Bun's bundling capabilities can also be used to extend Bun's runtime capabilities.
+- **Runtime integration**. Builds return an array of `BuildArtifact` objects, which implement the `Blob` interface and can be passed directly into HTTP APIs like `new Response()`. The runtime implements special pretty-printing for `BuildArtifact`.
+- **Standalone executables**. The bundler can generate standalone executables from TypeScript & JavaScript scripts via the `--compile` flag. These executables are entirely self-contained and include a copy of the Bun runtime.
+
+Soon, the bundler will be integrated with Bun's HTTP server API (`Bun.serve`), making it possible to represent currently-complicated build pipelines with a simple declarative API. More on that later.
+
+### Performance
+
+This one won't surprise anybody. As a runtime, Bun's codebase already contains the groundwork (implemented in Zig) for quickly parsing and transforming source code. While possible, it would have been hard to integrate with an existing native bundler, and the overhead involved in interprocess communication would hurt performance.
+
+Ultimately the results speak for themselves. In [our benchmarks](https://github.com/oven-sh/bun/tree/main/bench/bundle) (which is derived from esbuild's three.js benchmark), Bun is 1.75x faster than esbuild, 150x faster than Parcel 2, 180x times faster than Rollup + Terser, and 220x times faster than Webpack.
+
+### Developer experience
+
+Looking at the APIs of existing bundlers, we saw a lot of room for improvement. No one likes wrestling with bundler configurations. Bun's bundler API is designed to be unambiguous and unsurprising. Speaking of which...
+
+## The API
+
+The API is currently minimal by design. Our goal with this initial release is to implement a minimal feature set that fast, stable, and accommodates most modern use cases without sacrificing performance.
+
+Here is the API as it currently exists:
+
+```ts
+interface Bun {
+  build(options: BuildOptions): Promise<BuildOutput>;
+}
+
+interface BuildOptions {
+  entrypoints: string[]; // required
+  outdir?: string; // default: no write (in-memory only)
+  target?: "browser" | "bun" | "node"; // "browser"
+  format?: "esm"; // later: "cjs" | "iife"
+  splitting?: boolean; // default false
+  plugins?: BunPlugin[]; // [] // see https://bun.sh/docs/bundler/plugins
+  loader?: { [k in string]: string }; // see https://bun.sh/docs/bundler/loaders
+  external?: string[]; // default []
+  sourcemap?: "none" | "inline" | "external"; // default "none"
+  root?: string; // default: computed from entrypoints
+  publicPath?: string; // e.g. http://mydomain.com/
+  naming?:
+    | string // equivalent to naming.entry
+    | { entry?: string; chunk?: string; asset?: string };
+  minify?:
+    | boolean // default false
+    | { identifiers?: boolean; whitespace?: boolean; syntax?: boolean };
+}
+```
+
+Other bundlers have made poor architectural decisions in the pursuit of feature-completeness that end up crippling performance; this is a mistake we are carefully trying to avoid.
+
+### Module systems
+
+Only `format: "esm"` is supported for now. We plan to add support for other module systems and targets like `iife`. If enough people ask, we'll add `cjs` otuput support as well (CommonJS input is supported, but not output).
+
+### Targets
+
+Three "targets" are supported: `"browser"` (the default), `"bun"`, and `"node"`.
+
+#### `browser`
+
+- TypeScript and JSX are automatically transpiled to vanilla JavaScript.
+- Modules are resolved using the `"browser"` package.json `"exports"` condition when availabile
+- Bun automatically polyfills certain Node.js APIs when imported in the browser such as `node:crypto`, similarly to [Webpack 4's behavior](https://github.com/facebook/create-react-app/issues/11756). Bun's own APIs are currently prohibited from being imported, but we might revisit this in the future.
+
+#### `bun`
+
+- Bun and Node.js APIs are supported and left untouched.
+- Modules are resolved using the default resolution algorithm used by Bun's runtime.
+- The generated bundles are marked with a special `// @bun` pragma comment to indicate that they were generated by Bun. This indicates to Bun's runtime that the file does not need to be re-transpiled before execution. Synergy!
+
+#### `node`
+
+Currently, this is identical to `target: "bun"`. In the future, we plan to automatically polyfill Bun APIs like the `Bun` global and `bun:*` built-in modules.
+
+### File types
+
+The bundler supports the following file types:
+
+- `.js` `.jsx` `.ts` `.tsx` - JavaScript and TypeScript files. Duh.
+- `.txt` — Plain text files. These are inlined as strings.
+- ` .json` `.toml` — These are parsed at compile time and inlined as JSON.
+<!-- - `.css` — When a `.css` import is encountered, Bun reads the `.css` file and resolves any `@import` statements within them. The "bundled" CSS file is written to the build directory. All traces of the import are removed from the JavaScript bundle. -->
+
+Everything else is treated as an _asset_. Assets are copied into the `outdir` as-is, and the import is replaced with a relative path or URL to the file, e.g. `/images/logo.png`.
+
+{% codetabs %}
+
+```ts#Input
+import logo from "./images/logo.png";
+
+console.log(logo);
+```
+
+```ts#Output
+var logo = "./images/logo.png";
+
+console.log(logo);
+```
+
+{% /codetabs %}
+
+### Plugins
+
+As with the runtime itself, the bundler is designed to be extensible via plugins. In fact, there's no difference at all between a runtime plugin and a bundler plugin.
+
+```ts
+import YamlPlugin from "bun-plugin-yaml";
+
+const plugin = YamlPlugin();
+
+// register a runtime plugin
+Bun.plugin(plugin);
+
+// register a bundler plugin
+Bun.build({
+  entrypoints: ["./src/index.ts"],
+  plugins: [plugin],
+});
+```
+
+### Build outputs
+
+The `Bun.build` function returns a `Promise<BuildOutput>`, defined as:
+
+```ts
+interface BuildOutput {
+  outputs: BuildArtifact[];
+  success: boolean;
+  logs: Array<object>; // see docs for details
+}
+
+interface BuildArtifact extends Blob {
+  kind: "entry-point" | "chunk" | "asset" | "sourcemap";
+  path: string;
+  loader: Loader;
+  hash: string | null;
+  sourcemap: BuildArtifact | null;
+}
+```
+
+The `outputs` array contains all the files that were generated by the build. Each artifact implements the [`Blob`](https://developer.mozilla.org/en-US/docs/Web/API/Blob) interface.
+
+```ts
+const build = await Bun.build({
+  /* */
+});
+
+for (const output of build.outputs) {
+  output.size; // file size in bytes
+  output.type; // MIME type of file
+
+  await output.arrayBuffer(); // => ArrayBuffer
+  await output.text(); // string
+}
+```
+
+Artifacts also contain the following additional properties:
+
+{% table %}
+
+---
+
+- `kind`
+- What kind of build output this file is. A build generates bundled entrypoints, code-split "chunks", sourcemaps, and copied assets (like images).
+
+---
+
+- `path`
+- Absolute path to the file on disk or the output path if the files were not written to disk.
+
+---
+
+- `loader`
+- The loader was used to interpret the file. See [Bundler > Loaders](/docs/bundler/loaders) to see how Bun maps file extensions to the appropriate built-in loader.
+
+---
+
+- `hash`
+- The hash of the file contents. Always defined for assets.
+
+---
+
+- `sourcemap`
+- Another `BuildArtifact` of the sourcemap corresponding to this file, if generated. Only defined for entrypoints and chunks.
+
+{% /table %}
+
+Similar to `BunFile`, `BuildArtifact` objects can be passed directly into `new Response()`.
+
+```ts
+const build = Bun.build({
+  /* */
+});
+
+const artifact = build.outputs[0];
+
+// Content-Type is set automatically
+return new Response(artifact);
+```
+
+The Bun runtime implements special pretty-printing when logging `BuildArtifact` objects to make debugging easier.
+
+{% codetabs %}
+
+```ts#Build_script
+// build.ts
+const build = Bun.build({/* */});
+
+const artifact = build.outputs[0];
+console.log(artifact);
+```
+
+```sh#Shell_output
+$ bun run build.ts
+BuildArtifact (entry-point) {
+  path: "./index.js",
+  loader: "tsx",
+  kind: "entry-point",
+  hash: "824a039620219640",
+  Blob (114 bytes) {
+    type: "text/javascript;charset=utf-8"
+  },
+  sourcemap: null
+}
+```
+
+{% /codetabs %}
+
+<!-- ## Usage
+
+With the `Bun.build` API living right alongside `Bun.serve` and the rest of Bun's runtime APIs, you can express complex build steps and workflows in a remarkably readable way.
+
+Want to bundle some React components and spin up a static file server to serve them? No problem.
+
+```ts
+const BUILD_DIR = import.meta.dir + "/build";
+
+const router = new Bun.FileSystemRouter({
+  dir: "./components",
+});
+
+const files = Object.values(router.routes);
+
+const { manifest } = await Bun.build({
+  entrypoints: files,
+  target: "browser",
+  outdir: BUILD_DIR,
+});
+
+Bun.serve({
+  port: 3000,
+  fetch(req) {
+    const url = new URL(req.url);
+    const match = manifest.outputs[url.pathname];
+    if (match) return new Response(Bun.file(BUILD_DIR + "/" + url.pathname));
+    return new Response("Not found", { status: 404 });
+  },
+});
+``` -->
+
+### Server components
+
+Bun's bundler has experimental support for React Server Components via the `--server-components` flag. We'll be releasing additional documentation and a sample project later in the week.
+
+## Tree shaking
+
+Bun's bundler supports tree-shaking of unused code. This is always enabled when bundling.
+
+#### package.json `"sideEffects"` field
+
+Bun supports `"sideEffects": false` in `package.json`. This is a hint to the bundler that the package has no side effects and enables more aggressive dead code elimination.
+
+#### `__PURE__` comments
+
+Bun supports `__PURE__` annotations:
+
+{% codetabs %}
+
+```js#file.js
+function foo() {
+  return 123;
+}
+
+/** #__PURE__ */ foo();
+```
+
+{% /codetabs %}
+
+Since `foo` is side effect free, this results in an empty file:
+
+```js#output.js
+
+```
+
+Learn more on [Webpack's documentation](https://webpack.js.org/guides/tree-shaking/#mark-a-function-call-as-side-effect-free).
+
+#### `process.env.NODE_ENV` and `--define`
+
+Bun supports the `NODE_ENV` environment variable and the `--define` CLI flag. These are often used to conditionally include code in production builds.
+
+If `process.env.NODE_ENV` is set to `"production"`, Bun will automatically remove code that is wrapped in `if (process.env.NODE_ENV !== "production") { ... }`.
+
+{% codetabs %}
+
+```js#node-env.js
+if (process.env.NODE_ENV !== "production") {
+  module.exports = require("./cjs/react.development.js");
+} else {
+  module.exports = require("./cjs/react.production.min.js");
+}
+```
+
+{% /codetabs %}
+
+### ES Module tree-shaking
+
+ESM tree-shaking is supported for both ESM and CommonJS input files. Bun's bundler will automatically remove unused exports from ESM files when it is safe to do so.
+
+{% codetabs %}
+
+```js#entry.js
+import { foo } from "./foo.js";
+console.log(foo);
+```
+
+```js#foo.js
+export const bar = 123;
+export const foo = 456;
+```
+
+{% /codetabs %}
+
+The unused `bar` export is eliminated, resulting in:
+
+{% codetabs %}
+
+```js#output.js
+// foo.js
+var $foo = 456;
+console.log($foo);
+```
+
+{% /codetabs %}
+
+### CommonJS tree-shaking
+
+In limited cases, Bun's bundler automatically converts CommonJS into ESM with zero runtime overhead. Consider this trivial example:
+
+{% codetabs %}
+
+```js#index.ts
+import { foo } from "./foo.js";
+console.log(foo);
+```
+
+```js#foo.js
+// foo.js
+exports.foo = 123;
+
+exports.bar = "this will be treeshaken";
+```
+
+{% /codetabs %}
+
+Bun will automatically convert `foo.js` to ESM and tree-shake the unused `exports` object.
+
+```js#Bundled
+// foo.js
+var $foo = 123;
+
+// entry.js
+console.log($foo);
+```
+
+Note that there are many cases where the dynamic nature of CommonJS makes this very difficult. For instance, consider these three files:
+
+{% codetabs %}
+
+```js#entry.js
+// entry.js
+export default require("./foo");
+```
+
+```js#foo.js
+// foo.js
+exports.foo = 123;
+Object.assign(module.exports, require("./bar"));
+```
+
+```js#bar.js
+// bar.js
+exports.foobar = 123;
+```
+
+{% /codetabs %}
+
+Bun can't statically determine the exports of `foo.js` without executing it. (Also `Object.assign` can be overridden, making static analysis impossible in the general case.) In this case, Bun will not tree-shake the `exports` object; instead it injects some CommonJS runtime code to make it work as expected.
+
+{% details summary="CommonJS wrapper" %}
+
+```js
+var __commonJS = (cb, mod) => () => (
+  mod || cb((mod = { exports: {} }).exports, mod), mod.exports
+);
+
+// bar.js
+var require_bar = __commonJS((exports) => {
+  exports.fooba = 123;
+});
+
+// foo.js
+var require_foo = __commonJS((exports, module) => {
+  exports.foo = 123;
+  Object.assign(exports, require_bar());
+});
+
+// entry.js
+var entry_default = require_foo();
+export { entry_default as default };
+```
+
+{% /details %}
+
+## Source maps
+
+The bundler supports both inline and external source maps.
+
+```ts
+const build = await Bun.build({
+  entrypoints: ["./src/index.ts"],
+
+  // generates a *.js.map file alongside each output
+  sourcemap: "external",
+
+  // adds a base64-encoded `sourceMappingURL` to the end of each output file
+  sourcemap: "inline",
+});
+
+console.log(await build.outputs[0].sourcemap.json()); // => { version: 3, ... }
+```
+
+## Minifier
+
+A JavaScript bundler is not complete without a minifier. This release also introduces an all-new JavaScript minifier built into Bun. Enable minification with `minify: true`, or configure minification behavior more granularly with the following options:
+
+```ts
+{
+  minify?: boolean | {
+    identifiers?: boolean; // default: false
+    whitespace?: boolean; // default: false
+    syntax?: boolean; // default: false
+  }
+}
+```
+
+The minifier is capable of removing dead code, renaming identifiers, removing whitespace, and intelligently condensing & inlining constant values.
+
+{% codetabs %}
+
+```js#Input
+// This comment will be removed!
+console.log("this" + " " + "text" + " will" + " be " + "merged");
+```
+
+```js#Minified
+console.log("this text will be merged");
+```
+
+{% /codetabs %}
+
+<!-- ## Jump in
+
+We've updated the following React `bun create` templates to use `Bun.build` under the hood. Run the following commands to scaffold a simple React project powered by the Bun bundler.
+
+```bash
+# a React single-page app
+bun create react ./myapp
+
+# a Next.js-like app with a /pages directory
+# with SSR and client-side hydration
+bun create react-ssr ./myapp
+``` -->
+
+<!-- # an app that uses React server components!
+# this should be considered experimental
+bun create react-rsc ./myapp
+ -->
+
+## Sneak peek: `Bun.App`
+
+The bundler is just laying the groundwork for a more ambitious effort. In the next couple months, we'll be announcing `Bun.App`: a "super-API" that stitches together Bun's native-speed bundler, HTTP server, and file system router into a cohesive whole.
+
+The goal is to make it easy to express any kind of app with Bun with just a few lines of code:
+
+{% codetabs %}
+
+```ts#Static_file_server
+new Bun.App({
+ bundlers: [
+   {
+     name: "static-server",
+     outdir: "./out",
+   },
+ ],
+ routers: [
+   {
+     mode: "static",
+     dir: "./public",
+     build: "static-server",
+   },
+ ],
+});
+
+app.serve();
+app.build();
+```
+
+```ts#API_server
+const app = new Bun.App({
+  configs: [
+    {
+      name: "simple-http",
+      target: "bun",
+      outdir: "./.build/server",
+      // bundler config...
+    },
+  ],
+  routers: [
+    {
+      mode: "handler",
+      handler: "./handler.tsx", // automatically included as entrypoint
+      prefix: "/api",
+      build: "simple-http",
+    },
+  ],
+});
+
+app.serve();
+app.build();
+```
+
+```ts#Next.js-style_framework
+const projectRoot = process.cwd();
+
+const app = new Bun.App({
+ configs: [
+   {
+     name: "react-ssr",
+     target: "bun",
+     outdir: "./.build/server",
+     // bundler config
+   },
+   {
+     name: "react-client",
+     target: "browser",
+     outdir: "./.build/client",
+     transform: {
+       exports: {
+         pick: ["default"],
+       },
+     },
+   },
+ ],
+ routers: [
+   {
+     mode: "handler",
+     handler: "./handler.tsx",
+     build: "react-ssr",
+     style: "nextjs",
+     dir: projectRoot + "/pages",
+   },
+   {
+     mode: "build",
+     build: "react-client",
+     dir: "./pages",
+     // style: "build",
+     // dir: projectRoot + "/pages",
+     prefix: "_pages",
+   },
+ ],
+});
+
+app.serve();
+app.build();
+```
+
+{% /codetabs %}
+
+This API is still under [active discussion](https://github.com/oven-sh/bun/pull/2551) and subject to change.
+
+## Credits
+
+- The architecture of bun's bundler and minifier is based on esbuild's design, so thank you Evan Wallace (evanw).
+- Thank you to [@paperclover](https://github.com/paperclover) for porting esbuild's test suite to Bun.
+- Thank you to [@dylan-conway](https://github.com/dylan-conway) for implementing source maps support and fixing so many bugs.

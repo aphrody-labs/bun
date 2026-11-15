@@ -1,0 +1,169 @@
+---
+title: CommonJS is not going away
+description: CommonJS is here to stay, and that's okay. Better tooling will solve today's developer experience issues.
+date: "2023-06-30T23:18:20+00:00"
+author: jarred
+draft: false
+---
+
+{% callout %}
+We're hiring C/C++ and Zig engineers to build the future of JavaScript! [Join our team →](/careers)
+{% /callout %}
+
+Some may be surprised to see the [recent](https://bun.sh/blog/bun-v0.6.5) [release](https://bun.sh/blog/bun-v0.6.10) [notes](https://bun.sh/blog/bun-v0.6.12) for Bun mention CommonJS support. After all, CommonJS is a legacy module system, and the future of JavaScript is ES Modules (ESM), right? As a "forward-thinking" "next-gen" runtime, why would Bun put so much effort into improving CommonJS support?
+
+{% raw %}
+
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">The latest about ESM on npm: ESM is now at 9%, dual at 3.8, faux ESM at 13.7%, and CJS at 73.6%.<br><br>This data includes only the most popular npm packages (1m+ downloads per week and/or 500+ others depend on it), excluding the TypeScript `types/*` packages. <a href="https://t.co/kdZg5tM9N6">pic.twitter.com/kdZg5tM9N6</a></p>&mdash; Titus 🇵🇸 (@wooorm) <a href="https://twitter.com/wooorm/status/1588905279206621184?ref_src=twsrc%5Etfw">November 5, 2022</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+{% /raw %}
+
+Because CommonJS is here to stay, and that's okay! We think that better tooling can solve today's developer experience issues with CommonJS and ESM interop.
+
+## The situation, explained
+
+As you might imagine, it's often desirable to split your application into multiple files. When you do this, you need a way to reference code in other files.
+
+The _CommonJS_ module format was developed in 2009 and popularized by Node.js. Files can assign properties to a special variable called `exports`. Then, other files can reference properties from the `exports` object by "requiring" the file with a special `require` function.
+
+{% codetabs %}
+
+```ts#a.js
+const b = require("./b.js");
+
+b.sayHi(); // prints "hi"
+```
+
+```ts#b.js
+exports.sayHi = () => {
+  console.log("hi");
+};
+```
+
+{% /codetabs %}
+
+To overly simplify how this works: when a file is `require`d, the file is _executed_ and the properties of the `exports` object are made available to the importer. CommonJS is designed for server-side JavaScript (in fact, it was originally named _ServerJS_), where it's expected that all files are available on the local filesystem. This is what it means for CommonJS to be _synchronous_ — you can conceptualize `require()` as a "blocking" operation that reads the imported file and runs it, then hands control back to the importer.
+
+ECMAScript modules were introduced in 2015 as part of ES6. An ES module declares its exports with the `export` keyword. The `import` keyword is used to import from other files. Unlike `exports/require`, both `import` and `export` statements can only occur at the _top level_ of a file.
+
+{% codetabs %}
+
+```ts#a.js
+import { sayHi } from "./b.js"
+
+sayHi(); // prints "hi"
+```
+
+```ts#b.js
+export const sayHi = () => {
+  console.log("hi");
+};
+```
+
+{% /codetabs %}
+
+Because ES modules are designed to work in browsers, it's expected that files are loaded over the network. This is what it means for ES modules to be _asynchronous_. Given an ES module, a browser can see what it imports and exports _without running the file_. Commonly, the entire module graph will be resolved (which may potentially involve multiple round-trip network requests) before any code is executed.
+
+## The case for CommonJS
+
+### CommonJS starts faster
+
+ES modules are slower for larger applications. Unlike require, you either need load the entire module graph when using statements or await each import with expressions. For example, if you want to lazy-load a package for use in a function, your code _must_ return a promise (which can introduce additional microticks and overhead).
+
+```js
+async function transpileEsm(code) {
+  const { transform } = await import("@babel/core");
+  // ... return must be a Promise
+}
+
+function transpileCjs(code) {
+  const { transform } = require("@babel/core");
+  // ... return is sync
+}
+```
+
+ES Modules are slower by design. They need two passes in order to bind imports to exports. The entire module graph gets parsed and analyzed, _then_ the code gets evaluated. This is split into distinct steps. It's what makes "live bindings" in ES Modules possible.
+
+Consider these two simple files.
+
+{% codetabs %}
+
+```js#babel.cjs
+require("@babel/core")
+```
+
+```js#babel.mjs
+import "@babel/core";
+```
+
+{% /codetabs %}
+
+Babel is a package that consists of a huge number of files, so comparing the runtime of these two files is a decent way to evaluate performance costs associated with module resolution. The results:
+
+{% image src="https://github.com/oven-sh/bun/assets/3084745/87414629-c433-4141-ba19-08a9d4451196" caption="With Bun, loading Babel with CommonJS is roughly 2.4x faster than with ES modules." / %}
+
+There's a difference of 85ms. In the context of serverless cold starts, that is massive. With Node.js the difference was 1.8x (~60ms).
+
+<!-- ### Sometimes synchronous is good
+
+One of the key strengths of CommonJS is its synchronous nature. In environments where synchronous loading is acceptable, like server-side applications or CLIs, CommonJS provides a straightforward and intuitive way to work with modules.  The synchronous loading ensures that modules are available when they are needed, making it easier to reason about the code's flow and dependencies. -->
+
+### Incremental loading
+
+CommonJS allows for dynamic module loading—you can `require()` a file conditionally, or `require()` a dynamically constructed path/specifier, or `require()` in the body of a function. This flexibility can be advantageous in scenarios where dynamic loading is required, such as plugin systems or lazy-loading specific components based on user interactions.
+
+ES modules provide a dynamic `import()` function with similar properties. In some sense, its existence is a testament to the fact that the CommonJS's dynamic approach has utility and is valued by developers.
+
+<!-- With ES modules, the module graph must is typically fully constructed before any code evaluation happens. With CommonJS, things are a little more seat-of-the-pants; modules are loaded and evaluated on the fly. -->
+
+### It's already here
+
+Millions of modules published to npm already use CommonJS. Many of these are both: (a) are no longer actively maintained, and (b) are critically important to existing projects. We will never hit a point where _all_ packages can be expected to use ES modules. A runtime or framework that doesn't support CommonJS is leaving a huge amount of value on the table.
+
+## CommonJS in Bun
+
+As of Bun v0.6.5, the Bun runtime natively implements CommonJS. Previously, Bun transpiled CommonJS files to a special "synchronous ESM" format.
+
+### Importing CommonJS from ESM
+
+You can `import` or `require` CommonJS modules from ESM modules.
+
+```ts
+import { stuff } from "./my-commonjs.cjs";
+import Stuff from "./my-commonjs.cjs";
+const myStuff = require("./my-commonjs.cjs");
+```
+
+Recently, Bun also added support for the [`__esModule` annotation](https://github.com/oven-sh/bun/pull/3393).
+
+```ts#module.js
+exports.__esModule = true;
+exports.default = 5;
+exports.foo = "foo";
+```
+
+This is a de-facto mechanism for a CommonJS module to indicate (in conjunction with `"type": "module"` in `package.json`) that `exports.default` should be interpreted as the _default export_. When `__esModule` is set in a CommonJS module, a _default `import`_ (`import a from "./a.js"`) will import the `exports.default` property. Without the annotation, a default import will import the entire `exports` object.
+
+With the annotation:
+
+```ts
+// with __esModule: true
+import mod, { foo } from "./module.js";
+mod; // 5
+foo; // "foo"
+```
+
+Without the annotation:
+
+```ts
+// without __esModule
+import mod, { foo } from "./module.js";
+mod; // { default: 5 }
+mod.default; // 5
+foo; // "foo"
+```
+
+This is a de-facto standard way for a CommonJS module to indicate that `exports.default` should be interpreted as the _default export_.
+
+## In summary
+
+CommonJS is already here to stay. Not only that, it has real reasons to exist. We love ES modules here at Bun, but pragmatism is important. CommonJS is not a relic of a bygone era, and Bun treats it as a first-class citizen today.

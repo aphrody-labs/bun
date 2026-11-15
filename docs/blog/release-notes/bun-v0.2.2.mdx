@@ -1,0 +1,269 @@
+---
+title: Bun v0.2.2
+description: Release notes for Bun v0.2.2
+date: "2022-10-27T08:14:11Z"
+author: jarred
+thumbText: v0.2.2
+---
+
+To upgrade:
+
+```bash
+bun upgrade
+```
+
+To install:
+
+```bash
+curl https://bun.sh/install | bash
+```
+
+TLDR:
+
+- TCP/TLS Socket API
+- WebCrypto API
+- `fs.createReadStream` works now
+- `Bun.peek`
+- Install Bun with Homebrew
+- Several bug fixes
+
+## TCP sockets
+
+Bun now has support for TCP clients and servers. You can use it to implement database clients, game servers, or anything else that needs to use TCP instead of HTTP.
+
+A TCP echo server runs 24% faster [in Bun](https://github.com/oven-sh/bun/blob/main/bench/snippets/tcp-echo.bun.ts) compared to [Node](https://github.com/oven-sh/bun/blob/main/bench/snippets/tcp-echo.node.mjs):
+
+![image](https://user-images.githubusercontent.com/709451/198228543-bbc86788-ab27-4515-a749-575f9f43e2e6.png)
+
+This API is designed to be fast. Instead of promises or assigning callbacks for each socket, like the Node.js EventEmitter or the standard WebSocket API, callbacks are defined once for optimal performance and better code readability.
+
+### Start a TCP server
+
+```js
+import { listen } from "bun";
+
+listen({
+  hostname: "localhost",
+  port: 8080,
+  socket: {
+    open(socket) {},
+    data(socket, data) {
+      console.log(data instanceof Uint8Array); // true
+    },
+    drain(socket) {},
+    close(socket) {},
+    error(socket, error) {},
+  },
+});
+```
+
+### Start a TCP client
+
+```js
+import { connect } from "bun";
+
+connect({
+  hostname: "localhost",
+  port: 8080,
+  socket: {
+    data(socket, data) {
+      console.log("Received:", data);
+    },
+  },
+});
+```
+
+There is also support for:
+
+- Hot-reloading a TCP socket without downtime
+- Assigning custom data to a socket
+- TLS/SSL support
+
+You can read more about TCP sockets in the [README](https://github.com/oven-sh/bun#bunlisten--bunconnect---tcptls-sockets).
+
+This API is very new and I imagine there are still some bugs to fix. Please file issues about any bugs you run into!
+
+## Bug fixes
+
+Bun has a special transform for importing builtin modules which converts them from asynchronous ESM imports into synchronous ESM `import.meta.require`. A transpiler bug when `default` was imported in these builtin Bun modules along with other named imports caused a runtime error:
+
+```ts
+// this code would break
+import fs, { writeFileSync } from "fs";
+
+// but this code worked
+import * as fs from "fs";
+```
+
+The bug was due to how Bun's transpiler rewrote those imports. In this case, `default` is equivalent to the namespace object (only for these builtin modules which may not actually point to JavaScript source code)
+
+Now, Bun transpiles the above into:
+
+```ts
+var fs = import.meta.require("node:fs");
+
+// note: live bindings are not preserved
+var { writeFileSync } = fs;
+```
+
+---
+
+When an import fails to resolve at build time, Bun throws a `ResolveError`. `ResolveError` includes a `position` object that exposes detailed line & column information about where the file was originally imported.
+
+There was a bug where Bun would crash if you attempted to access the `position` object when it came from an `await import` which imported another file that failed to resolve
+
+File A:
+
+```js
+import { expect, it, describe } from "bun:test";
+
+describe("ResolveError", () => {
+  it("position object does not segfault", async () => {
+    try {
+      await import("./file-b");
+    } catch (e) {
+      expect(Bun.inspect(e.position).length > 0).toBe(true);
+    }
+  });
+});
+```
+
+`file-b.js`:
+
+```js
+import "./does-not-exist.js";
+```
+
+This bug has been fixed.
+
+---
+
+Error handling logic for `new Response(Bun.file(fileDescriptorAsANumber))` when used with the HTTP server expected it to be used with file paths instead of file descriptor numbers, causing a crash. Thanks to [@sno2](https://github.com/sno2) for [the fix](https://github.com/oven-sh/bun/commit/b3434a8b883ee98324cea2c7d14dd988e6bb8adc).
+
+```js
+export default {
+  // This would crash due to incorrect error handling logic
+  fetch(req) {
+    return new Response(Bun.file(123));
+  },
+};
+```
+
+---
+
+An edgecase involving hex-escaped RegExp literals with lookbehinds caused our Oniguruma polyfill from v0.2.1 to throw an error. This was [fixed](https://github.com/oven-sh/bun/pull/1363) thanks to [@dylan-conway](https://github.com/dylan-conway)
+
+---
+
+More bug fixes:
+
+- [Fix calling ws.publish inside close when other clients are connected](https://github.com/oven-sh/bun/commit/9f16906499c812eb82a982307511c454dec769ed)
+- [Fix crash in Node Streams highWaterMark](https://github.com/oven-sh/bun/commit/da9b2452a7d44705f33ccde29c970cc510870264)
+- [Fix infinite loop involving regexp lookbehinds](https://github.com/oven-sh/bun/commit/c940f00e2d49ea37ac69589a9a160a43df91eeb6)
+- [new Response(null) caused a crash](https://github.com/oven-sh/bun/commit/14cec299f5170b8ed35eed28e53b88724b8cc04f) (a regression from v0.2.0)
+- The `ReadableStream.prototype.tee` function did not work when used with `"direct"` streams 360a007f160b6935140dc75003a503059ff23976
+- Fix missing error logging @zhiyuang in https://github.com/oven-sh/bun/pull/1387
+- Fix undefined error object in `error` handler in `Bun.serve` @zhiyuang in https://github.com/oven-sh/bun/pull/1387
+- Fix spawn exitcode by [@zhiyuang](https://github.com/zhiyuang) in https://github.com/oven-sh/bun/pull/1371
+
+## `Bun.peek`
+
+Sometimes you have code that is `async`, but you _know_ it is not actually `async`. The new `peek` function will allow you to read a promise's result without await or .then, but only if the promise has already fulfilled or rejected.
+
+```js
+import { peek } from "bun";
+
+const promise = Promise.resolve("immediate");
+const result = peek(promise); // no await!
+
+console.log(result); // "immediate"
+```
+
+It is useful for performance-sensitive code where you want to reduce the number of extra microticks. It's an advanced API and you (probably) shouldn't use it unless you know what you're doing.
+
+You can read more about `peek` in the [README](https://github.com/oven-sh/bun/#bunpeek---read-a-promise-without-resolving-it).
+
+## Node.js streams
+
+In addition to new APIs, we continue to make progress towards Node.js compatibility. Bun now supports [`fs.createReadStream`](https://nodejs.org/api/fs.html#fscreatereadstreampath-options) and has generally improved support for Node.js streams.
+
+```js
+import { createReadStream } from "node:fs";
+
+// Reads the first 100 bytes of a file
+const reader = createReadStream("example.txt", {
+  encoding: "utf-8",
+  start: 0,
+  end: 100,
+});
+
+reader.on("data", (chunk) => {
+  console.log(chunk);
+});
+```
+
+## WebCrypto API
+
+The standard [WebCrypto](https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto) API is now implemented, thanks to the many contributors at [WebKit](https://github.com/WebKit).
+
+WebCrypto is a low-level API, so we only recommend using it when you know a little more than a thing or two about cryptography. However, there are popular libraries that depend on WebCrypto that you can now use with Bun.
+
+Here's an example using a package that depends on WebCrypto: [`jose`](https://github.com/panva/jose) by [@panva](https://github.com/panva).
+
+```js
+const jwt = await new jose.SignJWT({ "urn:example:claim": true })
+  .setProtectedHeader({ alg: "ES256" })
+  .setIssuedAt()
+  .setIssuer("urn:example:issuer")
+  .setAudience("urn:example:audience")
+  .setExpirationTime("2h")
+  .sign(privateKey);
+
+console.log(jwt);
+```
+
+## Homebrew
+
+You can now install or upgrade Bun with our official [Homebrew tap](https://github.com/oven-sh/homebrew-bun).
+
+```bash
+brew tap oven-sh/bun
+brew install bun
+```
+
+You can also install a specific version.
+
+```bash
+brew install bun@0.2.2
+```
+
+You can also upgrade with either `brew` or `bun`.
+
+```bash
+brew upgrade bun
+bun upgrade # still works
+```
+
+## All the PRs
+
+- Improve issue templates by [@Electroid](https://github.com/Electroid) in https://github.com/oven-sh/bun/pull/1353
+- Cache dir loader: Prefer `$BUN_INSTALL` and `$XDG_CACHE_HOME` to `$HOME`. by [@lgarron](https://github.com/lgarron) in https://github.com/oven-sh/bun/pull/1351
+- Fix Bun.serve error handler error param by [@zhiyuang](https://github.com/zhiyuang) in https://github.com/oven-sh/bun/pull/1359
+- chore: remove outdated `var` usages by [@sno2](https://github.com/sno2) in https://github.com/oven-sh/bun/pull/1364
+- Fix spawn exitcode by [@zhiyuang](https://github.com/zhiyuang) in https://github.com/oven-sh/bun/pull/1371
+- fix(fetch): stop `new Response(null)` from segfaulting by [@sno2](https://github.com/sno2) in https://github.com/oven-sh/bun/pull/1383
+- Add Web Crypto API by [@Jarred-Sumner](https://github.com/Jarred-Sumner) in https://github.com/oven-sh/bun/pull/1384
+- fix(web): stop segfault on invalid fd error by [@sno2](https://github.com/sno2) in https://github.com/oven-sh/bun/pull/1386
+- oniguruma regex lookbehind and multibyte hex fix by [@dylan-conway](https://github.com/dylan-conway) in https://github.com/oven-sh/bun/pull/1363
+- TCP & TLS Socket API by [@Jarred-Sumner](https://github.com/Jarred-Sumner) in https://github.com/oven-sh/bun/pull/1374
+- Fix lexer expected token error by [@zhiyuang](https://github.com/zhiyuang) in https://github.com/oven-sh/bun/pull/1387
+- Update Dev Containers extension name by [@jpaquim](https://github.com/jpaquim) in https://github.com/oven-sh/bun/pull/1393
+- Minor fixes to README.md by [@jpaquim](https://github.com/jpaquim) in https://github.com/oven-sh/bun/pull/1395
+
+## New Contributors
+
+- @Electroid made their first contribution in https://github.com/oven-sh/bun/pull/1353
+- @lgarron made their first contribution in https://github.com/oven-sh/bun/pull/1351
+- @jpaquim made their first contribution in https://github.com/oven-sh/bun/pull/1393
+
+[**Full Changelog**](https://github.com/oven-sh/bun/compare/bun-v0.2.1...bun-v0.2.2)

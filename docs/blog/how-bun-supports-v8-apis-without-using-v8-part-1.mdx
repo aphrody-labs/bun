@@ -1,0 +1,424 @@
+---
+title: "How Bun supports V8 APIs without using V8 (part 1)"
+description: "Bun is built on JavaScriptCore, not V8. Here's how we're implementing V8's C++ API on top of it."
+date: "2024-09-30T00:00-07:00"
+author: ben
+shareImage: /images/v8layout-bold.png
+---
+
+{% callout %}
+We're hiring [systems engineers](/careers) in San Francisco to build the future of JavaScript!
+{% /callout %}
+
+When packages work in Node.js but don't work in Bun, we consider that a bug in Bun.
+
+Native C & C++ APIs are often used in the JavaScript ecosystem for performance-critical libraries like 2D Canvas, database drivers, CPU detection, and more. Bun and Node.js implement `Node-API` (napi), which is the recommended engine-independent C API for interfacing with JavaScript.
+
+But, a number of popular native modules directly use the [V8 engine APIs exposed by Node.js](https://nodejs.org/api/addons.html). At the time of writing, [the issue requesting V8 API support](https://github.com/oven-sh/bun/issues/4290) is the 11th-highest open issue on Bun's tracker when sorted by thumbs-up.
+
+This is challenging for Bun because we use JavaScriptCore as the JavaScript engine (used in Safari), unlike Node.js which uses V8 (used in Chrome). JavaScriptCore is an entirely different JavaScript engine implementation with different design choices.
+
+|                      | JavaScriptCore           | V8              |
+| -------------------- | ------------------------ | --------------- |
+| Garbage collector    | Non-moving, conservative | Moving, precise |
+| Value representation | `JSC::JSValue`           | `v8::Local<T>`  |
+| Value lifetime       | Stack-scanning           | Handle scopes   |
+| ...many many more... | ...                      | ...             |
+
+Previously, when loading one of the packages that relied on V8 C++ APIs in Bun, you would sometimes see an error like this:
+
+```sh
+$ bun ./index.js
+dyld[26946]: missing symbol called
+```
+
+Since Bun v1.1.25, we've been implementing a steadily-growing list of V8's C++ APIs using JavaScriptCore. This unblocks popular Node.js native modules like `cpu-features` in Bun. Here's how we're doing that.
+
+## JavaScriptCore vs. V8 API example
+
+First, for a high-level overview, let's look at some sample code using the JSC API and its equivalent in the V8 API. We'll write a function that takes two numbers from JavaScript and returns their product. If the user provides fewer or more than two arguments, or either argument is not a number, we'll return `undefined`. Note that we're only showing the C++ function implementation, but in reality there would be more glue code required to register this as a function that can be called from JavaScript.
+
+JavaScriptCore:
+
+```cpp#jsc-multiply.cpp
+EncodedJSValue JSC_HOST_CALL_ATTRIBUTES multiply(JSGlobalObject* globalObject, CallFrame* callFrame) {
+    if (callFrame->argumentCount() != 2) {
+        return JSValue::encode(jsUndefined());
+    }
+
+    JSValue arg1 = callFrame->argument(0);
+    JSValue arg2 = callFrame->argument(1);
+
+    if (!arg1.isNumber() || !arg2.isNumber()) {
+        return JSValue::encode(jsUndefined());
+    }
+
+    double number1 = arg1.asNumber();
+    double number2 = arg2.asNumber();
+    EncodedJSValue returnValue = JSValue::encode(jsNumber(number1 * number2));
+
+    return returnValue;
+}
+```
+
+V8 version:
+
+```cpp#v8-multiply.cc
+void multiply(const FunctionCallbackInfo<Value>& info) {
+    Isolate* isolate = info.GetIsolate();
+    if (info.Length() != 2) {
+        return;
+    }
+
+    Local<Value> arg1 = info[0];
+    Local<Value> arg2 = info[1];
+
+    if (!arg1->IsNumber() || !arg2->IsNumber()) {
+        return;
+    }
+
+    double number1 = arg1.As<Number>()->Value();
+    double number2 = arg2.As<Number>()->Value();
+    Local<Number> returnValue = Number::New(isolate, number1 * number2);
+
+    info.GetReturnValue().Set(returnValue);
+}
+```
+
+These both carry out the same basic operations:
+
+- check the number of arguments
+- check the types of the arguments
+- convert both arguments into C++ `double`s
+- multiply the arguments
+- convert the result to a JavaScript number
+- return the result
+
+But they do it in different ways.
+
+### Value Representation, part 1
+
+One of the first major differences is how JavaScript values are represented in both engines. JSC uses `JSValue`, which is an 8-byte (Bun only supports 64-bit CPUs) class that can represent any JavaScript type. We also see `EncodedJSValue`, which is an integer the same size as a `JSValue` used for passing across ABI boundaries (`JSValue::encode` just reinterprets the same bits as a different type).
+
+In V8, on the other hand, you'll usually see the template class `Local<T>`, which is also 8 bytes. `Local<T>` overloads `T* operator*()` and `T* operator->()` which lets native code treat it like a pointer to `T`. Pay attention to the usage of `.` and `->` in V8 code for this reason: `.` means we are calling a function on the `Local`, but `->` means we are calling a function on the wrapped type. `Local<Value>` is the most generic form of this for representing any value JavaScript can use. Before doing almost anything with a `Local<Value>`, you need to convert it to a `Local` of some specific type. Here, we call:
+
+- `bool Value::IsNumber()` to check the type of both arguments
+- `Local<S> Local<T>::As<S>()` to forcibly cast them to `Local<Number>` (this would be undefined behavior if they were not numbers)
+- `double Number::Value()` to extract a C++ `double` from the JavaScript numbers
+
+### API Comparison
+
+The fact that our V8 values are `Local` has important lifetime implications, but we'll get into that, as well as the details of how `JSValue` and `Local` are implemented, later. For now, let's look back at the `multiply` functions and go over some of the other similarities and differences between V8 and JSC.
+
+- Both take an object (`CallFrame` and `FunctionCallbackInfo`) to represent information passed from JavaScript to our function. We use both to get the number of arguments and then the arguments themselves (V8 uses `operator[]` for the second step which is why it looks like array indexing). That object is also how we would access the value of `this` in both APIs, if we needed it.
+- Our JSC function returns `EncodedJSValue`, which is how we indicate what we return to JavaScript. In V8, our function itself returns `void` and we use `info.GetReturnValue().Set(...)` to return a value (if we don't call this, it defaults to `undefined`).
+- Our JSC function is annotated with `JSC_HOST_CALL_ATTRIBUTES`. This macro expands to a compiler-specific attribute which ensures the calling convention of our function is correct. JSC uses Unix's System V calling convention for JIT-compiled machine code. This makes their code generation simpler as they don't have to generate code using two different calling conventions, but it also means that any native function called by JavaScript needs to use the right calling convention. Otherwise, the native function would look for its arguments in registers other than the ones that the JIT-compiled code placed them in. V8 has no equivalent to this since it always uses the standard calling convention for a given platform.
+- Our JSC function is given a pointer to a `JSGlobalObject`. This is a class which encapsulates both the global scope accessible by JavaScript, as well as global state used by native functions that interact with JSC. Bun subclasses JSC's generic version of this to add our own globally-accessible functionality, such as [the `Bun` object](https://github.com/oven-sh/bun/blob/fe62a614046948ebba260bed87db96287e67921f/src/bun.js/bindings/ZigGlobalObject.h#L570) (`Zig::GlobalObject` is 7,528 bytes!). We'll also see usage of `JSC::VM`, which you can access from the global object, and encapsulates more of the execution state of JavaScript code. While neither is exactly equivalent, two similar V8 types we see are `Isolate` and `Context`. For us, the important details are that an isolate can contain multiple contexts, but only one of those contexts has JavaScript running in it at a given time (since two threads can't share an isolate). [This article from V8](https://chromium.googlesource.com/chromium/src/+/refs/tags/128.0.6613.92/third_party/blink/renderer/bindings/core/v8/V8BindingDesign.md) has more details about the distinction. The isolate isn't passed directly into our V8 native function, but we can easily get it from the `FunctionCallbackInfo`, and we can also ask the isolate to tell us the current context if we need that.
+- In V8 we had to pass the isolate to convert the multiplication result into a `Local<Number>`, while in JSC we didn't supply any extra parameters to `jsNumber`. In V8 we even have to do this for values like booleans, `null`, and `undefined`, while in JSC those all have simple functions that return a `JSValue` directly and don't depend on the `JSGlobalObject` or `VM`. We'll see later why these seemingly simple functions require access to the current isolate.
+
+## Implementing V8 Functions, First Attempt
+
+Since V8's `Local` and JSC's `JSValue` are both 8 bytes, I started by trying to simply reinterpret between the two. `Local<T>::operator*()` and `Local<T>::operator->()` just return the contents as a pointer (we can't actually change the implementation of those functions as they are declared inline in the V8 headers, but copying the implementation into Bun's code will help us write other V8 functions that work on `Local`s):
+
+```cpp#v8.h
+namespace v8 {
+
+template<class T>
+class Local final {
+public:
+    T* ptr;
+
+    T* operator*() const { return ptr; }
+};
+
+}
+```
+
+In our implementation, the `T*` won't really be a pointer to `T`. Instead, it'll be a reinterpreted `JSValue`. This means that our classes that represent V8 values (like `Number`) don't actually contain any fields (this is the case in V8 as well, which should have concerned me at the time). Instead, they will receive a `this` pointer that is actually just a `JSValue`:
+
+```cpp#v8.h
+class Number {
+public:
+    BUN_EXPORT static Local<Number> New(Isolate* isolate, double value);
+
+    BUN_EXPORT double Value() const;
+};
+
+Local<Number> Number::New(Isolate* isolate, double value)
+{
+    JSC::JSValue jsv = JSC::jsDoubleNumber(value);
+    JSC::EncodedJSValue encoded = JSC::JSValue::encode(jsv);
+    auto ptr = reinterpret_cast<Number*>(encoded);
+    return Local<Number> { ptr };
+}
+
+double Number::Value() const
+{
+    auto encoded = reinterpret_cast<JSC::EncodedJSValue>(this);
+    JSC::JSValue jsv = JSC::JSValue::decode(encoded);
+    return jsv.asNumber();
+}
+```
+
+Perhaps surprisingly, this actually worked! And it kept working for a while. I wrote tests for these APIs which printed the same results in Node.js and in Bun (although they had to be wrapped in a Node-API function as I hadn't yet implemented Node.js's way of loading a native module). Sadly, the fundamental flaw with this design became clear while I was trying to implement objects.
+
+### Problems
+
+V8 has a class called `ObjectTemplate` which can be created by native code and then used to construct multiple objects, which can be passed to JavaScript. These objects support a feature called _internal fields_, which are fields indexed by a number that can be accessed by native code but not by JavaScript. And you can use the `ObjectTemplate` to configure how many internal fields should be present on the objects it creates. Native modules can use internal fields to return "handle" objects to JavaScript that represent native resources without letting JavaScript mess with the internal state of these resources.
+
+The problem became obvious (well, somewhat obvious) when I first tried to test accessing internal fields on objects. I had already noticed that `v8::Object::GetInternalField` is an inline function which performs some checks and then calls `v8::Object::SlowGetInternalField` if they fail. Since the inline function will get its definition from V8 header files and that code is compiled into any native module, we can't control what it does. I had hoped that the slow path would usually be taken, and it would call the `SlowGetInternalField` function that we can control (which is not inline). But the first time I tested internal fields, I got a segfault inside V8's inline function.
+
+Let's take a look at [V8's implementation](https://github.com/v8/v8/blob/8ab91836885699b9ef686c3a30df4778501ef7d1/include/v8-object.h#L741-L764):
+
+```cpp#v8-object.h
+namespace v8 {
+
+class V8_EXPORT Object : public Value {
+ public:
+  // ...
+  V8_INLINE Local<Data> GetInternalField(int index);
+  // ...
+};
+
+// ...
+Local<Data> Object::GetInternalField(int index) {
+#ifndef V8_ENABLE_CHECKS
+  using A = internal::Address;
+  using I = internal::Internals;
+  A obj = internal::ValueHelper::ValueAsAddress(this);
+  // Fast path: If the object is a plain JSObject, which is the common case, we
+  // know where to find the internal fields and can return the value directly.
+  int instance_type = I::GetInstanceType(obj);
+  if (I::CanHaveInternalField(instance_type)) {
+    int offset = I::kJSAPIObjectWithEmbedderSlotsHeaderSize +
+                 (I::kEmbedderDataSlotSize * index);
+    A value = I::ReadRawField<A>(obj, offset);
+#ifdef V8_COMPRESS_POINTERS
+    // We read the full pointer value and then decompress it in order to avoid
+    // dealing with potential endiannes issues.
+    value = I::DecompressTaggedField(obj, static_cast<uint32_t>(value));
+#endif
+
+    auto isolate = reinterpret_cast<v8::Isolate*>(
+        internal::IsolateFromNeverReadOnlySpaceObject(obj));
+    return Local<Data>::New(isolate, value);
+  }
+#endif
+  return SlowGetInternalField(index);
+}
+
+}
+```
+
+Luckily, with my native module built in debug mode I could still step into and through the inline function and see a proper stack trace as if the function were not inlined. The crash occurred inside `ValueAsAddress`, which is also inlined. Let's refactor this function a little so it's easier to see what's going on. In Node.js's headers, neither `V8_ENABLE_CHECKS` nor `V8_COMPRESS_POINTERS` is defined, so the code in the outer `#ifndef` will be expanded but not the code in the inner `#ifdef`. `internal::Address` is a type alias for `uintptr_t`. Here are some definitions of inlined functions that this calls:
+
+#### [`ValueAsAddress`](https://github.com/v8/v8/blob/8ab91836885699b9ef686c3a30df4778501ef7d1/include/v8-internal.h#L1352-L1355)
+
+```cpp#v8-internal.h
+  template <typename T>
+  V8_INLINE static Address ValueAsAddress(const T* value) {
+    return *reinterpret_cast<const Address*>(value);
+  }
+```
+
+#### [`GetInstanceType`](https://github.com/v8/v8/blob/8ab91836885699b9ef686c3a30df4778501ef7d1/include/v8-internal.h#L862-L868)
+
+```cpp#v8-internal.h
+  V8_INLINE static int GetInstanceType(Address obj) {
+    Address map = ReadTaggedPointerField(obj, kHeapObjectMapOffset);
+#ifdef V8_MAP_PACKING
+    // omitted
+#endif
+    return ReadRawField<uint16_t>(map, kMapInstanceTypeOffset);
+  }
+```
+
+#### [`ReadRawField` and `ReadTaggedPointerField`](https://github.com/v8/v8/blob/8ab91836885699b9ef686c3a30df4778501ef7d1/include/v8-internal.h#L983-L1009)
+
+```cpp#v8-internal.h
+  template <typename T>
+  V8_INLINE static T ReadRawField(Address heap_object_ptr, int offset) {
+    Address addr = heap_object_ptr + offset - kHeapObjectTag;
+#ifdef V8_COMPRESS_POINTERS
+    // omitted
+#endif
+    return *reinterpret_cast<const T*>(addr);
+  }
+
+  V8_INLINE static Address ReadTaggedPointerField(Address heap_object_ptr,
+                                                  int offset) {
+#ifdef V8_COMPRESS_POINTERS
+    // omitted
+#else
+    return ReadRawField<Address>(heap_object_ptr, offset);
+#endif
+  }
+```
+
+`kHeapObjectTag` is 1, `kHeapObjectMapOffset` is 0, and `kMapInstanceTypeOffset` is 12 on platforms Bun supports.
+
+Let's first rewrite `GetInternalField` to use `ReadRawField` directly:
+
+```cpp-diff#v8-object.h
+  Local<Data> Object::GetInternalField(int index) {
+    using A = internal::Address;
+    using I = internal::Internals;
+-   A obj = internal::ValueHelper::ValueAsAddress(this);
+-   int instance_type = I::GetInstanceType(obj);
++   A obj = *reinterpret_cast<const A*>(this);
++   A map = ReadRawField<Address>(obj, 0);
++   int instance_type = ReadRawField<uint16_t>(map, 12);
+
+    if (I::CanHaveInternalField(instance_type)) {
+      // omitted
+    }
+    return SlowGetInternalField(index);
+  }
+```
+
+All `ReadRawField` does is subtract `kHeapObjectTag` from the address passed in, add the offset, and then convert the resulting address to a pointer and dereference it. So we can rewrite this further as:
+
+```cpp-diff#v8-object.h
+  Local<Data> Object::GetInternalField(int index) {
+    using A = internal::Address;
+    using I = internal::Internals;
+
+    A obj = *reinterpret_cast<const A*>(this);
+-   A map = ReadRawField<Address>(obj, 0);
+-   int instance_type = I::GetInstanceType(obj);
++   A map = *reinterpret_cast<const A*>(obj - 1 + 0);
++   int instance_type = *reinterpret_cast<const uint16_t*>(map - 1 + 12);
+
+    if (I::CanHaveInternalField(instance_type)) {
+      // omitted
+    }
+    return SlowGetInternalField(index);
+  }
+```
+
+So, we...
+
+- reinterpret `this` (which has the type `Object*`, although it isn't really) as a pointer to an `Address`, and dereference that pointer to get `obj`
+- subtract 1 from `obj`, and read an address from that location to get `map`
+- add 11 to `map`, and read 2 bytes from that location to get the instance type
+
+Remember that in the current implementation, `this` isn't a pointer to an `Address` at all, it's a `JSValue`. So V8 will blindly dereference whatever the `JSValue` looks like as a pointer, dereference it _again_ to find whatever `map` is, and then dereference _that_ to get the instance type. And remember, this is all code that gets compiled into each native module. We can't change any of it.
+
+At this point, I figured my best hope was to somehow set up these pointers just enough that V8 would find an `instance_type` which makes `CanHaveInternalField` return `false` (if that function returns `true`, `GetInternalField` reads the internal field at a direct pointer offset, which would be even harder to make work under JSC than everything else we've seen). Then, it would always call `SlowGetInternalField`, which I can control the implementation of because it's not inline. But even getting to this point is hard and requires throwing out our initial scheme of storing `JSValue`s directly in `Local`s.
+
+Let's go back to basics and look more closely at how `JSValue`s and `Local`s are represented.
+
+## Value Representation, part 2
+
+JavaScript engines face the challenge of representing a dynamic type system, where a value may change its type at any moment, while being implemented in a static type system where every variable's type must be known by the compiler.
+
+The representation of numbers is also an important choice in JavaScript engines. According to the specification, JavaScript numbers behave like IEEE 754 double-precision floating-point numbers (`double` in C or C++, and `f64` in Zig or Rust). Bitwise operations do have to convert the number to an integer to manipulate its bits, but the result of such operations still needs to behave like a double (`(5 << 1) / 4` must be `2.5`). So the easiest implementation would be to always store JavaScript numbers as doubles, and only briefly convert them to an integer and then back to a double.
+
+However, storing all numbers as doubles has a severe performance cost. Doubles are a lot slower to operate on than integers, and most of the numbers used by a typical program are integers anyway (numbers like array indices). So almost every JavaScript engine contains an optimization to represent numbers as integers where possible. This can be done without breaking the specification, as long as you're careful to convert the numbers back to doubles where necessary. You also need to make sure not to allow representing values that a `double` can't represent. For instance, it'd be inappropriate to use 64-bit integers, because those have greater precision than a `double` for very large integers. On 64-bit platforms, and when V8's pointer compression is disabled, JSC and V8 both use a signed 32-bit integer for this optimization.
+
+V8 and JSC have both come up value representations that can use only 8 bytes while distinguishing between common kinds of values. Let's look at JSC's solution first.
+
+### JSValue
+
+A `JSValue` takes up 64 bits, and can represent any of these:
+
+- A 64-bit double-precision float
+- A 48-bit `JSCell` pointer. `JSCell` is the base class for any JavaScript value allocated on the heap.
+- A 32-bit signed integer
+- `false`, `true`, `undefined`, or `null`
+
+How do they do this? JSC uses a technique called _NaN boxing_. This takes advantage of the fact that, in the double-precision representation of NaN, there are 51 unused bits. Libraries and hardware floating-point implementations generally set these to zero, so any nonzero value in these bits can be used to encode a non-floating-point value. JSC sets the upper two of these bits for non-float representations, so that the lower 49 can be set to anything without being confused for a real NaN. JSC uses the uppermost bit of these 49 to distinguish between a 48-bit pointer (no 64-bit platform we support actually uses more than 48 bits for memory addressing) and a 32-bit integer. `false`, `true`, `undefined`, and `null` are represented as specific invalid pointers.
+
+What I've described above implements NaN boxing where the non-double values are represented as valid double-precision encodings of NaN. However, doing that forces some of the high bits to be set in all non-double values, which is inconvenient for pointers as we'd have to zero out those bits before dereferencing the pointer. JSC's last trick is to subtract 2^49 from the double-precision value encoded as described above. This makes the kinds of values we've talked about fall into the following ranges:
+
+```
+Pointer {  0000:PPPP:PPPP:PPPP
+
+         / 0002:****:****:****
+Double  {         ...
+         \ FFFC:****:****:****
+
+Integer {  FFFE:0000:IIII:IIII
+```
+
+Since pointers now have their upper bits set to zero, after checking that a `JSValue` is a pointer it can be used directly. Doubles and integers only require simple integer math to be converted to their true values.
+
+If that didn't make much sense (or even if it did), I recommend consulting [this comment in the header that defines `JSValue`](https://github.com/WebKit/WebKit/blob/2a4cf936370c9d32f4f3df96ea84047ed1575b3c/Source/JavaScriptCore/runtime/JSCJSValue.h#L418-L476) which explains the scheme very well.
+
+### Tagged Pointers
+
+V8 uses a scheme called _pointer tagging_. The lower 2 bits of a pointer are used to indicate what kind of value it is. This is okay because all objects allocated by V8's garbage collector are at least 4-byte aligned, so the lower 2 bits in a valid address would always be zero. On 64-bit platforms (the only ones Bun supports), the lowermost bit is set to 1 if a value is a pointer, and the second-lowest bit is set to 1 if the pointer is weak. If the value is not a pointer, the lower 32 bits are all set to zero, and the upper 32 bits store a signed integer value (which V8 calls a "small integer" or "Smi"):
+
+```
+            |----- 32 bits -----|----- 32 bits -----|
+Pointer:    |________________address______________w1|
+Smi:        |____int32_value____|0000000000000000000|
+```
+
+You may notice that doubles don't fit into this scheme. V8 stores doubles in a separate allocation called a `HeapNumber`. We'll look at how V8 handles booleans, `null`, and `undefined` in part 3.
+
+To read more about V8's value representation, see [`tagged.h`](https://github.com/v8/v8/blob/8ab91836885699b9ef686c3a30df4778501ef7d1/src/objects/tagged.h#L24-L66) as well as [Igor Sheludko and Santiago Aboy Solanes's blog post explaining pointer compression](https://v8.dev/blog/pointer-compression). Pointer compression is an optional build-time V8 feature which changes the size of a tagged pointer to 32 bits, even on 64-bit platforms. Node.js does not enable pointer compression, so Bun does not have to mimic that representation, but that article still contains a good explanation of the non-compressed scheme as well as interesting details about the tradeoffs of pointer compression.
+
+### Local and Handle Scope
+
+Now we understand tagged pointers, but what's in a `Local`?
+
+V8 (unlike JSC) uses a _moving garbage collector_. This means that the garbage collector may need to change an object's location in memory. To do that, it needs to locate all references to the object and change the addresses to the object's new location. This isn't feasible with C code using raw pointers. Instead, V8 stores the tagged pointers we discussed above in _handle scopes_. A `HandleScope` manages a group of object references, or handles. It maintains storage for all their addresses, which the garbage collector can see. A `Local`, in turn, stores a pointer to the address that is stored in the handle scope. When a native function needs to access data from a `Local`, it has to dereference the pointer to the address, and then dereference that address to go to the actual object. When the garbage collector needs to move an object, it can simply look through all the handle scopes for pointers matching the object's old address and replace those pointers with the new address.
+
+What about integers? Those still use the handle scope, but the tagged pointer stored in the handle scope will have the low bits set to zero, indicating that it is a 32-bit signed integer rather than a pointer. The GC knows it can skip over those handles.
+
+Handle scopes are always stored in stack memory, and they themselves also make up a stack: when you create a `HandleScope`, it keeps a reference to the previous one, and when you exit the scope in which the `HandleScope` was created, it releases all the handles it contained and makes the previous one active again. The stack of handle scopes doesn't always match the native call stack, though, because you can always create handles in the currently active handle scope even if you didn't create your own in the current function.
+
+### Maps
+
+V8 uses objects called `Map`s (not to be confused with JavaScript maps) to represent the layout of heap-allocated JavaScript types. JSC has a similar concept called a `Structure`. Fortunately, we don't need to worry about too many implementation details; only enough to make the `GetInstanceType` function work. From that function's code, we know:
+
+- Every object has, as its first field, a tagged pointer to its `Map`
+- The `Map` has a two-byte integer at offset 12 to represent the instance type
+
+Since `Map`s are heap objects, each one also has a pointer to its `Map` as the first field. These all point to the same `Map`, which is the map that describes the layout of a `Map`. I haven't seen a scenario where inline V8 functions rely on this, but I've implemented that field too because it wasn't difficult.
+
+### Putting it all together: V8 memory layout
+
+As an example, let's see what the memory looks like after running the following code in Node.js (right before `baz` returns):
+
+```cpp
+void foo(const FunctionCallbackInfo<Value>& info) {
+    Isolate* isolate = info.GetIsolate();
+    HandleScope foo_scope(isolate);
+    Local<String> foo_string = String::NewFromUtf8(isolate, "hello").ToLocalChecked();
+    bar(isolate);
+}
+
+void bar(Isolate* isolate) {
+    Local<Number> bar_number = Number::New(isolate, 2.0);
+    baz(isolate);
+}
+
+void baz(Isolate* isolate) {
+    HandleScope baz_scope(isolate);
+    Local<Number> baz_number = Number::New(isolate, 3.5);
+}
+```
+
+![Diagram of memory layout in the previous C++ program. Each function's local variables hold the addresses of handles in a handle scope. The handle for foo_string contains a strong pointer to a string on the heap. The handle for bar_number contains an integer. The handle for baz_number contains a strong pointer to a heap number. Each heap object starts with a pointer to its map, one for each type. Each map has a pointer to the map used by maps, which points to itself.](/images/v8layout.drawio.svg)
+
+Notice how everything stored in the handle scope uses the tagged pointer representation discussed in the previous section, which is why the memory addresses of heap objects are stored as odd numbers. The handles for `foo_string` and `baz_number` have their lowest 2 bits set to `01` to indicate that they are strong pointers. But to get the actual addresses they refer to, we have to change those bits to zero, resulting in the objects' actual locations written after "@."
+
+Under "Heap," we can see which `Map` each object points to. These pointers to `Map`s are of course tagged pointers, so they also have the least significant bit set. The string and heap number also of course have more fields after the map pointer, but those fields (luckily) aren't a part of the layout that we have to match, so they aren't shown here.
+
+Before we can do anything useful with the V8 API, we'll need to come up with a way to make JSC's types fit in this diagram the way that V8 expects them to. We'll also need to make sure that JSC's garbage collector can find all the V8 values that a native addon has created, so that it doesn't delete them while they can still be accessed. Finally, we'll need to implement a lot of extra types for V8 concepts that JSC doesn't precisely expose.
+
+## Coming up
+
+In [the next part of this series](/blog/how-bun-supports-v8-apis-without-using-v8-part-2), we'll look at how Bun can manipulate JSC types to match the layout expected by V8, while trying to avoid undue slowdown or wasted memory.
+
+## Links
+
+- [Getting started with embedding V8](https://v8.dev/docs/embed): overview of many V8 APIs from a user's perspective, with some internal details
+- [Pointer Compression in V8](https://v8.dev/blog/pointer-compression): explanation of the value representation in V8 with and without pointer compression (which makes tagged pointers only take up 32 bits even on 64-bit systems), and details of the implementation of optimized routines to compress and decompress pointers. Node.js has not enabled pointer compression, but Chromium and Electron have.
+- [`tagged.h`](https://github.com/v8/v8/blob/8ab91836885699b9ef686c3a30df4778501ef7d1/src/objects/tagged.h#L24-L66): implementation of V8's pointer tagging system
+- [Design of V8 bindings](https://chromium.googlesource.com/chromium/src/+/refs/tags/128.0.6613.92/third_party/blink/renderer/bindings/core/v8/V8BindingDesign.md): describes from the perspective of V8's use in Chromium the difference between concepts like Isolates and Contexts
+- [`JSCJSValue.h`](https://github.com/WebKit/WebKit/blob/2a4cf936370c9d32f4f3df96ea84047ed1575b3c/Source/JavaScriptCore/runtime/JSCJSValue.h#L418-L476): details the 32- and 64-bit (only the latter is relevant for Bun) encodings of JSC's basic value type
+- [_Crafting Interpreters_ on NaN boxing](https://craftinginterpreters.com/optimization.html#nan-boxing): more detailed justification and explanation of one technique used by JSC to compactly represent values of different types
+- [value representation in javascript implementations](https://wingolog.org/archives/2011/05/18/value-representation-in-javascript-implementations): survey of different value representations used by production JavaScript interpreters and their tradeoffs

@@ -1,0 +1,156 @@
+---
+title: Bun v0.1.12
+description: Release notes for Bun v0.1.12
+date: "2022-09-18T06:37:55Z"
+author: jarred
+thumbText: v0.1.12
+---
+
+To upgrade:
+
+```bash
+bun upgrade
+```
+
+To install:
+
+```bash
+curl https://bun.sh/install | bash
+```
+
+{% details summary="If you have any problems upgrading" %}
+
+Run the install script (you can run it multiple times):
+
+```bash
+curl https://bun.sh/install | bash
+```
+
+{% /details %}
+
+### `bun install` gets faster & more reliable
+
+Previously, `bun install` on Linux would crash or hang at least 1 out of every 80,000 cold package installs 🙈. It was particularly bad for download speeds < 100 mbps. Sometimes there were DNS hostname resolution issues as well (which caused a separate crash). If you were on a Linux kernel earlier than v5.5 or had a low memlock limit (e.g. using Ubuntu 18.04), it just wouldn't work at all.
+
+Bun v0.1.12 fixes that.
+
+To end-to-end test this, I had a computer cold install 512 MB of `node_modules` for 2 hours in a loop (at least 800,000 cold package installs) and it installed successfully every time without crashing or hanging (unlike Bun v0.1.11 and earlier)
+
+The first run installed 100 times and the second 1,000 times.
+
+![image](https://user-images.githubusercontent.com/709451/190843692-8d2ce29f-9375-4740-bba5-973bd30f696c.png)
+
+Four different things caused stability issues:
+
+- A deadlock in the code that waits for async work to complete (extracting files and parsing JSON happen in a threadpool). This was fixed by (1) moving to a multi-producer single-consumer lockfree queue for HTTP requests and (2) using either a eventfd or a machport to notify readiness instead of a futex.
+- A bug in the HTTP client when suspending/resuming from work that occurred asynchronously. This was fixed while rewriting the HTTP client (it no longer uses Zig's async/await)
+- A crash when reading an empty JSON file. This was a trivial fix.
+- A crash when DNS resolution failed for any reason. This was fixed while rewriting the HTTP client because now it uses libc's `getaddrinfo`
+
+Many of these issues applied to macOS as well (excluding the memlock limit one)
+
+There are still important missing features in `bun install`, including support for `git` dependencies, `github` dependencies, `npm:` package aliasing, and workspaces support. Those are just not implemented yet, which is different than stability issues with existing features.
+
+### `fetch()` gets faster & more reliable
+
+The eventing code for Bun's HTTP client has been rewritten to use [uSockets](https://github.com/uNetworking/uSockets) and that, along with changes to concurrent task scheduling and HTTP keep-alive made sending HTTP requests in Bun faster & more reliable.
+
+Bun's [`fetch()`](https://developer.mozilla.org/en-US/docs/Web/API/fetch) can send 155,000 requests per second on Linux x64:
+
+- 24x higher throughput than in Node v18.9.0
+- 6.2x higher throughput than in Bun v0.1.11
+- 4.5x higher throughput than in Deno v1.25.3
+  {% image  width="287" alt="image" src="https://user-images.githubusercontent.com/709451/190843561-050e6273-3043-496e-870c-a97ef6624e0e.png" /%}
+
+[Code](https://gist.github.com/Jarred-Sumner/d1cd803fc33023a4dfa557357613ac84)
+
+The performance of `fetch` in Bun seems to be within 25% of optimized native HTTP benchmarking tools like `oha` and `bombardier` (`autocannon`, the more popular choice, only reaches 60k req/s)
+
+### `read.u8` in `bun:ffi`
+
+`read` in `bun:ffi` lets you read pointers without creating a new DataView. This helps write faster libraries.
+
+```ts
+import { read, ptr } from "bun:ffi";
+import { it, expect } from "bun:test";
+
+it("read", () => {
+  const buffer = new BigInt64Array(16);
+  const dataView = new DataView(buffer.buffer);
+  const addr = ptr(buffer);
+
+  for (let i = 0; i < buffer.length; i++) {
+    buffer[i] = BigInt(i);
+    expect(read.intptr(addr, i * 8)).toBe(
+      Number(dataView.getBigInt64(i * 8, true)),
+    );
+    expect(read.ptr(addr, i * 8)).toBe(
+      Number(dataView.getBigUint64(i * 8, true)),
+    );
+    expect(read.f64(addr, i + 8)).toBe(dataView.getFloat64(i + 8, true));
+    expect(read.i64(addr, i * 8)).toBe(dataView.getBigInt64(i * 8, true));
+    expect(read.u64(addr, i * 8)).toBe(dataView.getBigUint64(i * 8, true));
+  }
+
+  for (let i = 0; i < buffer.byteLength - 4; i++) {
+    // read is intended to behave like DataView
+    // but instead of doing
+    //    new DataView(toArrayBuffer(myPtr)).getInt8(0, true)
+    // you can do
+    //    read.i8(myPtr, 0)
+    expect(read.i8(addr, i)).toBe(dataView.getInt8(i, true));
+    expect(read.i16(addr, i)).toBe(dataView.getInt16(i, true));
+    expect(read.i32(addr, i)).toBe(dataView.getInt32(i, true));
+    expect(read.u8(addr, i)).toBe(dataView.getUint8(i, true));
+    expect(read.u16(addr, i)).toBe(dataView.getUint16(i, true));
+    expect(read.u32(addr, i)).toBe(dataView.getUint32(i, true));
+    expect(read.f32(addr, i)).toBe(dataView.getFloat32(i, true));
+  }
+});
+```
+
+Implementing this involved a change to WebKit's DOMJIT to [enable 52-bit integer arguments (pointers) ](https://github.com/oven-sh/WebKit/commit/2e9e9203ef0561f08919285f32d81b25ad96608a)
+
+This involved an unlikely but potentially breaking change to the pointer representation in `bun:ffi`. Previously, `bun:ffi` pointers stored the memory address at the end of a JavaScript double (bit-casted a double to a 64-bit signed integer) and now the value is stored in the integer part of the double. This would only be a breaking change for libraries relying on the pointer representation in napi
+
+### String.prototype.replace gets 2x faster
+
+`String.prototype.replace` gets 2x faster in Safari & Bun, thanks to [@Constellation](https://github.com/Constellation). It affects code like this:
+
+```js
+myString.replace("foo", "baz");
+```
+
+PRs:
+
+- https://github.com/WebKit/WebKit/pull/4079
+- https://github.com/WebKit/WebKit/pull/4121
+- https://github.com/WebKit/WebKit/pull/3983
+
+This version of Bun updates to the latest WebKit as of September 17th, 2022 (which includes these PRs)
+
+### Faster `crypto.getRandomValues` and `crypto.randomUUID`
+
+`crypto.getRandomValues` now uses BoringSSL's optimized random functions
+
+Note: this screenshot was taken before Bun's version was bumped to v0.1.12 which is why it shows v0.1.11 there
+
+![image](https://user-images.githubusercontent.com/709451/190848391-0c9b18a5-80bc-4b87-b991-1c2c20ba3e5c.png)
+
+### More
+
+- curly brace support for .env files https://github.com/oven-sh/bun/pull/1246 thanks to [@ekil1100](https://github.com/ekil1100) @Kit-p
+- [[breaking][bun:ffi] Change the pointer representation to be a 52-bit integer](https://github.com/oven-sh/bun/commit/e9c456ff5cf53d6f57a619db27ed0335c61041eb)
+- [Fix bug with `Buffer.from([123], "utf8")`](https://github.com/oven-sh/bun/commit/2b02f7eb99d9fd84a0be50dd01122ae7b2874c0d)
+- [Resolve rope strings in dynamic import paths](https://github.com/oven-sh/bun/commit/71e2c26577289763a518cf8fc7ed8c8ef3cb7e60)
+- [Fix crash when parsing empty JSON file](https://github.com/oven-sh/bun/commit/453eaf6871afdde6f1fe85c0b1e3a44cbd980b10)
+- [Make fetch throw a SystemError on reject](https://github.com/oven-sh/bun/commit/4b9f6baf7909cfb68335fd1effd40f0e593f36fb)
+- [Fix origin missing protocol in URL](https://github.com/oven-sh/bun/commit/f55b9a853064f276c918fe3f91df55c48f901f86)
+- [Fast path for Bun.write with short-ish strings & typed arrays](https://github.com/oven-sh/bun/commit/25e4fcf5c82af1e3af5bb103c68d5e110cfbc30f)
+- Add native helper functions for Readable and convert ReadableState properties to getter/setter by [@zhuzilin](https://github.com/zhuzilin) in https://github.com/oven-sh/bun/pull/1218
+- Fix segfault due to GC and some more helper functions by [@zhuzilin](https://github.com/zhuzilin) in https://github.com/oven-sh/bun/pull/1221
+- Updated to latest BoringSSL
+- More globals are modifiable (some libraries depend on this)
+- A regression in NAPI module registration broke some libraries.
+
+[**Full Changelog**](https://github.com/oven-sh/bun/compare/bun-v0.1.11...bun-v0.1.12)

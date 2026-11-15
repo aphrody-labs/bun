@@ -1,0 +1,642 @@
+---
+title: Bun v0.7.0
+description: vite dev support, Workers, bun --smol, WebSocket.ping(), structuredClone(), serialize() and better Node.js compatibility
+date: "2023-07-21T00:57:49+00:00"
+author: jarred
+draft: false
+---
+
+We're pleased to announce Bun v0.7.0, a big leap forward in terms of Node.js compatibility.
+
+{% callout %}
+We're hiring C/C++ and Zig engineers to build the future of JavaScript! [Join our team →](/careers)
+{% /callout %}
+
+Bun is an incredibly fast JavaScript runtime, bundler, transpiler, and package manager &mdash; all in one. Over the past couple months, we've been releasing a lot of changes to Bun recently, here's a recap in case you missed it:
+
+- [`v0.6.10`](/blog/bun-v0.6.10) - `fs.watch()`, `bun install` bug fixes, `bun test` features, and improved CommonJS support
+- [`v0.6.11`](/blog/bun-v0.6.10) - Addressed a release build issue from `v0.6.10`.
+- [`v0.6.12`](/blog/bun-v0.6.12) - Sourcemap support in `Error.stack`, `Bun.file().exists()`, and Node.js bug fixes.
+- [`v0.6.13`](/blog/bun-v0.6.13) - Implemented mock `Date`, faster base64 encoding, and fixes for `WebSocket` and `node:tls`.
+- [`v0.6.14`](/blog/bun-v0.6.14) - `process.memoryUsage()`, `process.cpuUsage()`, `process.on('beforeExit', cb)`, `process.on('exit', cb)` and crash fixes
+
+To install Bun:
+
+{% codetabs %}
+
+```sh#curl
+$ curl -fsSL https://bun.sh/install | bash
+```
+
+```sh#npm
+$ npm install -g bun
+```
+
+```sh#brew
+$ brew tap oven-sh/bun
+$ brew install bun
+```
+
+```sh#docker
+$ docker pull oven/bun
+$ docker run --rm --init --ulimit memlock=-1:-1 oven/bun
+```
+
+{% /codetabs %}
+
+To upgrade Bun:
+
+```sh
+$ bun upgrade
+```
+
+## Vite support
+
+{% callout %}
+_Support is still experimental and non-optimized._ Vite does not use Bun's bundler, module resolver, or transpiler, even when run with Bun.
+{% /callout %}
+
+With the recent strides towards Node.js API compatibilty, Bun can now run [`vite dev`](https://vitejs.dev/), thanks to [@paperclover](https://github.com/paperclover)! This is one of Bun's [most upvoted issues](https://github.com/oven-sh/bun/issues/250).
+
+To try this with one of Vite's starter projects, use `bunx`:
+
+```sh
+$ bunx create-vite myapp
+$ cd myapp
+$ bun install
+```
+
+Then start the dev server.
+
+```sh
+$ bun --bun vite dev
+```
+
+{% callout %}
+**Why `--bun`?** The `--bun` flag tells Bun to override the `#! /usr/bin/env node` shebang in the `vite` CLI and execute the file with Bun instead of Node.js. In a future release this will be the default behavior.
+{% /callout %}
+
+{% image src="https://user-images.githubusercontent.com/709451/254804727-725bf67c-c60f-4eec-b472-07d52b650a93.gif" caption="Hot module reloading with Vite" /%}
+
+This is a great way to develop frontend code with Bun's APIs on the server when building frontend apps.
+
+Note: if you run `bun vite dev` without `-b` or `--bun`, it will still run in Node.js as `vite`'s CLI specifies `#!/usr/bin/env node` at the top which tells Bun (and other software on your computer) to run it in Node.js.
+
+## Concurrency with `Worker`
+
+Bun now supports [`Worker`](https://developer.mozilla.org/en-US/docs/Web/API/Worker) which allows you to run another JavaScript instance in a separate thread. In Bun, workers support ES Modules, CommonJS, TypeScript, JSX, and the rest of Bun's features with no extra configuration.
+
+As in browsers, `Worker` is a global class. To create a worker from the main thread:
+
+```ts#main.ts
+const worker = new Worker("./worker.ts");
+worker.addEventListener("message", (event: MessageEvent) => {
+  console.log("Message from worker:", event.data);
+});
+worker.postMessage("Hello from main thread!");
+```
+
+On the worker thread:
+
+```ts#worker.ts
+addEventListener("message", (event: MessageEvent) => {
+  console.log("Message from main thread:", event.data);
+  postMessage("Hello from worker thread!");
+});
+
+```
+
+{% callout %}
+This release _does not_ include support for the `node:worker_threads` module, but this unblocks the work necessary for us to implement it in Bun.
+{% /callout %}
+
+The following globals have been added to Bun:
+
+- `postMessage`
+- `addEventListener`
+- `removeEventListener`
+- `onmessage` (getter/setter)
+
+Refer to [Docs > API > Workers](/docs/api/workers) to learn more about using `Worker` in Bun.
+
+### Using `comlink` with Bun
+
+The popular [`comlink`](https://github.com/GoogleChromeLabs/comlink) package works in Bun without changes. This library makes it easier to share functions and state between main and worker threads.
+
+{% details summary="Comlink usage example" %}
+The main thread:
+
+```ts#main.ts
+import * as Comlink from "comlink";
+
+const worker = new Worker("./worker.ts");
+
+// WebWorkers use `postMessage` and therefore work with Comlink.
+const obj = Comlink.wrap(worker);
+alert(`Counter: ${await obj.counter}`);
+
+await obj.inc();
+alert(`Counter: ${await obj.counter}`);
+```
+
+The worker thread:
+
+```ts#worker.ts
+import * as Comlink from "comlink";
+const obj = {
+  counter: 0,
+  inc() {
+    this.counter++;
+  },
+};
+
+Comlink.expose(obj);
+```
+
+{% /details %}
+
+### `structuredClone()` support
+
+As in browsers, `postMessage` serializes messages using the _structured clone algorithm_. Bun now exposes this via the Web-standard[`structuredClone()`](https://developer.mozilla.org/en-US/docs/Web/API/structuredClone) function, which provides a mechanism for deep-cloning objects. It is similar to `JSON.parse(JSON.stringify(obj))`, but it supports more types.
+
+```ts
+const obj = { a: 1, b: 2 };
+const clone = structuredClone(obj);
+```
+
+## `AsyncLocalStorage` support
+
+Bun now implements `AsyncLocalStorage` from the `node:async_hooks` module. This provides a mechanism for passing contextual data through a chain of asynchronous code. This is a big step towards supporting Next.js and other frameworks that rely on this module.
+
+```ts
+import { AsyncLocalStorage } from "node:async_hooks";
+
+const requestId = new AsyncLocalStorage();
+let lastId = 0;
+
+Bun.serve({
+  fetch(request) {
+    lastId++;
+    // Run the callback with 'requestId' set. async_hooks will preserve
+    // this value through any chain of asynchronous code.
+    return requestId.run(lastId, async () => {
+      console.log(`Request ID: ${requestId.getStore()}`);
+      await Bun.sleep(500);
+      // Even if new requests mutate 'lastId', 'requestId' is still preserved.
+      return new Response(`Request ID: ${requestId.getStore()}`);
+    });
+  },
+});
+```
+
+## Reduce memory usage with `bun --smol`
+
+`bun --smol` is a new CLI flag which configures the JavaScriptCore heap size to be smaller and grow slower, at a cost to runtime performance. This is useful for running Bun in memory-constrained environments.
+
+{% raw %}
+
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">The next version of bun gets the &quot;--smol&quot; flag, which reduces memory usage at a slight cost to performance <a href="https://t.co/9cw9vylrur">pic.twitter.com/9cw9vylrur</a></p>&mdash; Jarred Sumner (@jarredsumner) <a href="https://twitter.com/jarredsumner/status/1680803842743750657?ref_src=twsrc%5Etfw">July 17, 2023</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+{% /raw %}
+
+To avoid setting the flag manually, you can set this as a default in `bunfig.toml`.
+
+```toml#bunfig.toml
+smol = true
+
+[test]
+# set it only for tests, if you want
+smol = true
+```
+
+## `--bail` in `bun test`
+
+Running `bun test` with `--bail=1` will exit after the first test failure.
+
+```sh
+$ bun test --bail 1
+bun test v0.7.0
+
+✓ test1 [0.02ms]
+test2.test.js:
+1 | import {test, expect} from 'bun:test';
+2 |
+3 | test('test2', () => {
+4 |   expect(2).toEqual(3);
+      ^
+error: expect(received).toEqual(expected)
+Expected: 3
+Received: 2
+      at /Users/colinmcd94/Documents/bun/fun/test/test2.test.js:13:8
+✗ test2 [0.18ms]
+Ran 2 tests across 2 files. [8.00ms]
+Bailed out after 1 failures
+```
+
+This is useful for CI environments or when you want to stop running tests after the first failure. Thanks to [@TiranexDev](https://github.com/TiranexDev) for landing this improvement!
+
+## `Bun.readableStreamToFormData()`
+
+Bun now exposes a helper for converting a [ReadableStream](https://developer.mozilla.org/en-US/docs/Web/API/ReadableStream) into [FormData](https://developer.mozilla.org/en-US/docs/Web/API/FormData).
+
+It supports multipart form data.
+
+```ts
+import { readableStreamToFormData } from "bun";
+
+// without dashes
+const boundary = "WebKitFormBoundary" + Math.random().toString(16).slice(2);
+
+const myStream = getStreamFromSomewhere(); // ...
+const formData = await Bun.readableStreamToFormData(stream, boundary);
+formData.get("foo"); // "bar"
+```
+
+It also supports URL-encoded form data:
+
+```ts
+import { readableStreamToFormData } from "bun";
+
+const stream = new Response("hello=123").body;
+const formData = await readableStreamToFormData(stream);
+formData.get("hello"); // "123"
+```
+
+We added this to help fix a bug causing `request.formData()` and `response.formData()` to hang when the body was a `ReadableStream` from JavaScript.
+
+## `serialize` and `deserialize` in `bun:jsc`
+
+The `bun:jsc` module now exports `serialize()` and `deserialize()`, which convert JavaScript objects to `ArrayBuffer` and back.
+
+```ts
+import { serialize, deserialize } from "bun:jsc";
+import { deepEquals } from "bun";
+
+const obj = { a: 1, b: 2 };
+const buffer = serialize(obj);
+const clone = deserialize(buffer);
+
+if (deepEquals(obj, clone)) {
+  console.log("They are equal!");
+}
+```
+
+The `node:v8` module exports these same functions, for compatibility with existing libraries that serialize/deserialize data between processes.
+
+## `WebSocket` improvements
+
+You can now manually send & receive WebSocket `ping` and `pong` frames.
+
+```ts
+const ws = new WebSocket("wss://echo.websocket.org");
+ws.addEventListener("pong", () => {
+  console.log("Received pong");
+});
+ws.ping();
+```
+
+This applies to both `ServerWebSocket` and `WebSocket`.
+
+### `nodebuffer` is now the default `binaryType`
+
+By default, the `binaryType` for `WebSocket` and `ServerWebSocket` in Bun is now `nodebuffer` This means that binary data frames in `WebSocket` will be `Buffer` instances, instead of `ArrayBuffer` (as before). This is to match the bahavior of the `ws` package.
+
+```ts
+const ws = new WebSocket("wss://echo.websocket.org");
+
+ws.addEventListener("message", (event: MessageEvent) => {
+  console.log(event.data instanceof Buffer); // true
+});
+```
+
+To change it back to `ArrayBuffer`, set `ws.binaryType = "arraybuffer"`.
+
+```ts
+const ws = new WebSocket("wss://echo.websocket.org");
+ws.binaryType = "arraybuffer";
+
+ws.addEventListener("message", (event: MessageEvent) => {
+  event.data; // ArrayBuffer
+});
+```
+
+(Note that in browsers it is `Blob` by default.)
+
+### Close reasons propagate correctly now
+
+A bug was fixed where `WebSocket` would not propagate close reasons from third-party servers correctly. Thanks to [@Electroid](https://github.com/electroid) for landing these improvements!
+
+## Node.js compatibility improvements
+
+This release adds several additional improvements to Node.js compatibility.
+
+### Improvements to `TLSSocket` from `node:tls`
+
+The following methods were implemented on the `TLSSocket` class. Thanks to [@cirospaciari](https://github.com/cirospaciari) for landing these improvements in [`#3596`](https://github.com/oven-sh/bun/pull/3596).
+
+- `.getPeerFinished()`
+- `.getFinished()`
+- `.getProtocol()`
+- `.getSharedSigalgs()`
+- `.isSessionReused()`
+- `.exportKeyingMaterial()`
+- `.setMaxSendFragment()`
+- `.getPeerCertificate()`
+- `.getCertificate()`
+- `.enableTrace()`
+- `.disableRenegotiation()`
+- `.getCipher()`
+- `.getEphemeralKeyInfo()`
+- `.getTLSTicket()`
+- `.getSession()`
+- `.setSession()`
+
+### `base64url` hashes are no longer `data:` urls
+
+Previously, Bun would prepend `data:base64,` to the output of `crypto.createHash("sha256").digest("base64url")`. This is not what Node.js does, and it was causing issues with libraries that expected the output to be the same string as Node.js.
+
+```js
+crypto.createHash("sha256").update("abc").digest("base64url");
+
+//        Node.js:  "ungWv48Bz-pBQUDeXa4iI7ADYaOWF3qctBD_YfIAFa0"
+//     Bun v0.7.0:  "ungWv48Bz-pBQUDeXa4iI7ADYaOWF3qctBD_YfIAFa0"
+// <= Bun v0.6.14:  "data:base64,ungWv48Bz-pBQUDeXa4iI7ADYaOWF3qctBD_YfIAFa0="
+```
+
+### Terminal dimensions with `process.stdout.columns` and `process.stdout.rows`
+
+`process.stdout` and `process.stderr` now support reading the terminal window's dimensions.
+
+```ts
+const { columns, rows } = process.stdout;
+const [columns, rows] = process.stdout.getWindowSize();
+const { columns, rows } = process.stderr;
+const [columns, rows] = process.stderr.getWindowSize();
+```
+
+You can also use `process.stdout.getWindowSize()` if you want both dimensions at once.
+
+## Bugfixes
+
+[`#3656`](https://github.com/oven-sh/bun/pull/3656) **A memory leak** in await `new Response(latin1String).arrayBuffer()` and `await Response.json(obj).json()` has been fixed.
+
+After:
+
+```js
+cpu: Apple M1 Max
+runtime: bun 0.7.0 (arm64-darwin)
+
+benchmark                                                        time (avg)             (min … max)       p75       p99      p995
+--------------------------------------------------------------------------------------------------- -----------------------------
+new Response().arrayBuffer() (new string each call, latin1)    12.9 µs/iter      (625 ns … 4.18 ms)      1 µs 567.17 µs 711.79 µs
+new Response().arrayBuffer() (new string each call, utf16)    12.85 µs/iter     (1.67 µs … 1.56 ms)   2.17 µs 462.75 µs 621.13 µs
+new Response().arrayBuffer() (existing string, latin1)         6.53 µs/iter     (6.21 µs … 7.07 µs)   6.64 µs   7.07 µs   7.07 µs
+
+Peak memory usage: 49 MB
+```
+
+Before:
+
+```js
+cpu: Apple M1 Max
+runtime: bun 0.7.0 (arm64-darwin)
+
+benchmark                                                        time (avg)             (min … max)       p75       p99      p995
+--------------------------------------------------------------------------------------------------- -----------------------------
+new Response().arrayBuffer() (new string each call, latin1)   13.51 µs/iter       (541 ns … 3.2 ms)   1.92 µs 553.42 µs 709.92 µs
+new Response().arrayBuffer() (new string each call, utf16)    13.07 µs/iter     (1.71 µs … 3.43 ms)   2.13 µs 451.21 µs 651.67 µs
+new Response().arrayBuffer() (existing string, latin1)         6.25 µs/iter     (5.79 µs … 6.81 µs)    6.4 µs   6.81 µs   6.81 µs
+
+Peak memory usage: 292 MB
+```
+
+[`#3659`](https://github.com/oven-sh/bun/issues/3659) A **module resolution bug** causing the `graphql` package to import both CommonJS and ESM versions of the same modules has been fixed. This was fixed by aligning the package.json main field order closer to what Node.js does.
+
+```
+error: Cannot use GraphQLScalarType "String" from another module or realm.
+
+Ensure that there is only one instance of "graphql" in the node_modules
+directory. If different versions of "graphql" are the dependencies of other
+relied on modules, use "resolutions" to ensure only one version is installed.
+
+https://yarnpkg.com/en/docs/selective-version-resolutions
+
+Duplicate "graphql" modules cannot be used at the same time since different
+versions may have different capabilities and behavior. The data from one
+version used in the function from another could produce confusing and
+spurious results.
+```
+
+[`#3663`](https://github.com/oven-sh/bun/pull/3663) A **bug in bun:test lifecycle hooks** caused `beforeAll` and `afterAll` to not run when no tests were defined in a scope. This has been fixed.
+
+[`#3670`](https://github.com/oven-sh/bun/issues/3670) A **bug when .env pointed to a directory** caused Bun to crash. This has been fixed.
+
+[`#3682`](https://github.com/oven-sh/bun/issues/3682) A **TypeScript parser bug related to ternaries with spread operators** has been fixed
+
+### Changelog
+
+{% table %}
+
+---
+
+- [#3253](https://github.com/oven-sh/bun/pull/3253)
+- feat(bun/test): Implement "bail" option for "bun test" by [@TiranexDev](https://github.com/TiranexDev)
+
+---
+
+- [#3608](https://github.com/oven-sh/bun/pull/3608)
+- Improve our internal typedefs by [@paperclover](https://github.com/paperclover)
+
+---
+
+- [#3257](https://github.com/oven-sh/bun/pull/3257)
+- Improvements to `WebSocket` and `ServerWebSocket` by [@Electroid](https://github.com/Electroid)
+
+---
+
+- [#3630](https://github.com/oven-sh/bun/pull/3630)
+- $npm_lifecycle_event should have the value of the last call by [@TiranexDev](https://github.com/TiranexDev)
+
+---
+
+- [#3631](https://github.com/oven-sh/bun/pull/3631)
+- Update docs/types for process by [@colinhacks](https://github.com/colinhacks)
+
+---
+
+- [#3637](https://github.com/oven-sh/bun/pull/3637)
+- structured clone by [@dylan-conway](https://github.com/dylan-conway)
+
+---
+
+- [#3650](https://github.com/oven-sh/bun/pull/3650)
+- docs: add one missing line in typescript.md by [@capaj](https://github.com/capaj)
+
+---
+
+- [#3643](https://github.com/oven-sh/bun/pull/3643)
+- Fixes #3641 by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [#3614](https://github.com/oven-sh/bun/pull/3614)
+- Support `napi_wrap` in constructors by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [#3645](https://github.com/oven-sh/bun/pull/3645)
+- Implement Workers by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [#3654](https://github.com/oven-sh/bun/pull/3654)
+- Fixes base64url encoding for crypto by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [#3655](https://github.com/oven-sh/bun/pull/3655)
+- 20% faster `deserialize` for structuredClone / postMessage with objects by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [#3626](https://github.com/oven-sh/bun/pull/3626)
+- workaround `readable-stream` compatibility by [@alexlamsl](https://github.com/alexlamsl)
+
+---
+
+- [#3662](https://github.com/oven-sh/bun/pull/3662)
+- [install] handle duplicated workspace declarations gracefully by [@alexlamsl](https://github.com/alexlamsl)
+
+---
+
+- [#3664](https://github.com/oven-sh/bun/pull/3664)
+- package json `main` field extension order by [@dylan-conway](https://github.com/dylan-conway)
+
+---
+
+- [#3596](https://github.com/oven-sh/bun/pull/3596)
+- [tls] General compatibility improvements by [@cirospaciari](https://github.com/cirospaciari)
+
+---
+
+- [#3667](https://github.com/oven-sh/bun/pull/3667)
+- zig upgrade by [@dylan-conway](https://github.com/dylan-conway)
+
+---
+
+- [#3671](https://github.com/oven-sh/bun/pull/3671)
+- fix(tls) patch checkServerIdentity by [@cirospaciari](https://github.com/cirospaciari)
+
+---
+
+- [#3672](https://github.com/oven-sh/bun/pull/3672)
+- feature(constants) add constants/node:constants module and tests(prisma) use prima 5.0.0 + use same connection for postgres, add prisma mssql (disabled for now) by [@cirospaciari](https://github.com/cirospaciari)
+
+---
+
+- [#3678](https://github.com/oven-sh/bun/pull/3678)
+- Better error for workspace dependency not found by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [#3683](https://github.com/oven-sh/bun/pull/3683)
+- move constants module to cpp by [@cirospaciari](https://github.com/cirospaciari)
+
+---
+
+- [#3687](https://github.com/oven-sh/bun/pull/3687)
+- fix #3682 by [@dylan-conway](https://github.com/dylan-conway)
+
+---
+
+- [#3680](https://github.com/oven-sh/bun/pull/3680)
+- fix createDecipheriv by [@cirospaciari](https://github.com/cirospaciari)
+
+---
+
+- [#3688](https://github.com/oven-sh/bun/pull/3688)
+- update root certificates and add tls.rootCertificates by [@cirospaciari](https://github.com/cirospaciari)
+
+---
+
+- [#3089](https://github.com/oven-sh/bun/pull/3089)
+- Implement `AsyncLocalStorage` by [@paperclover](https://github.com/paperclover)
+
+---
+
+- [#3693](https://github.com/oven-sh/bun/pull/3693)
+- Fix browser bundled string_decoder by [@paperclover](https://github.com/paperclover)
+
+---
+
+- [#3694](https://github.com/oven-sh/bun/pull/3694)
+- Fix vite by [@paperclover](https://github.com/paperclover)
+
+---
+
+- [#3698](https://github.com/oven-sh/bun/pull/3698)
+- Fixes #3670 by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [#3697](https://github.com/oven-sh/bun/pull/3697)
+- Support streams in response.formData() & request.formData, introduce Bun.readableStreamToFormData() by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [#3706](https://github.com/oven-sh/bun/pull/3706)
+- Improve types for FFI number types by [@colinhacks](https://github.com/colinhacks)
+
+---
+
+- [#3707](https://github.com/oven-sh/bun/pull/3707)
+- fix start delay on Worker by [@cirospaciari](https://github.com/cirospaciari)
+
+---
+
+- [#3709](https://github.com/oven-sh/bun/pull/3709)
+- set `_preload_modules` to empty array by [@dylan-conway](https://github.com/dylan-conway)
+
+---
+
+- [#3708](https://github.com/oven-sh/bun/pull/3708)
+- fix 3702 by [@dylan-conway](https://github.com/dylan-conway)
+
+---
+
+- [#3692](https://github.com/oven-sh/bun/pull/3692)
+- Pass constructor arguments to TextDecoder by [@Parzival-3141](https://github.com/Parzival-3141)
+
+---
+
+- [#3711](https://github.com/oven-sh/bun/pull/3711)
+- Fix builtins generator `$lazy` by [@paperclover](https://github.com/paperclover)
+
+---
+
+- [#3710](https://github.com/oven-sh/bun/pull/3710)
+- fix directory caching with workaround by [@paperclover](https://github.com/paperclover)
+
+---
+
+- [#3713](https://github.com/oven-sh/bun/pull/3713)
+- Fix builtins again by [@paperclover](https://github.com/paperclover)
+
+---
+
+- [#3714](https://github.com/oven-sh/bun/pull/3714)
+- fix process.exit status code handling by [@paperclover](https://github.com/paperclover)
+
+---
+
+- [#3715](https://github.com/oven-sh/bun/pull/3715)
+- fix `isFIFO` by [@dylan-conway](https://github.com/dylan-conway)
+
+---
+
+- [#3717](https://github.com/oven-sh/bun/pull/3717)
+- string escape edgecase by [@dylan-conway](https://github.com/dylan-conway)
+
+---
+
+{% /table %}

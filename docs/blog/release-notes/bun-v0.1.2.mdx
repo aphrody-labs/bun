@@ -1,0 +1,102 @@
+---
+title: Bun v0.1.2
+description: Release notes for Bun v0.1.2
+date: "2022-07-07T23:32:48Z"
+author: jarred
+thumbText: v0.1.2
+---
+
+To upgrade:
+
+```bash
+bun upgrade
+```
+
+{% details summary="If you have any problems upgrading" %}
+
+Run this:
+
+```bash
+curl https://bun.sh/install | bash
+```
+
+{% /details %}
+
+## What's Changed
+
+bun install:
+
+- Fix `error: NotSameFileSystem`
+- When the Linux kernel version doesn't support io_uring, print instructions for upgrading to the latest Linux kernel on Windows Subsystem for Linux
+
+bun.js:
+
+- Export `randomUUID` in `crypto` module by [@WebReflection](https://github.com/WebReflection) in https://github.com/Jarred-Sumner/bun/pull/254
+- `napi_get_version` should return the Node-API version by [@kjvalencik](https://github.com/kjvalencik) in https://github.com/Jarred-Sumner/bun/pull/392
+
+bun dev:
+
+- Fix crash on running `bun dev` on linux on some machines (@egoarka) https://github.com/Jarred-Sumner/bun/pull/316
+
+Examples:
+
+- Minor updates to the Next.js example app by [@Nutlope](https://github.com/Nutlope) in https://github.com/Jarred-Sumner/bun/pull/389
+- Fixing issues with example app READMEs by [@Nutlope](https://github.com/Nutlope) in https://github.com/Jarred-Sumner/bun/pull/397
+- Add RSC to list of unsupported Next.js features in README by [@Nutlope](https://github.com/Nutlope) in https://github.com/Jarred-Sumner/bun/pull/334
+- adding a template .gitignore by [@MrBaggieBug](https://github.com/MrBaggieBug) in https://github.com/Jarred-Sumner/bun/pull/232
+
+Landing page:
+
+- Fix: long numbers + unused css by [@michellbrito](https://github.com/michellbrito) in https://github.com/Jarred-Sumner/bun/pull/367
+- fix a11y issues on landing by [@alexkuz](https://github.com/alexkuz) in https://github.com/Jarred-Sumner/bun/pull/225
+- Add a space in page.tsx by [@eyalcohen4](https://github.com/eyalcohen4) in https://github.com/Jarred-Sumner/bun/pull/264
+
+Internal:
+
+- Allow setting LLVM_PREFIX and MIN_MACOS_VERSION as environment variables by [@aslilac](https://github.com/aslilac) in https://github.com/Jarred-Sumner/bun/pull/237
+- Use Node.js v18.x from NodeSource to use string.replaceAll method by [@hnakamur](https://github.com/hnakamur) in https://github.com/Jarred-Sumner/bun/pull/268
+- refactor: wrap BigInt tests in describe block by [@jsjoeio](https://github.com/jsjoeio) in https://github.com/Jarred-Sumner/bun/pull/278
+- Add needed dependencies to Makefile devcontainer target by [@hnakamur](https://github.com/hnakamur) in https://github.com/Jarred-Sumner/bun/pull/269
+- [strings] Fix typo in string_immutable.zig by [@eltociear](https://github.com/eltociear) in https://github.com/Jarred-Sumner/bun/pull/274
+
+README:
+
+- Add troubleshooting for old intel CPUs by [@coffee-is-power](https://github.com/coffee-is-power) in https://github.com/Jarred-Sumner/bun/pull/386
+- docs: add callout for typedefs with TypeScript by [@josefaidt](https://github.com/josefaidt) in https://github.com/Jarred-Sumner/bun/pull/276
+- Added label for cpu by [@isaac-mcfadyen](https://github.com/isaac-mcfadyen) in https://github.com/Jarred-Sumner/bun/pull/322
+- chore(examples): Updates start doco #326 by [@mrowles](https://github.com/mrowles) in https://github.com/Jarred-Sumner/bun/pull/328
+- fix devcontainer starship installation by [@shanehsi](https://github.com/shanehsi) in https://github.com/Jarred-Sumner/bun/pull/345
+- Update README.md by [@PyBaker](https://github.com/PyBaker) in https://github.com/Jarred-Sumner/bun/pull/370
+- Add Bun logo in README by [@DanielTolentino](https://github.com/DanielTolentino) in https://github.com/Jarred-Sumner/bun/pull/228
+- Fix `Safari's implementation` broken link by [@F3n67u](https://github.com/F3n67u) in https://github.com/Jarred-Sumner/bun/pull/257
+- docs: Fix broken toc link by [@hyp3rflow](https://github.com/hyp3rflow) in https://github.com/Jarred-Sumner/bun/pull/218
+
+## New Contributors
+
+- @addy made their first contribution in https://github.com/Jarred-Sumner/bun/pull/207
+- @styfle made their first contribution in https://github.com/Jarred-Sumner/bun/pull/212
+- @lucacasonato made their first contribution in https://github.com/Jarred-Sumner/bun/pull/215
+- @logikaljay made their first contribution in https://github.com/Jarred-Sumner/bun/pull/236
+- @intergalacticspacehighway made their first contribution in https://github.com/Jarred-Sumner/bun/pull/245
+- @aslilac made their first contribution in https://github.com/Jarred-Sumner/bun/pull/237
+- @F3n67u made their first contribution in https://github.com/Jarred-Sumner/bun/pull/257
+- @WebReflection made their first contribution in https://github.com/Jarred-Sumner/bun/pull/254
+- @MrBaggieBug made their first contribution in https://github.com/Jarred-Sumner/bun/pull/232
+- @DanielTolentino made their first contribution in https://github.com/Jarred-Sumner/bun/pull/228
+- @jsjoeio made their first contribution in https://github.com/Jarred-Sumner/bun/pull/278
+- @hyp3rflow made their first contribution in https://github.com/Jarred-Sumner/bun/pull/218
+- @hnakamur made their first contribution in https://github.com/Jarred-Sumner/bun/pull/269
+- @egoarka made their first contribution in https://github.com/Jarred-Sumner/bun/pull/316
+- @josefaidt made their first contribution in https://github.com/Jarred-Sumner/bun/pull/276
+- @isaac-mcfadyen made their first contribution in https://github.com/Jarred-Sumner/bun/pull/322
+- @mrowles made their first contribution in https://github.com/Jarred-Sumner/bun/pull/328
+- @eyalcohen4 made their first contribution in https://github.com/Jarred-Sumner/bun/pull/264
+- @Nutlope made their first contribution in https://github.com/Jarred-Sumner/bun/pull/334
+- @eltociear made their first contribution in https://github.com/Jarred-Sumner/bun/pull/274
+- @shanehsi made their first contribution in https://github.com/Jarred-Sumner/bun/pull/345
+- @PyBaker made their first contribution in https://github.com/Jarred-Sumner/bun/pull/370
+- @michellbrito made their first contribution in https://github.com/Jarred-Sumner/bun/pull/367
+- @coffee-is-power made their first contribution in https://github.com/Jarred-Sumner/bun/pull/386
+- @kjvalencik made their first contribution in https://github.com/Jarred-Sumner/bun/pull/392
+
+[**Full Changelog**](https://github.com/Jarred-Sumner/bun/compare/bun-v0.1.1...bun-v0.1.2)

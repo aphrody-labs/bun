@@ -1,0 +1,175 @@
+---
+title: Bun v0.7.2
+description: worker_threads, BroadcastChannel, diagnostics_channel, Node.js compatibility improvements, bun ., bugfixes and 2 memory leaks fixed
+date: "2023-08-03T12:00:00+00:00"
+author: jarred
+draft: false
+---
+
+Bun v0.7.2 adds support for `node:worker_threads`, `node:diagnostics_channel`, [`BroadcastChannel`](https://developer.mozilla.org/en-US/docs/Web/API/BroadcastChannel), improves compatibility with Node.js, and fixes a couple nasty memory leaks.
+
+{% callout %}
+We're hiring C/C++ and Zig engineers to build the future of JavaScript! [Join our team →](/careers)
+{% /callout %}
+
+Bun is an incredibly fast JavaScript runtime, bundler, transpiler, and package manager &mdash; all in one. Over the past couple months, we've been releasing a lot of changes to Bun recently, here's a recap in case you missed it:
+
+- [`v0.6.12`](/blog/bun-v0.6.12) - Sourcemap support in `Error.stack`, `Bun.file().exists()`, and Node.js bug fixes.
+- [`v0.6.13`](/blog/bun-v0.6.13) - Implemented mock `Date`, faster base64 encoding, and fixes for `WebSocket` and `node:tls`.
+- [`v0.6.14`](/blog/bun-v0.6.14) - `process.memoryUsage()`, `process.cpuUsage()`, `process.on('beforeExit', cb)`, `process.on('exit', cb)` and crash fixes
+- [`v0.7.0`](/blog/bun-v0.7.0) - Web Workers, --smol, structuredClone(), WebSocket reliability improvements, node:tls fixes, and more.
+- [`v0.7.1`](/blog/bun-v0.7.1) - ES Modules load 30% - 250% faster, fs.watch fixes, and lots of node:fs compatibility improvements.
+
+To install Bun:
+
+{% codetabs %}
+
+```sh#curl
+$ curl -fsSL https://bun.sh/install | bash
+```
+
+```sh#npm
+$ npm install -g bun
+```
+
+```sh#brew
+$ brew tap oven-sh/bun
+$ brew install bun
+```
+
+```sh#docker
+$ docker pull oven/bun
+$ docker run --rm --init --ulimit memlock=-1:-1 oven/bun
+```
+
+{% /codetabs %}
+
+To upgrade Bun:
+
+```sh
+$ bun upgrade
+```
+
+## Node.js worker_threads
+
+You can now use the `node:worker_threads` module in Bun. `Worker` remains a global variable, but you can now use packages & frameworks that depend on `node:worker_threads` in Bun.
+
+```js
+import { Worker } from "node:worker_threads";
+
+const worker = new Worker("./worker.js");
+```
+
+## `bun .` - run the main file
+
+You can now run a project in Bun with `bun .` when you don't want to type out a path to a file. It is equivalent to doing `import '.'`
+
+```sh
+$ bun .
+```
+
+## BroadcastChannel
+
+The [`BroadcastChannel`](https://developer.mozilla.org/en-US/docs/Web/API/BroadcastChannel) API is now available in Bun. It allows you to publish-subscribe to messages across multiple `Worker` threads and the main thread. This is a new global variable, so you can use it without importing anything just like in web browsers.
+
+```js
+const channel = new BroadcastChannel("my-channel");
+const message = { hello: "world" };
+
+channel.onmessage = (event) => {
+  console.log(event.data); // { hello: "world" }
+};
+channel.postMessage(message);
+```
+
+Thanks to [@dylan-conway](https://github.com/dylan-conway) for getting this working in Bun and the WebKit/Safari team for the original implementation.
+
+## postMessage() now supports `Error`
+
+You can now use `postMessage` and `structuredClone()` to clone `Error` objects.
+
+```js
+const error = new Error("hello world");
+const clone = structuredClone(error);
+console.log(clone.message); // "hello world"
+```
+
+## Node.js `node:diagnostics_channel` support
+
+You can now use the `node:diagnostics_channel` module in Bun. The node:diagnostics_channel module provides an API to create named channels to report arbitrary message data for diagnostics purposes.
+
+## Creating new TypedArray gets up to 40x faster
+
+{% raw %}
+
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">In the next version of Bun<br><br>Creating large new typed arrays gets up to 40x faster, thanks to <a href="https://twitter.com/Constellation?ref_src=twsrc%5Etfw">@Constellation</a> <a href="https://t.co/PRvKsVh7GE">pic.twitter.com/PRvKsVh7GE</a></p>&mdash; Jarred Sumner (@jarredsumner) <a href="https://twitter.com/jarredsumner/status/1687023208548241408?ref_src=twsrc%5Etfw">August 3, 2023</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+{% /raw %}
+
+## Module resolution change: `browser` and `module` exports conditions
+
+Bun no longer respects the `"browser"` or `"module"` package.json `"exports"` conditions. This addresses bugs impacting Astro CLI, axios, and more.
+
+- Bun is not a web browser, so Bun should not use the `"browser"` package.json exports condition.
+- The `"module"` exports condition is used by older versions of tslib and that breaks packages which rely on tslib. We still support this in `bun build`, but not at runtime.
+
+The list of package.json `"exports"` conditions Bun respects at runtime is now as follows:
+
+- `"bun"`
+- `"worker"`
+- `"node"`
+- `"default"`
+
+When coming from an ES module, `"import"` is used and when coming from a CommonJS module, `"require"` is used as well.
+
+This is technically a breaking change, but it will usually be more of a "fixing" change.
+
+## 2 memory leaks fixed
+
+A memory leak in strong references held by native code in Bun has been fixed. This is a leak of about 16 bytes, however it quickly adds up in long-running processes.
+
+{% raw %}
+
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">fixes a memory leak in fetch, Bun.spawn, napi, Bun.write, Bun.connect, Bun.listen, streams... <a href="https://t.co/FqhSg4HTZy">pic.twitter.com/FqhSg4HTZy</a></p>&mdash; Jarred Sumner (@jarredsumner) <a href="https://twitter.com/jarredsumner/status/1685481593862004737?ref_src=twsrc%5Etfw">July 30, 2023</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+{% /raw %}
+
+A memory leak in `response.clone()` has been fixed. The headers object was cloned twice.
+
+{% raw %}
+
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">fixed a memory leak in response.clone() <a href="https://t.co/6c37kllgWC">pic.twitter.com/6c37kllgWC</a></p>&mdash; Jarred Sumner (@jarredsumner) <a href="https://twitter.com/jarredsumner/status/1685890215775436800?ref_src=twsrc%5Etfw">July 31, 2023</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+{% /raw %}
+
+## Bugfixes
+
+We also fixed some bugs
+
+### `PrintingErrorWriteFailed` bug fixed
+
+A regression from the async transpiler changes caused some imports to fail with `PrintingErrorWriteFailed`. This has been fixed.
+
+### `file` loader bug fix
+
+A regression from the async transpiler changes caused `file` loader imports to fail to load unless explicitly passed via `--loader`. This has been fixed.
+
+### `require('node:module')` is now a `Module` constructor
+
+`require('node:module')` is now a `Module` constructor, as it is in Node.js.
+
+### `bun install --production` with workspaces
+
+A bug causing packages to not be updated in the lockfile when `--production` was used in a workspace has been fixed.
+
+### node:http file upload bug has been fixed
+
+[A bug](https://github.com/oven-sh/bun/issues/3116) where binary file uploads via `node:http` would produce incorrectly-encoded data has been fixed by [@Hanaasagi](https://github.com/Hanaasagi). Thanks @Hanaasagi!
+
+## Internals changes
+
+We migrated our JavaScript builtins from ES modules to CommonJS, which improves start time for `"crypto"` by about 30% and fixed a crash when importing `"astro"`.
+
+## Changelog
+
+[View the complete changelog](https://github.com/oven-sh/bun/compare/bun-v0.7.1...bun-v0.7.2)

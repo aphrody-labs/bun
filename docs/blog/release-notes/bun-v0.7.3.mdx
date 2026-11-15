@@ -1,0 +1,248 @@
+---
+title: Bun v0.7.3
+description: bun test gets code coverage reporting. bun test -t pattern lets you filter tests to run by regex pattern. Fixes a crash in bun:sqlite, node.js compatiblity improvements, and more.
+date: "2023-08-06T12:12:00Z"
+author: jarred
+draft: false
+---
+
+Bun v0.7.3 adds support for code coverage and filtering tests by RegExp pattern. Bugs have been fixed in async Node.js `fs` functions, `bun:sqlite`, `Buffer.prototype.copy`, and macros.
+
+{% callout %}
+We're hiring C/C++ and Zig engineers to build the future of JavaScript! [Join our team →](/careers)
+{% /callout %}
+
+Bun is an incredibly fast JavaScript runtime, bundler, transpiler, and package manager &mdash; all in one. Over the past couple months, we've been releasing a lot of changes to Bun recently, here's a recap in case you missed it:
+
+- [`v0.6.13`](/blog/bun-v0.6.13) - Implemented mock `Date`, faster base64 encoding, and fixes for `WebSocket` and `node:tls`.
+- [`v0.6.14`](/blog/bun-v0.6.14) - `process.memoryUsage()`, `process.cpuUsage()`, `process.on('beforeExit', cb)`, `process.on('exit', cb)` and crash fixes
+- [`v0.7.0`](/blog/bun-v0.7.0) - Web Workers, --smol, structuredClone(), WebSocket reliability improvements, node:tls fixes, and more.
+- [`v0.7.1`](/blog/bun-v0.7.1) - ES Modules load 30% - 250% faster, fs.watch fixes, and lots of node:fs compatibility improvements.
+- [`v0.7.2`](/blog/bun-v0.7.1) - `node:worker_threads`, `node:diagnostics_channel`, [`BroadcastChannel`](https://developer.mozilla.org/en-US/docs/Web/API/BroadcastChannel), Node.js compatibility improvements, fixes to a couple memory leaks
+
+To install Bun:
+
+{% codetabs %}
+
+```sh#curl
+$ curl -fsSL https://bun.sh/install | bash
+```
+
+```sh#npm
+$ npm install -g bun
+```
+
+```sh#brew
+$ brew tap oven-sh/bun
+$ brew install bun
+```
+
+```sh#docker
+$ docker pull oven/bun
+$ docker run --rm --init --ulimit memlock=-1:-1 oven/bun
+```
+
+{% /codetabs %}
+
+To upgrade Bun:
+
+```sh
+$ bun upgrade
+```
+
+## Code coverage reporting in bun test
+
+`bun test` now has builtin suppport for code coverage reporting. To enable it, pass the `--coverage` flag:
+
+```sh
+$ bun test --coverage
+```
+
+This will generate a textual report in the terminal.
+
+```ts
+-------------|---------|---------|-------------------
+File         | % Funcs | % Lines | Uncovered Line #s
+-------------|---------|---------|-------------------
+All files    |   38.89 |   42.11 |
+ index-0.ts  |   33.33 |   36.84 | 10-15,19-24
+ index-1.ts  |   33.33 |   36.84 | 10-15,19-24
+ index-10.ts |   33.33 |   36.84 | 10-15,19-24
+ index-2.ts  |   33.33 |   36.84 | 10-15,19-24
+ index-3.ts  |   33.33 |   36.84 | 10-15,19-24
+ index-4.ts  |   33.33 |   36.84 | 10-15,19-24
+ index-5.ts  |   33.33 |   36.84 | 10-15,19-24
+ index-6.ts  |   33.33 |   36.84 | 10-15,19-24
+ index-7.ts  |   33.33 |   36.84 | 10-15,19-24
+ index-8.ts  |   33.33 |   36.84 | 10-15,19-24
+ index-9.ts  |   33.33 |   36.84 | 10-15,19-24
+ index.ts    |  100.00 |  100.00 |
+-------------|---------|---------|-------------------
+```
+
+A more detailed serialized report is planned in a future release.
+
+## Filter tests by RegExp pattern
+
+`bun test` now supports filtering tests by name with a RegExp pattern. To filter tests, pass the `-t` flag:
+
+```sh
+$ bun test -t /foo/
+```
+
+This will run all tests that match the `/foo/` pattern.
+
+{% raw %}
+
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">In the next version of bun test<br><br>&quot;bun test -t &lt;pattern&gt;&quot; lets you filter tests to run via regex <a href="https://t.co/R4LRke9kmL">pic.twitter.com/R4LRke9kmL</a></p>&mdash; clo (@paperclover_dev) <a href="https://twitter.com/paperclover_dev/status/1687698841087406080?ref_src=twsrc%5Etfw">August 5, 2023</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+{% /raw %}
+
+## bun --hot now clears the terminal on reload
+
+Thanks to [@simylein](https://github.com/simylein).
+
+## Bun.plugin no longer uses transpiler magic
+
+The recommended way to use `Bun.plugin` is now with `--preload`, to ensure that the plugin is loaded before any other code.
+
+```ts
+// my markdown plugin
+import { plugin, file } from "bun";
+
+plugin({
+  name: "Markdown",
+  async setup(builder) {
+    builder.onLoad({ filter: /\.(md)$/ }, async ({ path }) => {
+      console.log(`[markdown-loader] ${path}`);
+      const contents = await file(path).text();
+      const slug = path.split("/").slice(-1)[0].slice(0, -3);
+      return {
+        exports: {
+          slug,
+          contents,
+        },
+        loader: "object",
+      };
+    });
+  },
+});
+```
+
+Previously, Bun would inject the plugin ahead of time so that the plugin could potentially be used in the same file as the plugin was defined in. This caused... problems.
+
+Now plugins have to be loaded with `--preload` or by configuring `preload` in `bunfig.toml`.
+
+## Node.js compatibilty improvements
+
+#### dns.getServers()
+
+The `node:dns` module now exports `dns.getServers()`, which returns an array of IP addresses as strings. Thanks to [@Hanaasagi](https://github.com/Hanaasagi).
+
+```ts
+import dns from "node:dns";
+import fs from "node:fs";
+import os from "node:os";
+
+test("dns.getServers", (done) => {
+  function parseResolvConf() {
+    let servers = [];
+    try {
+      const content = fs.readFileSync("/etc/resolv.conf", "utf-8");
+      const lines = content.split(os.EOL);
+
+      for (const line of lines) {
+        const parts = line.trim().split(/\s+/);
+        if (parts.length >= 2 && parts[0] === "nameserver") {
+          servers.push(parts[1]);
+        }
+      }
+    } catch (err) {
+      done(err);
+    }
+    return servers;
+  }
+
+  const expectServers = parseResolvConf();
+  const actualServers = dns.getServers();
+  try {
+    for (const server of expectServers) {
+      expect(actualServers).toContain(server);
+    }
+  } catch (err) {
+    return done(err);
+  }
+  done();
+});
+```
+
+#### Buffer.copy bugfix
+
+Previously, the following test would fail in Bun but pass in Node.js:
+
+```js
+it("should ignore sourceEnd if it's out of range", () => {
+  const buf1 = Buffer.allocUnsafe(26);
+  const buf2 = Buffer.allocUnsafe(10).fill("!");
+
+  for (let i = 0; i < 26; i++) {
+    // 97 is the decimal ASCII value for 'a'.
+    buf1[i] = i + 97;
+  }
+
+  // Copy `buf1` bytes "xyz" into `buf2` starting at byte 1 of `buf2`.
+  expect(buf1.copy(buf2, 1, 23, 100)).toBe(3);
+  expect(buf2.toString()).toBe("!xyz!!!!!!");
+});
+```
+
+This has been fixed, thanks to [@buffaybu](https://github.com/buffaybu).
+
+#### Module.wrap()
+
+The `node:module` module now exports `Module.wrap(code)`, which is an undocumented function used by Webpack.
+
+## Bug fixes
+
+We've also fixed a number of bugs.
+
+### Crash in bun:sqlite
+
+A crash in `bun:sqlite` was introduced after upgrading JavaScriptCore in Bun v0.7.2 (not JavaScriptCore's fault, our fault). This has been fixed.
+
+This crash happened when columns returned strings greater than 64 characters.
+
+### Crash in async Node.js `fs` functions
+
+A thread-safety issue in the async version of Node.js `fs` functions was fixed in this release. Sometimes strings are threadlocal (such as when they come from property names) and passing them to another thread causes unexpected behavior. Bun's fs functions now clones threadlocal strings before they are passed to another thread. This addresses the bug without introducing a performance regression.
+
+### bun init now accepts a nested directory path
+
+Thanks to [@Hanaasagi](https://github.com/Hanaasagi), `bun init` now accepts a directory path. This allows you to initialize a Bun project in a directory other than the current working directory.
+
+```bash
+$ bun init ./foo/my-project
+```
+
+### workspace:\* dependencies bug fix
+
+A bug caused `workspace:*` dependencies to be incorrectly not found in certain cases. This has been fixed thanks to [@alexlamsl](https://github.com/alexlamsl).
+
+### Event, DOMException, ErrorEvent, etc are writable
+
+The following Web API globals are now writable:
+
+- [`Event`](https://developer.mozilla.org/en-US/docs/Web/API/Event)
+- [`DOMException`](https://developer.mozilla.org/en-US/docs/Web/API/DOMException)
+- [`EventTarget`](https://developer.mozilla.org/en-US/docs/Web/API/EventTarget)
+- [`ErrorEvent`](https://developer.mozilla.org/en-US/docs/Web/API/ErrorEvent)
+- [`CustomEvent`](https://developer.mozilla.org/en-US/docs/Web/API/CustomEvent)
+- [`CloseEvent`](https://developer.mozilla.org/en-US/docs/Web/API/CloseEvent)
+
+This fixes a bug impacting Angular server-side rendering support.
+
+Thanks to [@arturovt](https://github.com/arturovt) for fixing this.
+
+## Changelog
+
+[View the complete changelog](https://github.com/oven-sh/bun/compare/bun-v0.7.2...bun-v0.7.3)

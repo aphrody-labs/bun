@@ -1,0 +1,235 @@
+---
+title: Bun v0.6.9
+description: Memory usage reductions in Bun.serve(), bun install, module imports, and crypto hashing. Crash in CommonJS modules fixed, plus additional bugfixes.
+date: "2023-06-13T15:05:43.883Z"
+author: jarred
+draft: false
+---
+
+{% callout %}
+We're hiring C/C++ and Zig engineers to build the future of JavaScript! [Join our team →](/careers)
+{% /callout %}
+
+We've been releasing a lot of changes to Bun recently, here's a recap in case you missed it:
+
+- [`v0.6.0`](/blog/bun-bundler) - Introducing `bun build`, Bun's new JavaScript bundler.
+- [`v0.6.2`](/blog/bun-v0.6.2) - Performance boosts: 20% faster `JSON.parse`, up to 2x faster `Proxy` and `arguments`.
+- [`v0.6.3`](/blog/bun-v0.6.3) - Implemented `node:vm`, lots of fixes to `node:http` and `node:tls`.
+- [`v0.6.4`](/blog/bun-v0.6.4) - Implemented `require.cache`, `process.env.TZ`, and 80% faster `bun test`.
+- [`v0.6.5`](/blog/bun-v0.6.5) - Native support for CommonJS modules (_previously, Bun did CJS to ESM transpilation_),
+- [`v0.6.6`](/blog/bun-v0.6.6) - `bun test` improvements, including Github Actions support, `test.only()`, `test.if()`, `describe.skip()`, and 15+ more `expect()` matchers; also streaming file uploads using `fetch()`.
+- [`v0.6.7`](/blog/bun-v0.6.7) - Node.js compatibility improvements to unblock Discord.js, Prisma, and Puppeteer
+- [`v0.6.8`](/blog/bun-v0.6.8) - `Bun.password`, function mocking in `bun test`, and a `toMatchObject` expect matcher. Plus an experimental `inspector` mode in `Bun.serve()`.
+
+This release reduces Bun's memory usage across the board and fixes bugs in the bundler/transpiler, CommonJS module loading, `bun run`, and `bun install`.
+
+To install Bun:
+
+{% codetabs %}
+
+```sh#curl
+$ curl -fsSL https://bun.sh/install | bash
+```
+
+```sh#npm
+$ npm install -g bun
+```
+
+```sh#brew
+$ brew tap oven-sh/bun
+$ brew install bun
+```
+
+```sh#docker
+$ docker pull oven/bun
+$ docker run --rm --init --ulimit memlock=-1:-1 oven/bun
+```
+
+{% /codetabs %}
+
+{% raw %}
+<br>
+{% /raw %}
+
+To upgrade Bun:
+
+```sh
+$ bun upgrade
+```
+
+## `Bun.serve()` uses less memory to send strings
+
+Bun now supports zero-copy string `Response` bodies in `Bun.serve()`.
+
+{% raw %}
+
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">In the next version of Bun<br><br>Sending strings with Bun&#39;s HTTP server uses less memory.<br><br>After responding to 1000 requests with a 12 MB string<br><br>Bun: 60 MB ram<br>Deno: 425 MB ram<br>Node: 1414 MB ram <a href="https://t.co/LJ6FdAcWkZ">pic.twitter.com/LJ6FdAcWkZ</a></p>&mdash; Jarred Sumner (@jarredsumner) <a href="https://twitter.com/jarredsumner/status/1667863498825830402?ref_src=twsrc%5Etfw">June 11, 2023</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+{% /raw %}
+
+We've also applied this optimization to `Response` outside of `Bun.serve()`
+
+Previously, the following code would clone `text` twice:
+
+```ts
+const text = await Bun.file("file.txt").text();
+
+// Copy #1
+const response = new Response(text);
+
+// Copy #2
+await response.text();
+```
+
+Now, it doesn't copy, saving you memory.
+
+## Cold `bun install` uses 50% less memory
+
+We free more memory in `bun install` now, reducing memory usage by 50% for cold installs.
+
+{% raw %}
+
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">In the next version of Bun<br><br>bun install (cold) uses 2x less memory <a href="https://t.co/HePmK3uHUx">pic.twitter.com/HePmK3uHUx</a></p>&mdash; Jarred Sumner (@jarredsumner) <a href="https://twitter.com/jarredsumner/status/1667469826548436992?ref_src=twsrc%5Etfw">June 10, 2023</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+{% /raw %}
+
+## Importing modules in Bun's runtime uses less memory
+
+We've fixed a couple memory leaks in Bun that happened when importing modules in Bun's runtime, and improved our bindings with JavaScriptCore for source code management.
+
+![image](https://github.com/oven-sh/bun/assets/709451/b839fda4-fa3d-4abd-b7f5-0573995ac313)
+
+## Non-ascii filenames
+
+Previously, Bun would throw an error when importing a file with a non-ascii filename.
+
+{% codetabs %}
+
+```bash#shell
+$ bun run 👋.js
+
+error: FileNotFound reading "/Users/jarred/Desktop/ð.js"
+```
+
+```js#👋.js
+console.log("hello!");
+```
+
+{% /codetabs %}
+
+This error was caused by both a printing bug and a bug in Bun's JavaScriptCore bindings when reading import identifier names.
+
+## Bugfixes to mocks in `bun test`
+
+`mockResolvedValue` is fixed in `bun test` now. Previously, `mockResolvedValue` would appear to do nothing in `bun test`.
+
+To use `mockResolvedValue`:
+
+```ts
+import { mock, test, expect } from "bun:test";
+
+test("hey", async () => {
+  const fn = mock.mockResolvedValue(1);
+
+  expect(fn()).toBeInstanceOf(Promise);
+
+  const value = await fn();
+
+  expect(value).toBe(1); // 1
+});
+```
+
+The `mock` object returned was missing a `.bind`, `.apply`, `.call`, `.name`, and `.length` functions. This has been fixed. We've also made it so that the `.name` of the mocked function is copied over from the original function automatically.
+
+```ts
+import { mock, test, expect } from "bun:test";
+
+test("hey", async () => {
+  const hey = mock(function yo() {
+    return 42;
+  });
+
+  expect(hey.name).toBe("yo");
+});
+```
+
+## Crash in CommonJS `require()` fixed
+
+This release fixes a crash that can occur when many CommonJS files are imported and then the garbage collector is run after the files are no longer in use:
+
+```js
+import "lodash/omit.js";
+import "lodash/findIndex.js";
+import "discord.js";
+
+Bun.gc(true);
+```
+
+This was a bug in the CommonJS module loader not correctly preventing the function from being garbage collected.
+
+## A memory leak in `node:crypto` has been fixed
+
+This release fixes a memory leak in `node:crypto`. The following code would leak about 192 bytes per call.
+
+```js
+const crypto = require("crypto");
+
+function sha256(buf) {
+  return crypto.createHash("sha256").update(buf).digest();
+}
+
+async function main() {
+  for (var i = 1000000; i >= 0; i--) {
+    const buf = Buffer.alloc(2046);
+    const hash = sha256(buf);
+    if (i % 1000 === 0) {
+      await new Promise((r) => setTimeout(r, 20));
+      global.gc ? global.gc() : Bun?.gc(true);
+    }
+  }
+}
+
+main();
+```
+
+After:
+
+![](https://github.com/oven-sh/bun/assets/709451/d111274a-0a4a-4075-82f2-39699dbf8521)
+
+Before:
+
+![](https://github.com/oven-sh/bun/assets/709451/231f7e38-0717-4610-a8dd-aebac2aa70d7)
+
+Node.js, for comparison:
+
+![](https://github.com/oven-sh/bun/assets/709451/22e4466e-883e-4659-9f5c-f0310865515b)
+
+## Changelog
+
+{% table %}
+
+---
+
+- [`#3277`](https://github.com/oven-sh/bun/pull/3277)
+- add --save argument to install by [@kvakil](https://github.com/kvakil)
+
+---
+
+- [`#3292`](https://github.com/oven-sh/bun/pull/3292)
+- handle unwrapping require in any expression by [@dylan-conway](https://github.com/dylan-conway)
+
+---
+
+- [`#3286`](https://github.com/oven-sh/bun/pull/3286)
+- Typo in readline by [@paperclover](https://github.com/paperclover)
+
+---
+
+- [`#3290`](https://github.com/oven-sh/bun/pull/3290)
+- workaround quote escape issues for bun run
+
+---
+
+{% /table %}
+
+[**View Full Changelog**](https://github.com/oven-sh/bun/compare/bun-v0.6.8...bun-v0.6.9)

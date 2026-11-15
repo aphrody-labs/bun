@@ -1,0 +1,378 @@
+---
+title: Bun v0.6.0
+description: A new JavaScript bundler, standalone executables, and lots of new features and improvements
+date: "2023-05-16T12:00:00+00:00"
+author: jarred
+draft: false
+---
+
+{% callout %}
+We're hiring [C/C++ and Zig engineers](/careers) to build the future of JavaScript! [See job listings →](/careers)
+{% /callout %}
+
+This is the biggest release of Bun yet.
+
+Bun now has a built-in JavaScript and TypeScript bundler and minifier. Use it to bundle frontend apps or bundle your code into a standalone executable.
+
+We've also been busy improving performance and fixing bugs as-per usual: `writeFile()` gets up to 20% faster on Linux, lots of bug fixes to Node.js compatiblity and Web API compatiblity, support for TypeScript 5.0 syntax, and various fixes to `bun install`.
+
+## Bun's new JavaScript bundler & minifier
+
+The focus of this release is Bun's new JavaScript bundler, but the bundler is just the beginning of a larger project. In the next couple months, we'll be announcing `Bun.App` — a "super-API" that stitches together Bun's native-speed bundler, HTTP server, and file system router into a cohesive whole.
+
+It can be used using the `bun build` CLI command or the new `Bun.build()` JavaScript API.
+
+{% codetabs %}
+
+```ts#JavaScript
+Bun.build({
+  entrypoints: ["./src/index.tsx"],
+  outdir: "./build",
+  minify: true,
+  // ...
+});
+```
+
+```bash#CLI
+$ bun build ./src/index.tsx --outdir ./build --minify
+```
+
+{% /codetabs %}
+
+{% callout %}
+
+To learn more, check out our [blog post](/blog/bun-bundler) introducing the Bun bundler.
+
+{% /callout %}
+
+## Standalone executables
+
+You can now create standalone executables with `bun build`.
+
+```sh
+bun build --compile ./foo.ts
+```
+
+This lets you distribute your app as a single executable file, without requiring users to install Bun.
+
+```sh
+./foo
+```
+
+You can also minify it to improve startup performance for large apps:
+
+```js
+bun build --minify --compile ./three.ts
+  [32ms]  minify  -123 KB (estimate)
+  [50ms]  bundle  456 modules
+ [107ms] compile  three
+```
+
+This is powered by Bun's new JavaScript bundler and minifier.
+
+{% raw %}
+
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">Standalone executables are coming in Bun v0.6.0 <a href="https://t.co/eaUeFtKisL">pic.twitter.com/eaUeFtKisL</a></p>&mdash; Jarred Sumner (@jarredsumner) <a href="https://twitter.com/jarredsumner/status/1657750890349215744?ref_src=twsrc%5Etfw">May 14, 2023</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+{% /raw %}
+
+## `import.meta.main`
+
+You can now use `import.meta.main` to check if the current file is the entry point that started bun. This is useful for CLIs to determine if the current file is what started the app.
+
+For example, if you have a file called `index.ts`:
+
+{% codetab %}
+
+```ts#index.ts
+console.log(import.meta.main);
+```
+
+{% /codetab %}
+
+And you run it:
+
+```js
+$ bun ./index.ts
+true
+```
+
+But if you import it:
+
+{% codetab %}
+
+```ts#other.ts
+import "./index.ts";
+```
+
+{% /codetab %}
+
+And run it:
+
+```js
+$ bun ./other.ts
+false
+```
+
+## Improvements to `bun test`
+
+- `bun test` now reports time taken to run tests
+
+{% raw %}
+
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">in the next version of bun<br><br>bun:test prints out how long each test took<br><br>slow tests are highlighted yellow <a href="https://t.co/yXDSJrkYBu">pic.twitter.com/yXDSJrkYBu</a></p>&mdash; Jarred Sumner (@jarredsumner) <a href="https://twitter.com/jarredsumner/status/1656569942354042880?ref_src=twsrc%5Etfw">May 11, 2023</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+{% /raw %}
+
+- `describe.skip` has been implemented (thanks to [\_yogr](https://twitter.com/_yogr))
+
+- `expect().toBeEven()` and `expect().toBeOdd()` has been implemented (thanks to [will-richards-ii](https://github.com/will-richards-ii))
+
+## Faster `fs.writeFile` on Linux
+
+{% raw %}
+
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">In the next version of Bun<br><br>fs.writeFile gets 20% faster for large files on Linux <a href="https://t.co/QgWhBoiz2c">pic.twitter.com/QgWhBoiz2c</a></p>&mdash; Jarred Sumner (@jarredsumner) <a href="https://twitter.com/jarredsumner/status/1651533306868137984?ref_src=twsrc%5Etfw">April 27, 2023</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+{% /raw %}
+
+## Transpiler improvements
+
+This release also introduces many improvements to the transpiler. Here are some of the highlights:
+
+- Parser support for [TypeScript 5.0](https://devblogs.microsoft.com/typescript/announcing-typescript-5-0/).
+- Parser support for [import attributes](https://github.com/tc39/proposal-import-assertions).
+- Some npm packages threw "ReferenceError: Cannot access uninitialized variable" errors on import due to a bug with cyclical imports in Bun's transpiler. This has been fixed.
+- Support for `// @jsx`, `// @jsxImportSource`, and `// @jsxFragment` comments.
+- Dead code elimination for unused global constructor function calls like `new Set()`.
+- String template literal concatenation like `foo${1}${"2"}${'3'}` -> `foo123`.
+- Parser bugfixes for the deprecated ES5 [`with` statement](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/with).
+
+A big thanks to [@kzc](https://github.com/kzc) for many helpful bug reports.
+
+## Node.js compatibility
+
+- `tls.Server` has basic support (previously, not implemented)
+- `fs.promises.constants` is now exported correctly (previously, it was missing)
+- `node:http`'s server module now (correctly) accepts a `callback` argument
+- `Timer.refresh()` now works as expected
+- Fixed `mkdtemp` and `mkdtempSync` errors
+
+## Web API compatibility
+
+- `new Request("http://example.com", otherRequest).url` would previously return the url of `otherRequest` instead of `"http://example.com"`. This has been fixed.
+- `Bun.file(path).lastModified` has been added, which is similar to the [`File` API's `lastModified` property](https://developer.mozilla.org/en-US/docs/Web/API/File/lastModified)
+- Supported `redirect: "error"` in `fetch()`
+- Fixed `fetch.bind`, `fetch.call`, and `fetch.apply` not working
+
+## Changelog
+
+{% table %}
+
+---
+
+- [`#2556`](https://github.com/oven-sh/bun/pull/2556)
+- Implemented `import.meta.main` by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#2561`](https://github.com/oven-sh/bun/pull/2561)
+- Removed `Object.prototype` from `node:path` exports by [@privatenumber](https://github.com/privatenumber)
+
+---
+
+- [`#2557`](https://github.com/oven-sh/bun/pull/2557)
+- Fixed `Bun.deepEquals()` with accessors and holed arrays by [@dylan-conway](https://github.com/dylan-conway)
+
+---
+
+- [`#2554`](https://github.com/oven-sh/bun/pull/2554)
+- Fixed issues with `fetch({ proxy })` by [@cirospaciari](https://github.com/cirospaciari)
+
+---
+
+- [`#2491`](https://github.com/oven-sh/bun/pull/2491)
+- Implemented `BunFile.lastModified` by [@zhongweiy](https://github.com/zhongweiy)
+
+---
+
+- [`#2567`](https://github.com/oven-sh/bun/pull/2567)
+- Fixed `constants` export from `node:fs/promises` by [@paperclover](https://github.com/paperclover)
+
+---
+
+- [`#2552`](https://github.com/oven-sh/bun/pull/2552)
+- Implemented basic support for `tls.Server` by [@cirospaciari](https://github.com/cirospaciari)
+
+---
+
+- [`#2593`](https://github.com/oven-sh/bun/pull/2593)
+- Implemented support for TypeScript 5.0 syntax by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#2652`](https://github.com/oven-sh/bun/pull/2652)
+- Improved performance of `crypto.createHash()` by [@paperclover](https://github.com/paperclover)
+
+---
+
+- [`#2661`](https://github.com/oven-sh/bun/pull/2661)
+- Fixed a bug where `expect().toBeFalsy()` did not increment assertions by [@will-richards-ii](https://github.com/will-richards-ii)
+
+---
+
+- [`#2673`](https://github.com/oven-sh/bun/pull/2673)
+- Implemented support for `axios` by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`9e1745e`](https://github.com/oven-sh/bun/commit/9e1745ee1f5844e6ab89135e776552d2ad1ad684)
+- Fixed a bug with `path.dirname()` would return the wrong path for the root by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#2728`](https://github.com/oven-sh/bun/pull/2728)
+- Fixed `bun add <github>` by [@alexlamsl](https://github.com/alexlamsl)
+
+---
+
+- [`3c4f092`](https://github.com/oven-sh/bun/commit/3c4f0920b95cfffc52d13cb0211701ca55211164)
+- remove by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`5353d41`](https://github.com/oven-sh/bun/commit/5353d4101493632cb25d0cdddfef94f62bc5902d)
+- Fixed incorrect value for modulo with negative operands by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#2748`](https://github.com/oven-sh/bun/pull/2748)
+- Fixed crash with invalid JavaScript by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#2759`](https://github.com/oven-sh/bun/pull/2759)
+- Improved performance of `open()` and `writeFileSync()` by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#2761`](https://github.com/oven-sh/bun/pull/2761)
+- Fixed incorrect output from `Hash.copy()` by [@silversquirl](https://github.com/silversquirl)
+
+---
+
+- [`396416a`](https://github.com/oven-sh/bun/commit/396416a91fed5166f3c4e9c340a3f2af5367bb78)
+- Fixed crash from invalid input in `fetch()` by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#2780`](https://github.com/oven-sh/bun/pull/2780)
+- Fixed a bug with repeated `bun install` of a GitHub dependency by [@alexlamsl](https://github.com/alexlamsl)
+
+---
+
+- [`#2781`](https://github.com/oven-sh/bun/pull/2781)
+- Fixed a bug where `devDependencies` did not resolve from a local dependency by [@alexlamsl](https://github.com/alexlamsl)
+
+---
+
+- [`#2754`](https://github.com/oven-sh/bun/pull/2754)
+- Implemented `expect().toBeEven()` and `expect().toBeOdd()` by [@will-richards-ii](https://github.com/will-richards-ii)
+
+---
+
+- [`c43c1b5`](https://github.com/oven-sh/bun/commit/c43c1b50fffece35c1507f18758df6b450cc57c9)
+- Implemented `ClientRequest.setNoDelay()` by [@Electroid](https://github.com/Electroid)
+
+---
+
+- [`f95a81e`](https://github.com/oven-sh/bun/commit/f95a81e05de50debf60771c46111d115334afe96)
+- Fixed a crash in `napi_create_external_buffer` by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`c7c5dc1`](https://github.com/oven-sh/bun/commit/c7c5dc14384f81a2d245870d2848c0512193690d)
+- Implemented `BunFile.name` by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#2834`](https://github.com/oven-sh/bun/pull/2834)
+- Fixed a bug where `bun install --cwd` was not working correctly by [@alexlamsl](https://github.com/alexlamsl)
+
+---
+
+- [`#2841`](https://github.com/oven-sh/bun/pull/2841)
+- Changed `bun add` to ignore invalid workspaces by [@alexlamsl](https://github.com/alexlamsl)
+
+---
+
+- [`#2843`](https://github.com/oven-sh/bun/pull/2843)
+- Fixed a crash during `WebSocket.close()` by [@cirospaciari](https://github.com/cirospaciari)
+
+---
+
+- [`#2842`](https://github.com/oven-sh/bun/pull/2842)
+- Fixed `fetch.bind` is not a function by [@cirospaciari](https://github.com/cirospaciari)
+
+---
+
+- [`#2845`](https://github.com/oven-sh/bun/pull/2845)
+- Implemented `fetch({ redirect: "error" })` by [@cirospaciari](https://github.com/cirospaciari)
+
+---
+
+- [`#2836`](https://github.com/oven-sh/bun/pull/2836)
+- Implemented `describe.skip()` by [@blackmann](https://github.com/blackmann)
+
+---
+
+- [`5ffee94`](https://github.com/oven-sh/bun/commit/5ffee9477cc856d975b6ac8577f25396b55e8403)
+- Added timings to each test in `bun test` by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#2846`](https://github.com/oven-sh/bun/pull/2846)
+- Implemented `dns.lookup({ all: true })` by [@cirospaciari](https://github.com/cirospaciari)
+
+---
+
+- [`#2851`](https://github.com/oven-sh/bun/pull/2851)
+- Fixed suprious errors with `mkdtemp()` and `mktempSync()` by [@cirospaciari](https://github.com/cirospaciari)
+
+---
+
+- [`5c08200`](https://github.com/oven-sh/bun/commit/5c08200b1845fad5a97c864a63c3f03424c15fab)
+- Changed `node:http` to handle errors better from `fetch()` by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#2850`](https://github.com/oven-sh/bun/pull/2850)
+- Fixed `Bun.spawn()` with a large stdout by [@cirospaciari](https://github.com/cirospaciari)
+
+---
+
+- [`#2869`](https://github.com/oven-sh/bun/pull/2869)
+- Fixed `node:path` for Windows by [@paperclover](https://github.com/paperclover)
+
+---
+
+- [`#2879`](https://github.com/oven-sh/bun/pull/2879)
+- Implemented support for generating standalone Bun executables by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#2866`](https://github.com/oven-sh/bun/pull/2866)
+- Implemented `Uint8Array` support for `Bun.spawn()` stdout by [@cirospaciari](https://github.com/cirospaciari)
+
+---
+
+- [`#2881`](https://github.com/oven-sh/bun/pull/2881)
+- Fixed bug where `Request.url` was incorrect by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+{% /table %}
+
+## Contributors
+
+And finally, thank you to all the contributors from the community that helped improve Bun this release: [@privatenumber](https://github.com/privatenumber), [@Lawlzer](https://github.com/Lawlzer), [@jakeboone02](https://github.com/jakeboone02), [@zhongweiy](https://github.com/zhongweiy), [@xHyroM](https://github.com/xHyroM), [@rmorey](https://github.com/rmorey), [@marktani](https://github.com/marktani), [@Kruithne](https://github.com/Kruithne), [@will-richards-ii](https://github.com/will-richards-ii), [@simon04](https://github.com/simon04), [@alexlamsl](https://github.com/alexlamsl), [@flakey5](https://github.com/flakey5), [@MaanuVazquez](https://github.com/MaanuVazquez), [@Plecra](https://github.com/Plecra), [@silversquirl](https://github.com/silversquirl), [@beeburrt](https://github.com/beeburrt), [@aquapi](https://github.com/aquapi), [@blackmann](https://github.com/blackmann), [@Fire-The-Fox](https://github.com/Fire-The-Fox)

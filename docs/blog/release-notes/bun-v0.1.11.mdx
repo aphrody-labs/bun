@@ -1,0 +1,179 @@
+---
+title: Bun v0.1.11
+description: Release notes for Bun v0.1.11
+date: "2022-09-07T19:56:07Z"
+author: jarred
+thumbText: v0.1.11
+---
+
+To upgrade:
+
+```bash
+bun upgrade
+```
+
+To install:
+
+```bash
+curl https://bun.sh/install | bash
+```
+
+{% details summary="If you have any problems upgrading" %}
+
+Run the install script (you can run it multiple times):
+
+```bash
+curl https://bun.sh/install | bash
+```
+
+{% /details %}
+
+### In Bun v0.1.11, web framework libraries built on Bun got faster
+
+[![web frameworks](https://user-images.githubusercontent.com/709451/188964804-9e2d1561-9b0c-4ffa-be24-593100cc2aea.png)](https://github.com/SaltyAom/bun-http-framework-benchmark)
+
+Benchmark: https://github.com/SaltyAom/bun-http-framework-benchmark
+This was run on Linux
+Image credit: @Kapsonfire-DE
+
+## Plugin API
+
+Bun's runtime now supports a plugin API.
+
+- Import and require `.svelte`, `.vue`, `.yaml`, `.scss`, `.less` and other file extensions that Bun doesn't implement a builtin loader for
+- Dynamically generate ESM & CJS modules
+
+The API is loosely based on esbuild's plugin API.
+
+This code snippet lets you import `.mdx` files in Bun:
+
+```tsx
+import { plugin } from "bun";
+import { renderToStaticMarkup } from "react-dom/server";
+
+// Their esbuild plugin runs in Bun (without esbuild)
+import mdx from "@mdx-js/esbuild";
+plugin(mdx());
+
+// Usage
+import Foo from "./bar.mdx";
+console.log(renderToStaticMarkup(<Foo />));
+```
+
+This lets you import `yaml` files:
+
+```tsx
+import { plugin } from "bun";
+
+plugin({
+  name: "YAML",
+
+  setup(builder) {
+    const { load } = require("js-yaml");
+    const { readFileSync } = require("fs");
+    // Run this function on any import that ends with .yaml or .yml
+    builder.onLoad({ filter: /\.(yaml|yml)$/ }, (args) => {
+      // Read the YAML file from disk
+      const text = readFileSync(args.path, "utf8");
+
+      // parse the YAML file with js-yaml
+      const exports = load(text);
+
+      return {
+        // Copy the keys and values from the parsed YAML file into the ESM module namespace object
+        exports,
+
+        // we're returning an object
+        loader: "object",
+      };
+    });
+  },
+});
+```
+
+We're planning on supporting browser builds with this plugin API as well (run at transpilation time)
+
+## Reliability improvements
+
+Node compatibility:
+
+- feat: implement native os module by [@xHyroM](https://github.com/xHyroM) in https://github.com/oven-sh/bun/pull/1115
+- fix buffer.copy by [@zhuzilin](https://github.com/zhuzilin) in https://github.com/oven-sh/bun/pull/1113
+- fix buffer.slice(0, 0) by [@zhuzilin](https://github.com/zhuzilin) in https://github.com/oven-sh/bun/pull/1114
+- Add buffer.indexOf, includes and lastIndexOf by [@zhuzilin](https://github.com/zhuzilin) in https://github.com/oven-sh/bun/pull/1112
+- Add native EventEmitter by [@zhuzilin](https://github.com/zhuzilin) in https://github.com/oven-sh/bun/pull/1123
+- Support emit Symbol events in EventEmitter by [@zhuzilin](https://github.com/zhuzilin) in https://github.com/oven-sh/bun/pull/1129
+- add SlowBuffer by [@zhuzilin](https://github.com/zhuzilin) in https://github.com/oven-sh/bun/pull/1133
+- update minified url polyfill by [@samfundev](https://github.com/samfundev) in https://github.com/oven-sh/bun/pull/1132
+- Add pad back to base64 by [@zhuzilin](https://github.com/zhuzilin) in https://github.com/oven-sh/bun/pull/1140
+- fix mkdtemp by [@zhuzilin](https://github.com/zhuzilin) in https://github.com/oven-sh/bun/pull/1151
+- Fix Buffer.isEncoding 39dc9899157d082841d79daa2f98dbecaa4efed6
+- Implement `napi_add_finalizer` f023b89b732db0aff24445acbbe39c366d13118d
+- `NAPI_MODULE_INIT()` wasn't implemented correctly in Bun and that has been fixed
+- `import assert` and `import process` did not behave as expected (`assert` wasn't returning a function). This has been fixed
+- `"node:module"`'s `createRequire` function wasn't requiring non-napi modules correctly
+
+macOS event loop internals moved to a more reliable polling mechanism:
+
+- **`setTimeout` CPU usage drops by 50%** https://github.com/oven-sh/bun/commit/c1734c6ec5ef709ee4126b3474c7bee0a377a1fa (Before: 90%, After: 33% - still more work to do here)
+- on macOS, bun would sometimes hang due to race conditions (unrelated to network connection) if you ran `fetch` enough times in quick succession. The race conditions have been fixed.
+
+More:
+
+- [bun:ffi] Fix crash with uint64_t 296fb41e920736041c6c1dec38f1d8c355a402a1
+- [bun:ffi] Fix int16 / uin16 max 30992a8b051565ace57083b990d010316d56605d
+- Fix `Request` and `Response` in macros e0b35b3086b00fb27f950a72a082b360a3dad891
+- Fix `clearTimeout` on Linux e6a1209c53adb3056263b894d774b30ee70a3188
+
+## Performance improvements
+
+Bun has a long-term commitment to performance. On macOS, React server-side rendering gets around 2x faster.
+
+{% image  width="474" alt="image" src="https://user-images.githubusercontent.com/709451/188825206-94183cbc-d900-4ca5-b6ac-5fc193311058.png" /%}
+
+Coming up next in performance improvements: a new HTTP server implementation. Not far enough along for this release, but experiments are [showing progress](https://twitter.com/jarredsumner/status/1565279541685153794).
+
+## PRs
+
+- fix(ReferenceError): expected type in getCode by [@xHyroM](https://github.com/xHyroM) in https://github.com/oven-sh/bun/pull/1120
+- chore: fix bun-tools location in macOSx Zig instructions by [@mljlynch](https://github.com/mljlynch) in https://github.com/oven-sh/bun/pull/1124
+- Fix clearTimeout and linux timeout by [@zhuzilin](https://github.com/zhuzilin) in https://github.com/oven-sh/bun/pull/1138
+- Add native BufferList by [@zhuzilin](https://github.com/zhuzilin) in https://github.com/oven-sh/bun/pull/1146
+- fix: broken README links by [@MNThomson](https://github.com/MNThomson) in https://github.com/oven-sh/bun/pull/1148
+- fix: added shell function to STRIP by [@dylan-conway](https://github.com/dylan-conway) in https://github.com/oven-sh/bun/pull/1156
+- fix compile error by [@zhuzilin](https://github.com/zhuzilin) in https://github.com/oven-sh/bun/pull/1157
+- Fix ffi uint64_t parameter by [@zhuzilin](https://github.com/zhuzilin) in https://github.com/oven-sh/bun/pull/1158
+- Update WebKit by [@Jarred-Sumner](https://github.com/Jarred-Sumner) in https://github.com/oven-sh/bun/pull/1165
+- Support for NULL in ffi by [@zhuzilin](https://github.com/zhuzilin) in https://github.com/oven-sh/bun/pull/1160
+- feat: hack in support for tsconfig `extends` by [@yepitschunked](https://github.com/yepitschunked) in https://github.com/oven-sh/bun/pull/1147
+- More reliable macOS event loop by [@Jarred-Sumner](https://github.com/Jarred-Sumner) in https://github.com/oven-sh/bun/pull/1166
+- chore: Clean buffer C API by [@zhuzilin](https://github.com/zhuzilin) in https://github.com/oven-sh/bun/pull/1174
+- Fixed JSBuffer write issues by [@nullhook](https://github.com/nullhook) in https://github.com/oven-sh/bun/pull/1175
+- Add profiler support by [@bwasti](https://github.com/bwasti) in https://github.com/oven-sh/bun/pull/1110
+- chore(doc): remove recurse flag from xattr by [@jbergstroem](https://github.com/jbergstroem) in https://github.com/oven-sh/bun/pull/1182
+- Fix typo in futex.zig by [@eltociear](https://github.com/eltociear) in https://github.com/oven-sh/bun/pull/1186
+- Add native StringDecoder by [@zhuzilin](https://github.com/zhuzilin) in https://github.com/oven-sh/bun/pull/1188
+- Fix failing Buffer tests by [@zhuzilin](https://github.com/zhuzilin) in https://github.com/oven-sh/bun/pull/1197
+- allow set proxy for github by [@usrtax](https://github.com/usrtax) in https://github.com/oven-sh/bun/pull/1198
+- export syntax error fix for exported enums and namespaces by [@dylan-conway](https://github.com/dylan-conway) in https://github.com/oven-sh/bun/pull/1203
+- Plugin API by [@Jarred-Sumner](https://github.com/Jarred-Sumner) in https://github.com/oven-sh/bun/pull/1199
+- fix: GitHub CLI installation by [@Kit-p](https://github.com/Kit-p) in https://github.com/oven-sh/bun/pull/1204
+- chore(install-script): automatically add bun to path - bash shell by [@xHyroM](https://github.com/xHyroM) in https://github.com/oven-sh/bun/pull/1168
+- update example react-is to v18(#1155) by [@tHyt-lab](https://github.com/tHyt-lab) in https://github.com/oven-sh/bun/pull/1172
+- Add native ReadableState by [@zhuzilin](https://github.com/zhuzilin) in https://github.com/oven-sh/bun/pull/1210
+
+## New Contributors
+
+- @mljlynch made their first contribution in https://github.com/oven-sh/bun/pull/1124
+- @samfundev made their first contribution in https://github.com/oven-sh/bun/pull/1132
+- @MNThomson made their first contribution in https://github.com/oven-sh/bun/pull/1148
+- @dylan-conway made their first contribution in https://github.com/oven-sh/bun/pull/1156
+- @yepitschunked made their first contribution in https://github.com/oven-sh/bun/pull/1147
+- @nullhook made their first contribution in https://github.com/oven-sh/bun/pull/1175
+- @bwasti made their first contribution in https://github.com/oven-sh/bun/pull/1110
+- @jbergstroem made their first contribution in https://github.com/oven-sh/bun/pull/1182
+- @usrtax made their first contribution in https://github.com/oven-sh/bun/pull/1198
+- @Kit-p made their first contribution in https://github.com/oven-sh/bun/pull/1204
+- @tHyt-lab made their first contribution in https://github.com/oven-sh/bun/pull/1172
+
+[**Full Changelog**](https://github.com/oven-sh/bun/compare/bun-v0.1.10...bun-v0.1.11)

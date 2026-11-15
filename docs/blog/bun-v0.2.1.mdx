@@ -1,0 +1,101 @@
+---
+title: Bun v0.2.1
+description: Release notes for Bun v0.2.1
+date: "2022-10-19T06:10:52Z"
+author: jarred
+thumbText: v0.2.1
+---
+
+To upgrade:
+
+```bash
+bun upgrade
+```
+
+To install:
+
+```bash
+curl https://bun.sh/install | bash
+```
+
+{% details summary="If you have any problems upgrading" %}
+
+Run the install script (you can run it multiple times):
+
+```bash
+curl https://bun.sh/install | bash
+```
+
+{% /details %}
+
+## WebSocket server
+
+`Bun.serve()` now has builtin support for websockets on the server
+
+```ts
+Bun.serve({
+  websocket: {
+    message(ws, message) {
+      ws.send(message);
+    },
+  },
+
+  fetch(req, server) {
+    // Upgrade to a ServerWebSocket if we can
+    // This automatically checks for the `Sec-WebSocket-Key` header
+    // meaning you don't have to check headers, you can just call `upgrade()`
+    if (server.upgrade(req))
+      // When upgrading, we return undefined since we don't want to send a Response
+      return;
+
+    return new Response("Regular HTTP response");
+  },
+});
+```
+
+For more information about using websockets with `Bun.serve()`, [see the readme](https://github.com/oven-sh/bun#websockets-with-bunserve)
+
+For a chat room on Linux:
+
+{% image width="440" alt="chat room benchmark linux" src="https://user-images.githubusercontent.com/709451/196610254-5d49703a-ddc3-4010-82be-1e99d24d4123.png" /%}
+
+To reproduce this benchmark on your own computer, [go here](https://github.com/oven-sh/bun/tree/main/bench/websocket-server)
+
+Bun's server-side websockets are powered by [uWebSockets](https://github.com/uNetworking/uWebSockets).
+
+## RegExp lookbehinds assertions fix
+
+To address #314, Bun now includes a fallback RegExp implementation that uses the [Oniguruma](https://github.com/kkos/oniguruma) regex engine. Thanks to [@dylan-conway](https://github.com/dylan-conway)!
+
+RegExp lookbehind assertions are used by popular npm packages like Discord.js
+
+When a RegExp literal with a lookbehind is used inside Bun's runtime, Bun's transpiler now automatically replaces it with a `Bun.OnigurumaRegExp`. This API isn't intended to be used outside of the transpiler and will be removed once [JavaScriptCore lands native support](https://bugs.webkit.org/show_bug.cgi?id=174931).
+
+When run inside Bun's JavaScript runtime, this input:
+
+```js
+export default /\d+(?=%)/;
+```
+
+Transpiles to:
+
+```js
+export default new globalThis.Bun.OnigurumaRegExp("\\d+(?=%)");
+```
+
+The RegExp polyfill is largely based on JavaScriptCore's own `JSC::RegExp` bindings.
+
+## More stuff
+
+- Send a `Date` header in HTTP responses
+- [`performance.timeOrigin`]() has been implemented
+- `process.argv` was returning an empty array when bun started without arguments other than the script, like `bun foo.js` (thanks to [@dylan-conway](https://github.com/dylan-conway) for the fix)
+- [Fix a crash when BodyMixin functions throw](https://github.com/oven-sh/bun/commit/3482d761758368c74d4971f75606af5657aff53c)
+- [Fix a memory leak in HTTP server related to promises](https://github.com/oven-sh/bun/commit/b1e97edc59628a1ae5ae02547947722ca96761c3)
+- Fix a regression from v0.2.0 where small buffered (non-streaming) HTTP response bodies would sometimes include invalid data due to a memory aliasing bug
+- Fix a bug where a pong control frame in Bun's `WebSocket` client would sometimes put the `WebSocket` in an error state https://github.com/oven-sh/bun/commit/c6fe82018aeda88a3337a5355313de7db68ef827
+- Fix a bug where a `WebSocket` client would not keep the process open - #1335
+- More test coverage for Bun's client-side `WebSocket` implementation due to adding server-side WebSockets
+- Added DOMJIT function call support to Bun's JavaScriptCore bindings generator (used by the new `ServerWebSocket` object for `publishText`, `publishBinary`, `sendText` and `sendBinary` functions)
+
+[**Full Changelog**](https://github.com/oven-sh/bun/compare/bun-v0.2.0...bun-v0.2.1)

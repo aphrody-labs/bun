@@ -1,0 +1,206 @@
+---
+title: Bun v0.6.2
+description: Up to 20% faster JSON.parse, 15% faster JSON.stringify, and Proxy gets faster. A couple bugfixes to the minifier and bundler
+date: "2023-05-17T12:00:00+00:00"
+author: jarred
+draft: false
+---
+
+{% callout %}
+We're hiring [C/C++ and Zig engineers](/careers) to build the future of JavaScript! [See job listings →](/careers)
+{% /callout %}
+
+This is a couple bugfixes to the minifier and bundler, and performance improvements to JavaScript thanks to JavaScriptCore team members @Constellation and @shvaikalesh.
+
+Be sure to check out the [Bun v0.6.0](/blog/bun-v0.6.0) release notes if you haven't.
+
+{% codetabs %}
+
+```sh#curl
+$ curl -fsSL https://bun.sh/install | bash
+```
+
+```sh#npm
+$ npm install -g bun
+```
+
+```sh#brew
+$ brew tap oven-sh/bun
+$ brew install bun
+```
+
+```sh#docker
+$ docker pull oven/bun
+$ docker run --rm --init --ulimit memlock=-1:-1 oven/bun
+```
+
+{% /codetabs %}
+
+{% raw %}
+<br>
+{% /raw %}
+
+To upgrade Bun:
+
+```sh
+$ bun upgrade
+```
+
+## toLocaleString() gets 79x faster
+
+Thanks to [@Constellation](https://github.com/Constellation), `toLocaleString()` on numbers gets 79x faster.
+
+[`toLocaleString`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/toLocaleString) converts the number into how a string is expected to be read by the current locale.
+
+This impacts code like this:
+
+```js
+const myNumber = 123;
+
+myNumber.toLocaleString();
+```
+
+- https://github.com/WebKit/WebKit/pull/13860
+
+## Up to 20% faster JSON.parse & 15% faster JSON.stringify
+
+Thanks to [@Constellation](https://github.com/Constellation), `JSON.parse` gets 20% faster on objects on objects without many nested objects and `JSON.stringify` gets 15% faster in the same scenario.
+
+Before:
+
+```js
+cpu: Apple M1 Max
+runtime: bun 0.6.1 (arm64-darwin)
+
+benchmark                time (avg)             (min … max)       p75       p99      p995
+----------------------------------------------------------- -----------------------------
+JSON.parse(obj)        1.45 µs/iter     (1.32 µs … 2.99 µs)   1.38 µs   2.99 µs   2.99 µs
+JSON.stringify(obj)  612.71 ns/iter   (556.91 ns … 1.35 µs) 586.41 ns   1.35 µs   1.35 µs
+```
+
+After (lower is better):
+
+```js
+cpu: Apple M1 Max
+runtime: bun 0.6.2 (arm64-darwin)
+
+benchmark                time (avg)             (min … max)       p75       p99      p995
+----------------------------------------------------------- -----------------------------
+JSON.parse(obj)         1.1 µs/iter   (999.92 ns … 2.08 µs)   1.04 µs   2.08 µs   2.08 µs
+JSON.stringify(obj)  546.45 ns/iter   (489.78 ns … 1.68 µs) 518.86 ns  979.2 ns   1.68 µs
+```
+
+Node.js, for comparison:
+
+```js
+cpu: Apple M1 Max
+runtime: node v20.1.0 (arm64-darwin)
+
+benchmark                time (avg)             (min … max)       p75       p99      p995
+----------------------------------------------------------- -----------------------------
+JSON.parse(obj)        2.44 µs/iter     (2.34 µs … 2.59 µs)   2.51 µs   2.59 µs   2.59 µs
+JSON.stringify(obj)    1.38 µs/iter     (1.33 µs … 1.47 µs)   1.42 µs   1.47 µs   1.47 µs
+```
+
+[View microbenchmark](https://github.com/oven-sh/bun/blob/67f543daa79c142cf6ea1451fa0c5d691b468c40/bench/snippets/json-parse-stringify.mjs)
+
+- https://github.com/WebKit/WebKit/pull/13898
+- https://github.com/WebKit/WebKit/pull/13480 (note that benchmarks listed there are for entire apps, not JSON.parse microbenchmarks specifically)
+- https://github.com/oven-sh/WebKit/commit/3fa658700239c8e7cbe8fa20793a6314274560cd
+
+## `Proxy` gets faster
+
+Thanks to a series of PRs by [@shvaikalesh](https://github.com/shvaikalesh), [Proxy](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Proxy) gets 2x faster or more when getting or setting properties through it.
+
+- https://github.com/WebKit/WebKit/pull/13349
+- https://github.com/WebKit/WebKit/pull/13408
+- https://github.com/WebKit/WebKit/pull/13660
+
+## Object.assign with empty objects gets faster
+
+Thanks to [@Constellation](https://github.com/Constellation), Object.assign() with empty objects as the 2nd argument gets 2x faster.
+
+```js
+function test(options) {
+  var options = Object.assign({ defaultParam: 32 }, options);
+  return options;
+}
+
+// empty object as the 2nd arguemnt to object assign
+test({});
+```
+
+- https://github.com/WebKit/WebKit/pull/13220/files
+
+## Returning `arguments` gets 2x faster
+
+Also thanks to [@Constellation](https://github.com/Constellation), returning `arguments` in a function this gets 2x faster
+
+```js
+function test(a, b, c) {
+  return arguments;
+}
+
+for (var i = 0; i < 1e6; ++i) test(0, 1, 2);
+```
+
+- https://github.com/WebKit/WebKit/pull/13304
+
+## Minifier bug involving template strings
+
+Due to incorrect logic involving rope strings inside template literals in bun's parser, code like this would sometimes produce incorrect strings:
+
+```js
+const foo = ".*";
+const regex1 = new RegExp(foo); // Invalid regular expression: unmatched parentheses
+const regex2 = new RegExp(`(${foo})`);
+```
+
+This has been fixed, thanks to [@dylan-conway](https://github.com/dylan-conway).
+
+## Asset names rewriting bug
+
+When running
+
+```bash
+bun build ./foo.js
+```
+
+If foo.js looked something like:
+
+{% codetab %}
+
+```js#foo.js
+import MyAsset from './asset.svg';
+```
+
+{% /codetab %}
+
+`bun build` would report the following:
+
+```bash
+
+  foo.js                        0.00 KB
+
+  asset-bcd3157c264ff68c.svg    0.00 KB
+
+[6ms] bundle 2 modules
+```
+
+...and then never actually copy `asset-bcd3157c264ff68c.svg` to the output directory.
+
+This has been fixed (and test coverage improved), thanks to [@dylan-conway](https://github.com/dylan-conway).
+
+## Warning messages would fail the build
+
+Bun has different log levels for build-related errors. Only `error` log level messages are supposed to fail the build, but a bug caused any message at all to fail the build.
+
+This would mean that, for example, code like this:
+
+```jsx
+const Foo = <Bar key="123" {...props} />;
+```
+
+Would cause a build failure because it warns on using `key` and a spread operator together.
+
+That was a bug and has been fixed, thanks to [@paperclover](https://github.com/paperclover).

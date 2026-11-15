@@ -1,0 +1,869 @@
+---
+title: Bun v0.8.0
+description: Bun gets debugger support, fetch streaming, and `bun update`. ReadStream and WriteStream from `node:tty` are implemented, including raw mode on `process.stdin`. SvelteKit now works in Bun. Plus bug fixes and stability improvements.
+date: "2023-08-24T00:21:35.514Z"
+author: colin
+draft: false
+---
+
+Bun v0.8.0 adds debugger support, implements fetch streaming, and unblocks [SvelteKit](https://kit.svelte.dev/). ReadStream and WriteStream from `node:tty` are implemented, and `.setRawMode()` now works on `process.stdin`, unblocking several interactive CLI tools. Plus Node.js compatibility updates, bug fixes, stability improvements.
+
+{% callout %}
+Bun 1.0 is coming on September 7th! Register for the launch stream at [https://bun.sh/1.0](https://bun.sh/1.0).
+{% /callout %}
+
+Bun is an incredibly fast JavaScript runtime, bundler, transpiler, and package manager &mdash; all in one. We've been releasing a lot of changes to Bun recently. Here's a recap of the last few releases. In case you missed it:
+
+- [`v0.7.0`](/blog/bun-v0.7.0) - Web Workers, `--smol`, `structuredClone()`, WebSocket reliability improvements, `node:tls` fixes, and more.
+- [`v0.7.1`](/blog/bun-v0.7.1) - ES Modules load 30-250% faster, `fs.watch` fixes, and lots of `node:fs` compatibility improvements.
+- [`v0.7.2`](/blog/bun-v0.7.1) - Implements `node:worker_threads`, `node:diagnostics_channel`, and [`BroadcastChannel`](https://developer.mozilla.org/en-US/docs/Web/API/BroadcastChannel).
+- [`v0.7.3`](/blog/bun-v0.7.1) - Coverage reporting in `bun test`, plus test filtering with `bun test -t`.
+
+To install Bun:
+
+{% codetabs %}
+
+```sh#curl
+$ curl -fsSL https://bun.sh/install | bash
+```
+
+```sh#npm
+$ npm install -g bun
+```
+
+```sh#brew
+$ brew tap oven-sh/bun
+$ brew install bun
+```
+
+```sh#docker
+$ docker pull oven/bun
+$ docker run --rm --init --ulimit memlock=-1:-1 oven/bun
+```
+
+{% /codetabs %}
+
+To upgrade Bun:
+
+```sh
+$ bun upgrade
+```
+
+## Debugger support
+
+Bun now implements debugger support via WebKit's Inspector Protocol. To use it, run your file or script with the `--inspect` flag. Consider the following simple HTTP server.
+
+```ts#server.ts
+const server = Bun.serve({
+  fetch(req){
+    console.log(req.url);
+    return new Response("Hello world!");
+  }
+});
+
+console.log(`Listening on http://localhost:${server.port}`);
+```
+
+When we run this file with `--inspect`, it starts our HTTP server _and_ spins up a localhost WebSocket server on an unused port. This WebSocket server uses the Inspector Protocol to communicate with debugging tools, which can introspect and control the running `bun` process.
+
+```sh
+$ bun --inspect server.ts
+Listening on http://localhost:3000
+------------------ Bun Inspector ------------------
+Listening at:
+  ws://localhost:6499/0tqxs9exrgrm
+
+Inspect in browser:
+  https://debug.bun.sh/#localhost:6499/0tqxs9exrgrm
+------------------ Bun Inspector ------------------
+```
+
+### Using `debug.bun.sh`
+
+The `--inspect` flag will also print a `https://debug.bun.sh#` URL to the console. This domain `debug.bun.sh` hosts a stripped-down version of Safari Developer Tools designed for debugging Bun. Open the link in your preferred browser and a new debugging session will start automatically.
+
+{% image src="https://github.com/oven-sh/bun/assets/3084745/3b69c7e9-25ff-4f9d-acc4-caa736862935" caption="Bun Developer Tools at debug.bun.sh" /%}
+
+From the web debugger, you can inspect the currently running code and set breakpoints. Once a breakpoint is triggered, you can:
+
+- View all variables in scope
+- Execute code in the console, with full access to in-scope variables and Bun APIs
+- Step through your code step-by-step
+
+{% image src="https://github.com/oven-sh/bun/assets/3084745/8b565e58-5445-4061-9bc4-f41090dfe769" alt="screenshot of Bun debugger" /%}
+
+Read the [Debug Bun with the web debugger](/guides/runtime/web-debugger) guide for more complete documentation.
+
+<!-- ### Using the Bun VS Code extension
+
+With the Bun VS Code extension enables, you'll see a new "Debug file" command in the command palette.
+
+IMAGE
+
+The command will run the current file with `--inspect` and open a new VS Code window with the debugger attached. Set breakpoints to see all variables in scope and step through your code step-by-step.
+
+IMAGE -->
+
+## `bun update`
+
+The new `bun update` command will update all project dependencies to the latest versions that are compatible with the semver ranges in your `package.json`.
+
+```sh
+$ bun update
+```
+
+To update a particular dependency:
+
+```sh
+$ bun update zod
+```
+
+{% callout %}
+**Note** — Unlike `npm`, the `bun upgrade` command is reserved for upgrading Bun itself. It is _not_ an alias for `bun update`.
+{% /callout %}
+
+Thanks to [@alexlamsl](https://github.com/alexlamsl) for implementing this feature.
+
+<!-- ## Node.js compatibility and support for frameworks
+
+As we move towards more complete Node.js API compatibility, we've unblocked a couple more popular full-stack web frameworks. -->
+
+<!-- ## Nest.js support
+
+With recent Node.js compatibility improvements, Bun now supported [Nest.js](https://nestjs.com/). To scaffold a new Nest.js project, use the Nest.js CLI.
+
+```sh
+$ bunx @nestjs/cli new my-app
+⚡  We will scaffold your app in a few seconds..
+
+? Which package manager would you ❤️  to use? bun
+CREATE my-app/.eslintrc.js (663 bytes)
+CREATE my-app/.prettierrc (51 bytes)
+CREATE my-app/README.md (3347 bytes)
+CREATE my-app/nest-cli.json (171 bytes)
+CREATE my-app/package.json (1946 bytes)
+CREATE my-app/tsconfig.build.json (97 bytes)
+CREATE my-app/tsconfig.json (546 bytes)
+CREATE my-app/src/app.controller.spec.ts (617 bytes)
+CREATE my-app/src/app.controller.ts (274 bytes)
+CREATE my-app/src/app.module.ts (249 bytes)
+CREATE my-app/src/app.service.ts (142 bytes)
+CREATE my-app/src/main.ts (208 bytes)
+CREATE my-app/test/app.e2e-spec.ts (630 bytes)
+CREATE my-app/test/jest-e2e.json (183 bytes)
+
+✔ Installation in progress... ☕
+
+🚀  Successfully created project my-app
+👉  Get started with the following commands:
+
+$ cd my-app
+$ bun run start
+``` -->
+
+<!-- ### Nuxt
+
+With [support for `util.formatWithOptions`](https://github.com/oven-sh/bun/pull/4090) Nuxt now works in Bun. Start a fresh Nuxt + Bun project with `nuxi`. Read the
+
+```sh
+$ bunx nuxi@latest init my-app
+$ cd my-app
+``` -->
+<!--
+### Astro
+
+With [support for `util.formatWithOptions`](https://github.com/oven-sh/bun/pull/4090) Nuxt now works in Bun. Start a fresh Nuxt + Bun project with `nuxi`. Read the
+
+```sh
+$ bunx nuxi@latest init my-app
+$ cd my-app
+``` -->
+
+## SvelteKit support
+
+Improved support for [environment variables in `Worker`](https://github.com/oven-sh/bun/pull/4052) has unblocked SvelteKit. Scaffold your project with `create-svelte`.
+
+```sh
+$ bunx create-svelte my-app
+create-svelte version 5.0.5
+
+┌  Welcome to SvelteKit!
+│
+◇  Which Svelte app template?
+│  SvelteKit demo app
+│
+◇  Add type checking with TypeScript?
+│  Yes, using TypeScript syntax
+│
+◇  Select additional options (use arrow keys/space bar)
+│  none
+│
+└  Your project is ready!
+
+✔ Typescript
+  Inside Svelte components, use <script lang="ts">
+
+Install community-maintained integrations:
+  https://github.com/svelte-add/svelte-add
+```
+
+To install dependencies and start the dev server:
+
+```sh
+$ cd my-app
+$ bun install
+$ bun run dev -- --open
+```
+
+Open [`localhost:3000`](http://localhost:3000) to see the demo SvelteKit app in action.
+{% image src="https://github.com/oven-sh/bun/assets/3084745/7c76eae8-78f9-44fa-9f15-1bd3ca1a47c0" caption="A SvelteKit app running on Bun" /%}
+
+## Support for Nuxt (`nuxt dev`)
+
+With improved `node:tty` and `node:fs` support, the Nuxt development server now works with the Bun runtime. To get started, use the `nuxi` command-line tool.
+
+```sh
+$ bunx --bun nuxi init my-app
+$ cd my-app
+$ bun install
+```
+
+Once dependencies are installed, start the development server with the `"dev"` package.json script.
+
+```sh
+$ bun --bun run dev
+ $ nuxt dev
+Nuxt 3.6.5 with Nitro 2.5.2
+  > Local:    http://localhost:3000/
+  > Network:  http://192.168.0.21:3000/
+  > Network:  http://[fd8a:d31d:481c:4883:1c64:3d90:9f83:d8a2]:3000/
+
+✔ Nuxt DevTools is enabled v0.8.0 (experimental)
+ℹ Vite client warmed up in 547ms
+✔ Nitro built in 244 ms
+```
+
+{% callout %}
+The `--bun` flag ensures the server is using the Bun runtime instead of Node.js. By default the `nuxt` CLI uses Node.js.
+{% /callout %}
+
+Then visit [http://localhost:3000](http://localhost:3000) to see the default Nuxt welcome screen.
+
+{% image src="https://github.com/oven-sh/bun/assets/3084745/2c683ecc-3298-4bb0-b8c0-cf4cfaea1daa" caption="Nuxt app running on Bun" /%}
+
+{% callout %}
+**Note** — There are still some issues with Nuxt's `build` command. When doing a production build, use `bun run build` instead of `bun --bun run build`. This will use Node.js to run Nuxt's build pipeline. Track this issue [here](https://github.com/oven-sh/bun/issues/3771).
+{% /callout %}
+
+Refer to the [Building an app with Nuxt and Bun](/guides/ecosystem/nuxt) for a more complete walkthrough.
+
+## Fetch response body streaming
+
+Bun now implements `fetch()` response body streaming, thanks to [@cirospaciari](https://github.com/cirospaciari). This means that you can now stream data from a fetch response, instead of waiting for the entire response to be downloaded.
+
+```ts
+const res = await fetch("https://example.com/bigfile.txt");
+
+// read the response chunk-by-chunk!
+for await (const chunk of res.body) {
+  console.log(chunk);
+}
+```
+
+### Use OpenAI in Bun
+
+Streaming is especially useful when working with APIs that take awhile to respond. Now you can stream responses from OpenAI's API in Bun.
+
+```ts
+import OpenAI from "openai";
+
+const openai = new OpenAI({
+  apiKey: "my api key",
+});
+
+const stream = await openai.chat.completions.create({
+  model: "gpt-4",
+  messages: [{ role: "user", content: "Say this is a test" }],
+  stream: true,
+});
+
+for await (const part of stream) {
+  process.stdout.write(part.choices[0]?.delta?.content || "");
+}
+```
+
+## Bun.serve() streaming improvements
+
+Previously, the following would buffer the response body, meaning it would only send the response once the entire body had been generated.
+
+```js
+import { serve, sleep } from "bun";
+serve({
+  fetch(req) {
+    return new Response(
+      new ReadableStream({
+        async pull(controller) {
+          for (let i = 0; i < 20; i++) {
+            controller.enqueue("Hello world!");
+            await sleep(42);
+          }
+
+          controller.close();
+        },
+      }),
+    );
+  },
+});
+
+// Hello World!Hello World!Hello World!...[~840ms]
+```
+
+That's not what people want! Now, the response body is streamed, meaning it's sent to the client as it's generated.
+
+```js
+import { serve, sleep } from "bun";
+serve({
+  fetch(req) {
+    return new Response(
+      new ReadableStream({
+        async pull(controller) {
+          for (let i = 0; i < 20; i++) {
+            controller.enqueue("Hello world!");
+            await sleep(42);
+          }
+
+          controller.close();
+        },
+      }),
+    );
+  },
+});
+
+// Hello world! [42ms]
+// Hello world! [42ms]
+// Hello world! [42ms]
+```
+
+Previously, streaming was only supported when using ReadableStream with `type: "direct"`, a Bun-specific fast path for streaming.
+
+```js
+import { serve, sleep } from "bun";
+serve({
+  port: 3000,
+  fetch(req) {
+    return new Response(
+      new ReadableStream({
+        // bun specific option
+        type: "direct",
+
+        async pull(controller) {
+          for (let i = 0; i < 20; i++) {
+            controller.write("Hello world!");
+
+            // in bun < 0.8.0, flush() was required
+            controller.flush();
+
+            // now bun will automatically flush pending writes once the microtask queue is drained
+            await sleep(42);
+          }
+
+          controller.end();
+        },
+      }),
+    );
+  },
+});
+
+// Hello world! [42ms]
+// Hello world! [42ms]
+// Hello world! [42ms]
+// Hello world! [42ms]
+```
+
+We still have optimization work ahead to make streaming using the default ReadableStream type fast. For now, we recommend using `type: "direct"` to get the fastest possible streaming.
+
+## Support for `node:tty` and `process.stdin.setRawMode()`
+
+{% image src="https://github.com/oven-sh/bun/assets/709451/5cd88625-5784-479a-8c32-634bff898579" caption="Inquirer npm package in Bun" /%}
+
+The `ReadStream` and `WriteStream` classes from `node:tty` have been implemented, and `process.stdin` is now an instance of `ReadStream`. Accordingly, it's now possible to enable "raw mode" on `process.stdin`.
+
+```ts
+process.stdin.setRawMode(true);
+```
+
+### Support for `inquirer` and other prompt libraries
+
+This makes it possible to read keypresses without waiting for a newline character, which is important for interactive CLI tools. The popular libraries [`inquirer`](https://github.com/SBoudrias/Inquirer.js), [`enquirer`](https://github.com/enquirer/enquirer), and [`prompts`](https://github.com/terkelg/prompts) are now fully supported.
+
+Run the following command to interactively scaffold a Remix app using Bun and the interactive `create-remix` command-line tool.
+
+```sh
+$ bunx --bun create-remix
+```
+
+Thanks to [@dylan-conway](https://github.com/dylan-conway) for implementing this feature.
+
+## Improvements to `bun test`
+
+### `test.each` and `describe.each`
+
+Thanks to [@jecquas](https://github.com/jecquas), Bun now supports `test.each` and `describe.each` from Jest. This makes it easy to run the same test with different inputs.
+
+```ts
+describe.each([
+  [1, 1, 2],
+  [1, 2, 3],
+  [2, 1, 3],
+])("add(%i, %i)", (a, b, expected) => {
+  test(`returns ${expected}`, () => {
+    expect(a + b).toBe(expected);
+  });
+});
+```
+
+### `.toSatisfy()` and `.toIncludeRepeated()`
+
+Thanks to [@TiranexDev](https://github.com/TiranexDev), `bun test` now supports [additional matchers](https://github.com/oven-sh/bun/pull/3651). These matchers are part of `jest-extended` and are now natively supported by `bun test`.
+
+Sample usage of [`.toSatisfy()`](https://vitest.dev/api/expect.html#tosatisfy):
+
+```ts
+const isOdd = (value: number) => value % 2 !== 0;
+it("toSatisfy", () => {
+  expect(1).toSatisfy(isOdd);
+  expect(2).not.toSatisfy(isOdd);
+});
+```
+
+Sample usage of [`.toIncludeRepeated()`](https://jest-extended.jestcommunity.dev/docs/matchers/string/#toincluderepeatedsubstring-times):
+
+```ts
+test("toIncludeRepeated", () => {
+  // check if string contains substring exactly 2 times
+  expect("hello hello").toIncludeRepeated("hello", 2);
+  // works with .not
+  expect("hello hello world").not.toIncludeRepeated("hello", 1);
+});
+```
+
+## 40x faster `buffer.toString("hex")`
+
+The Node.js `Buffer.toString("hex")` function gets optimized with SIMD, leading to 40x faster performance.
+
+{% raw %}
+
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">In the next version of Bun<br><br>Buffer.toString(&quot;hex&quot;) gets 40x faster <a href="https://t.co/Hz7rXBAjJw">pic.twitter.com/Hz7rXBAjJw</a></p>&mdash; Jarred Sumner (@jarredsumner) <a href="https://twitter.com/jarredsumner/status/1693597759310573945?ref_src=twsrc%5Etfw">August 21, 2023</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+{% /raw %}
+
+## `Bun.inspect.custom`
+
+Objects can now be augmented with custom formatters using the `Bun.inspect.custom` symbol. For compatibility reasons, `util.inspect.custom` from Node.js's `node:util` works too.
+
+```ts
+class Password {
+  value: string;
+  constructor(value: string) {
+    this.value = value;
+  }
+  [Bun.inspect.custom]() {
+    return "Password <********>";
+  }
+}
+
+const p = new Password("secret");
+console.log(p);
+// => "Password <********>"
+```
+
+## Global `File` constructor
+
+The `File` constructor has been added as a new global. `File` instances can be constructed.
+
+```ts
+const file = new File(["hello world"], "hello.txt", {
+  type: "text/plain",
+  lastModified: Date.now() - 1000,
+});
+
+file.size; // 11
+file.name; // "hello.txt"
+file.type; // "text/plain"
+file.lastModified; // 1693597759310573
+```
+
+## Crash in Buffer-related functions fixed
+
+A JIT crash in `Buffer`-related functions has been fixed. This crash was caused by incorrect side effects when passed to DOMJIT which led to a crash during type validation when the functions were called. This impacted several libraries and the crash began after a JavaScriptCore upgrade in Bun v0.7.3.
+
+This crash would cause `EXC_BREAKPOINT` to be thrown after enough calls to `Buffer.alloc`, `Buffer.allocUnsafe`, `Buffer.isBuffer` were called.
+
+## Bugfixes and stability improvements
+
+**Buffer.toString("hex") memory leak fix**
+
+A memory leak has [been fixed](https://github.com/oven-sh/bun/pull/4235) in the implementation of `buffer.toString("hex")`.
+
+**NAPI fixes and support for `resvg`, `sharp`**
+
+A couple bugs in the [`NAPIClass` constructor](NapiClass) and [`napi_create_external_arraybuffer` / `napi_create_external_buffer`](https://github.com/oven-sh/bun/pull/4221) have been fixed. The resolves issues when using [`resvg-js`](https://github.com/yisibl/resvg-js) or [`sharp`](https://github.com/lovell/sharp).
+
+**Better error when `this` is invalid**
+
+When calling a method with an unexpected value for `this`, Bun [now reports](https://twitter.com/jarredsumner/status/1692693498841931804) an informative error.
+
+```ts
+const { json } = new Response(`"hello"`);
+json();
+// ^ TypeError: Expected `this` to be instanceof Response
+```
+
+**Handle cross-device file copies**
+
+Bun [now detects](https://github.com/oven-sh/bun/issues/1675) when a file copying operation (e.g `fs.copyFile`) is attempting to copy files across devices or partitions and falls back to a manual file copy syscall.
+
+**Fix `Bun.deepEqual` URL comparison**
+
+[`#4105`](https://github.com/oven-sh/bun/pull/4105) fixes a bug where URLs we're not properly compared by their internal `href`.
+
+**10% Regression in async-await performance on macOS has been fixed**
+
+- The daylight savings time cache is no longer updated on each microtask call. This regression began in v0.7.x.
+
+**Several fixes to streams**
+
+[`#4251`](https://github.com/oven-sh/bun/pull/4251) includes a number of improvements and bugfixes in the implementation of `ReadableStream` have been fixed. This includes:
+
+- Pending writes to HTTP response bodies are automatically flushed once the microtask queue has been drained, fixing #1886
+- Improved error handling inside `pull`.
+
+## Changelog
+
+As Bun 1.0 approaches, we've been tracking down remaining memory leaks and crashes.
+
+{% table %}
+
+---
+
+- [`#4028`](https://github.com/oven-sh/bun/pull/4028)
+- [install] Handle `bun add` of existing `peerDependencies` correctly by [@alexlamsl](https://github.com/alexlamsl)
+
+---
+
+- [`#4026`](https://github.com/oven-sh/bun/pull/4026)
+- Running missing scripts exits with non-0 by [@YashoSharma](https://github.com/YashoSharma)
+
+---
+
+- [`#4030`](https://github.com/oven-sh/bun/pull/4030)
+- Bind require.resolve`() by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#4034`](https://github.com/oven-sh/bun/pull/4034)
+- Normalize `Request` URLs by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#4042`](https://github.com/oven-sh/bun/pull/4042)
+- Fix `path.normalize` edge case. by [@Hanaasagi](https://github.com/Hanaasagi)
+
+---
+
+- [`#4043`](https://github.com/oven-sh/bun/pull/4043)
+- Compile Bun's transpiler to WASM and add test analyzer by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#4048`](https://github.com/oven-sh/bun/pull/4048)
+- Fix iterating headers with `set-cookie` by [@dylan-conway](https://github.com/dylan-conway)
+
+---
+
+- [`#4000`](https://github.com/oven-sh/bun/pull/4000)
+- implement fetching data urls by [@dylan-conway](https://github.com/dylan-conway)
+
+---
+
+- [`#4054`](https://github.com/oven-sh/bun/pull/4054)
+- Fix `Bun.hash` functions by [@jhmaster2000](https://github.com/jhmaster2000)
+
+---
+
+- [`#4064`](https://github.com/oven-sh/bun/pull/4064)
+- Fix `path.format` compatibility issue. by [@Hanaasagi](https://github.com/Hanaasagi)
+
+---
+
+- [`#4073`](https://github.com/oven-sh/bun/pull/4073)
+- Fix require("console") #3820 by [@paperclover](https://github.com/paperclover)
+
+---
+
+- [`#4076`](https://github.com/oven-sh/bun/pull/4076)
+- Set exports to {} in user-constructed CommonJSModuleRecords by [@paperclover](https://github.com/paperclover)
+
+---
+
+- [`#4086`](https://github.com/oven-sh/bun/pull/4086)
+- Fix `XLSX.read` coredump by [@Hanaasagi](https://github.com/Hanaasagi)
+
+---
+
+- [`#4027`](https://github.com/oven-sh/bun/pull/4027)
+- Add support for bun --revision by [@YashoSharma](https://github.com/YashoSharma)
+
+---
+
+- [`#4106`](https://github.com/oven-sh/bun/pull/4106)
+- Fix segfault in base64url encoder #4062 by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#4109`](https://github.com/oven-sh/bun/pull/4109)
+- Handle thundering herd of `setInterval` by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#4111`](https://github.com/oven-sh/bun/pull/4111)
+- Fix memory leak in Buffer.toString('base64url') by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#4113`](https://github.com/oven-sh/bun/pull/4113)
+- Run files without extensions by [@dylan-conway](https://github.com/dylan-conway)
+
+---
+
+- [`#4117`](https://github.com/oven-sh/bun/pull/4117)
+- Make `astro build` slightly faster
+
+---
+
+- [`#4125`](https://github.com/oven-sh/bun/pull/4125)
+- Support TypeScript's `export type * as Foo from 'bar'` by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#4126`](https://github.com/oven-sh/bun/pull/4126)
+- `bun-wasm` fixes & improvements by [@jhmaster2000](https://github.com/jhmaster2000)
+
+---
+
+- [`#4131`](https://github.com/oven-sh/bun/pull/4131)
+- Deprecate loading `node_modules.bun` by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#4129`](https://github.com/oven-sh/bun/pull/4129)
+- Fix custom config path not working. by [@Hanaasagi](https://github.com/Hanaasagi)
+
+---
+
+- [`#4114`](https://github.com/oven-sh/bun/pull/4114)
+- Fix worker event loop ref/unref + leak by [@paperclover](https://github.com/paperclover)
+
+---
+
+- [`#4152`](https://github.com/oven-sh/bun/pull/4152)
+- Make builtins' source origin use a valid url by [@paperclover](https://github.com/paperclover)
+
+---
+
+- [`#4155`](https://github.com/oven-sh/bun/pull/4155)
+- Fix importing too long of strings by [@paperclover](https://github.com/paperclover)
+
+---
+
+- [`#4162`](https://github.com/oven-sh/bun/pull/4162)
+- Fix method name typo by [@Hanaasagi](https://github.com/Hanaasagi)
+
+---
+
+- [`#4157`](https://github.com/oven-sh/bun/pull/4157)
+- Fix event loop issue with `Bun.connect` by [@paperclover](https://github.com/paperclover)
+
+---
+
+- [`#4172`](https://github.com/oven-sh/bun/pull/4172)
+- Update docs our current status of node compatibility by [@paperclover](https://github.com/paperclover) in https://github.com/oven-sh/bun/pull/4172
+
+---
+
+- [`#4173`](https://github.com/oven-sh/bun/pull/4173)
+- Create domjit.test.ts by [@dylan-conway](https://github.com/dylan-conway) in https://github.com/oven-sh/bun/pull/4173
+
+---
+
+- [`#4150`](https://github.com/oven-sh/bun/pull/4150)
+- Fix prisma linux generation by [@cirospaciari](https://github.com/cirospaciari) in https://github.com/oven-sh/bun/pull/4150
+
+---
+
+- [`#4181`](https://github.com/oven-sh/bun/pull/4181)
+- Fix leaking .ptr by [@Jarred-Sumner](https://github.com/Jarred-Sumner) in https://github.com/oven-sh/bun/pull/4181
+
+---
+
+- [`#4192`](https://github.com/oven-sh/bun/pull/4192)
+- correct guide's bunfig example option by [@xxxhussein](https://github.com/xxxhussein) in https://github.com/oven-sh/bun/pull/4192
+
+---
+
+- [`#4193`](https://github.com/oven-sh/bun/pull/4193)
+- refactor: move HTMLRewriter to c++ bindings by [@bru02](https://github.com/bru02) in https://github.com/oven-sh/bun/pull/4193
+
+---
+
+- [`#4191`](https://github.com/oven-sh/bun/pull/4191)
+- Fix(node:fs): add `buffer` parameter in `fs.read` callback. by [@Hanaasagi](https://github.com/Hanaasagi) in https://github.com/oven-sh/bun/pull/4191
+
+---
+
+- [`#4154`](https://github.com/oven-sh/bun/pull/4154)
+- Allow IncomingRequest.req to be overwritten. by [@paperclover](https://github.com/paperclover) in https://github.com/oven-sh/bun/pull/4154
+
+---
+
+- [`#4098`](https://github.com/oven-sh/bun/pull/4098)
+- Support Nitro by [@paperclover](https://github.com/paperclover) in https://github.com/oven-sh/bun/pull/4098
+
+---
+
+- [`#4194`](https://github.com/oven-sh/bun/pull/4194)
+- Add `util.inspect.custom` support to `util.inspect/Bun.inspect/console.log` by [@paperclover](https://github.com/paperclover) in https://github.com/oven-sh/bun/pull/4194
+
+---
+
+- [`#4187`](https://github.com/oven-sh/bun/pull/4187)
+- Remove most C API usages, add debugger pretty printers for `Headers`, `URLSearchParams`, `FormData`, `Worker`, `EventTarget` by [@Jarred-Sumner](https://github.com/Jarred-Sumner) in https://github.com/oven-sh/bun/pull/4187
+
+---
+
+- [`#4208`](https://github.com/oven-sh/bun/pull/4208)
+- Implement BigIntStats by [@paperclover](https://github.com/paperclover) in https://github.com/oven-sh/bun/pull/4208
+
+---
+
+- [`#4206`](https://github.com/oven-sh/bun/pull/4206)
+- feat: add self-closing & can-have-content by [@bru02](https://github.com/bru02) in https://github.com/oven-sh/bun/pull/4206
+
+---
+
+- [`#4213`](https://github.com/oven-sh/bun/pull/4213)
+- Add inline sourcemaps when `--inspect` is enabled by [@Jarred-Sumner](https://github.com/Jarred-Sumner) in https://github.com/oven-sh/bun/pull/4213
+
+---
+
+- [`#4220`](https://github.com/oven-sh/bun/pull/4220)
+- Fixes #172 by [@Jarred-Sumner](https://github.com/Jarred-Sumner) in https://github.com/oven-sh/bun/pull/4220
+
+---
+
+- [`#4221`](https://github.com/oven-sh/bun/pull/4221)
+- Fix crash impacting sharp & resvg by [@Jarred-Sumner](https://github.com/Jarred-Sumner) in https://github.com/oven-sh/bun/pull/4221
+
+---
+
+- [`#4210`](https://github.com/oven-sh/bun/pull/4210)
+- Add unsupported (yet) comment to distroless image by [@o-az](https://github.com/o-az) in https://github.com/oven-sh/bun/pull/4210
+
+---
+
+- [`#4163`](https://github.com/oven-sh/bun/pull/4163)
+- Fix(bundler): use different alias mappings based on the target. by [@Hanaasagi](https://github.com/Hanaasagi) in https://github.com/oven-sh/bun/pull/4163
+
+---
+
+- [`#4231`](https://github.com/oven-sh/bun/pull/4231)
+- Fix test failures from 3a9a6c63a by [@Jarred-Sumner](https://github.com/Jarred-Sumner) in https://github.com/oven-sh/bun/pull/4231
+
+---
+
+- [`#4222`](https://github.com/oven-sh/bun/pull/4222)
+- Implement `--inspect-brk` by [@Jarred-Sumner](https://github.com/Jarred-Sumner) in https://github.com/oven-sh/bun/pull/4222
+
+---
+
+- [`#4230`](https://github.com/oven-sh/bun/pull/4230)
+- Fixes #1675 by [@Jarred-Sumner](https://github.com/Jarred-Sumner) in https://github.com/oven-sh/bun/pull/4230
+
+---
+
+- [`#4235`](https://github.com/oven-sh/bun/pull/4235)
+- Fix memory leak in `buffer.toString("hex")` by [@Jarred-Sumner](https://github.com/Jarred-Sumner) in https://github.com/oven-sh/bun/pull/4235
+
+---
+
+- [`#4237`](https://github.com/oven-sh/bun/pull/4237)
+- Buffer.toString('hex') gets 40x faster by [@Jarred-Sumner](https://github.com/Jarred-Sumner) in https://github.com/oven-sh/bun/pull/4237
+
+---
+
+- [`#4243`](https://github.com/oven-sh/bun/pull/4243)
+- feat: Implement Bun.inspect.custom by [@paperclover](https://github.com/paperclover)
+
+---
+
+- [`#4156`](https://github.com/oven-sh/bun/pull/4156)
+- Implement `napi_ref_threadsafe_function` by [@paperclover](https://github.com/paperclover)
+
+---
+
+- [`#4242`](https://github.com/oven-sh/bun/pull/4242)
+- Fix crypto.EC constructor by [@paperclover](https://github.com/paperclover)
+
+---
+
+- [`#4226`](https://github.com/oven-sh/bun/pull/4226)
+- Fix(bundler): allow generating exe file in nested path. by [@Hanaasagi](https://github.com/Hanaasagi)
+
+---
+
+- [`#4245`](https://github.com/oven-sh/bun/pull/4245)
+- Fix `emitKeyPresses` with backspace + quote by [@paperclover](https://github.com/paperclover)
+
+---
+
+- [`#4127`](https://github.com/oven-sh/bun/pull/4127)
+- fetch(stream) add stream support for compressed and uncompressed data by [@cirospaciari](https://github.com/cirospaciari)
+
+---
+
+- [`#4244`](https://github.com/oven-sh/bun/pull/4244)
+- import errors have `code` set to `ERR_MODULE_NOT_FOUND` and `require` errors have `code` set to `MODULE_NOT_FOUND` by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+---
+
+- [`#4250`](https://github.com/oven-sh/bun/pull/4250)
+- fix stdin stream unref and resuming by [@dylan-conway](https://github.com/dylan-conway)
+
+---
+
+- [`#4247`](https://github.com/oven-sh/bun/pull/4247)
+- fix fsevents and stub for qwikcity by [@paperclover](https://github.com/paperclover)
+
+---
+
+- [`#4264`](https://github.com/oven-sh/bun/pull/4264)
+- fix(parser): yield before `]`shouldn't be a syntax error by [@paperclover](https://github.com/paperclover)
+
+---
+
+- [`#4256`](https://github.com/oven-sh/bun/pull/4256)
+- Ask for `bun --revision` instead `bun -v` in PR template by [@xHyroM](https://github.com/xHyroM)
+
+---
+
+- [`#4273`](https://github.com/oven-sh/bun/pull/4273)
+- Fix more types. by [@xxxhussein](https://github.com/xxxhussein)
+
+---
+
+- [`#4251`](https://github.com/oven-sh/bun/pull/4251)
+- Bunch of streams fixes by [@Jarred-Sumner](https://github.com/Jarred-Sumner)
+
+{% /table %}
+
+[**View the complete changelog**](https://github.com/oven-sh/bun/compare/bun-v0.7.2...bun-v0.7.3)

@@ -1,0 +1,178 @@
+---
+title: Bun v1.3.8
+description: "Fixes 8 issues (addressing 6 👍). Bun.markdown is a builtin CommonMark-compliant Markdown parser written in Zig. Bun's bundler gets bun build --metafile-md to write LLM-friendly module graph metadata. Fixes a regression in 'npm install -g bun' on Windows."
+date: "2026-01-29T10:04:52.476Z"
+author: jarred
+---
+
+#### To install Bun
+
+{% codetabs %}
+
+```sh#curl
+$ curl -fsSL https://bun.sh/install | bash
+```
+
+```sh#npm
+$ npm install -g bun
+```
+
+```sh#powershell
+$ powershell -c "irm bun.sh/install.ps1|iex"
+```
+
+```sh#scoop
+$ scoop install bun
+```
+
+```sh#brew
+$ brew tap oven-sh/bun
+$ brew install bun
+```
+
+```sh#docker
+$ docker pull oven/bun
+$ docker run --rm --init --ulimit memlock=-1:-1 oven/bun
+```
+
+{% /codetabs %}
+
+#### To upgrade Bun
+
+```sh
+$ bun upgrade
+```
+
+## `Bun.markdown` — Built-in Markdown Parser
+
+Bun now includes a fast, CommonMark-compliant Markdown parser written in Zig. This is a Zig port of the popular `md4c` library.
+
+The new `Bun.markdown` API provides three ways to render Markdown:
+
+### `Bun.markdown.html()` — Render to HTML
+
+```js
+const html = Bun.markdown.html("# Hello **world**");
+// "<h1>Hello <strong>world</strong></h1>\n"
+
+// With options
+Bun.markdown.html("## Hello", { headingIds: true });
+// '<h2 id="hello">Hello</h2>\n'
+```
+
+### `Bun.markdown.render()` — Custom Callbacks
+
+Render with JavaScript callbacks for each element, perfect for custom HTML, ANSI terminal output, or stripping formatting:
+
+```js
+// Custom HTML with classes
+const html = Bun.markdown.render("# Title\n\nHello **world**", {
+  heading: (children, { level }) =>
+    `<h${level} class="title">${children}</h${level}>`,
+  paragraph: (children) => `<p>${children}</p>`,
+  strong: (children) => `<b>${children}</b>`,
+});
+
+// ANSI terminal output
+const ansi = Bun.markdown.render("# Hello\n\n**bold**", {
+  heading: (children) => `\x1b[1;4m${children}\x1b[0m\n`,
+  paragraph: (children) => children + "\n",
+  strong: (children) => `\x1b[1m${children}\x1b[22m`,
+});
+
+// Return null to omit elements
+const result = Bun.markdown.render("# Title\n\n![logo](img.png)", {
+  image: () => null,
+  heading: (children) => children,
+});
+```
+
+### `Bun.markdown.react()` — React Elements
+
+Returns a React Fragment directly usable as a component return value:
+
+```tsx
+function Markdown({ text }: { text: string }) {
+  return Bun.markdown.react(text);
+}
+
+// With custom components
+const element = Bun.markdown.react("# Hello", {
+  h1: ({ children }) => <h1 className="title">{children}</h1>,
+});
+
+// Server-side rendering
+import { renderToString } from "react-dom/server";
+const html = renderToString(Bun.markdown.react("# Hello **world**"));
+```
+
+For React 18 and older, pass `reactVersion: 18` since the default targets React 19's element format.
+
+### GFM Extensions
+
+GitHub Flavored Markdown extensions are enabled by default:
+
+- Tables
+- Strikethrough (`~~deleted~~`)
+- Task lists (`- [x] done`)
+- Permissive autolinks
+
+Additional options include `wikiLinks`, `latexMath`, `headingIds`, and `autolinkHeadings`.
+
+<!-- https://github.com/oven-sh/bun/commit/1bfe5c6b37e65995ac58e761ccbff7bb7b8dc954 -->
+
+## `--metafile-md` CLI option for LLM-friendly bundle analysis
+
+`bun build` now supports a `--metafile-md` option that generates a Markdown visualization of your bundle's module graph. This is particularly useful for analyzing bundle composition with LLMs like Claude—paste the output into a chat to identify bloat, understand dependency chains, and optimize your builds.
+
+```bash
+# Default filename (meta.md)
+bun build entry.js --metafile-md --outdir=dist
+
+# Custom filename
+bun build entry.js --metafile-md=analysis.md --outdir=dist
+
+# Both JSON and markdown
+bun build entry.js --metafile=meta.json --metafile-md=meta.md --outdir=dist
+```
+
+The generated Markdown includes:
+
+- **Quick Summary** — Module counts, sizes, ESM/CJS breakdown, output/input ratio
+- **Largest Input Files** — Sorted by size to identify potential bloat
+- **Entry Point Analysis** — Bundle size, exports, CSS bundles, and bundled modules
+- **Dependency Chains** — Most commonly imported modules and reverse dependencies
+- **Full Module Graph** — Complete import/export info for each module
+- **Raw Data for Searching** — Grep-friendly markers like `[MODULE:]`, `[SIZE:]`, `[IMPORT:]`
+
+The `Bun.build()` API also supports this via an expanded `metafile` option:
+
+```js
+const result = await Bun.build({
+  entrypoints: ["./index.ts"],
+  outdir: "./dist",
+  // Can now be a string path or object with json/markdown paths
+  metafile: {
+    json: "meta.json",
+    markdown: "meta.md",
+  },
+});
+```
+
+<!-- https://github.com/oven-sh/bun/commit/aded701d1d2f89663a114c22ef6550153c9b23e4 -->
+
+## Bugfixes
+
+- Updated mimalloc
+- Fixed: `napi_typeof` incorrectly returning `napi_object` instead of `napi_function` for callbacks wrapped in `AsyncContextFrame`, which caused native addons like encore.dev to panic with "expect Function, got: Object" when using `AsyncLocalStorage.run()`
+- Fixed: Crash during heap snapshot generation in certain cases
+- Fixed: Crash in `node:vm` when using `SyntheticModule` with `node:async_hooks` enabled, such as when running the React Email preview server
+- Fixed: HTTP/2 stream state handling that caused gRPC streaming calls to fail with `DEADLINE_EXCEEDED` errors in certain cases when using libraries like `@google-cloud/firestore` and `@grpc/grpc-js`
+- Fixed: `npm i -g bun` failing on Windows due to npm's `cmd-shim` generating broken wrappers that referenced `/bin/sh` from placeholder scripts' shebang lines
+
+### Thanks to 4 contributors!
+
+- [@dylan-conway](https://github.com/dylan-conway)
+- [@jarred-sumner](https://github.com/jarred-sumner)
+- [@robobun](https://github.com/robobun)
+- [@sosukesuzuki](https://github.com/sosukesuzuki)

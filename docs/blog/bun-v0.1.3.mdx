@@ -1,0 +1,93 @@
+---
+title: Bun v0.1.3
+description: Release notes for Bun v0.1.3
+date: "2022-07-11T19:38:25Z"
+author: jarred
+thumbText: v0.1.3
+---
+
+## What's new:
+
+- `alert()`, `confirm()`, `prompt()` are new globals, thanks to [@sno2](https://github.com/sno2)
+- more comprehensive type definitions, thanks to [@Snazzah](https://github.com/Snazzah)
+- Fixed `console.log()` sometimes adding an "n" to non-BigInt numbers thanks to [@FinnRG](https://github.com/FinnRG)
+- Fixed `subarray()` console.log bug
+- TypedArray logs like in node now instead of like a regular array
+- Migrate to Zig v0.10.0 (HEAD) by [@alexkuz](https://github.com/alexkuz) in https://github.com/oven-sh/bun/pull/491
+- `console.log(request)` prints something instead of nothing
+- fix `performance.now()` returning nanoseconds instead of milliseconds @Pruxis
+- update wordmark in bun-error @Snazzah
+
+All the PRs:
+
+- fix: add unzip is required information by [@MoritzLoewenstein](https://github.com/MoritzLoewenstein) in https://github.com/oven-sh/bun/pull/305
+- feat: new blank template by [@xHyroM](https://github.com/xHyroM) in https://github.com/oven-sh/bun/pull/289
+- fix(templates/react): Add a SVG type definition by [@FinnRG](https://github.com/FinnRG) in https://github.com/oven-sh/bun/pull/427
+- Further landing accessibility improvements by [@Tropix126](https://github.com/Tropix126) in https://github.com/oven-sh/bun/pull/330
+- Fix react example README typo. by [@keidarcy](https://github.com/keidarcy) in https://github.com/oven-sh/bun/pull/433
+- style(napi): cleanup commented out code by [@xHyroM](https://github.com/xHyroM) in https://github.com/oven-sh/bun/pull/435
+- feat: update default favicon to new logo by [@Snazzah](https://github.com/Snazzah) in https://github.com/oven-sh/bun/pull/477
+- Add SVG logo and SEO improvements to landing by [@Snazzah](https://github.com/Snazzah) in https://github.com/oven-sh/bun/pull/417
+- Fix illegal instruction troubleshooting steps by [@ziloka](https://github.com/ziloka) in https://github.com/oven-sh/bun/pull/400
+- Migrate to Zig v0.10.0 (HEAD) by [@alexkuz](https://github.com/alexkuz) in https://github.com/oven-sh/bun/pull/491
+- fix: Remove unnecessary n while formatting by [@FinnRG](https://github.com/FinnRG) in https://github.com/oven-sh/bun/pull/508
+- fix: Append n when printing a BigInt by [@FinnRG](https://github.com/FinnRG) in https://github.com/oven-sh/bun/pull/509
+- Fix grammar erros in README.md by [@jakemcf22](https://github.com/jakemcf22) in https://github.com/oven-sh/bun/pull/476
+- typo by [@pvinis](https://github.com/pvinis) in https://github.com/oven-sh/bun/pull/483
+- README.md typo fix by [@JL102](https://github.com/JL102) in https://github.com/oven-sh/bun/pull/449
+- fix dotenv config snippet by [@JolteonYellow](https://github.com/JolteonYellow) in https://github.com/oven-sh/bun/pull/436
+- add partial node:net polyfill by [@evanwashere](https://github.com/evanwashere) in https://github.com/oven-sh/bun/pull/516
+- fix: update build files to latest Zig version by [@sno2](https://github.com/sno2) in https://github.com/oven-sh/bun/pull/522
+- Update Bun CLI version typo to v0.1.2 by [@b0iq](https://github.com/b0iq) in https://github.com/oven-sh/bun/pull/503
+- update bash references to work in non-fhs compliant distros by [@lucasew](https://github.com/lucasew) in https://github.com/oven-sh/bun/pull/502
+- bugfix: performance.now function should return MS instead of nano by [@Pruxis](https://github.com/Pruxis) in https://github.com/oven-sh/bun/pull/428
+- feat: add issue templates by [@hisamafahri](https://github.com/hisamafahri) in https://github.com/oven-sh/bun/pull/466
+- refactor(websockets): Rename `connectedWebSocketContext()` by [@ryanrussell](https://github.com/ryanrussell) in https://github.com/oven-sh/bun/pull/459
+- feat(bun-error): update "powered by" logo to use new bun wordmark by [@Snazzah](https://github.com/Snazzah) in https://github.com/oven-sh/bun/pull/536
+- Remove unnecessary `Output.flush`s before `Global.exit` and `Global.crash` by [@r00ster91](https://github.com/r00ster91) in https://github.com/oven-sh/bun/pull/535
+- bun-framework-next README.md clarification by [@Scout2012](https://github.com/Scout2012) in https://github.com/oven-sh/bun/pull/534
+- Fix "operations" word spelling by [@Bellisario](https://github.com/Bellisario) in https://github.com/oven-sh/bun/pull/543
+- Update GitHub URL to match new repo URL by [@auroraisluna](https://github.com/auroraisluna) in https://github.com/oven-sh/bun/pull/547
+- fix: remove unnecessary quotes in commit message by [@dkarter](https://github.com/dkarter) in https://github.com/oven-sh/bun/pull/464
+- chore: update issue templates by [@xHyroM](https://github.com/xHyroM) in https://github.com/oven-sh/bun/pull/544
+- Fix macOS build by [@thislooksfun](https://github.com/thislooksfun) in https://github.com/oven-sh/bun/pull/525
+- add depd browser polyfill by [@evanwashere](https://github.com/evanwashere) in https://github.com/oven-sh/bun/pull/517
+- Updated typo in example by [@rml1997](https://github.com/rml1997) in https://github.com/oven-sh/bun/pull/573
+- Fix: NotSameFileSystem at clonefile by [@adi-g15](https://github.com/adi-g15) in https://github.com/oven-sh/bun/pull/546
+- Cleanup discord-interactions readme by [@CharlieS1103](https://github.com/CharlieS1103) in https://github.com/oven-sh/bun/pull/451
+- Fixes typo in src/c.zig by [@gabuvns](https://github.com/gabuvns) in https://github.com/oven-sh/bun/pull/568
+- feat(types): Add types for node modules and various fixing by [@Snazzah](https://github.com/Snazzah) in https://github.com/oven-sh/bun/pull/470
+- Revert "Fix: NotSameFileSystem at clonefile" by [@Jarred-Sumner](https://github.com/Jarred-Sumner) in https://github.com/oven-sh/bun/pull/581
+- feat(core): implement web interaction APIs by [@sno2](https://github.com/sno2) in https://github.com/oven-sh/bun/pull/528
+
+## New Contributors
+
+- @MoritzLoewenstein made their first contribution in https://github.com/oven-sh/bun/pull/305
+- @xHyroM made their first contribution in https://github.com/oven-sh/bun/pull/289
+- @FinnRG made their first contribution in https://github.com/oven-sh/bun/pull/427
+- @Tropix126 made their first contribution in https://github.com/oven-sh/bun/pull/330
+- @keidarcy made their first contribution in https://github.com/oven-sh/bun/pull/433
+- @Snazzah made their first contribution in https://github.com/oven-sh/bun/pull/477
+- @ziloka made their first contribution in https://github.com/oven-sh/bun/pull/400
+- @jakemcf22 made their first contribution in https://github.com/oven-sh/bun/pull/476
+- @pvinis made their first contribution in https://github.com/oven-sh/bun/pull/483
+- @JL102 made their first contribution in https://github.com/oven-sh/bun/pull/449
+- @JolteonYellow made their first contribution in https://github.com/oven-sh/bun/pull/436
+- @sno2 made their first contribution in https://github.com/oven-sh/bun/pull/522
+- @b0iq made their first contribution in https://github.com/oven-sh/bun/pull/503
+- @lucasew made their first contribution in https://github.com/oven-sh/bun/pull/502
+- @Pruxis made their first contribution in https://github.com/oven-sh/bun/pull/428
+- @hisamafahri made their first contribution in https://github.com/oven-sh/bun/pull/466
+- @ryanrussell made their first contribution in https://github.com/oven-sh/bun/pull/459
+- @r00ster91 made their first contribution in https://github.com/oven-sh/bun/pull/535
+- @Scout2012 made their first contribution in https://github.com/oven-sh/bun/pull/534
+- @Bellisario made their first contribution in https://github.com/oven-sh/bun/pull/543
+- @auroraisluna made their first contribution in https://github.com/oven-sh/bun/pull/547
+- @dkarter made their first contribution in https://github.com/oven-sh/bun/pull/464
+- @thislooksfun made their first contribution in https://github.com/oven-sh/bun/pull/525
+- @rml1997 made their first contribution in https://github.com/oven-sh/bun/pull/573
+- @adi-g15 made their first contribution in https://github.com/oven-sh/bun/pull/546
+- @CharlieS1103 made their first contribution in https://github.com/oven-sh/bun/pull/451
+- @gabuvns made their first contribution in https://github.com/oven-sh/bun/pull/568
+
+[**Full Changelog**](https://github.com/oven-sh/bun/compare/bun-v0.1.2...bun-v0.1.3)

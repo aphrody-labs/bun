@@ -1,0 +1,256 @@
+---
+title: Bun v0.6.12
+description: Sourcemapped stack traces at runtime, Node.js compatibility improvements, Bun.file(path).exists, minifier and bundler bugfixes
+date: "2023-06-30T20:15:43+00:00"
+author: jarred
+draft: false
+---
+
+{% callout %}
+We're hiring C/C++ and Zig engineers to build the future of JavaScript! [Join our team →](/careers)
+{% /callout %}
+
+We've been releasing a lot of changes to Bun recently, here's a recap in case you missed it:
+
+- [`v0.6.0`](/blog/bun-bundler) - Introducing `bun build`, Bun's new JavaScript bundler.
+- [`v0.6.2`](/blog/bun-v0.6.2) - Performance boosts: 20% faster `JSON.parse`, up to 2x faster `Proxy` and `arguments`.
+- [`v0.6.3`](/blog/bun-v0.6.3) - Implemented `node:vm`, lots of fixes to `node:http` and `node:tls`.
+- [`v0.6.4`](/blog/bun-v0.6.4) - Implemented `require.cache`, `process.env.TZ`, and 80% faster `bun test`.
+- [`v0.6.5`](/blog/bun-v0.6.5) - Native support for CommonJS modules (_previously, Bun did CJS to ESM transpilation_),
+- [`v0.6.6`](/blog/bun-v0.6.6) - `bun test` improvements, including Github Actions support, `test.only()`, `test.if()`, `describe.skip()`, and 15+ more `expect()` matchers; also streaming file uploads using `fetch()`.
+- [`v0.6.7`](/blog/bun-v0.6.7) - Node.js compatibility improvements to unblock Discord.js, Prisma, and Puppeteer
+- [`v0.6.8`](/blog/bun-v0.6.8) - Introduced `Bun.password`, mocking in `bun test`, and `toMatchObject()`
+- [`v0.6.9`](/blog/bun-v0.6.9) - Less memory usage and support for non-ascii filenames
+- [`v0.6.10`](/blog/bun-v0.6.10) - `fs.watch()`, `bun install` bug fixes, `bun test` features, and improved CommonJS support
+- `v0.6.11` - address a release build issue from `v0.6.10`
+
+This release makes it easier to read runtime errors, improves Node.js compatiblity, adds `await Bun.file(path).exists()`, fixes bundler bugs and slightly reduces minifier output size.
+
+To install Bun:
+
+{% codetabs %}
+
+```sh#curl
+$ curl -fsSL https://bun.sh/install | bash
+```
+
+```sh#npm
+$ npm install -g bun
+```
+
+```sh#brew
+$ brew tap oven-sh/bun
+$ brew install bun
+```
+
+```sh#docker
+$ docker pull oven/bun
+$ docker run --rm --init --ulimit memlock=-1:-1 oven/bun
+```
+
+{% /codetabs %}
+
+{% raw %}
+<br>
+{% /raw %}
+
+To upgrade Bun:
+
+```sh
+$ bun upgrade
+```
+
+## Better runtime errors
+
+We've made several improvements to runtime errors in Bun:
+
+- Patched JavaScriptCore to allow Bun to print `Error.prototype.stack` in the same style as V8.
+- Stack traces show fewer internal builtin functions
+- `console.error(error)` now includes indirect function names, such as `let foo = function() {}` will now show `foo` instead of `anonymous`
+- `Error.captureStackTrace(err)`'s `err.stack` property is no longer marked as read-only (this was incorrect)
+- `Error.prototype.stack` is now automatically sourcemapped.
+
+Bun transpiles every file in the runtime. Before this release, `error.stack` would show the stack for the transpiled source, which was not very useful. Now, `error.stack` shows the stack for the original source, following an internal sourcemap generated for each file.
+
+The output of `console.log(error.stack)` after:
+
+```js
+Error: hello!
+    at hey (error.js:1:29)
+    at module code (error.js:4:16)
+```
+
+The output of `console.log(error.stack)` before:
+
+```js
+hey@error.js:1:29
+module code@error.js:4:16
+evaluate@[native code]
+moduleEvaluation@[native code]
+moduleEvaluation@[native code]
+@[native code]
+asyncFunctionResume@[native code]
+promiseReactionJobWithoutPromise@[native code]
+promiseReactionJob@[native code]
+```
+
+Input:
+
+```js
+function hey() {
+  return new Error("hello!").stack;
+}
+console.log(hey());
+```
+
+{% raw %}
+
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">In the next version of Bun <br><br>error.stack is formatted like in node/V8 and automatically sourcemapped. <a href="https://t.co/BQ3uSVTloy">pic.twitter.com/BQ3uSVTloy</a></p>&mdash; Jarred Sumner (@jarredsumner) <a href="https://twitter.com/jarredsumner/status/1673957121472491520?ref_src=twsrc%5Etfw">June 28, 2023</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+{% /raw %}
+
+## Improvements to CommonJS <> ES Module interop
+
+When using `require` to load an ES Module at runtime, Bun now inserts the `__esModule` annotation which many npm packages transpiled with Babel need in order to work correctly. This fixed a bug with using `@mui/styled-engine` with `bun test`.
+
+### package.json `"module"` field is no longer used in Bun's runtime
+
+Bundlers use the `"module"` field in `package.json` with a higher priority over the `"main"` field when bundling ES Modules, but Node.js does not use the `"module"` field at all.
+
+Previously, Bun used the `"module"` at runtime (when package.json `"exports"` wasn't in use) similar to how bundlers use it, but this caused some packages to load the browser version of their code in Bun and Node.js versions in Node.
+
+Bun's bundler continues to support the `"module"` field when building for browsers, but to improve Node.js compatibility, Bun's runtime no longer uses the `"module"` field.
+
+## SQLite3 Full-text search is enabled
+
+{% raw %}
+
+<blockquote class="twitter-tweet"><p lang="en" dir="ltr">In the next version of Bun<br><br>You can use full text search with sqlite (via fts5), thanks to <a href="https://twitter.com/ItsRedraskal?ref_src=twsrc%5Etfw">@ItsRedraskal</a> <a href="https://t.co/NCP8BezEmQ">pic.twitter.com/NCP8BezEmQ</a></p>&mdash; Jarred Sumner (@jarredsumner) <a href="https://twitter.com/jarredsumner/status/1673856130853011456?ref_src=twsrc%5Etfw">June 28, 2023</a></blockquote> <script async src="https://platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+{% /raw %}
+
+## Bun.file(path).exists()
+
+`Bun.file(path).exists()` is a new method that returns a boolean indicating whether a file exists at the given path.
+
+```ts
+import { file, write } from "bun";
+
+console.log(await file("hello.txt").exists()); // false
+await write("hello.txt", "hello world");
+console.log(await file("hello.txt").exists()); // true
+```
+
+## Node.js compatibility improvements
+
+Several bugfixes to node:http and node:stream have landed
+
+### Google Maps works
+
+The `@googlemaps/google-maps-services-js` package now works in Bun, thanks to [@dylan-conway](https://github.com/dylan-conway) fixing a bug in our `node:http` implmenetation where properties were marked as read only that shouldn't have been marked as read-only.
+
+```js
+import { Client } from "@googlemaps/google-maps-services-js";
+
+const client = new Client({});
+
+client
+  .elevation({
+    params: {
+      locations: [{ lat: 45, lng: -110 }],
+      key: "asdf",
+    },
+    timeout: 1000, // milliseconds
+  })
+  .then((r) => {
+    console.log(r.data.results[0].elevation);
+  })
+  .catch((e) => {
+    console.log(e.response.data.error_message);
+  });
+```
+
+### ytdl-core now works
+
+The `ytdl-core` package now works in Bun, thanks to [@paperclover](https://github.com/paperclover) fixing a couple bugs in our `node:http` and `node:stream` implementations:
+
+```js
+import { createWriteStream } from "fs";
+import ytdl from "ytdl-core";
+
+ytdl("https://www.youtube.com/watch?v=dQw4w9WgXcQ").pipe(
+  createWriteStream("secret-video-do-not-download.mp4"),
+);
+```
+
+### Minifier improvements
+
+Bun's minifier now minifies `obj["a"]` into `obj.a` and `obj["a"] = 1` into `obj.a = 1`.
+
+Build:
+
+```bash
+$ bun build --minify ./input.js`
+```
+
+Input:
+
+```js
+const obj = {};
+obj["a"] = 1;
+```
+
+After:
+
+```js
+const obj = {};
+obj.a = 1;
+```
+
+Before:
+
+```js
+const obj = {};
+obj["a"] = 1;
+```
+
+This yields a 0.02% reduction in bundle size for `vue` and potentially a little faster at runtime (engines implement computed property accesses differently than regular property accesses).
+
+### Bundler bugfixes
+
+A bug where two consecutive files that re-export another file using CommonJS `module.exports = require()` would produce invalid code has been fixed
+
+```js
+// a.js
+module.exports = require("./b");
+```
+
+{% raw %}
+<br>
+{% /raw %}
+
+```js
+// b.js
+module.exports = require("./c");
+```
+
+{% raw %}
+<br>
+{% /raw %}
+
+```js
+// c.js
+module.exports = {};
+```
+
+- In certain cases, Bun's CommonJS -> ES Module transform in the bundler would inject `exports.foo = undefined` and that caused some packages which used Object prototype methods to throw an error and it bloated the code. This has been fixed.
+
+### More bugfixes
+
+- A regression breaking macros has been fixed
+- The `resolve6` export in dns/promises was missing
+- The `errorMonitor` export in `node:events` was missing
+
+## Changelog
+
+[See the changelog on GitHub](https://github.com/oven-sh/bun/compare/bun-v0.6.11...bun-v0.6.12)

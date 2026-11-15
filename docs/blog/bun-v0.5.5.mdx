@@ -1,0 +1,72 @@
+---
+title: "Bun v0.5.5"
+description: Improved compatibility for `node:http`, support for `http.request()` and `stripe-node`, and fixed various bugs.
+date: "2023-02-02T22:39:43+00:00"
+author: ashcon
+thumbText: v0.5.5
+---
+
+Bun v0.5.5 improves Node.js compatibility for [`node:http`](https://nodejs.org/api/http.html#http), adds support for [`http.request()`](https://nodejs.org/api/http.html#httprequesturl-options-callback), and fixes various bugs.
+
+```bash
+# Install using curl
+curl -fsSL https://bun.sh/install | bash
+
+# Install using npm
+npm install -g bun
+
+# Upgrade
+bun upgrade
+```
+
+## `node:http`
+
+The following `node:http` APIs are now supported in Bun:
+
+- [`http.request()`](https://nodejs.org/api/http.html#httprequesturl-options-callback)
+- [`http.ClientRequest`](https://nodejs.org/api/http.html#class-httpclientrequest)
+- [`http.OutgoingMessage`](https://nodejs.org/api/http.html#class-httpoutgoingmessage)
+- [`http.Agent`](https://nodejs.org/api/http.html#class-httpagent) (some features are stubbed out, for now)
+
+This enables several npm packages, including [`stripe`](https://github.com/stripe/stripe-node), to now work in Bun!
+
+![Stripe example code](https://user-images.githubusercontent.com/3238291/216470887-584ed95a-3150-420f-bd2f-ec07ff6db594.jpg)
+
+Thanks @ThatOneBro for landing this feature!
+
+## Fixed duplicate `bun install` dependencies
+
+We also fixed a [bug](https://github.com/oven-sh/bun/issues/1952) where `bun install` would crash if your machine had more than 8 versions of the same dependency installed. We have some plans to make our `bun install` testing suite more robust to catch errors like this in the future.
+
+Thanks @alexlamsl for debugging this issue and landing a fix.
+
+## Changelog
+
+{% table %}
+
+- [`#1959`](https://github.com/oven-sh/bun/pull/1959)
+- Add http.request by [@ThatOneBro](https://github.com/ThatOneBro)
+
+---
+
+- [`#1967`](https://github.com/oven-sh/bun/pull/1967)
+- Fix text encoding for utf8 by [@dylan-conway](https://github.com/dylan-conway)
+
+---
+
+- [`#b12762a`](https://github.com/oven-sh/bun/commit/b12762af6c0fa3576733ca5e4d8ef8e69a1848cd)
+- Fix occasional stack overflow in console.log with a string
+
+---
+
+- [`#1970`](https://github.com/oven-sh/bun/pull/1970)
+- Resolve duplicate npm dependencies correctly by [@alexlamsl](https://github.com/alexlamsl)
+
+---
+
+- [`#1964`](https://github.com/oven-sh/bun/pull/1964)
+- Add filePath property on MatchedRoute by [@gaurishhs](https://github.com/gaurishhs)
+
+---
+
+{% /table %}

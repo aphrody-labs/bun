@@ -1,0 +1,134 @@
+---
+title: Vercel now supports the Bun Runtime
+description: Deploy and run your applications with Bun's fast JavaScript runtime on Vercel Functions, with full access to Bun APIs and improved performance
+shareImage: /bunvercel-og.png
+date: "2025-10-28T08:00-07:00"
+authors:
+  [
+    jarred,
+    lydia,
+	]
+
+---
+
+{% raw %}
+
+<video autoplay loop muted playsinline width="1280" height="720" class="block h-auto w-full" style="border: 2px solid #d1d5db; border-radius: 5px;" poster="/bunvercel.png">
+  <source src="/bunvercel-720p.webm" type="video/webm" />
+  <source src="/bunvercel-720p.mp4" type="video/mp4" />
+</video>
+
+{% /raw %}
+
+You can now run your applications on the Bun Runtime on Vercel.
+
+Support is available today as a **public beta** for all projects.
+
+## From package manager to full runtime support
+
+In 2023, `bun install` support on Vercel became their most upvoted feature request ever.
+
+{% raw %}
+
+<img src="/vercelupvote.png" style="border: 1px solid lightgrey; border-radius: 6px;">
+
+{% /raw %}
+
+Developers wanted Bun, and Vercel delivered. Support for `bun install` was already [added back in 2023](https://vercel.com/changelog/bun-install-is-now-supported-with-zero-configuration).
+
+Today, that support goes further.
+
+**Vercel now has built-in support for the Bun Runtime**. This means that you can now run your apps on Bun itself, powered by the same focus on speed and performance.
+
+---
+
+You can enable Bun by adding `"bunVersion": "1.x"` to your `vercel.json`.
+
+```json-diff #vercel.json
+{
++  "bunVersion": "1.x"
+}
+```
+
+> The value should be `"1.x"`. Vercel manages the minor version.
+
+Once set, Vercel detects the configuration, installs Bun if needed, and runs your project natively. This works both locally with `vercel dev` and in production.
+
+Your Next.js, Hono, or custom API routes will now execute on the Bun Runtime. More framework support is coming soon.
+
+## Built for modern JavaScript
+
+Bun combines a JavaScript runtime, bundler, test runner, and package manager into a single fast toolchain. With Bun on Vercel, you can expect:
+
+- **Lower memory and CPU usage.** Bun is built in Zig and optimized for efficiency, reducing resource consumption at scale.
+- **Access to all Bun APIs.** Use [`Bun.SQL`](https://bun.com/docs/runtime/sql), [`Bun.S3`](https://bun.com/docs/runtime/s3), [`Bun.file`](https://bun.com/docs/runtime/file-io), [`Bun.password.hash`](https://bun.com/docs/runtime/hashing), or any other [Bun API](https://bun.com/docs/runtime/bun-apis) directly in your functions and components.
+- **Access to many Web APIs.** Bun supports many [Web APIs](https://bun.com/docs/runtime/web-apis), and aims for full compatibility with Node.js.
+
+## Bun with Next.js
+
+Next.js works out of the box with the Bun Runtime on Vercel.
+
+To use Bun in your build and start commands, add the `bun run --bun` (or the shorter `bun --bun`) syntax:
+
+```json-diff#package.json
+{
+  "scripts": {
++    "dev": "bun --bun next dev",
++    "build": "bun --bun next build",
++    "start": "bun --bun next start"
+  }
+}
+```
+
+> Next.js will still use its own bundler (Turbopack or Webpack) to bundle/compile. This command makes sure that the runtime underneath—which is the part that's executing JavaScript, reading files, serving responses, etc.—is Bun.
+
+This allows you to call Bun's APIs natively inside Server Functions or React Server Components.
+
+```ts-diff#app/blog/page.tsx
++ import { s3, $, sql } from 'bun'
+
+export default async function BlogPage({ params: { slug } }) {
++  const [post] = await sql`
++    SELECT title, image_key, content_html
++    FROM posts
++    WHERE slug = ${slug}
++  `
+
++  const imgUrl = s3.file(post.image_key).presign({ expiresIn: 3600 })
++  const wordCount = await $`echo "${post.content_html}" | wc -w`
+
+  return ...
+}
+```
+
+No adapters, no setup. It just works.
+
+## Public beta status
+
+This is the first public release of the Bun Runtime on Vercel. It’s available to everyone, but remains in **public beta** while we get more feedback and improve the developer experience even further. We’re collaborating with the Vercel team to ensure a stable, high-quality experience for all users.
+
+At Bun, we’re also actively expanding framework compatibility and performance so your projects run seamlessly, whether you’re using Next.js, Tanstack Start, Remix, Hono, you name it.
+
+## What’s next
+
+It’s Vercel’s mission to make the web faster for developers. Bun shares that mission.
+
+Together, we aim to bring a faster JavaScript runtime to the platforms developers already use to ship production apps.
+
+Bun has already been supported on platforms like [Railway](https://bun.com/docs/guides/deployment/railway), [Render](https://bun.com/docs/guides/deployment/render), and any [Dockerized environment](https://bun.com/docs/guides/ecosystem/docker). Now, that support extends to Vercel.
+
+## Try it today
+
+It's time for the Buntime.
+
+Deploy your Bun-powered Vercel app today. Add `"bunVersion": "1.x"` to your `vercel.json` configuration, and deploy to Vercel. Your app will build and run on Bun automatically.
+
+```json-diff
+{
++  "bunVersion": "1.x"
+}
+```
+
+---
+
+For support, please visit [our docs](/docs), or [join our Discord](/discord).

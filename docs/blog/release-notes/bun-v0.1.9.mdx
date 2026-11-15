@@ -1,0 +1,137 @@
+---
+title: Bun v0.1.9
+description: Release notes for Bun v0.1.9
+date: "2022-08-18T08:49:36Z"
+author: jarred
+thumbText: v0.1.9
+---
+
+To upgrade:
+
+```bash
+bun upgrade
+```
+
+To install:
+
+```bash
+curl https://bun.sh/install | bash
+```
+
+{% details summary="If you have any problems upgrading" %}
+
+Run the install script (you can run it multiple times):
+
+```bash
+curl https://bun.sh/install | bash
+```
+
+{% /details %}
+
+## What's new
+
+- Numerous crashes fixed by [@zhuzilin](https://github.com/zhuzilin)!! Incredible work.
+- [Linux] Improved event loop reliability and reduced CPU usage for concurrent/async IO (affects `bun install` and `fetch()` mostly)
+- `Bun.serve` gets about 20% faster outside of "hello world" benchmarks due to optimizing how `Headers` are copied/read and faster generated bindings
+- `require("buffer")` and `require("process")` now point to Bun's implementation instead of a browserify polyfill (thanks @zhuzilin)
+- Fixed a bug that would cause `setTimeout` or `setInterval` to not keep the process alive (thanks @zhuzilin)
+- Updated to latest WebKit
+- 6x - 10x faster `ptr()` in `bun:ffi`
+
+JIT-optimized `TextEncoder.encodeInto` can be a 1.5x perf boost up to around a 5x perf boost
+
+{% image  width="536" alt="image" src="https://user-images.githubusercontent.com/709451/185333824-26c37ce4-dd29-4a2a-938e-182771eb8ce8.png" /%}
+
+The `hash()` function in this microbenchmark calls `ptr()`:
+
+{% image  width="597" alt="image" src="https://user-images.githubusercontent.com/709451/185334865-e5451f5a-6214-4c83-b401-1247f3ef9ae1.png" /%}
+
+## Internals
+
+#### Bun learns how to JIT
+
+`DOMJIT` is a JavaScriptCore API that gives 3rd-party embedders low-level access to the JIT compiler/assembler to optimize native functions and getters/setters. Safari leverages DOMJIT to make commonly-accessed properties like `element.parentNode` faster
+
+Bun is beginning to use DOMJIT now, starting in two places:
+
+- `ptr()` function in `bun:ffi`
+- [`TextEncoder.encodeInto`](https://developer.mozilla.org/en-US/docs/Web/API/TextEncoder/encodeInto)
+
+To better support Bun's usecase, I extended `DOMJIT` to support Typed Array arguments, as well as added support for specifying more kinds of side effects that enable/disable optimizations:
+
+- https://github.com/oven-sh/WebKit/commit/d2ef2fd828761778a3b04289563946354a457e29
+- https://github.com/oven-sh/WebKit/commit/3262da8fd77667aaf95e75c7efa501dc135bc0ac
+- https://github.com/oven-sh/WebKit/commit/4ac5b04047a53ce2363495a79770a2ae6d67761b#diff-90a5d15b3faae39b6e5075902ae5fd2e0b7f7f40bb0590f3e298e7715db048e5
+
+#### Faster and more reliable JSC <> Zig bindings
+
+At Bun's compile-time, Bun now code-generates C++ binding classes for JavaScript objects implemented in Zig. Previously, Bun mostly used the JavaScriptCore C API.
+
+Using JavaScriptCore's C++ API improves performance and is important for making the garbage collector better aware of Bun's usage. But, writing bindings manually can be very repetitive.
+
+Given a class definition in JavaScript [like this](https://github.com/oven-sh/bun/blob/eb5b298bc17a7ea2ede438b227c27c3fc0b5462e/src/bun.js/webcore/response.classes.ts#L60-L65):
+
+```ts
+define({
+  name: "Response",
+  construct: true,
+  finalize: true,
+  JSType: "0b11101110",
+  klass: {
+    json: {
+      fn: "constructJSON",
+    },
+    // rest of the code
+  },
+  proto: {
+    url: {
+      getter: "getURL",
+      cache: true,
+    },
+
+    text: { fn: "getText" },
+    json: { fn: "getJSON" },
+    arrayBuffer: { fn: "getArrayBuffer" },
+    blob: { fn: "getBlob" },
+    clone: { fn: "doClone", length: 1 },
+    // rest of the code
+  },
+});
+```
+
+Bun generates corresponding:
+
+- [C++ classes](https://github.com/oven-sh/bun/blob/eb5b298bc17a7ea2ede438b227c27c3fc0b5462e/src/bun.js/bindings/ZigGeneratedClasses.cpp#L2465-L2872)
+- [Zig bindings](https://github.com/oven-sh/bun/blob/eb5b298bc17a7ea2ede438b227c27c3fc0b5462e/src/bun.js/bindings/generated_classes.zig#L826-L937) with type checks that verify the expected ABI matches
+
+This approach is inspired by [WebIDL bindings](https://www.chromium.org/developers/web-idl-interfaces/) which both Safari and Chromium use.
+
+#### More reliable event loop on Linux
+
+This screenshot is with a simulated bandwidth limit and no throttling of max http connections
+
+Previously, bun had a tendency to hang in situations like this
+
+![image](https://user-images.githubusercontent.com/709451/185347695-42182e74-6c09-4688-b2fd-c5ed0376422f.png)
+
+## What's Changed
+
+- fix MD5 length and compile error by [@zhuzilin](https://github.com/zhuzilin) in https://github.com/oven-sh/bun/pull/1050
+- fix appendFile permission by [@zhuzilin](https://github.com/zhuzilin) in https://github.com/oven-sh/bun/pull/1052
+- Invalidate column name caches when the schema of table may change by [@zhuzilin](https://github.com/zhuzilin) in https://github.com/oven-sh/bun/pull/1056
+- refactor(src/tagged_pointer): `IntPrimtiive` -> `IntPrimitive` by [@ryanrussell](https://github.com/ryanrussell) in https://github.com/oven-sh/bun/pull/1046
+- Remove column name caches in js by [@zhuzilin](https://github.com/zhuzilin) in https://github.com/oven-sh/bun/pull/1057
+- [bun error] fix typo in markdown.ts by [@eltociear](https://github.com/eltociear) in https://github.com/oven-sh/bun/pull/995
+- [WIP] Native buffer module by [@zhuzilin](https://github.com/zhuzilin) in https://github.com/oven-sh/bun/pull/1067
+- Improve event loop reliability on Linux by [@Jarred-Sumner](https://github.com/Jarred-Sumner) in https://github.com/oven-sh/bun/pull/1066
+- Add synthetic buffer module by [@zhuzilin](https://github.com/zhuzilin) in https://github.com/oven-sh/bun/pull/1076
+- Deps - Update libarchive by [@jonacollazo](https://github.com/jonacollazo) in https://github.com/oven-sh/bun/pull/1078
+- Fix active_task count for timeout tasks by [@zhuzilin](https://github.com/zhuzilin) in https://github.com/oven-sh/bun/pull/1081
+- Fix server segfault by making controller not early GC'ed by [@zhuzilin](https://github.com/zhuzilin) in https://github.com/oven-sh/bun/pull/1090
+- Add native process module by [@zhuzilin](https://github.com/zhuzilin) in https://github.com/oven-sh/bun/pull/1095
+
+## New Contributors
+
+- @jonacollazo made their first contribution in https://github.com/oven-sh/bun/pull/1078
+
+[**Full Changelog**](https://github.com/oven-sh/bun/compare/bun-v0.1.8...bun-v0.1.9)
