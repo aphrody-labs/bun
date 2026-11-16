@@ -12,6 +12,7 @@ mod bytes;
 mod json;
 mod regex;
 mod registry;
+mod replace_packages;
 mod report;
 mod rust_plan;
 mod scan;
@@ -47,6 +48,9 @@ pub struct Options {
     pub write: bool,
     /// Apply every rewrite, including those that change behavior. Implies `write`.
     pub aggressive: bool,
+    /// Rewrite the uses of packages that Bun replaces (execa, glob, rimraf, dotenv, node-fetch, ws and others) and
+    /// remove the dependencies that no use is left of.
+    pub replace_packages: bool,
     pub target: Target,
     pub format: Format,
     /// Extra registry files: name for messages, and contents.
@@ -82,6 +86,10 @@ pub fn run(files: &mut dyn Files, options: &Options) -> Result<Outcome, Registry
         paths
     };
 
+    let manifest_dirs: Vec<Vec<u8>> = paths.iter().filter(|path| bytes::basename(path) == b"package.json").map(|path| bytes::dirname(path).to_vec()).collect();
+    let ranges = if options.replace_packages { dependency_ranges(files, &paths) } else { Vec::new() };
+    let mut gone: Vec<(Vec<u8>, &str)> = Vec::new();
+    let mut kept: Vec<(Vec<u8>, &str)> = Vec::new();
     let mut findings = Vec::new();
     let mut manifests: Vec<Manifest> = Vec::new();
     let mut plan = (options.target == Target::Rust).then(Vec::new);
@@ -107,6 +115,27 @@ pub fn run(files: &mut dyn Files, options: &Options) -> Result<Outcome, Registry
             _ => scanner.rewrite_text(kind, path, &text, None, &mut findings),
         };
         scanner.check_json(path, &text, &mut findings);
+        if options.replace_packages && kind == Some(Kind::Source) {
+            let owner = owner_of(&manifest_dirs, path);
+            let view = current.clone();
+            let view = view.as_deref().unwrap_or(&text);
+            if replace_packages::mentions_any(view) {
+                let before = findings.len();
+                let major = |package: &str| ranges.iter().find(|(dir, name, _)| *dir == owner && name == package.as_bytes()).and_then(|(_, _, major)| *major);
+                let replaced = replace_packages::rewrite(path, view, &major, &mut findings);
+                let final_text = if apply.safe { replaced.text } else { None };
+                if !apply.safe {
+                    findings[before..].iter_mut().for_each(|finding| finding.applied = false);
+                }
+                if let Some(new) = &final_text {
+                    gone.extend(replaced.gone.iter().map(|package| (owner.clone(), *package)));
+                    kept.extend(replace_packages::still_mentioned(new).into_iter().map(|package| (owner.clone(), package)));
+                    current = final_text;
+                } else {
+                    kept.extend(replace_packages::still_mentioned(view).into_iter().map(|package| (owner.clone(), package)));
+                }
+            }
+        }
         if let Some(items) = plan.as_mut() {
             let view = current.clone();
             let view = view.as_deref().unwrap_or(&text);
@@ -124,6 +153,10 @@ pub fn run(files: &mut dyn Files, options: &Options) -> Result<Outcome, Registry
         if let Some(new) = current.filter(|new| *new != text) {
             changes.push((path.clone(), new));
         }
+    }
+
+    if options.replace_packages && apply.safe {
+        remove_dependencies(files, &gone, &kept, &mut changes, &mut findings);
     }
 
     let mut changed = Vec::new();
@@ -146,5 +179,70 @@ fn is_ignored(pattern: &[u8], path: &[u8]) -> bool {
     match pattern.strip_suffix(b"/**").or_else(|| pattern.strip_suffix(b"/")) {
         Some(dir) => bytes::is_within(path, dir),
         None => bytes::glob_matches(pattern, path) || bytes::glob_matches(pattern, bytes::basename(path)) || bytes::is_within(path, pattern),
+    }
+}
+
+/// The directory of the package.json that a file belongs to: the longest one that holds it.
+fn owner_of(manifest_dirs: &[Vec<u8>], path: &[u8]) -> Vec<u8> {
+    manifest_dirs.iter().filter(|dir| bytes::is_within(path, dir)).max_by_key(|dir| dir.len()).cloned().unwrap_or_default()
+}
+
+/// The major version that each package.json asks for, per package: directory, name and major.
+fn dependency_ranges(files: &dyn Files, paths: &[Vec<u8>]) -> Vec<(Vec<u8>, Vec<u8>, Option<u32>)> {
+    let mut ranges = Vec::new();
+    for path in paths.iter().filter(|path| bytes::basename(path) == b"package.json") {
+        let Some(root) = files.read(path).and_then(|text| json::parse(&text).ok()) else { continue };
+        for section in [&b"dependencies"[..], b"devDependencies", b"optionalDependencies"] {
+            for dep in root.get(section).map_or(&[][..], |deps| deps.members()) {
+                let range = dep.value.as_str().unwrap_or(b"");
+                let digits: Vec<u8> = range.iter().copied().skip_while(|byte| !byte.is_ascii_digit()).take_while(u8::is_ascii_digit).collect();
+                let major = core::str::from_utf8(&digits).ok().and_then(|digits| digits.parse().ok());
+                ranges.push((bytes::dirname(path).to_vec(), dep.key.clone(), major));
+            }
+        }
+    }
+    ranges
+}
+
+/// Removes a dependency from the package.json that owns the files where its last use went away. It stays if a file
+/// of the package still names it, or a script of the package.json runs it.
+fn remove_dependencies(files: &dyn Files, gone: &[(Vec<u8>, &str)], kept: &[(Vec<u8>, &str)], changes: &mut Vec<(Vec<u8>, Vec<u8>)>, findings: &mut Vec<Finding>) {
+    let mut owners: Vec<&Vec<u8>> = gone.iter().map(|(owner, _)| owner).collect();
+    owners.sort();
+    owners.dedup();
+    for owner in owners {
+        let path = bytes::join(owner, b"package.json");
+        let text = match changes.iter().find(|(changed, _)| *changed == path) {
+            Some((_, text)) => text.clone(),
+            None => match files.read(&path) {
+                Some(text) => text,
+                None => continue,
+            },
+        };
+        let Ok(root) = json::parse(&text) else { continue };
+        let script_text: Vec<u8> = root.get(b"scripts").map(|node| node.members().iter().filter_map(|member| member.value.as_str().map(<[u8]>::to_vec)).collect::<Vec<_>>().join(&b
+)).unwrap_or_default();
+        let mut edits = Vec::new();
+        for section in [&b"dependencies"[..], b"devDependencies"] {
+            let Some(deps) = root.get(section) else { continue };
+            for (index, dep) in deps.members().iter().enumerate() {
+                let name = core::str::from_utf8(&dep.key).unwrap_or("");
+                let used = gone.iter().any(|(gone_owner, package)| gone_owner == owner && *package == name);
+                let alive = kept.iter().any(|(kept_owner, package)| kept_owner == owner && *package == name) || bun_core::strings::contains(&script_text, &dep.key);
+                if used && !alive {
+                    let (start, end) = json::member_span(deps, index);
+                    edits.push(scan::Edit { start, end, replacement: Vec::new() });
+                    let (line, column) = bytes::LineIndex::new(&text).locate(dep.key_start);
+                    findings.push(Finding { file: path.clone(), line, column, rule: b"replace/dependency".to_vec(), severity: Severity::Info, message: format!("{name} is no longer used by this package").into_bytes(), original: dep.key.clone(), replacement: Some(Vec::new()), fixable: true, aggressive: false, applied: true, docs: Vec::new() });
+                }
+            }
+        }
+        if !edits.is_empty() {
+            let new = scan::apply_edits(&text, edits);
+            match changes.iter_mut().find(|(changed, _)| *changed == path) {
+                Some(entry) => entry.1 = new,
+                None => changes.push((path, new)),
+            }
+        }
     }
 }

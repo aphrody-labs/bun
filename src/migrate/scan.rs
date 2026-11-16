@@ -51,10 +51,10 @@ pub(crate) struct Manifest {
     pub(crate) dependencies: Vec<(Vec<u8>, Vec<u8>)>,
 }
 
-struct Edit {
-    start: usize,
-    end: usize,
-    replacement: Vec<u8>,
+pub(crate) struct Edit {
+    pub(crate) start: usize,
+    pub(crate) end: usize,
+    pub(crate) replacement: Vec<u8>,
 }
 
 const MAX_SHOWN: usize = 120;
@@ -364,7 +364,7 @@ fn shown(text: &[u8]) -> Vec<u8> {
 }
 
 /// Applies edits whose spans do not overlap, except cuts, which merge.
-fn apply_edits(text: &[u8], mut edits: Vec<Edit>) -> Vec<u8> {
+pub(crate) fn apply_edits(text: &[u8], mut edits: Vec<Edit>) -> Vec<u8> {
     edits.sort_by_key(|edit| (edit.start, edit.end));
     let mut out = Vec::with_capacity(text.len());
     let mut at = 0;

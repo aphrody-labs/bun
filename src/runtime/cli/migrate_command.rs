@@ -85,6 +85,7 @@ fn parse(args: &[&'static ZStr]) -> Command {
         options: Options {
             write: false,
             aggressive: false,
+            replace_packages: false,
             target: Target::Bun,
             format: Format::Text,
             registries: Vec::new(),
@@ -108,6 +109,7 @@ fn parse(args: &[&'static ZStr]) -> Command {
             }
             b"--write" => command.options.write = true,
             b"--aggressive" => command.options.aggressive = true,
+            b"--replace-packages" => command.options.replace_packages = true,
             b"--check" => command.check = true,
             b"--target" => {
                 command.options.target = match value_of(flag, inline, &mut rest) {
@@ -203,6 +205,8 @@ pub(crate) fn print_help() {
 <b>Flags<r>:
       <cyan>--write<r>               Apply the safe rewrites
       <cyan>--aggressive<r>          Also apply rewrites that change behavior, such as node to bun (implies --write)
+      <cyan>--replace-packages<r>    Replace execa, glob, rimraf, dotenv, node-fetch, ws and del with what Bun has, and remove
+                               the dependencies that no use is left of
       <cyan>--check<r>               Exit with 1 if warnings or errors remain, and write nothing
       <cyan>--target<r> <blue>\\<bun|rust\\><r>  <d>(default: bun)<r> With rust, also plan which packages become Rust crates
       <cyan>--format<r> <blue>\\<name\\><r>    <d>(default: text)<r> text, json, jsonl, markdown or sarif
