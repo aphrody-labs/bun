@@ -60,7 +60,8 @@ fn strip_runners(mut line: &[u8]) -> &[u8] {
 pub(crate) fn rewrite_tool(registry: &Registry, command: &[u8]) -> Option<Outcome> {
     let line = strip_runners(command.trim_ascii());
     let tokens: Vec<&[u8]> = line.split(|byte| byte.is_ascii_whitespace()).filter(|token| !token.is_empty()).collect();
-    let index = registry.tools.iter().position(|tool| tool.name == *tokens.first()?)?;
+    let first = *tokens.first()?;
+    let index = registry.tools.iter().position(|tool| tool.name == first)?;
     let tool: &ToolRule = &registry.tools[index];
     let manual = |reason: &[u8]| Some(Outcome::Manual { reason: reason.to_vec(), tool: index });
     if line.iter().any(|byte| b"|$`<>(){}*?&;".contains(byte)) {

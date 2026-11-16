@@ -121,7 +121,7 @@ pub(crate) fn rewrite(path: &[u8], text: &[u8], major: &dyn Fn(&str) -> Option<u
         let mut outcome = Outcome { edits: Vec::new(), rewritten: 0, manual: Vec::new() };
         apply_rule(spec, &current, &statements, major, &mut outcome);
         // A package named in a form that no statement covers, such as a dynamic import, keeps the dependency alive.
-        let covered = statements.iter().filter(|statement| spec.packages.iter().any(|package| statement.spec == *package || statement.spec.starts_with(&[package.as_bytes(), b"/"].concat()))).count();
+        let covered = statements.iter().filter(|statement| spec.packages.iter().any(|package| statement.spec == package.as_bytes() || statement.spec.starts_with(&[package.as_bytes(), b"/"].concat()))).count();
         let mentioned: usize = spec.packages.iter().filter_map(|package| quoted(package)).map(|pattern| pattern.find_all(&current).len()).sum();
         let stray = mentioned > covered + dotenv_inline(spec.rule, &current);
         if stray && let Some(at) = first_outside(spec.packages, &current, &statements) {
