@@ -969,12 +969,12 @@ impl FileReader {
         {
             // `self.fd` is filled by `on_start` and never cleared, so gate on
             // liveness or a closed fd would leak a stale number.
-            if self.done.get() || self.reader().is_done() {
+            if self.done.get() || self.reader.is_done() {
                 return -1;
             }
             let mut fd = self.fd.get();
             if fd == Fd::INVALID {
-                fd = self.reader().get_fd();
+                fd = self.reader.get_fd();
             }
             if fd == Fd::INVALID { -1 } else { fd.native() }
         }

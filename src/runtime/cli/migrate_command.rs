@@ -189,7 +189,7 @@ impl MigrateCommand {
             }
         }
         Output::flush();
-        Global::exit(i32::from(command.check && outcome.remaining > 0));
+        Global::exit(u32::from(command.check && outcome.remaining > 0));
     }
 }
 
