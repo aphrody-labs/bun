@@ -5,6 +5,9 @@ name: native
 # upstream's Buildkite lanes, then measured against upstream stable and canary.
 
 on:
+  push:
+    branches: [main]
+    paths-ignore: ["docs/**", "**/*.md", "**/*.mdx"]
   workflow_dispatch:
     inputs:
       targets:
@@ -44,6 +47,15 @@ jobs:
         with:
           fetch-depth: 1
           persist-credentials: false
+      # Shared build cache (ccache objects, cargo registry and target, dep tarballs, WebKit prebuilt):
+      # BUN_BUILD_CACHE_DIR points into the workspace so the docker build below reads and fills it.
+      - name: Restore build cache
+        uses: actions/cache@v6
+        with:
+          path: .build-cache
+          key: bun-build-cache-${{ matrix.target }}-${{ github.sha }}
+          restore-keys: |
+            bun-build-cache-${{ matrix.target }}-
       - name: Generate the host script
         run: |
           curl -fsSL -o bun.zip https://github.com/oven-sh/bun/releases/download/bun-v1.4.4/bun-linux-aarch64.zip
@@ -78,13 +90,13 @@ jobs:
             fi
             grep -vc '^#' build/$t/linker.order
           fi
-          docker run --rm -v "$PWD:/src" -w /src debian:13 sh -c "
+          docker run --rm -e BUN_BUILD_CACHE_DIR=/src/.build-cache -v "$PWD:/src" -w /src debian:13 sh -c "
             set -e
             sh scripts/native-host.sh > /tmp/host.log 2>&1 || { tail -80 /tmp/host.log; exit 1; }
             . /etc/profile.d/bun-ci.sh
             git config --global --add safe.directory /src
             nice -n 19 node scripts/build.ts --profile=release --trimmable=on $args --build-dir=build/$t -j4
-            chown -R $(id -u):$(id -g) build
+            chown -R $(id -u):$(id -g) build .build-cache
           "
       - name: Collect
         run: |
