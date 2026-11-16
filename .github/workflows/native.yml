@@ -46,7 +46,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 1
-          persist-credentials: false
+          persist-credentials: true
       # Shared build cache (ccache objects, cargo registry and target, dep tarballs, WebKit prebuilt):
       # BUN_BUILD_CACHE_DIR points into the workspace so the docker build below reads and fills it.
       - name: Restore build cache
@@ -95,9 +95,30 @@ jobs:
             sh scripts/native-host.sh > /tmp/host.log 2>&1 || { tail -80 /tmp/host.log; exit 1; }
             . /etc/profile.d/bun-ci.sh
             git config --global --add safe.directory /src
-            nice -n 19 node scripts/build.ts --profile=release --trimmable=on $args --build-dir=build/$t -j4
+            # Cargo.lock is refreshed here, after the vendor fetch has made every path dependency
+            # resolvable and the git dependencies (pinned by rev in Cargo.toml) are fetched: when the
+            # --locked plan reports a stale lock, resolve without --locked, keep the result and retry.
+            build() { nice -n 19 node scripts/build.ts --profile=release --trimmable=on $args --build-dir=build/$t -j4; }
+            if ! { build > /tmp/build.log 2>&1 || { cat /tmp/build.log; false; }; }; then
+              grep -q 'cannot update the lock file' /tmp/build.log || exit 1
+              cargo metadata --format-version 1 > /dev/null
+              git diff --stat Cargo.lock
+              cp Cargo.lock /src/Cargo.lock.ci
+              build
+            fi
             chown -R $(id -u):$(id -g) build .build-cache
           "
+      - name: Commit refreshed Cargo.lock
+        if: matrix.target == 'linux-x64-gnu' && github.event_name == 'push'
+        run: |
+          [ -f Cargo.lock.ci ] || exit 0
+          cp Cargo.lock.ci Cargo.lock; rm Cargo.lock.ci
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Cargo.lock
+          git commit -m "Cargo.lock: refreshed in CI for the pinned git dependencies [skip ci]"
+          git pull --rebase origin main
+          git push origin HEAD:main
       - name: Collect
         run: |
           t=${{ matrix.target }}
