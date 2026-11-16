@@ -500,6 +500,24 @@ static pid_t execve_counting_pid = 0;
 extern "C" int __real_execve(const char*, char* const[], char* const[]);
 extern "C" bool CrashHandler__isReloadingProcess();
 extern "C" int __real_pthread_create(pthread_t*, const pthread_attr_t*, void* (*)(void*), void*);
+extern "C" char* __real_realpath(const char*, char*);
+
+// realpath(path, NULL) returns memory from libc's own malloc, and Rust's std::fs::canonicalize frees it with the
+// executable's free, which is mimalloc: a crash on the page map. With no buffer given, the result is copied
+// into memory the executable's malloc owns. Linked in with -Wl,--wrap=realpath (scripts/build/flags.ts).
+extern "C" char* __wrap_realpath(const char* path, char* resolved)
+{
+    if (resolved)
+        return __real_realpath(path, resolved);
+    char buffer[PATH_MAX];
+    if (!__real_realpath(path, buffer))
+        return nullptr;
+    size_t length = strlen(buffer) + 1;
+    char* copy = static_cast<char*>(malloc(length));
+    if (copy)
+        memcpy(copy, buffer, length);
+    return copy;
+}
 
 #if defined(BUN_SAFE_STACK)
 extern "C" __attribute__((visibility("default"))) thread_local void* __safestack_unsafe_stack_ptr = nullptr;

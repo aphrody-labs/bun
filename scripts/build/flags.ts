@@ -1424,7 +1424,7 @@ export const linkerFlags: Flag[] = [
     // flight, and __wrap_pthread_create retries the EAGAIN the kernel returns
     // for clone(CLONE_FS) during that window (the --watch reload). Behavioral,
     // not a version pin, so it applies to every Linux libc.
-    flag: ["-Wl,--wrap=execve", "-Wl,--wrap=pthread_create"],
+    flag: ["-Wl,--wrap=execve", "-Wl,--wrap=pthread_create", "-Wl,--wrap=realpath"],
     when: c => c.linux,
     desc: "Retry pthread_create EAGAIN caused by an in-flight execve",
   },
