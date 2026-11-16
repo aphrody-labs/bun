@@ -1,6 +1,6 @@
 //! The subset of TOML that rule registries use: `[[section]]` headers each followed by `key = value` lines, or one
 //! inline table `{ key = value, ... }` per line under a `[section]` header. Values are strings (basic or literal),
-//! booleans, integers and one-line arrays of strings.
+//! booleans and one-line arrays of strings.
 
 use crate::bytes::find_byte_from;
 
@@ -8,7 +8,6 @@ use crate::bytes::find_byte_from;
 pub(crate) enum Value {
     Str(Vec<u8>),
     Bool(bool),
-    Int(i64),
     List(Vec<Vec<u8>>),
 }
 
@@ -162,7 +161,7 @@ impl Cursor<'_> {
                 match &self.text[start..self.at] {
                     b"true" => Ok(Value::Bool(true)),
                     b"false" => Ok(Value::Bool(false)),
-                    digits => core::str::from_utf8(digits).ok().and_then(|n| n.parse().ok()).map(Value::Int).ok_or("unknown value"),
+                    _ => Err("unknown value"),
                 }
             }
             None => Err("a value is missing"),

@@ -43,7 +43,6 @@ pub(crate) struct Scanner<'a> {
 pub(crate) struct Manifest {
     pub(crate) path: Vec<u8>,
     pub(crate) name: Vec<u8>,
-    pub(crate) private: bool,
     pub(crate) scripts: Vec<Vec<u8>>,
     pub(crate) workspaces: Vec<Vec<u8>>,
     pub(crate) package_manager: Vec<u8>,
@@ -221,7 +220,6 @@ impl<'a> Scanner<'a> {
         let mut manifest = Manifest {
             path: path.to_vec(),
             name: root.get(b"name").and_then(Node::as_str).unwrap_or(b"").to_vec(),
-            private: matches!(root.get(b"private").map(|node| &node.value), Some(json::Value::Bool(true))),
             scripts: Vec::new(),
             workspaces: Vec::new(),
             package_manager: root.get(b"packageManager").and_then(Node::as_str).unwrap_or(b"").to_vec(),
