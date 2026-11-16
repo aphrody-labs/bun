@@ -97,6 +97,11 @@ async function absorb(source: Source, ref: string): Promise<void> {
 
   const dropKeys = [...guiKeys, ...guiCrates.map(c => `craft-${c}`)];
   await rewrite(`${source.prefix}/Cargo.toml`, text => headlessManifest(text, dropKeys, source.dropTables));
+  await commitStaged(`craft: headless ${source.repo} (no window crates, web build or desktop packaging)`);
+}
+
+async function commitStaged(message: string): Promise<void> {
+  if ((await git("diff", "--cached", "--name-only")) !== "") await git("commit", "-q", "-m", message);
 }
 
 /**
@@ -181,9 +186,7 @@ async function main(): Promise<void> {
     ),
   );
 
-  if ((await git("diff", "--cached", "--name-only")) !== "") {
-    await git("commit", "-q", "-m", "craft: headless trees (no egui apps, web app, window crates or desktop packaging)");
-  }
+  await commitStaged("craft: Craft Anything builds against src/craft/libs; Bun's workspace leaves src/craft out");
   console.log(await git("log", "-1", "--format=%h %s"));
 }
 
