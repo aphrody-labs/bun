@@ -22,7 +22,6 @@ craft-anything-engine = { path = "crates/engine" }
 craft-anything-ai = { path = "crates/ai" }
 craft-anything-mcp = { path = "crates/mcp" }
 craft-anything-setup = { path = "crates/setup" }
-craft-anything-ui-egui = { path = "crates/ui-egui" }
 craft-anything-testkit = { path = "crates/testkit" }
 
 # external
