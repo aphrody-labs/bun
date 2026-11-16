@@ -1,0 +1,7 @@
+# Checks on the keys of JSON files. Fields: id, files (base name globs), path (dotted), message, severity (info by
+# default), docs, and one test: equals (the value is one of these strings, compared without case), absent (the key is
+# missing), has and lacks (the value is an array that holds every `has` item and none of `lacks`).
+[json]
+{ id = "tsconfig/types", files = ["tsconfig*.json"], path = "compilerOptions.types", has = ["node"], lacks = ["bun"], message = "compilerOptions.types lists node and not bun: add bun, or Bun's globals have no types", docs = "https://bun.com/docs/typescript" }
+{ id = "tsconfig/module-resolution", files = ["tsconfig*.json"], path = "compilerOptions.moduleResolution", equals = ["node", "node10", "classic"], message = "moduleResolution bundler matches how Bun resolves imports", docs = "https://bun.com/docs/typescript" }
+{ id = "tsconfig/module", files = ["tsconfig*.json"], path = "compilerOptions.module", equals = ["commonjs", "amd", "umd", "system", "none", "es6", "es2015"], message = "module Preserve or ESNext keeps import and export statements, which Bun runs as they are", docs = "https://bun.com/docs/typescript" }

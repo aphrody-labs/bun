@@ -216,6 +216,8 @@ pub(crate) mod update_command;
 pub(crate) mod update_interactive_command;
 #[path = "why_command.rs"]
 pub(crate) mod why_command;
+#[path = "migrate_command.rs"]
+pub(crate) mod migrate_command;
 
 // ─── crate-local helper for param-table concatenation ────────────────────────
 // `bun_clap::parse_param!` is a real proc-macro (const `Param<Help>` literal),
@@ -919,6 +921,12 @@ pub(crate) mod command {
         if x == RootCommandMatcher::case(b"why") {
             return Tag::WhyCommand;
         }
+        if x == RootCommandMatcher::case(b"migrate") {
+            return match super::script_or_command::is_of_the_project(b"migrate") {
+                true => Tag::AutoCommand,
+                false => Tag::MigrateCommand,
+            };
+        }
         if x == RootCommandMatcher::case(b"fuzzilli") {
             if bun_core::Environment::ENABLE_FUZZILLI {
                 return Tag::FuzzilliCommand;
@@ -1175,6 +1183,7 @@ pub(crate) mod command {
             Tag::DedupeCommand => call_removable!(Install, Abort, exec_dedupe, log),
             Tag::PruneCommand => call_removable!(Install, Abort, exec_prune, log),
             Tag::WhyCommand => call_removable!(Install, Abort, exec_why, log),
+            Tag::MigrateCommand => call_removable!(Install, Abort, exec_migrate, log),
             Tag::BunxCommand => call_removable!(Install, Abort, exec_bunx, log),
             Tag::ReplCommand => call_removable!(Repl, Abort, exec_repl, log),
             Tag::RemoveCommand => call_removable!(Install, Abort, exec_remove, log),
@@ -1446,6 +1455,14 @@ pub(crate) mod command {
         let ctx = init(Tag::CompileCommand, log)?;
         super::compile_command::CompileCommand::exec_command(ctx)?;
         Ok(())
+    }
+
+    #[cold]
+    #[inline(never)]
+    fn exec_migrate(_log: &mut bun_ast::Log) -> CmdResult {
+        // MigrateCommand parses its own argv.
+        let argv = argv_zslice();
+        super::migrate_command::MigrateCommand::exec(after_command(&argv, b"migrate"))
     }
 
     #[cold]
@@ -2328,6 +2345,9 @@ Full documentation is available at <magenta>https://bun.com/docs/lint<r>
             }
             Tag::WhyCommand => {
                 pm_print_help(PmSubcommand::Why);
+            }
+            Tag::MigrateCommand => {
+                super::migrate_command::print_help();
             }
             Tag::InitCommand => {
                 pretty!(
