@@ -2,8 +2,8 @@
 /**
  * Brings Craft Anything and the Craft libraries into this repository, headless, with their history.
  *
- *   src/craft       storytold/craft-anything (engine, 320 tools, CLI, MCP server, setup)
- *   src/craft/libs  storytold/craft-libs (the format crates the engine reads files with)
+ *   craft           storytold/craft-anything (engine, 320 tools, CLI, MCP server, setup)
+ *   craft/libs      storytold/craft-libs (the format crates the engine reads files with)
  *
  * The first run of a source merges its upstream history and reads its tree under the prefix (the subtree merge
  * strategy, so the `git subtree` contrib command is not needed). Later runs merge with `-X subtree=<prefix>`. Every run
@@ -47,7 +47,7 @@ const sources: Source[] = [
   {
     key: "anything",
     repo: "craft-anything",
-    prefix: "src/craft",
+    prefix: "craft",
     drop: [
       "apps/craft-anything",
       "apps/craft-anything-web",
@@ -64,7 +64,7 @@ const sources: Source[] = [
   {
     key: "libs",
     repo: "craft-libs",
-    prefix: "src/craft/libs",
+    prefix: "craft/libs",
     drop: [".github", ".coderabbit.yaml", ".cargo", ".config"],
     dropTables: [],
   },
@@ -158,7 +158,7 @@ function headlessManifest(text: string, dropKeys: string[], dropTables: string[]
   return out.join("\n").replace(/\n{3,}/g, "\n\n").trimEnd() + "\n";
 }
 
-/** Points Craft Anything's git dependencies on craft-libs at `src/craft/libs`. */
+/** Points Craft Anything's git dependencies on craft-libs at `craft/libs`. */
 function localLibs(text: string): string {
   return text.replace(
     /^(craft-([a-z0-9-]+)) = \{ git = "https:\/\/github\.com\/storytold\/craft-libs"[^}]*\}/gm,
@@ -183,14 +183,14 @@ async function main(): Promise<void> {
   if (chosen.length === 0) throw new Error(`no source named ${values.only}`);
   for (const source of chosen) await absorb(source, values.ref!);
 
-  if (existsSync(join(repo, "src/craft/libs/Cargo.toml"))) await rewrite("src/craft/Cargo.toml", localLibs);
+  if (existsSync(join(repo, "craft/libs/Cargo.toml"))) await rewrite("craft/Cargo.toml", localLibs);
   await rewrite("Cargo.toml", root =>
     root.replace(/^exclude = \[([^\]]*)\]/m, (line, list: string) =>
-      list.includes('"src/craft"') ? line : `exclude = [${list}, "src/craft"]`,
+      list.includes('"craft"') ? line : `exclude = [${list}, "craft"]`,
     ),
   );
 
-  await commitStaged("craft: Craft Anything builds against src/craft/libs; Bun's workspace leaves src/craft out");
+  await commitStaged("craft: Craft Anything builds against craft/libs; Bun's workspace leaves craft out");
   console.log(await git("log", "-1", "--format=%h %s"));
 }
 

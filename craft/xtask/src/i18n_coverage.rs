@@ -225,7 +225,10 @@ mod tests {
     /// The list in the repository parses, so CI's check reads what's committed.
     #[test]
     fn the_committed_list_is_readable() {
-        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../crates/ui-egui/src/i18n").join(AWAITING);
-        assert!(std::fs::read_to_string(path).is_ok());
+        let dir = Path::new(env!("CARGO_MANIFEST_DIR")).join("../crates/ui-egui/src/i18n");
+        // A headless tree has no UI crate and so no catalogs.
+        if dir.exists() {
+            assert!(std::fs::read_to_string(dir.join(AWAITING)).is_ok());
+        }
     }
 }
