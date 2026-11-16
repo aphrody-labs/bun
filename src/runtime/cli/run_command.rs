@@ -931,28 +931,6 @@ Full documentation is available at <magenta>https://bun.com/docs/cli/run<r>
         crate::shell::Interpreter::init_and_run_from_file(ctx, mini, entry_path, &src)
     }
 
-    /// A script that is not JavaScript runs in its own language, chosen by extension or shebang: Rust through
-    /// `cargo -Zscript`, bash on rubash. `None` leaves the file to the JavaScript runtime.
-    fn run_other_language(ctx: &ContextData, entry_path: &[u8]) -> Option<i32> {
-        use bun_modules::script::{self, Language};
-        let path = std::path::Path::new(std::str::from_utf8(entry_path).ok()?);
-        let args: Vec<std::ffi::OsString> = ctx
-            .passthrough
-            .iter()
-            .map(|a| String::from_utf8_lossy(a).into_owned().into())
-            .collect();
-        match script::detect(path)? {
-            Language::JavaScript => None,
-            Language::Rust => Some(script::run_rust(path, &args)),
-            Language::Bash | Language::Shell => {
-                let name = if script::detect(path)? == Language::Bash { "bash" } else { "sh" };
-                let mut argv = vec![path.as_os_str().to_os_string()];
-                argv.extend(args);
-                bun_modules::run(name, argv)
-            }
-        }
-    }
-
     /// `VirtualMachine::init`,
     /// hand off CLI state, then enter `Run::start` under the JSC API lock.
     pub(crate) fn boot(
@@ -994,14 +972,6 @@ Full documentation is available at <magenta>https://bun.com/docs/cli/run<r>
                 Global::exit(1);
             }
             let exit_code = Self::boot_bun_shell(ctx, entry_path)?;
-            Global::exit(exit_code as u32);
-        }
-
-        if let BootMain::File {
-            path: entry_path, ..
-        } = &main
-            && let Some(exit_code) = Self::run_other_language(ctx, entry_path)
-        {
             Global::exit(exit_code as u32);
         }
 

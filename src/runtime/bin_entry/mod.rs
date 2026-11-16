@@ -221,43 +221,10 @@ pub(crate) unsafe extern "C" fn main(argc: c_int, argv: *const *const c_char) ->
     StackCheck::configure_thread();
     bun_io::ParentDeathWatchdog::install();
 
-    // 6. First-party modules: a link named after one (`ls`, `bash`, `nm`) or `bun applet NAME ARGS`.
-    if let Some(code) = run_module() {
-        Global::exit(code as u32);
-    }
-
     // 7. CLI dispatch.
     crate::cli::Cli::start();
     // `Global::exit` is `-> !`; it coerces to the `c_int` return type.
     Global::exit(0)
-}
-
-/// The exit status of the first-party module this invocation names, if it names one: by `argv[0]`, or as
-/// `applet NAME ARGS...` (`applet --list` prints the names).
-fn run_module() -> Option<i32> {
-    let argv = bun_core::argv();
-    let argv0 = argv.get(0)?.as_bytes();
-    let applet = argv.get(1).is_some_and(|a| a.as_bytes() == b"applet");
-    if !applet && bun_modules::is_bun_argv0(argv0) {
-        return None;
-    }
-    let all: Vec<std::ffi::OsString> = argv
-        .iter()
-        .map(|a| String::from_utf8_lossy(a).into_owned().into())
-        .collect();
-    if !applet {
-        return bun_modules::run_argv0(&all);
-    }
-    match all.get(2).and_then(|a| a.to_str()) {
-        Some("--list") => {
-            for name in bun_modules::names() {
-                bun_core::prettyln!("{}", name);
-            }
-            Some(0)
-        }
-        Some(name) if bun_modules::exists(name) => bun_modules::run(name, all[3..].to_vec()),
-        _ => None,
-    }
 }
 
 /// Linux's `expand_fdtable()` waits for an RCU grace period (tens of ms on a
