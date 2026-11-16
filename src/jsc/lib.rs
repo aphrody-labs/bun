@@ -16,6 +16,7 @@
 // `Tag` is a fieldless enum, so this is the structural-match subset of the
 // feature.
 #![feature(adt_const_params)]
+#![feature(core_io_borrowed_buf)]
 // `#[thread_local]` for the per-JS-thread VM holder and adjacent hot
 // per-callback statics — bare `__thread`/`.tbss` instead of the
 // `thread_local!` macro's `LocalKey::__getit` wrapper. node:http perf showed
@@ -29,7 +30,7 @@ extern crate alloc;
 // inside this crate.
 extern crate self as bun_jsc;
 
-use core::ffi::{c_char, c_void};
+use core::ffi::c_char;
 
 // ──────────────────────────────────────────────────────────────────────────
 // Proc-macro re-exports. `#[bun_jsc::host_call]` is implemented in the `bun_jsc_macros` crate
@@ -350,7 +351,7 @@ pub use self::uuid::{UUID, UUID5, UUID7};
 
 pub use self::js_function::JSFunction;
 pub use self::js_module_loader::JSModuleLoader;
-pub use self::strong::{Optional as StrongOptional, Strong};
+pub use self::strong::{Optional as StrongOptional, Strong, StrongCell};
 pub use self::weak::{Weak, WeakRefType};
 
 pub use self::exception::Exception;
@@ -454,8 +455,6 @@ pub mod zig_stack_frame;
 #[path = "ZigStackTrace.rs"]
 pub mod zig_stack_trace;
 
-#[path = "AsyncModule.rs"]
-pub mod async_module;
 #[path = "bindgen.rs"]
 pub mod bindgen;
 #[cfg(debug_assertions)]
@@ -1149,7 +1148,7 @@ pub mod virtual_machine;
 pub mod vm_handle;
 pub use self::virtual_machine as VirtualMachine;
 pub use self::virtual_machine::InitOptions as VirtualMachineInitOptions;
-pub use self::vm_handle::{ConcurrentPoster, LoopKind, Posted, Ticket, VmHandle};
+pub use self::vm_handle::{ConcurrentPoster, LoopKind, Posted, Ticket, VmBound, VmHandle};
 
 #[path = "ModuleLoader.rs"]
 pub mod module_loader;
@@ -1422,8 +1421,6 @@ impl Drop for Ref {
         self.unref(virtual_machine::VirtualMachine::get());
     }
 }
-
-pub type OpaqueCallback = unsafe extern "C" fn(current: *mut c_void);
 
 /// Legacy alias for [`ErrorCode`] (`src/jsc/ErrorCode.rs`) — the same type
 /// under both names.
