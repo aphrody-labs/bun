@@ -9,7 +9,7 @@ pub(crate) struct Node {
 
 pub(crate) enum Value {
     Null,
-    Bool(bool),
+    Bool,
     Number,
     String(Vec<u8>),
     Array(Vec<Node>),
@@ -72,8 +72,8 @@ impl Parser<'_> {
             b'{' => self.object(depth)?,
             b'[' => self.array(depth)?,
             b'"' => Value::String(self.string()?),
-            b't' => self.keyword(b"true", Value::Bool(true))?,
-            b'f' => self.keyword(b"false", Value::Bool(false))?,
+            b't' => self.keyword(b"true", Value::Bool)?,
+            b'f' => self.keyword(b"false", Value::Bool)?,
             b'n' => self.keyword(b"null", Value::Null)?,
             b'-' | b'0'..=b'9' => self.number(),
             _ => return Err(SyntaxError(self.at)),
