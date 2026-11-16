@@ -1,49 +1,74 @@
 #!/usr/bin/env bun
 /**
- * Brings Craft Anything into this repository as `src/craft`, headless, with its history.
+ * Brings Craft Anything and the Craft libraries into this repository, headless, with their history.
  *
- * The first run merges the upstream history and reads its tree into `src/craft` (the subtree merge strategy, so the
- * `git subtree` contrib command is not needed). Later runs merge with `-X subtree=src/craft`. Every run then
- * removes the parts that need a window or a browser build (the egui app, its UI crate, the Trunk web app, the wgpu-hal
- * patch and the desktop packaging), so a modify/delete conflict on a pull ends the same way.
+ *   src/craft       storytold/craft-anything (engine, 320 tools, CLI, MCP server, setup)
+ *   src/craft/libs  storytold/craft-libs (the format crates the engine reads files with)
  *
- * The tree keeps its upstream layout (`src/craft/crates/*`, `src/craft/apps/craft-anything-cli`) so pulls stay
- * mechanical. It is its own Cargo workspace, excluded from Bun's, until each crate builds with Bun's lints.
+ * The first run of a source merges its upstream history and reads its tree under the prefix (the subtree merge
+ * strategy, so the `git subtree` contrib command is not needed). Later runs merge with `-X subtree=<prefix>`. Every run
+ * then removes what needs a window or a browser build, so a modify/delete conflict on a pull ends the same way, and
+ * points the git dependencies between the two at the absorbed paths.
+ *
+ * Each tree keeps its upstream layout so pulls stay mechanical, and each is its own Cargo workspace, excluded from
+ * Bun's, until its crates build under Bun's lints.
  *
  * Usage:
- *   bun scripts/craft-absorb.ts              # add or pull from the aphrody fork's main
- *   bun scripts/craft-absorb.ts --ref <rev>  # a given branch, tag or commit
- *   CRAFT_REMOTE=<url> bun scripts/craft-absorb.ts
+ *   bun scripts/craft-absorb.ts                    # every source, from the aphrody forks' main
+ *   bun scripts/craft-absorb.ts --only libs        # one source
+ *   bun scripts/craft-absorb.ts --ref <rev>        # a given branch, tag or commit
  */
 
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 
 const repo = resolve(import.meta.dirname, "..");
-const prefix = "src/craft";
-const remote = process.env.CRAFT_REMOTE ?? "https://github.com/aphrody-labs/craft-anything.git";
+const org = process.env.CRAFT_ORG ?? "https://github.com/aphrody-labs";
 
-/** Paths under `src/craft` that only the windowed or browser editions use. */
-const headlessDrop = [
-  "apps/craft-anything",
-  "apps/craft-anything-web",
-  "crates/ui-egui",
-  "vendor/wgpu-hal",
-  "packaging",
-  ".github",
-  ".githooks",
-  ".coderabbit.yaml",
-  ".cargo",
-] as const;
+/** Manifest lines that start with these (dependency keys and patch entries) belong to the windowed editions. */
+const guiKeys = ["craft-anything-ui-egui", "eframe", "egui", "ecolor", "emath", "epaint", "winit", "wgpu", "rfd", "arboard"];
 
-/** Workspace dependencies that only the dropped crates name. */
-const guiDeps = ["eframe", "egui", "egui_extras", "egui_kittest", "rfd", "arboard"] as const;
+interface Source {
+  key: string;
+  repo: string;
+  prefix: string;
+  /** Paths under the prefix that only the windowed or browser editions use. */
+  drop: string[];
+  /** Whole manifest tables to remove. */
+  dropTables: string[];
+}
 
-/** Manifest tables for the browser build and the wgpu-hal patch. */
-const guiTables = ["[profile.web-release]", "[patch.crates-io]"] as const;
+const sources: Source[] = [
+  {
+    key: "anything",
+    repo: "craft-anything",
+    prefix: "src/craft",
+    drop: [
+      "apps/craft-anything",
+      "apps/craft-anything-web",
+      "crates/ui-egui",
+      "vendor/wgpu-hal",
+      "packaging",
+      ".github",
+      ".githooks",
+      ".coderabbit.yaml",
+      ".cargo",
+    ],
+    dropTables: ["[profile.web-release]", "[patch.crates-io]"],
+  },
+  {
+    key: "libs",
+    repo: "craft-libs",
+    prefix: "src/craft/libs",
+    drop: [".github", ".coderabbit.yaml", ".cargo", ".config"],
+    dropTables: [],
+  },
+];
 
-const { values } = parseArgs({ options: { ref: { type: "string", default: "main" } } });
+const { values } = parseArgs({
+  options: { ref: { type: "string", default: "main" }, only: { type: "string" } },
+});
 
 async function git(...args: string[]): Promise<string> {
   const proc = Bun.spawn(["git", ...args], { cwd: repo, stdout: "pipe", stderr: "inherit" });
@@ -52,51 +77,59 @@ async function git(...args: string[]): Promise<string> {
   return out.trim();
 }
 
-async function main(): Promise<void> {
-  if ((await git("status", "--porcelain", "--untracked-files=no")) !== "") {
-    throw new Error("the work tree has tracked changes; commit them first");
-  }
-  const ref = values.ref!;
-  const added = existsSync(join(repo, prefix));
-  const message = `craft: ${added ? "pull" : "add"} Craft Anything ${ref} from ${remote}`;
+async function absorb(source: Source, ref: string): Promise<void> {
+  const remote = `${org}/${source.repo}.git`;
+  const added = existsSync(join(repo, source.prefix, "Cargo.toml"));
+  const message = `craft: ${added ? "pull" : "add"} ${source.repo} ${ref} from ${remote}`;
   await git("fetch", "-q", "--no-tags", remote, ref);
   if (added) {
-    await git("merge", "-q", "--no-edit", "-X", `subtree=${prefix}`, "-m", message, "FETCH_HEAD");
+    await git("merge", "-q", "--no-edit", "-X", `subtree=${source.prefix}`, "-m", message, "FETCH_HEAD");
   } else {
     await git("merge", "-q", "-s", "ours", "--no-commit", "--allow-unrelated-histories", "FETCH_HEAD");
-    await git("read-tree", `--prefix=${prefix}/`, "-u", "FETCH_HEAD");
+    await git("read-tree", `--prefix=${source.prefix}/`, "-u", "FETCH_HEAD");
     await git("commit", "-q", "-m", message);
   }
 
-  const present = headlessDrop.filter(p => existsSync(join(repo, prefix, p)));
-  if (present.length > 0) await git("rm", "-r", "-q", "--", ...present.map(p => `${prefix}/${p}`));
+  const guiCrates = windowedCrates(join(repo, source.prefix));
+  const drop = [...source.drop, ...guiCrates.map(c => `crates/${c}`)];
+  const present = drop.filter(p => existsSync(join(repo, source.prefix, p)));
+  if (present.length > 0) await git("rm", "-r", "-q", "--", ...present.map(p => `${source.prefix}/${p}`));
 
-  const manifest = join(repo, prefix, "Cargo.toml");
-  const before = readFileSync(manifest, "utf8");
-  const after = headlessManifest(before);
-  if (after !== before) {
-    writeFileSync(manifest, after);
-    await git("add", "--", `${prefix}/Cargo.toml`);
-  }
-
-  const rootManifest = join(repo, "Cargo.toml");
-  const root = readFileSync(rootManifest, "utf8");
-  const excluded = root.replace(/^exclude = \[([^\]]*)\]/m, (line, list: string) =>
-    list.includes(`"${prefix}"`) ? line : `exclude = [${list}, "${prefix}"]`,
-  );
-  if (excluded !== root) {
-    writeFileSync(rootManifest, excluded);
-    await git("add", "--", "Cargo.toml");
-  }
-
-  if ((await git("diff", "--cached", "--name-only")) !== "") {
-    await git("commit", "-q", "-m", "craft: headless tree (no egui app, web app, wgpu-hal patch or desktop packaging)");
-  }
-  console.log(await git("log", "-1", "--format=%h %s"));
+  const dropKeys = [...guiKeys, ...guiCrates.map(c => `craft-${c}`)];
+  await rewrite(`${source.prefix}/Cargo.toml`, text => headlessManifest(text, dropKeys, source.dropTables));
 }
 
-/** Drops the GUI dependencies and the wgpu-hal patch from the Craft Anything workspace manifest. */
-function headlessManifest(text: string): string {
+/**
+ * The crates under `crates/` that need a window: those naming a GUI dependency, then, until nothing changes, those
+ * naming one of them.
+ */
+function windowedCrates(root: string): string[] {
+  const dir = join(root, "crates");
+  if (!existsSync(dir)) return [];
+  const manifests = new Map<string, string>();
+  for (const name of readdirSync(dir)) {
+    const path = join(dir, name, "Cargo.toml");
+    if (existsSync(path)) manifests.set(name, readFileSync(path, "utf8"));
+  }
+  const names = (text: string, keys: string[]) =>
+    keys.some(key => new RegExp(`^${key.replace(/[-]/g, "\\-")}(-[a-z_-]+)?\\s*[=.]`, "m").test(text));
+  const out = new Set<string>();
+  for (const [name, text] of manifests) if (names(text, guiKeys)) out.add(name);
+  for (let grew = true; grew; ) {
+    grew = false;
+    const keys = [...out].map(c => `craft-${c}`);
+    for (const [name, text] of manifests) {
+      if (!out.has(name) && keys.some(key => new RegExp(`^${key}\\s*[=.]`, "m").test(text))) {
+        out.add(name);
+        grew = true;
+      }
+    }
+  }
+  return [...out].sort();
+}
+
+/** Removes the given dependency keys and tables, each with the comment block above it. */
+function headlessManifest(text: string, dropKeys: string[], dropTables: string[]): string {
   const out: string[] = [];
   let comments: string[] = [];
   let inDroppedTable = false;
@@ -105,14 +138,53 @@ function headlessManifest(text: string): string {
       comments.push(line);
       continue;
     }
-    if (line.startsWith("[")) inDroppedTable = guiTables.some(table => line.startsWith(table));
-    const dropped = inDroppedTable || guiDeps.some(dep => line.startsWith(`${dep} = `));
-    // A comment block belongs to the line under it and goes with it.
+    if (line.startsWith("[")) inDroppedTable = dropTables.some(table => line.startsWith(table));
+    const key = line.match(/^([A-Za-z0-9_-]+)\s*=/)?.[1];
+    const dropped =
+      inDroppedTable || (key !== undefined && dropKeys.some(k => key === k || key.startsWith(`${k}-`) || key.startsWith(`${k}_`)));
     if (!dropped) out.push(...comments, line);
     comments = [];
   }
   out.push(...comments);
   return out.join("\n").replace(/\n{3,}/g, "\n\n").trimEnd() + "\n";
+}
+
+/** Points Craft Anything's git dependencies on craft-libs at `src/craft/libs`. */
+function localLibs(text: string): string {
+  return text.replace(
+    /^(craft-([a-z0-9-]+)) = \{ git = "https:\/\/github\.com\/storytold\/craft-libs"[^}]*\}/gm,
+    (_line, pkg: string, dir: string) => `${pkg} = { path = "libs/crates/${dir}" }`,
+  );
+}
+
+async function rewrite(path: string, edit: (text: string) => string): Promise<void> {
+  const file = join(repo, path);
+  const before = readFileSync(file, "utf8");
+  const after = edit(before);
+  if (after === before) return;
+  writeFileSync(file, after);
+  await git("add", "--", path);
+}
+
+async function main(): Promise<void> {
+  if ((await git("status", "--porcelain", "--untracked-files=no")) !== "") {
+    throw new Error("the work tree has tracked changes; commit them first");
+  }
+  const chosen = sources.filter(s => values.only === undefined || s.key === values.only);
+  if (chosen.length === 0) throw new Error(`no source named ${values.only}`);
+  for (const source of chosen) await absorb(source, values.ref!);
+
+  if (existsSync(join(repo, "src/craft/libs/Cargo.toml"))) await rewrite("src/craft/Cargo.toml", localLibs);
+  await rewrite("Cargo.toml", root =>
+    root.replace(/^exclude = \[([^\]]*)\]/m, (line, list: string) =>
+      list.includes('"src/craft"') ? line : `exclude = [${list}, "src/craft"]`,
+    ),
+  );
+
+  if ((await git("diff", "--cached", "--name-only")) !== "") {
+    await git("commit", "-q", "-m", "craft: headless trees (no egui apps, web app, window crates or desktop packaging)");
+  }
+  console.log(await git("log", "-1", "--format=%h %s"));
 }
 
 await main();
