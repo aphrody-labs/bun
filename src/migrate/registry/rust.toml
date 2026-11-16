@@ -1,0 +1,56 @@
+# Data of --target rust: what to port to Rust and what already has a Rust implementation. Sections:
+# [crate]   name and repo: where a crate lives; the report links `github:<repo>`. A registry given with --registry can
+#           list the same name again to point at another repository.
+# [addon]   packages that build or load native addons: the addon becomes a Rust cdylib that Bun loads with bun:ffi.
+# [hot]     packages whose work is CPU-bound and has a Rust crate: packages, crate, area.
+# [tool]    JavaScript CLIs with a command that replaces them: name, to, crate (empty when the replacement is part of
+#           bun), flags (flag=replacement, an empty replacement drops the flag; any other flag keeps the call manual),
+#           valued (flags that take a value), paths (positional paths are kept), require (flags of which one must be
+#           present), note.
+[crate]
+{ name = "oxc", repo = "oxc-project/oxc" }
+{ name = "swc", repo = "swc-project/swc" }
+{ name = "lightningcss", repo = "parcel-bundler/lightningcss" }
+{ name = "rspack", repo = "web-infra-dev/rspack" }
+{ name = "ignore", repo = "BurntSushi/ripgrep" }
+{ name = "walkdir", repo = "BurntSushi/walkdir" }
+{ name = "notify", repo = "notify-rs/notify" }
+{ name = "blake3", repo = "BLAKE3-team/BLAKE3" }
+{ name = "sha2", repo = "RustCrypto/hashes" }
+{ name = "argon2", repo = "RustCrypto/password-hashes" }
+{ name = "ring", repo = "briansmith/ring" }
+{ name = "image", repo = "image-rs/image" }
+{ name = "zstd", repo = "gyscos/zstd-rs" }
+{ name = "flate2", repo = "rust-lang/flate2-rs" }
+{ name = "comrak", repo = "kivikakk/comrak" }
+{ name = "oxc_resolver", repo = "oxc-project/oxc_resolver" }
+{ name = "napi-rs", repo = "napi-rs/napi-rs" }
+
+[addon]
+{ packages = ["node-gyp", "nan", "node-addon-api", "bindings", "node-gyp-build", "prebuild-install", "prebuildify", "node-pre-gyp", "@mapbox/node-pre-gyp", "cmake-js"] }
+
+[hot]
+{ packages = ["md5", "js-sha256", "js-sha512", "sha.js", "hash.js"], crate = "blake3, sha2", area = "hashing" }
+{ packages = ["crypto-js", "node-forge"], crate = "ring", area = "crypto" }
+{ packages = ["argon2"], crate = "argon2", area = "crypto" }
+{ packages = ["marked", "markdown-it"], crate = "comrak", area = "parsing" }
+{ packages = ["acorn", "esprima", "@babel/parser"], crate = "oxc", area = "parsing" }
+{ packages = ["@babel/core"], crate = "swc", area = "parsing" }
+{ packages = ["enhanced-resolve"], crate = "oxc_resolver", area = "parsing" }
+{ packages = ["postcss", "autoprefixer"], crate = "lightningcss", area = "parsing" }
+{ packages = ["pako", "fflate"], crate = "flate2", area = "compression" }
+{ packages = ["snappy", "node-zstd"], crate = "zstd", area = "compression" }
+{ packages = ["sharp", "jimp", "pngjs"], crate = "image", area = "image" }
+{ packages = ["glob", "globby", "fast-glob"], crate = "ignore", area = "glob and walk" }
+{ packages = ["readdirp"], crate = "walkdir", area = "glob and walk" }
+{ packages = ["chokidar"], crate = "notify", area = "glob and walk" }
+
+[tool]
+{ name = "prettier", to = "bun fmt", crate = "", flags = ["--write=", "-w=", "--check=--check", "-c=--check", "--list-different=--check", "-l=--check"], paths = true, note = "bun fmt reads the [fmt] section of bunfig.toml" }
+{ name = "eslint", to = "bun lint", crate = "", flags = ["--fix=--fix", "--quiet=--quiet"], paths = true, note = "bun lint runs ESLint's rules; its configuration is bunfig.toml" }
+{ name = "tsc", to = "bun check", crate = "", flags = ["--noEmit="], require = ["--noEmit"], note = "bun check type-checks without emitting" }
+{ name = "babel", to = "swc", crate = "swc", flags = ["-d=-d", "--out-dir=-d", "-w=-w", "--watch=-w"], valued = ["-d", "--out-dir"], paths = true, note = ".swcrc replaces the babel configuration" }
+{ name = "postcss", to = "lightningcss", crate = "lightningcss", note = "postcss plugins have no equivalent" }
+{ name = "autoprefixer", to = "lightningcss", crate = "lightningcss", note = "lightningcss adds vendor prefixes from the browserslist targets" }
+{ name = "webpack", to = "rspack build", crate = "rspack", note = "check that loaders and plugins work with rspack" }
+{ name = "webpack-cli", to = "rspack build", crate = "rspack", note = "check that loaders and plugins work with rspack" }

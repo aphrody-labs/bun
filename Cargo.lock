@@ -1509,6 +1509,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "bun_migrate"
+version = "0.0.0"
+dependencies = [
+ "bun_core",
+ "bun_resolve_builtins",
+ "bun_yarr",
+]
+
+[[package]]
 name = "bun_mimalloc_sys"
 version = "0.0.0"
 dependencies = [
@@ -1934,6 +1943,7 @@ dependencies = [
  "bun_lint_driver",
  "bun_lsquic_sys",
  "bun_md",
+ "bun_migrate",
  "bun_modules",
  "bun_node_path",
  "bun_opaque",

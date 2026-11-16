@@ -1,0 +1,39 @@
+# npm packages that Bun covers natively. A dependency or an import of one of the packages gets an info finding that names
+# the replacement. Fields: packages (names; an import of a subpath matches too), replacement, id, docs.
+[packages]
+{ id = "bun/sqlite", packages = ["better-sqlite3", "sqlite3"], replacement = "bun:sqlite" }
+{ id = "bun/fetch", packages = ["node-fetch", "isomorphic-fetch", "cross-fetch", "undici"], replacement = "the global fetch, Headers, Request and Response" }
+{ id = "bun/dotenv", packages = ["dotenv", "dotenv-cli"], replacement = ".env files, which bun reads on start" }
+{ id = "bun/websocket", packages = ["ws"], replacement = "the global WebSocket client (the ws server has no replacement)" }
+{ id = "bun/password", packages = ["bcrypt", "bcryptjs", "argon2"], replacement = "Bun.password" }
+{ id = "bun/glob", packages = ["glob", "fast-glob", "globby", "tiny-glob"], replacement = "Bun.Glob" }
+{ id = "bun/yaml", packages = ["js-yaml", "yaml"], replacement = "Bun.YAML" }
+{ id = "bun/toml", packages = ["toml", "smol-toml", "@iarna/toml"], replacement = "Bun.TOML" }
+{ id = "bun/json5", packages = ["json5"], replacement = "Bun.JSON5" }
+{ id = "bun/jsonc", packages = ["jsonc-parser"], replacement = "Bun.JSONC" }
+{ id = "bun/markdown", packages = ["marked", "markdown-it"], replacement = "Bun.markdown (the output can differ)" }
+{ id = "bun/escape-html", packages = ["escape-html", "he", "lodash.escape"], replacement = "Bun.escapeHTML" }
+{ id = "bun/cookie", packages = ["cookie", "cookie-parser"], replacement = "Bun.CookieMap" }
+{ id = "bun/csrf", packages = ["csrf", "csurf"], replacement = "Bun.CSRF" }
+{ id = "bun/string-width", packages = ["string-width"], replacement = "Bun.stringWidth" }
+{ id = "bun/strip-ansi", packages = ["strip-ansi", "ansi-regex"], replacement = "Bun.stripANSI" }
+{ id = "bun/slice-ansi", packages = ["slice-ansi"], replacement = "Bun.sliceAnsi" }
+{ id = "bun/which", packages = ["which"], replacement = "Bun.which" }
+{ id = "bun/deep-equals", packages = ["fast-deep-equal", "deep-equal", "lodash.isequal"], replacement = "Bun.deepEquals" }
+{ id = "bun/spawn", packages = ["cross-spawn", "execa", "shelljs"], replacement = "Bun.spawn and the Bun.$ shell" }
+{ id = "bun/gzip", packages = ["pako"], replacement = "Bun.gzipSync, Bun.gunzipSync, Bun.deflateSync and Bun.inflateSync" }
+{ id = "bun/s3", packages = ["@aws-sdk/client-s3"], replacement = "Bun.S3Client for object reads, writes and presigned URLs" }
+{ id = "bun/secrets", packages = ["keytar"], replacement = "Bun.secrets" }
+{ id = "bun/form-data", packages = ["form-data"], replacement = "the global FormData" }
+{ id = "bun/abort-controller", packages = ["abort-controller"], replacement = "the global AbortController" }
+{ id = "bun/url", packages = ["whatwg-url"], replacement = "the global URL" }
+{ id = "bun/parse-args", packages = ["minimist"], replacement = "util.parseArgs" }
+{ id = "bun/rm", packages = ["rimraf"], replacement = "fs.rm with recursive and force" }
+{ id = "bun/mkdir", packages = ["mkdirp"], replacement = "fs.mkdir with recursive" }
+{ id = "bun/test", packages = ["jest", "mocha", "vitest", "@jest/globals", "ts-jest", "babel-jest", "@swc/jest", "jest-circus"], replacement = "bun test, which reads Jest-style tests and imports from bun:test" }
+{ id = "bun/run-ts", packages = ["ts-node", "tsx", "esm"], replacement = "bun run, which runs TypeScript and ES modules directly" }
+{ id = "bun/watch", packages = ["nodemon"], replacement = "bun --watch" }
+{ id = "bun/lint", packages = ["eslint"], replacement = "bun lint" }
+{ id = "bun/format", packages = ["prettier"], replacement = "bun fmt" }
+{ id = "bun/types", packages = ["@types/node"], replacement = "@types/bun, which declares the Node.js APIs that Bun implements" }
+{ id = "bun/uuid", packages = ["uuid"], replacement = "crypto.randomUUID for version 4 and Bun.randomUUIDv7 for version 7" }

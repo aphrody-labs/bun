@@ -48,6 +48,7 @@ pub enum Tag {
     WhyCommand,
     DedupeCommand,
     PruneCommand,
+    MigrateCommand,
     FuzzilliCommand,
 }
 
@@ -94,6 +95,7 @@ impl Tag {
             Tag::WhyCommand => b'W',
             Tag::DedupeCommand => b'd',
             Tag::PruneCommand => b'N',
+            Tag::MigrateCommand => b'm',
             Tag::FuzzilliCommand => b'F',
         }
     }
@@ -183,6 +185,7 @@ impl Tag {
         Self::WhyCommand,
         Self::DedupeCommand,
         Self::PruneCommand,
+        Self::MigrateCommand,
         Self::FuzzilliCommand,
     ];
 
@@ -296,5 +299,6 @@ pub static USES_GLOBAL_OPTIONS: TagTable<bool> = TagTable({
     a[Tag::UnlinkCommand as usize] = false;
     a[Tag::UpdateCommand as usize] = false;
     a[Tag::WhyCommand as usize] = false;
+    a[Tag::MigrateCommand as usize] = false;
     a
 });
