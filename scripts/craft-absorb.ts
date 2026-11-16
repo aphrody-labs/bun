@@ -17,6 +17,7 @@
  *   bun scripts/craft-absorb.ts                    # every source, from the aphrody forks' main
  *   bun scripts/craft-absorb.ts --only libs        # one source
  *   bun scripts/craft-absorb.ts --ref <rev>        # a given branch, tag or commit
+ *   CRAFT_ORG=<url> bun scripts/craft-absorb.ts    # another owner than origin's
  */
 
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
@@ -24,7 +25,10 @@ import { join, resolve } from "node:path";
 import { parseArgs } from "node:util";
 
 const repo = resolve(import.meta.dirname, "..");
-const org = process.env.CRAFT_ORG ?? "https://github.com/aphrody-labs";
+/** Where the Craft repositories live: `CRAFT_ORG`, else the owner of this checkout's `origin` (its fork sits beside it). */
+const org =
+  process.env.CRAFT_ORG ??
+  (await Bun.$`git remote get-url origin`.cwd(repo).text()).trim().replace(/\/[^/]+$/, "");
 
 /** Manifest lines that start with these (dependency keys and patch entries) belong to the windowed editions. */
 const guiKeys = ["craft-anything-ui-egui", "eframe", "egui", "ecolor", "emath", "epaint", "winit", "wgpu", "rfd", "arboard"];
