@@ -297,7 +297,6 @@ static JSValue constructVersions(VM& vm, JSObject* processObject)
         // keep in sync with src/jsc/bindings/node/http/llhttp/README.md
         { "llhttp", "9.4.2" },
         { "mimalloc", BUN_VERSION_MIMALLOC },
-        { "picohttpparser", BUN_VERSION_PICOHTTPPARSER },
         { "uwebsockets", BUN_VERSION_UWS },
         { "webkit", BUN_VERSION_WEBKIT },
         { "zig", BUN_VERSION_ZIG },
@@ -1082,10 +1081,16 @@ JSC_DEFINE_HOST_FUNCTION(Process_functionChdir, (JSC::JSGlobalObject * globalObj
 static HashMap<int, Vector<String, 2>>* signalNumberToNamesMap = nullptr;
 static HashMap<String, int>* signalNameToNumberMap = nullptr;
 
+#if OS(WINDOWS)
+extern "C" void Bun__UVSignalHandle__close(uv_signal_t*);
+struct SignalHandleCloser {
+    void operator()(uv_signal_t* handle) const { Bun__UVSignalHandle__close(handle); }
+};
+#endif
 // On windows, signals need to have a handle to the uv_signal_t. When sigaction is used, this is kept track globally for you.
 struct SignalHandleValue {
 #if OS(WINDOWS)
-    uv_signal_t* handle;
+    std::unique_ptr<uv_signal_t, SignalHandleCloser> handle;
 #endif
 };
 static HashMap<int, SignalHandleValue>* signalToContextIdsMap = nullptr;
@@ -1350,7 +1355,6 @@ extern "C" bool Bun__onSignalForJS(int signalNumber, Zig::GlobalObject* globalOb
 
 #if OS(WINDOWS)
 extern "C" uv_signal_t* Bun__UVSignalHandle__init(JSC::JSGlobalObject* lexicalGlobalObject, int signalNumber, void (*callback)(uv_signal_t*, int));
-extern "C" uv_signal_t* Bun__UVSignalHandle__close(uv_signal_t*);
 #endif
 
 #if !OS(WINDOWS)
@@ -1600,20 +1604,22 @@ extern "C" void Bun__ensureSignalHandler();
 extern "C" bool Bun__isMainThreadVM();
 extern "C" void Bun__onPosixSignal(int signalNumber);
 extern "C" void Bun__onSignalListenerCountChanged(int signalNumber, int listenerCount);
+extern "C" bool Bun__AOT__isRecordingOrder();
 
-__attribute__((noinline)) static void forwardSignal(int signalNumber)
+// `bun run --watch` keeps this signal's handler installed for the process
+// lifetime (node's watcher process owns SIGINT the same way), so the
+// listener-removal path below must never restore SIG_DFL for it.
+#if !OS(WINDOWS)
+static int watchModeStickySignal = 0;
+
+__attribute__((noinline)) static void forwardSignal(int signalNumber, siginfo_t* info, void* context)
 {
+    Bun::reportOwnCrash(signalNumber, info, context);
     // We want a function that's equivalent to Bun__onPosixSignal but whose address is different.
     // This is so that we can be sure not to uninstall signal handlers that we didn't install here.
     Bun__onPosixSignal(signalNumber);
 }
 
-// `bun run --watch` keeps this signal's handler installed for the process
-// lifetime (node's watcher process owns SIGINT the same way), so the
-// listener-removal path below must never restore SIG_DFL for it.
-static int watchModeStickySignal = 0;
-
-#if !OS(WINDOWS)
 #if OS(LINUX)
 // Tells the seccomp SIGSYS handler in c-bindings.cpp whether to forward a SIGSYS sent with kill(2).
 extern "C" bool Bun__forwardSIGSYSToJS(bool enabled);
@@ -1627,10 +1633,10 @@ static void installForwardSignalHandler(int signalNumber)
 #endif
     struct sigaction action;
     memset(&action, 0, sizeof(struct sigaction));
-    action.sa_handler = forwardSignal;
+    action.sa_sigaction = forwardSignal;
     sigemptyset(&action.sa_mask);
     sigaddset(&action.sa_mask, signalNumber);
-    action.sa_flags = SA_RESTART;
+    action.sa_flags = SA_RESTART | SA_SIGINFO | (Bun::mayReportOwnCrash(signalNumber) ? SA_ONSTACK : 0);
     Bun::setSignalAction(signalNumber, &action, nullptr);
 }
 
@@ -1640,10 +1646,9 @@ static void uninstallForwardSignalHandler(int signalNumber)
     if (signalNumber == SIGSYS && Bun__forwardSIGSYSToJS(false))
         return;
 #endif
-    if (void (*oldHandler)(int) = Bun::setSignalHandler(signalNumber, SIG_DFL); oldHandler != forwardSignal) {
-        // Don't uninstall the old handler if it's not the one we installed.
-        Bun::setSignalHandler(signalNumber, oldHandler);
-    }
+    struct sigaction current;
+    if (Bun::setSignalAction(signalNumber, nullptr, &current) == 0 && current.sa_sigaction == forwardSignal)
+        Bun::setDefaultSignalAction(signalNumber);
 }
 
 extern "C" void Bun__installWatchModeSignalHandler(int signalNumber)
@@ -1727,7 +1732,7 @@ static void onDidChangeListeners(EventEmitter& eventEmitter, const Identifier& e
 #if OS(LINUX)
             // SIGKILL and SIGSTOP cannot be handled, and JSC needs its own signal handler to
             // suspend and resume the JS thread which we must not override.
-            if (signalNumber != SIGKILL && signalNumber != SIGSTOP && signalNumber != g_wtfConfig.sigThreadSuspendResume) {
+            if (signalNumber != SIGKILL && signalNumber != SIGSTOP && signalNumber != g_wtfConfig.sigThreadSuspendResume && !(eventEmitter.scriptExecutionContext()->vm().hasCompiledCode() && signalNumber == SIGTRAP && Bun__AOT__isRecordingOrder())) {
 #elif OS(DARWIN) || OS(FREEBSD)
             // these signals cannot be handled
             if (signalNumber != SIGKILL && signalNumber != SIGSTOP) {
@@ -1740,39 +1745,31 @@ static void onDidChangeListeners(EventEmitter& eventEmitter, const Identifier& e
 
                 if (isAdded) {
                     if (!signalToContextIdsMap->contains(signalNumber)) {
-                        SignalHandleValue signal_handle = {
-#if OS(WINDOWS)
-                            .handle = nullptr,
-#endif
-                        };
+                        SignalHandleValue signal_handle;
 #if !OS(WINDOWS)
                         Bun__ensureSignalHandler();
                         installForwardSignalHandler(signalNumber);
 #else
-                        signal_handle.handle = Bun__UVSignalHandle__init(
+                        signal_handle.handle.reset(Bun__UVSignalHandle__init(
                             eventEmitter.scriptExecutionContext()->jsGlobalObject(),
                             signalNumber,
-                            &signalHandler);
+                            &signalHandler));
 
                         if (!signal_handle.handle) [[unlikely]]
                             return;
 #endif
 
-                        signalToContextIdsMap->set(signalNumber, signal_handle);
+                        signalToContextIdsMap->set(signalNumber, WTF::move(signal_handle));
                     }
                 } else {
                     if (signalToContextIdsMap->find(signalNumber) != signalToContextIdsMap->end() && listenerCount == 0) {
                         // The watch-mode sticky signal keeps its OS handler installed; only the
                         // handler teardown is skipped. The map entry is still removed — it is the
                         // "has JS listeners" source of truth that e.g. self-kill flush consults.
-                        if (signalNumber != watchModeStickySignal) {
 #if !OS(WINDOWS)
+                        if (signalNumber != watchModeStickySignal)
                             uninstallForwardSignalHandler(signalNumber);
-#else
-                            SignalHandleValue signal_handle = signalToContextIdsMap->get(signalNumber);
-                            Bun__UVSignalHandle__close(signal_handle.handle);
 #endif
-                        }
                         signalToContextIdsMap->remove(signalNumber);
                     }
                 }
@@ -4117,19 +4114,9 @@ JSC_DEFINE_HOST_FUNCTION(jsFunctionIsStandardOutputStream, (JSGlobalObject * lex
     auto scope = DECLARE_THROW_SCOPE(vm);
     JSValue value = callFrame->argument(0);
 
-    // A thread has one table of names and one VM, so the three names are looked up once a thread and kept for as long as it lives.
-    static thread_local UniquedStringImpl* keptNames[3];
-    if (!keptNames[0]) [[unlikely]] {
-        unsigned index = 1;
-        for (ASCIILiteral streamName : { "stdout"_s, "stderr"_s }) {
-            Identifier name = Identifier::fromString(vm, streamName);
-            name.impl()->ref();
-            keptNames[index++] = name.impl();
-        }
-        Identifier nameOfHolder = Identifier::fromString(vm, "process"_s);
-        nameOfHolder.impl()->ref();
-        keptNames[0] = nameOfHolder.impl();
-    }
+    auto& keptNames = WebCore::clientData(vm)->standardOutputStreamNames;
+    if (keptNames[0].isNull()) [[unlikely]]
+        keptNames = { Identifier::fromString(vm, "process"_s), Identifier::fromString(vm, "stdout"_s), Identifier::fromString(vm, "stderr"_s) };
     PropertyName processName(keptNames[0]);
     auto isPlainValue = [](JSValue own) {
         return own && !own.isGetterSetter() && !own.isCustomGetterSetter();
@@ -4152,7 +4139,7 @@ JSC_DEFINE_HOST_FUNCTION(jsFunctionIsStandardOutputStream, (JSGlobalObject * lex
                 bool isDeclared = lexicalGlobalObject->getPropertySlot(lexicalGlobalObject, processName, slot);
                 RETURN_IF_EXCEPTION(scope, {});
                 if (!isDeclared)
-                    return throwVMError(lexicalGlobalObject, scope, createUndefinedVariableError(lexicalGlobalObject, Identifier::fromUid(vm, keptNames[0])));
+                    return throwVMError(lexicalGlobalObject, scope, createUndefinedVariableError(lexicalGlobalObject, keptNames[0]));
                 holder = slot.getValue(lexicalGlobalObject, processName);
                 RETURN_IF_EXCEPTION(scope, {});
             }
@@ -5975,7 +5962,7 @@ static void bypassCrashHandlerForSelfSentSignal(int pid, int ownPid, int signalN
     if (!CrashHandler__isCrashSignal(signalNumber) || !killReachesThisProcess(pid, ownPid))
         return;
     struct sigaction current;
-    if (Bun::setSignalAction(signalNumber, nullptr, &current) != 0 || current.sa_handler == forwardSignal)
+    if (Bun::setSignalAction(signalNumber, nullptr, &current) != 0 || current.sa_sigaction == forwardSignal)
         return;
     restoreDefaultSignalDisposition(signalNumber);
 }
