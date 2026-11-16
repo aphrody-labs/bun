@@ -121,6 +121,7 @@ members = [
   "src/patch_jsc",
   "src/router",
   "src/shell_parser",
+  "src/modules",
   "src/tcc_sys",
   "src/uws_sys",
   "src/lsquic_sys",
@@ -500,6 +501,7 @@ bun_output_tags = { path = "src/bun_output_tags" }
 bun_patch_jsc = { path = "src/patch_jsc" }
 bun_router = { path = "src/router" }
 bun_shell_parser = { path = "src/shell_parser" }
+bun_modules = { path = "src/modules" }
 bun_spawn = { path = "src/spawn" }
 bun_spawn_sys = { path = "src/spawn_sys" }
 bun_tcc_sys = { path = "src/tcc_sys" }

@@ -1,0 +1,143 @@
+[package]
+name = "bun_modules"
+version.workspace = true
+edition.workspace = true
+
+[lib]
+path = "lib.rs"
+
+[lints]
+workspace = true
+
+[features]
+default = ["applets", "bash"]
+# Unix applets compiled in: uutils coreutils, findutils, grep and sed behind one dispatch table (applets.rs).
+applets = ["dep:uu_arch", "dep:uu_base32", "dep:uu_base64", "dep:uu_basename", "dep:uu_basenc", "dep:uu_cat", "dep:uu_cksum", "dep:uu_b2sum", "dep:uu_md5sum", "dep:uu_nice", "dep:uu_sha1sum", "dep:uu_sha224sum", "dep:uu_sha256sum", "dep:uu_sha384sum", "dep:uu_sha512sum", "dep:uu_comm", "dep:uu_cp", "dep:uu_csplit", "dep:uu_cut", "dep:uu_date", "dep:uu_dd", "dep:uu_dir", "dep:uu_dircolors", "dep:uu_dirname", "dep:uu_echo", "dep:uu_expand", "dep:uu_expr", "dep:uu_factor", "dep:uu_false", "dep:uu_fmt", "dep:uu_fold", "dep:uu_head", "dep:uu_hostid", "dep:uu_join", "dep:uu_link", "dep:uu_ln", "dep:uu_ls", "dep:uu_mkdir", "dep:uu_mktemp", "dep:uu_mv", "dep:uu_nl", "dep:uu_numfmt", "dep:uu_od", "dep:uu_paste", "dep:uu_pathchk", "dep:uu_pr", "dep:uu_printenv", "dep:uu_printf", "dep:uu_ptx", "dep:uu_pwd", "dep:uu_readlink", "dep:uu_realpath", "dep:uu_rm", "dep:uu_rmdir", "dep:uu_seq", "dep:uu_shred", "dep:uu_shuf", "dep:uu_sleep", "dep:uu_sort", "dep:uu_split", "dep:uu_sum", "dep:uu_tac", "dep:uu_tail", "dep:uu_tee", "dep:uu_test", "dep:uu_touch", "dep:uu_tr", "dep:uu_true", "dep:uu_truncate", "dep:uu_tsort", "dep:uu_tty", "dep:uu_uname", "dep:uu_unexpand", "dep:uu_uniq", "dep:uu_unlink", "dep:uu_vdir", "dep:uu_wc", "dep:uu_yes", "dep:uu_df", "dep:uu_du", "dep:uu_env", "dep:uu_hostname", "dep:uu_kill", "dep:uu_nohup", "dep:uu_nproc", "dep:uu_more", "dep:uu_sync", "dep:uu_timeout", "dep:uu_uptime", "dep:uu_whoami", "dep:uu_chgrp", "dep:uu_chmod", "dep:uu_chown", "dep:uu_chroot", "dep:uu_groups", "dep:uu_id", "dep:uu_install", "dep:uu_logname", "dep:uu_mkfifo", "dep:uu_mknod", "dep:uu_stat", "dep:uu_stty", "dep:uu_pinky", "dep:uu_users", "dep:uu_who", "dep:findutils", "dep:uu_grep", "dep:sed"]
+
+# sh and bash on rubash (GNU Bash 5.3 in Rust), from the monorepo crate src/rubash.
+bash = ["dep:rubash"]
+
+[dependencies]
+rubash = { git = "https://github.com/aphrody-labs/aphrody", rev = "43a01a4c1936b7b8b523ed172cfe3ddb5e02dc75", optional = true }
+uu_arch = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_arch", optional = true }
+uu_base32 = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_base32", optional = true }
+uu_base64 = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_base64", optional = true }
+uu_basename = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_basename", optional = true }
+uu_basenc = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_basenc", optional = true }
+uu_cat = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_cat", optional = true }
+uu_cksum = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_cksum", optional = true }
+uu_b2sum = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_b2sum", optional = true }
+uu_md5sum = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_md5sum", optional = true }
+uu_nice = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_nice", optional = true }
+uu_sha1sum = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_sha1sum", optional = true }
+uu_sha224sum = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_sha224sum", optional = true }
+uu_sha256sum = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_sha256sum", optional = true }
+uu_sha384sum = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_sha384sum", optional = true }
+uu_sha512sum = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_sha512sum", optional = true }
+uu_comm = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_comm", optional = true }
+uu_cp = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_cp", optional = true }
+uu_csplit = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_csplit", optional = true }
+uu_cut = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_cut", optional = true }
+uu_date = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_date", optional = true }
+uu_dd = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_dd", optional = true }
+uu_dir = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_dir", optional = true }
+uu_dircolors = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_dircolors", optional = true }
+uu_dirname = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_dirname", optional = true }
+uu_echo = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_echo", optional = true }
+uu_expand = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_expand", optional = true }
+uu_expr = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_expr", optional = true }
+uu_factor = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_factor", optional = true }
+uu_false = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_false", optional = true }
+uu_fmt = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_fmt", optional = true }
+uu_fold = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_fold", optional = true }
+uu_head = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_head", optional = true }
+uu_hostid = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_hostid", optional = true }
+uu_join = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_join", optional = true }
+uu_link = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_link", optional = true }
+uu_ln = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_ln", optional = true }
+uu_ls = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_ls", optional = true }
+uu_mkdir = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_mkdir", optional = true }
+uu_mktemp = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_mktemp", optional = true }
+uu_mv = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_mv", optional = true }
+uu_nl = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_nl", optional = true }
+uu_numfmt = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_numfmt", optional = true }
+uu_od = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_od", optional = true }
+uu_paste = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_paste", optional = true }
+uu_pathchk = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_pathchk", optional = true }
+uu_pr = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_pr", optional = true }
+uu_printenv = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_printenv", optional = true }
+uu_printf = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_printf", optional = true }
+uu_ptx = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_ptx", optional = true }
+uu_pwd = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_pwd", optional = true }
+uu_readlink = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_readlink", optional = true }
+uu_realpath = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_realpath", optional = true }
+uu_rm = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_rm", optional = true }
+uu_rmdir = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_rmdir", optional = true }
+uu_seq = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_seq", optional = true }
+uu_shred = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_shred", optional = true }
+uu_shuf = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_shuf", optional = true }
+uu_sleep = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_sleep", optional = true }
+uu_sort = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_sort", optional = true }
+uu_split = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_split", optional = true }
+uu_sum = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_sum", optional = true }
+uu_tac = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_tac", optional = true }
+uu_tail = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_tail", optional = true }
+uu_tee = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_tee", optional = true }
+uu_test = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_test", optional = true }
+uu_touch = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_touch", optional = true }
+uu_tr = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_tr", optional = true }
+uu_true = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_true", optional = true }
+uu_truncate = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_truncate", optional = true }
+uu_tsort = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_tsort", optional = true }
+uu_tty = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_tty", optional = true }
+uu_uname = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_uname", optional = true }
+uu_unexpand = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_unexpand", optional = true }
+uu_uniq = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_uniq", optional = true }
+uu_unlink = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_unlink", optional = true }
+uu_vdir = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_vdir", optional = true }
+uu_wc = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_wc", optional = true }
+uu_yes = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_yes", optional = true }
+uu_df = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_df", optional = true }
+uu_du = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_du", optional = true }
+uu_env = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_env", optional = true }
+uu_hostname = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_hostname", optional = true }
+uu_kill = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_kill", optional = true }
+uu_nohup = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_nohup", optional = true }
+uu_nproc = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_nproc", optional = true }
+uu_more = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_more", optional = true }
+uu_sync = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_sync", optional = true }
+uu_timeout = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_timeout", optional = true }
+uu_uptime = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_uptime", optional = true }
+uu_whoami = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_whoami", optional = true }
+
+[target.'cfg(unix)'.dependencies]
+uu_chgrp = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_chgrp", optional = true }
+uu_chmod = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_chmod", optional = true }
+uu_chown = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_chown", optional = true }
+uu_chroot = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_chroot", optional = true }
+uu_groups = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_groups", optional = true }
+uu_id = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_id", optional = true }
+uu_install = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_install", optional = true }
+uu_logname = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_logname", optional = true }
+uu_mkfifo = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_mkfifo", optional = true }
+uu_mknod = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_mknod", optional = true }
+uu_stat = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_stat", optional = true }
+uu_stty = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_stty", optional = true }
+uu_pinky = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_pinky", optional = true }
+uu_users = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_users", optional = true }
+uu_who = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_who", optional = true }
+
+[dependencies.findutils]
+git = "https://github.com/uutils/findutils"
+rev = "83e46e72636d17a8b80a687f025337759e0f3185"
+optional = true
+
+[dependencies.uu_grep]
+git = "https://github.com/uutils/grep"
+rev = "617f541aa9f4db9d621db7867d7f598b6bc9f57e"
+optional = true
+
+[dependencies.sed]
+git = "https://github.com/uutils/sed"
+rev = "f8e4029a7391f2011a3c5ac4ae3337a8dd4f4dfd"
+optional = true
