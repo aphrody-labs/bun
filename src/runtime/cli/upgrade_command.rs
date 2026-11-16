@@ -630,7 +630,7 @@ impl UpgradeCommand {
                 Self::CANARY_RELEASE_PATH,
             );
 
-            refresher.root.end();
+            refresher.root().end();
             refresher.refresh();
 
             match from_api {
