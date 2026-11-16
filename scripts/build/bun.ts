@@ -63,7 +63,7 @@ function systemLibs(cfg: Config): string[] {
       // (compiler-rt builtins). -llog for __android_log_*.
       libs.push("-lc", "-lm", "-llog");
     } else {
-      libs.push("-lc", "-lpthread", "-ldl");
+      libs.push("-lc", "-lpthread", "-ldl", "-lrt"); // librt: timer_create of uucore (older glibc sysroots)
       // libatomic: static by default (CI distros ship it), dynamic on Arch-like.
       // The static path needs to be the actual file path for lld to find it;
       // dynamic uses -l syntax. We emit what CMake does: bare libatomic.a gets
