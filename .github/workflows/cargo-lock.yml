@@ -1,0 +1,34 @@
+name: cargo-lock
+
+# Refreshes Cargo.lock in CI (never on a workstation or a VPS host) after the git dependencies are
+# fetched, without bumping anything that is already locked, and commits it to main.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  lock:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+      - name: Resolve
+        run: |
+          rustup show active-toolchain || rustup toolchain install
+          cargo metadata --format-version 1 > /dev/null
+          git diff --stat Cargo.lock
+          cargo metadata --format-version 1 --locked > /dev/null
+      - name: Commit
+        run: |
+          git diff --quiet Cargo.lock && { echo "Cargo.lock already current"; exit 0; }
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Cargo.lock
+          git commit -m "Cargo.lock: refresh for the pinned git dependencies"
+          git pull --rebase origin main
+          git push origin HEAD:main
