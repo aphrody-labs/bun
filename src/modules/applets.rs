@@ -272,7 +272,7 @@ pub fn names() -> Vec<&'static str> {
 fn utf8(args: Vec<OsString>, who: &str) -> Result<Vec<String>, i32> {
     args.into_iter()
         .map(|a| a.into_string().map_err(|bad| {
-            eprintln!("{who}: invalid (non-UTF-8) argument: {}", bad.to_string_lossy());
+            bun_core::print_errorln!("{who}: invalid (non-UTF-8) argument: {}", bad.to_string_lossy());
             1
         }))
         .collect()

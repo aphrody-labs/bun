@@ -32,7 +32,7 @@ pub fn detect(path: &Path) -> Option<Language> {
 /// The language named by a `#!` line (`#!/bin/bash`, `#!/usr/bin/env -S cargo -Zscript`, `#!/usr/bin/env bun`).
 pub fn from_shebang(head: &[u8]) -> Option<Language> {
     let rest = head.strip_prefix(b"#!")?;
-    let line = std::str::from_utf8(&rest[..rest.iter().position(|&b| b == b'\n').unwrap_or(rest.len())]).ok()?;
+    let line = std::str::from_utf8(&rest[..bun_core::strings::index_of_char_usize(rest, b'\n').unwrap_or(rest.len())]).ok()?;
     let words: Vec<&str> = line.split_whitespace().collect();
     let program = |w: &str| w.rsplit(['/', '\\']).next().unwrap_or(w).to_string();
     let first = program(words.first()?);
@@ -56,7 +56,7 @@ pub fn run_rust(path: &Path, args: &[OsString]) -> i32 {
     match cmd.status() {
         Ok(status) => status.code().unwrap_or(1),
         Err(e) => {
-            eprintln!("cargo: {e} (a Rust script needs cargo on PATH)");
+            bun_core::print_errorln!("cargo: {e} (a Rust script needs cargo on PATH)");
             127
         }
     }

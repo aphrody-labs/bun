@@ -18,6 +18,7 @@ applets = ["dep:uu_arch", "dep:uu_base32", "dep:uu_base64", "dep:uu_basename", "
 bash = ["dep:rubash"]
 
 [dependencies]
+bun_core.workspace = true
 rubash = { git = "https://github.com/aphrody-labs/aphrody", rev = "43a01a4c1936b7b8b523ed172cfe3ddb5e02dc75", optional = true }
 uu_arch = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_arch", optional = true }
 uu_base32 = { git = "https://github.com/uutils/coreutils", rev = "3e2c890eb0e45db9c68cc87d4cc94f62e9c0c1b1", package = "uu_base32", optional = true }

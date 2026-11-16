@@ -1,6 +1,8 @@
 //! `--target rust`: the plan to move native addons and CPU-bound packages to Rust, and the JavaScript tools that
 //! already have a command that replaces them.
 
+use bun_core::strings;
+
 use crate::bytes::LineIndex;
 use crate::json;
 use crate::registry::{Registry, ToolRule};
@@ -45,7 +47,7 @@ pub(crate) enum Outcome {
 }
 
 fn pin_of(registry: &Registry, crate_name: &[u8]) -> Vec<u8> {
-    let first = crate_name.split(|&byte| byte == b',' || byte == b' ').next().unwrap_or(b"");
+    let first = strings::index_of_any(crate_name, b", ").map_or(crate_name, |end| &crate_name[..end]);
     registry.repo_of(first).map(|repo| [&b"github:"[..], repo].concat()).unwrap_or_default()
 }
 

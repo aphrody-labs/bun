@@ -227,7 +227,7 @@ impl Registry {
                 } else {
                     JsonTest::Items { has: owned(row.list("has")), lacks: owned(row.list("lacks")) }
                 };
-                let path = text("path").split(|&byte| byte == b'.').map(<[u8]>::to_vec).collect();
+                let path = strings::split(&text("path"), b".").map(<[u8]>::to_vec).collect();
                 self.json.push(JsonRule {
                     id: text("id"),
                     files: owned(row.list("files")),

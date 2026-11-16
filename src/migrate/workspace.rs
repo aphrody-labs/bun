@@ -1,5 +1,7 @@
 //! The shape of the repository: which package manager and task runner it uses and which packages it holds.
 
+use bun_core::strings;
+
 use crate::bytes::{basename, dirname};
 use crate::json;
 use crate::scan::Manifest;
@@ -125,7 +127,7 @@ fn is_member(patterns: &[Vec<u8>], dir: &[u8]) -> bool {
 }
 
 fn split_path(path: &[u8]) -> Vec<&[u8]> {
-    path.split(|&byte| byte == b'/').filter(|segment| !segment.is_empty()).collect()
+    strings::tokenize(path, b"/").collect()
 }
 
 fn segments_match(pattern: &[&[u8]], dir: &[&[u8]]) -> bool {

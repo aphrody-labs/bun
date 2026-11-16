@@ -289,7 +289,7 @@ fn call_rule(text: &[u8], statements: &[Statement], outcome: &mut Outcome, handl
         let mut ok = true;
         let mut seen = Vec::new();
         for call in &calls {
-            let head = call.callee.split(|&byte| byte == b'.').next().unwrap_or(b"");
+            let head = strings::split_once_char(&call.callee, b'.').map_or(&call.callee[..], |(head, _)| head);
             let Some(binding) = real.iter().find(|binding| binding.local == head) else { continue };
             seen.push(call.start);
             match handle(call, binding, text) {
@@ -345,7 +345,7 @@ fn literal(arg: Option<&Vec<u8>>) -> Option<&[u8]> {
     let arg = arg?;
     let (first, rest) = arg.split_first()?;
     let inner = rest.strip_suffix(core::slice::from_ref(first))?;
-    (matches!(first, b'\'' | b'"') && !inner.contains(first) && !inner.contains(&b'\\')).then_some(inner)
+    (matches!(first, b'\'' | b'"') && !inner.contains(first) && !strings::contains_char(inner, b'\\')).then_some(inner)
 }
 
 fn is_simple(text: &[u8]) -> bool {

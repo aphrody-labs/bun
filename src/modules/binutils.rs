@@ -39,13 +39,13 @@ fn find(tool: &str) -> Option<PathBuf> {
 /// Runs `tool` with `args` and returns its exit status; 127 when the tool is not installed.
 pub fn run(tool: &str, args: &[OsString]) -> i32 {
     let Some(path) = find(tool) else {
-        eprintln!("{tool}: not found beside the executable or on PATH (install LLVM)");
+        bun_core::print_errorln!("{tool}: not found beside the executable or on PATH (install LLVM)");
         return 127;
     };
     match std::process::Command::new(path).args(args).status() {
         Ok(status) => status.code().unwrap_or(1),
         Err(e) => {
-            eprintln!("{tool}: {e}");
+            bun_core::print_errorln!("{tool}: {e}");
             127
         }
     }

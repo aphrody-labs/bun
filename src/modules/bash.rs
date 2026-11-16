@@ -18,12 +18,12 @@ pub fn run(name: &str, args: &[OsString]) -> i32 {
     let inv = match ShellInvocation::parse(&args) {
         Ok(inv) => inv,
         Err(e) => {
-            eprintln!("{name}: {e}");
+            bun_core::print_errorln!("{name}: {e}");
             return 2;
         }
     };
     if inv.interactive {
-        eprintln!("{name}: the embedded engine runs commands and scripts, not an interactive prompt");
+        bun_core::print_errorln!("{name}: the embedded engine runs commands and scripts, not an interactive prompt");
         return 2;
     }
     let source = if let Some(text) = inv.command.clone() {
@@ -45,12 +45,12 @@ pub fn run(name: &str, args: &[OsString]) -> i32 {
     let mut session = match builder.build() {
         Ok(s) => s,
         Err(e) => {
-            eprintln!("{name}: cannot start the engine: {e:?}");
+            bun_core::print_errorln!("{name}: cannot start the engine: {e:?}");
             return 2;
         }
     };
     if let Err(e) = session.apply_invocation_before_startup(&inv) {
-        eprintln!("{name}: {e}");
+        bun_core::print_errorln!("{name}: {e}");
         return 2;
     }
     session.set_positional(inv.positional_params.clone());
@@ -70,7 +70,7 @@ pub fn run(name: &str, args: &[OsString]) -> i32 {
                 session.run(&String::from_utf8_lossy(&bytes), &opts)
             }
             Err(e) => {
-                eprintln!("{name}: {path}: {e}");
+                bun_core::print_errorln!("{name}: {path}: {e}");
                 return 127;
             }
         },
@@ -79,7 +79,7 @@ pub fn run(name: &str, args: &[OsString]) -> i32 {
     match outcome {
         Ok(_) => session.close(),
         Err(e) => {
-            eprintln!("{name}: {e:?}");
+            bun_core::print_errorln!("{name}: {e:?}");
             2
         }
     }

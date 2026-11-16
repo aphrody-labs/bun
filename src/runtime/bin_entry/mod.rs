@@ -251,7 +251,7 @@ fn run_module() -> Option<i32> {
     match all.get(2).and_then(|a| a.to_str()) {
         Some("--list") => {
             for name in bun_modules::names() {
-                println!("{name}");
+                bun_core::prettyln!("{}", name);
             }
             Some(0)
         }
