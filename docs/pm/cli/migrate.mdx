@@ -1,0 +1,100 @@
+---
+title: "bun migrate"
+description: "Report what a Node.js repository needs to run on Bun, and rewrite what can be rewritten"
+---
+
+`bun migrate` reads a repository that uses Node.js with npm, Yarn or pnpm, and reports what Bun does differently. With `--write` it rewrites what a rewrite can do safely. It reads monorepos: it follows `workspaces`, `pnpm-workspace.yaml` and `lerna.json`, and it reads `turbo.json`.
+
+`bun migrate` does not convert the lockfile. [`bun install`](/pm/cli/install) reads `package-lock.json`, `yarn.lock` and `pnpm-lock.yaml`, with `pnpm-workspace.yaml`, overrides, patches and catalogs, and writes `bun.lock`. Run it after `bun migrate --write`.
+
+```bash terminal icon="terminal"
+bun migrate
+```
+
+```txt
+1860 files scanned, 41 packages
+package manager: pnpm (lockfiles: pnpm-lock.yaml); task runner: turbo (tasks: build, test, lint)
+dependency protocols: workspace: 212, catalog: 38 (bun install reads them)
+
+rule                             severity  findings  fixable
+cli/filter-pnpm                  warn            14       14
+imports/node-prefix              warn             9        9
+docker/node-base                 warn             2        2
+
+package.json:12:15 warn cli/filter-pnpm: pnpm --filter becomes bun run --filter (pnpm --filter web run  -> bun run --filter web )
+
+next:
+  bun install    reads the lockfile of the old package manager and writes bun.lock
+  delete pnpm-lock.yaml once bun.lock is committed
+  bun migrate --write    applies the safe rewrites; --aggressive also applies the ones that change behavior
+```
+
+## What it reads
+
+| File                                                                        | What `bun migrate` does                                                                                                                              |
+| --------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `package.json`                                                              | Rewrites `npm`, `pnpm`, `yarn`, `npx` and `lerna` commands in `scripts` to `bun` commands. Names the dependencies that Bun replaces with a built-in. |
+| JavaScript and TypeScript                                                   | Adds the `node:` prefix to core modules. Rewrites `__dirname` and `__filename` in ES modules. Names calls that Bun implements itself.                |
+| `Dockerfile`, `docker-compose.yml`                                          | Replaces `node:` images with `oven/bun:` images and the package manager commands in `RUN`.                                                           |
+| `.github/workflows`, `.gitlab-ci.yml`                                       | Replaces `actions/setup-node` with `oven-sh/setup-bun` and the package manager commands in `run`.                                                    |
+| `.husky`, `Procfile`, `*.sh`                                                | Rewrites the package manager commands.                                                                                                               |
+| `turbo.json`                                                                | Replaces lockfiles in `inputs` with `bun.lock`.                                                                                                      |
+| `tsconfig.json`                                                             | Reports options that differ from what Bun's TypeScript guide recommends.                                                                             |
+
+The rules are data. [`registry/`](https://github.com/oven-sh/bun/tree/main/src/migrate/registry) in the Bun repository lists every rule.
+
+## Options
+
+### `--write`
+
+Apply the safe rewrites. Without it, `bun migrate` changes nothing.
+
+### `--aggressive`
+
+Also apply the rewrites that change behavior: `node`, `ts-node` and `tsx` become `bun` in scripts, shebangs run Bun, `packageManager` is removed, and calls such as `fs.readFileSync(path, "utf8")` become `await Bun.file(path).text()`. This implies `--write`.
+
+### `--replace-packages`
+
+Replace the uses of packages that Bun covers with its own APIs, and remove a dependency from `package.json` once no use of it is left. The rules cover `execa`, `glob`, `fast-glob`, `rimraf`, `dotenv`, `node-fetch`, `undici`, `ws` and `require-like`. `del` is reported and left alone.
+
+A file is rewritten only when every use of the package in it has a shape that the rule understands. Otherwise `bun migrate` reports the uses it could not rewrite and leaves the file as it is.
+
+### `--target`
+
+`bun` (the default) migrates to Bun. `rust` also plans which native addons and CPU-bound packages become Rust crates, and which JavaScript tools have a command that replaces them, such as `prettier` to `bun fmt` and `eslint` to `bun lint`. With `--write`, the scripts that map without a doubt are rewritten.
+
+### `--format`
+
+`text` (the default), `json`, `jsonl`, `markdown` or `sarif`. `json` lists the packages of the workspace, their scripts and their dependencies on each other.
+
+### `--check`
+
+Exit with `1` if a warning or an error is left, and write nothing. The exit code is `0` if none is.
+
+```yaml .github/workflows/migrate.yml icon="file-code"
+steps:
+  - uses: actions/checkout@v4
+  - uses: oven-sh/setup-bun@v2
+  - run: bun migrate --check --format sarif
+```
+
+### `--ignore`
+
+Skip a directory, or a glob of file names. `node_modules`, `.git`, `.turbo`, `.next`, `.yarn`, `.pnpm-store`, `dist` and `coverage` are always skipped. Can be repeated.
+
+### `--registry`
+
+Read more rules from a TOML file, in the format of the files in `src/migrate/registry`. Can be repeated. A `[crate]` row with the name of a built-in crate replaces it, to point `--target rust` at another repository.
+
+```toml extra.toml icon="file-code"
+[text]
+{ id = "acme/build", kinds = ["script"], pattern = '\bwebpack\s+--mode', replace = "bun build --mode", message = "Use bun build", autofix = true }
+```
+
+### `--rule`
+
+Set a rule to `off`, `info`, `warn` or `error`, as `--rule cli/run=off`. An id that ends with `/` stands for every rule under it: `--rule bun/=off`. Can be repeated.
+
+## A script named `migrate`
+
+If `package.json` has a script named `migrate`, `bun migrate` runs that script, as `bun check` and `bun lint` do.
