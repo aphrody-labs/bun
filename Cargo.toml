@@ -141,7 +141,7 @@ members = [
 # fetched into `vendor/` by `scripts/build/deps/lolhtml.ts` before cargo runs.
 # Keeping it out of `members` means its `[profile]` section is ignored and its
 # heavy dev-dependencies (criterion, html5ever) never enter `Cargo.lock`.
-exclude = ["vendor"]
+exclude = ["vendor", "src/craft"]
 
 [workspace.package]
 version = "0.0.0"
