@@ -220,8 +220,7 @@ fn remove_dependencies(files: &dyn Files, gone: &[(Vec<u8>, &str)], kept: &[(Vec
             },
         };
         let Ok(root) = json::parse(&text) else { continue };
-        let script_text: Vec<u8> = root.get(b"scripts").map(|node| node.members().iter().filter_map(|member| member.value.as_str().map(<[u8]>::to_vec)).collect::<Vec<_>>().join(&b
-)).unwrap_or_default();
+        let script_text: Vec<u8> = root.get(b"scripts").map(|node| node.members().iter().filter_map(|member| member.value.as_str().map(<[u8]>::to_vec)).collect::<Vec<_>>().join(&b'\n')).unwrap_or_default();
         let mut edits = Vec::new();
         for section in [&b"dependencies"[..], b"devDependencies"] {
             let Some(deps) = root.get(section) else { continue };
