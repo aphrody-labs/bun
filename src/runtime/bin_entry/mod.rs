@@ -236,14 +236,14 @@ pub(crate) unsafe extern "C" fn main(argc: c_int, argv: *const *const c_char) ->
 /// `applet NAME ARGS...` (`applet --list` prints the names).
 fn run_module() -> Option<i32> {
     let argv = bun_core::argv();
-    let argv0 = argv.first()?.as_bytes();
+    let argv0 = argv.get(0)?.as_bytes();
     let applet = argv.get(1).is_some_and(|a| a.as_bytes() == b"applet");
     if !applet && bun_modules::is_bun_argv0(argv0) {
         return None;
     }
     let all: Vec<std::ffi::OsString> = argv
         .iter()
-        .map(|a| String::from_utf8_lossy(a.as_bytes()).into_owned().into())
+        .map(|a| String::from_utf8_lossy(a).into_owned().into())
         .collect();
     if !applet {
         return bun_modules::run_argv0(&all);
