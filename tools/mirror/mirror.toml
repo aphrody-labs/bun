@@ -1,0 +1,43 @@
+# Mirror gate: what is crawled, compared and cached. Every value can be overridden by the
+# environment variable named next to it; hosts and credentials only ever come from the environment.
+
+[origin]
+url = "https://bun.com"               # MIRROR_ORIGIN
+sitemap = "/sitemap.xml"
+user_agent = "bun-mirror"             # MIRROR_USER_AGENT
+# Same-origin path prefixes fetched as page assets when a page references them.
+asset_extensions = ["css", "js", "mjs", "json", "png", "jpg", "jpeg", "webp", "avif", "gif", "svg", "ico", "woff", "woff2", "ttf", "mp4", "webm", "txt", "xml", "webmanifest"]
+# Third-party script hosts removed from mirrored pages.
+strip_script_hosts = ["googletagmanager.com", "google-analytics.com", "plausible.io", "vercel-insights.com", "vercel-scripts.com"]
+
+[crawl]
+concurrency = 8                       # MIRROR_CONCURRENCY (workers)
+delay_ms = 50                         # pause of one worker between two requests
+timeout_ms = 30000
+retries = 3
+max_age_hours = 24                    # a page older than this is revalidated (ETag / Last-Modified)
+
+[upstream]
+url = "https://github.com/oven-sh/bun.git"   # MIRROR_UPSTREAM_URL
+branch = "main"
+remote = "upstream"                   # used when the checkout already tracks it
+
+[compare]
+docs = ["docs/**/*.md", "docs/**/*.mdx", "*.md"]
+types = ["packages/bun-types/**/*.d.ts"]
+# URL path of a docs file: docs/<path>.mdx -> <docs_prefix>/<path>
+docs_prefix = "/docs"
+# Declarations the fork is allowed not to carry from upstream (name as reported by the gate).
+allow_missing_types = []
+
+[site]
+# Public host of the mirror, without scheme. Empty: links stay root-relative and work on any host.
+host = ""                             # MIRROR_HOST
+passthrough = true                    # a path missing from the store is fetched from the origin once, then cached
+
+[store]
+dir = ""                              # MIRROR_DIR; empty: <BUN_INSTALL or home>/.cache/bun-mirror
+# Optional tiers, each enabled only by its environment variable:
+#   MIRROR_S3_BUCKET (+ S3_ENDPOINT / S3_ACCESS_KEY_ID / S3_SECRET_ACCESS_KEY / S3_REGION, also valid for R2)
+#   MIRROR_POSTGRES_URL   shared page index, lets another machine resume a crawl
+#   MIRROR_REDIS_URL      hot key-value cache and the crawl lock

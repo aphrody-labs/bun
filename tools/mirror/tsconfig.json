@@ -1,0 +1,12 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "noEmit": true,
+    "lib": ["ESNext"],
+    "allowImportingTsExtensions": true,
+    // The fork's own declarations: the gate is type-checked against the API it ships.
+    "types": []
+  },
+  "include": ["*.ts", "../../packages/bun-types/index.d.ts"]
+}
