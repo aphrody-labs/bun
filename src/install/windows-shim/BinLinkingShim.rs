@@ -485,13 +485,11 @@ mod host {
         const MAX_LAUNCHER_SIZE: usize = 64 * 1024;
 
         fn is_missing(path: &WStr) -> bool {
-            // SAFETY: `path` is NUL-terminated. This resolves `..` the way `CreateProcessW` does.
-            let attributes = unsafe { win::kernel32::GetFileAttributesW(path.as_ptr()) };
-            attributes == win::INVALID_FILE_ATTRIBUTES
-                && matches!(
-                    win::Win32Error::get(),
-                    win::Win32Error::FILE_NOT_FOUND | win::Win32Error::PATH_NOT_FOUND
-                )
+            // This resolves `..` the way `CreateProcessW` does.
+            matches!(
+                win::GetFileAttributesW(path),
+                Err(win::Win32Error::FILE_NOT_FOUND | win::Win32Error::PATH_NOT_FOUND)
+            )
         }
 
         let exe = launcher.as_slice();

@@ -130,7 +130,6 @@ checksum = "87a0cf66fd1eb2fb7b822cb78370d82303750809bc6ba855f3f58e517d3238db"
 name = "bun_alloc"
 version = "0.0.0"
 dependencies = [
- "allocator-api2",
  "bun_mimalloc_sys",
  "bun_opaque",
  "bun_wyhash",
@@ -250,7 +249,6 @@ dependencies = [
  "bun_alloc",
  "bun_collections",
  "bun_core",
- "bun_dispatch",
  "bun_paths",
  "bun_perf",
  "bun_ptr",
@@ -729,6 +727,14 @@ name = "bun_histogram"
 version = "0.0.0"
 
 [[package]]
+name = "bun_hpack"
+version = "0.0.0"
+dependencies = [
+ "bun_wyhash",
+ "thiserror",
+]
+
+[[package]]
 name = "bun_http"
 version = "0.0.0"
 dependencies = [
@@ -745,6 +751,7 @@ dependencies = [
  "bun_dotenv",
  "bun_errno",
  "bun_event_loop",
+ "bun_hpack",
  "bun_http1",
  "bun_http_types",
  "bun_io",
@@ -767,6 +774,7 @@ dependencies = [
 name = "bun_http1"
 version = "0.0.0"
 dependencies = [
+ "bitflags",
  "bun_core",
  "bun_http_types",
  "thiserror",
@@ -1631,7 +1639,9 @@ dependencies = [
  "bun_hash",
  "bun_highway",
  "bun_histogram",
+ "bun_hpack",
  "bun_http",
+ "bun_http1",
  "bun_http_jsc",
  "bun_http_types",
  "bun_install",
@@ -1690,6 +1700,7 @@ dependencies = [
  "bun_uws_sys",
  "bun_valkey",
  "bun_watcher",
+ "bun_webp",
  "bun_which",
  "bun_wyhash",
  "bun_zlib",
@@ -1947,7 +1958,6 @@ dependencies = [
  "bun_core",
  "bun_libuv_sys",
  "bun_sys",
- "bun_windows_sys",
  "enumset",
  "libc",
  "strum",
@@ -2051,7 +2061,6 @@ dependencies = [
  "enum-map",
  "libc",
  "rustix",
- "scopeguard",
  "strum",
  "thiserror",
 ]
@@ -2147,6 +2156,7 @@ dependencies = [
  "bun_boringssl",
  "bun_core",
  "bun_jsc_macros",
+ "bun_ptr",
  "bun_uws_sys",
  "strum",
 ]
@@ -2161,6 +2171,7 @@ dependencies = [
  "bun_boringssl_sys",
  "bun_core",
  "bun_errno",
+ "bun_hpack",
  "bun_http_types",
  "bun_libuv_sys",
  "bun_opaque",
@@ -2197,6 +2208,15 @@ dependencies = [
  "libc",
  "scopeguard",
  "strum",
+ "thiserror",
+]
+
+[[package]]
+name = "bun_webp"
+version = "0.0.0"
+dependencies = [
+ "bun_alloc",
+ "bun_highway",
  "thiserror",
 ]
 
