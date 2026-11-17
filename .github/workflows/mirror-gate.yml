@@ -1,0 +1,49 @@
+name: Mirror gate
+
+# The gate of tools/mirror, run by a released Bun before anything is compiled: the hermetic test of
+# the whole system (store tiers, crawl, mirror), then the gate itself on this checkout against the
+# upstream branch (docs, bun-types, lockfile).
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "tools/mirror/**"
+      - "docs/**"
+      - "packages/bun-types/**"
+      - "test/packages/s3-server/**"
+      - "package.json"
+      - "bun.lock"
+      - ".github/workflows/mirror-gate.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  BUN_VERSION: "canary"
+
+jobs:
+  gate:
+    name: gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Setup Bun
+        uses: ./.github/actions/setup-bun
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+          download-url: https://github.com/oven-sh/bun/releases/download
+      - name: Fetch the upstream branch
+        run: git fetch --quiet --no-tags --depth=1 https://github.com/oven-sh/bun.git "+refs/heads/main:refs/remotes/upstream/main"
+      - name: Test
+        run: bun test ./tools/mirror
+      - name: Gate
+        run: bun tools/mirror/cli.ts gate --fresh
