@@ -825,6 +825,51 @@ async fn a_414_on_a_query_also_falls_back_to_the_post_hybrid_form() {
 }
 
 #[tokio::test]
+async fn a_redirect_to_a_foreign_host_does_not_carry_the_session() {
+    let foreign = MockServer::start(|_| Response::ok(json!({ "stolen": true }))).await;
+    let target = format!("{}/steal", foreign.base_url());
+    let origin =
+        MockServer::start(move |_| Response::json(302, json!({})).with_header("location", &target))
+            .await;
+    let client = client_for(&origin);
+    let reply = run(
+        ctx(&client),
+        "request",
+        &json!({ "method": "GET", "path": "1.1/account/verify_credentials.json" }),
+    )
+    .await
+    .unwrap();
+    assert_eq!(
+        reply["status"], 302,
+        "the redirect is returned, not followed"
+    );
+    assert_eq!(origin.count(), 1);
+    assert!(origin.requests()[0].header("cookie").is_some());
+    assert_eq!(foreign.count(), 0, "nothing reached the foreign host");
+}
+
+#[tokio::test]
+async fn a_redirect_inside_the_clients_own_base_is_followed() {
+    let origin = MockServer::start(|request| match request.last_segment() {
+        "moved.json" => Response::json(302, json!({})).with_header("location", "/i/api/final.json"),
+        _ => Response::ok(json!({ "final": true })),
+    })
+    .await;
+    let client = client_for(&origin);
+    let reply = run(
+        ctx(&client),
+        "request",
+        &json!({ "method": "GET", "path": "moved.json" }),
+    )
+    .await
+    .unwrap();
+    assert_eq!(reply["status"], 200);
+    assert_eq!(reply["json"]["final"], true);
+    assert_eq!(origin.count(), 2);
+    assert!(origin.requests()[1].header("cookie").is_some());
+}
+
+#[tokio::test]
 async fn the_raw_request_refuses_hosts_that_would_receive_the_session() {
     let server = MockServer::start(|_| {
         Response::ok(json!({ "pong": true })).with_header("set-cookie", "ct0=SECRET; Path=/")

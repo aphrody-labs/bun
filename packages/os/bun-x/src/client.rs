@@ -284,9 +284,29 @@ impl XClient {
         let headers = static_headers(&client_uuid, &client_device_id);
         let timeout = Duration::from_millis(options.timeout_ms.unwrap_or(DEFAULT_TIMEOUT_MS));
 
+        let api_base = options
+            .api_base
+            .map(|base| base.trim_end_matches('/').to_owned())
+            .unwrap_or_else(|| API_BASE.to_owned());
+        let upload_base = options.upload_base.unwrap_or_else(|| UPLOAD_URL.to_owned());
+
+        // The client's default headers carry the bearer token and every request carries the
+        // session: a redirect is followed only to a host the session may be sent to.
+        let trusted = [api_base.clone(), upload_base.clone()];
+        let redirects = reqwest::redirect::Policy::custom(move |attempt| {
+            if attempt.previous().len() >= MAX_REDIRECTS {
+                attempt.error("too many redirects")
+            } else if session_host_allowed(attempt.url(), &[&trusted[0], &trusted[1]]) {
+                attempt.follow()
+            } else {
+                attempt.stop()
+            }
+        });
+
         let inner = reqwest::Client::builder()
             .user_agent(CHROME_UA)
             .default_headers(headers)
+            .redirect(redirects)
             .connect_timeout(Duration::from_secs(15))
             .timeout(timeout)
             .tcp_keepalive(Some(Duration::from_secs(30)))
@@ -315,11 +335,8 @@ impl XClient {
             query_ids: Arc::new(query_ids),
             last_rate_limit: Mutex::new(None),
             rate_limits: Mutex::new(HashMap::new()),
-            api_base: options
-                .api_base
-                .map(|base| base.trim_end_matches('/').to_owned())
-                .unwrap_or_else(|| API_BASE.to_owned()),
-            upload_base: options.upload_base.unwrap_or_else(|| UPLOAD_URL.to_owned()),
+            api_base,
+            upload_base,
             persist_session,
         })
     }
@@ -786,6 +803,39 @@ fn insert_header(map: &mut HeaderMap, key: &'static str, value: &str) {
     if let Ok(val) = HeaderValue::from_str(value) {
         map.insert(HeaderName::from_static(key), val);
     }
+}
+
+/// Redirects followed before a request fails.
+const MAX_REDIRECTS: usize = 10;
+
+/// Hosts that may receive the session, besides the client's own API and upload bases.
+const X_HOSTS: [&str; 6] = [
+    "x.com",
+    "twitter.com",
+    "api.x.com",
+    "api.twitter.com",
+    "upload.twitter.com",
+    "upload.x.com",
+];
+
+fn same_origin(url: &reqwest::Url, base: &str) -> bool {
+    reqwest::Url::parse(base).is_ok_and(|b| {
+        b.scheme() == url.scheme()
+            && b.host_str() == url.host_str()
+            && b.port_or_known_default() == url.port_or_known_default()
+    })
+}
+
+/// The session may be sent to the client's own bases (same scheme, host and port: loopback servers
+/// in tests, a proxy) and to X hosts over https; nowhere else. Checked for the first URL of a raw
+/// request and again on every redirect hop.
+pub(crate) fn session_host_allowed(url: &reqwest::Url, bases: &[&str]) -> bool {
+    if bases.iter().any(|base| same_origin(url, base)) {
+        return true;
+    }
+    let host = url.host_str().unwrap_or_default();
+    url.scheme() == "https"
+        && (X_HOSTS.contains(&host) || host.ends_with(".x.com") || host.ends_with(".twitter.com"))
 }
 
 /// The headers identical on every request of a client (no credentials).

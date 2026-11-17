@@ -1039,33 +1039,9 @@ fn community_arg(args: &Value) -> Result<String> {
 // Raw request
 // ---------------------------------------------------------------------------
 
-/// Hosts that may receive the session cookies, besides the client's own API and upload bases.
-const X_HOSTS: [&str; 6] = [
-    "x.com",
-    "twitter.com",
-    "api.x.com",
-    "api.twitter.com",
-    "upload.twitter.com",
-    "upload.x.com",
-];
-
-fn same_origin(url: &reqwest::Url, base: &str) -> bool {
-    reqwest::Url::parse(base).is_ok_and(|b| {
-        b.scheme() == url.scheme()
-            && b.host_str() == url.host_str()
-            && b.port_or_known_default() == url.port_or_known_default()
-    })
-}
-
-/// The session may be sent to the client's own API and upload bases (same scheme, host and port:
-/// loopback servers in tests, a proxy) and to X hosts over https; nowhere else.
+/// Whether the session may be sent to `url` (see [`crate::client::session_host_allowed`]).
 fn host_allowed(client: &XClient, url: &reqwest::Url) -> bool {
-    if same_origin(url, client.api_base()) || same_origin(url, client.upload_url()) {
-        return true;
-    }
-    let host = url.host_str().unwrap_or_default();
-    url.scheme() == "https"
-        && (X_HOSTS.contains(&host) || host.ends_with(".x.com") || host.ends_with(".twitter.com"))
+    crate::client::session_host_allowed(url, &[client.api_base(), client.upload_url()])
 }
 
 fn string_pairs(value: &Value, key: &str) -> Result<Vec<(String, String)>> {
