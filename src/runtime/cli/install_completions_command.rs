@@ -223,9 +223,9 @@ impl InstallCompletionsCommand {
             match shell {
                 Shell::Bash | Shell::Zsh | Shell::Fish => {
                     if !env_var::IS_BUN_AUTO_UPDATE.get().unwrap_or(false)
-                        && !bun_sys::isatty(stdout.handle)
+                        && !bun_sys::isatty(stdout)
                     {
-                        return Self::write_and_exit(&stdout, shell.completions());
+                        return Self::write_and_exit(stdout, shell.completions());
                     }
                     let (file, rc): (&str, &str) = match shell {
                         Shell::Zsh => ("_bun", "~/.zshrc"),

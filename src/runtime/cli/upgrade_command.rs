@@ -971,7 +971,7 @@ impl UpgradeCommand {
                     }
                 };
                 if let Err(err) = exe_file.write_all(&data) {
-                    let _ = exe_file.close();
+                    drop(exe_file);
                     bun_core::pretty_errorln!(
                         "<r><red>error:<r> Failed to write {}: {}",
                         bstr::BStr::new(exe),
@@ -979,7 +979,7 @@ impl UpgradeCommand {
                     );
                     Global::exit(1);
                 }
-                let _ = exe_file.close();
+                drop(exe_file);
             }
             {
                 let verify_argv: [&[u8]; 2] = [
