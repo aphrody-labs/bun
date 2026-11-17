@@ -1,0 +1,6 @@
+id = "bun"
+kind = "runtime"
+org = "aphrody-labs"
+
+[exceptions]
+N013 = "the runtime keeps the upstream crate names (bun_core, bun_sys, ...) as a drop-in; Aphrody-only units are named bun-<unit>"
