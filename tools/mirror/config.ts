@@ -5,7 +5,7 @@ import { join } from "node:path";
 
 export interface Config {
   origin: { url: string; sitemap: string; user_agent: string; asset_extensions: string[]; strip_script_hosts: string[] };
-  crawl: { concurrency: number; delay_ms: number; timeout_ms: number; retries: number; max_age_hours: number };
+  crawl: { concurrency: number; delay_ms: number; timeout_ms: number; retries: number; max_age_hours: number; companions: string[] };
   upstream: { url: string; branch: string; remote: string };
   compare: { docs: string[]; types: string[]; docs_prefix: string; allow_missing_types: string[] };
   site: { host: string; passthrough: boolean };
@@ -19,6 +19,8 @@ export async function loadConfig(env: Record<string, string | undefined> = Bun.e
   const cfg = Bun.TOML.parse(await Bun.file(join(import.meta.dir, "mirror.toml")).text()) as unknown as Config;
   cfg.origin.url = (env.MIRROR_ORIGIN ?? cfg.origin.url).replace(/\/+$/, "");
   cfg.origin.user_agent = env.MIRROR_USER_AGENT ?? cfg.origin.user_agent;
+  cfg.crawl.companions ??= [];
+  cfg.crawl.max_age_hours = Number(env.MIRROR_MAX_AGE_HOURS ?? cfg.crawl.max_age_hours);
   cfg.crawl.concurrency = Number(env.MIRROR_CONCURRENCY ?? cfg.crawl.concurrency);
   cfg.upstream.url = env.MIRROR_UPSTREAM_URL ?? cfg.upstream.url;
   cfg.site.host = env.MIRROR_HOST ?? cfg.site.host;

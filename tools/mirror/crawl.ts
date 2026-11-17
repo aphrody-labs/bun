@@ -3,7 +3,7 @@
 // and a second run only revalidates (ETag / Last-Modified) what is older than `max_age_hours`.
 import type { Config } from "./config.ts";
 import type { FetchJob, FetchResult } from "./crawl.worker.ts";
-import { scanHtml } from "./html.ts";
+import { companionUrls, scanHtml, scanScript } from "./html.ts";
 import { readSitemap } from "./sitemap.ts";
 import type { Page, Store } from "./store.ts";
 
@@ -81,23 +81,33 @@ export async function crawl(cfg: Config, store: Store, opts: CrawlOptions = {}):
       if (inFlight.size === 0) settle();
     };
 
+    // What a page or script brings along; also run on a revalidated (304) copy, so a run completes a mirror
+    // crawled before a discovery rule existed.
+    const discover = async (page: Page, bytes: Uint8Array, contentType: string | null | undefined): Promise<void> => {
+      if (page.kind === "page" && isHtml(contentType)) {
+        const scan = await scanHtml(bytes, page.url, cfg);
+        store.index(page.url, scan.title, scan.text);
+        if (opts.assets !== false) report.assets += store.enqueue([...scan.assets, ...companionUrls(page.url, cfg)], "asset");
+      } else if (page.kind === "asset" && opts.assets !== false && /\.m?js$/.test(new URL(page.url).pathname)) {
+        report.assets += store.enqueue(scanScript(bytes, page.url, cfg), "asset");
+      }
+    };
+
     const commit = async (r: FetchResult): Promise<void> => {
       const page = inFlight.get(r.id)!;
       const next: Page = { ...page, status: r.status, attempts: page.attempts + r.attempts, fetched_at: now(), error: r.error };
       if (r.notModified) {
         next.state = "done";
         report.unchanged++;
+        const kept = page.hash ? await store.getBlob(page.hash) : null;
+        if (kept) await discover(page, kept, page.content_type);
       } else if (r.body && r.hash) {
         const bytes = new Uint8Array(r.body);
         await store.putBlob(bytes, r.hash);
         Object.assign(next, { state: "done", hash: r.hash, bytes: bytes.byteLength, etag: r.etag, last_modified: r.lastModified, content_type: r.contentType, attempts: 0 });
         report.fetched++;
         report.bytes += bytes.byteLength;
-        if (page.kind === "page" && isHtml(r.contentType)) {
-          const scan = await scanHtml(bytes, page.url, cfg);
-          store.index(page.url, scan.title, scan.text);
-          if (opts.assets !== false) report.assets += store.enqueue(scan.assets, "asset");
-        }
+        await discover(page, bytes, r.contentType);
       } else {
         // 404 and 410 will not come back; everything else is retried by a later run.
         next.state = r.status === 404 || r.status === 410 ? "gone" : "failed";

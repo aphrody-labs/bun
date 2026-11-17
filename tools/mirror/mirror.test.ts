@@ -11,7 +11,7 @@ import { loadConfig, sha256, type Config } from "./config.ts";
 import { crawl } from "./crawl.ts";
 import { checkDoc, compare, coverage, declaredNames, docPath } from "./docs.ts";
 import { runGate, summarize } from "./gate.ts";
-import { rewriteHtml, scanHtml } from "./html.ts";
+import { companionUrls, rewriteHtml, scanHtml, scanScript } from "./html.ts";
 import { inspectInstallation } from "./install.ts";
 import { normalizeUrl, parseSitemap, readSitemap } from "./sitemap.ts";
 import { serve as serveS3 } from "../../test/packages/s3-server/index.ts";
@@ -29,7 +29,7 @@ const dir = (name: string): string => (mkdirSync(join(scratch, name), { recursiv
 
 // --- a small origin: sitemap index, one gzip sitemap, ETags, a flaky page, a missing page -----------
 const hits = new Map<string, number>();
-const page = (title: string, body: string): string => `<!doctype html><html><head><title>${title}</title><link rel="canonical" href="ORIGIN/canon"><link rel="stylesheet" href="/assets/site.css"><script src="https://www.googletagmanager.com/gtag/js?id=X"></script><script>var inline = "not text";</script></head><body><main><h1>${title}</h1><p>${body}</p><a href="ORIGIN/docs/runtime/sql">absolute</a> <a href="/docs/guides">relative</a> <a href="https://example.com/out">external</a><img src="ORIGIN/assets/logo.svg" srcset="ORIGIN/assets/logo.svg 1x, /assets/logo@2x.png 2x"></main></body></html>`;
+const page = (title: string, body: string): string => `<!doctype html><html><head><title>${title}</title><link rel="canonical" href="ORIGIN/canon"><link rel="stylesheet" href="/assets/site.css"><script type="module" src="/assets/app-k3j2h1g0.js"></script><script src="https://www.googletagmanager.com/gtag/js?id=X"></script><script>var inline = "not text";</script></head><body><main><h1>${title}</h1><p>${body}</p><a href="ORIGIN/docs/runtime/sql">absolute</a> <a href="/docs/guides">relative</a> <a href="https://example.com/out">external</a><img src="ORIGIN/assets/logo.svg" srcset="ORIGIN/assets/logo.svg 1x, /assets/logo@2x.png 2x"></main></body></html>`;
 const files: Record<string, { type: string; body: string | Uint8Array }> = {
   "/": { type: "text/html; charset=utf-8", body: page("Home", "Bun is a fast runtime") },
   "/docs/runtime/sql": { type: "text/html; charset=utf-8", body: page("SQL", "Postgres MySQL and SQLite clients") },
@@ -37,6 +37,10 @@ const files: Record<string, { type: string; body: string | Uint8Array }> = {
   "/blog/release": { type: "text/html; charset=utf-8", body: page("Release", "Changelog of the redis client") },
   "/flaky": { type: "text/html; charset=utf-8", body: page("Flaky", "Eventually answers") },
   "/assets/site.css": { type: "text/css", body: "body{color:#111}" },
+  "/assets/app-k3j2h1g0.js": { type: "text/javascript", body: 'import{a}from"./chunk-9x8y7z6w.js";const lazy=()=>import("./page-docs-q1w2e3r4.js");export{a,lazy};' },
+  "/assets/chunk-9x8y7z6w.js": { type: "text/javascript", body: "export const a=1;" },
+  "/assets/page-docs-q1w2e3r4.js": { type: "text/javascript", body: "export default 2;" },
+  "/docs/guides.props.json": { type: "application/json", body: '{"title":"Guides"}' },
   "/assets/logo.svg": { type: "image/svg+xml", body: "<svg xmlns='http://www.w3.org/2000/svg'/>" },
   "/assets/logo@2x.png": { type: "image/png", body: new Uint8Array([137, 80, 78, 71, 13, 10, 26, 10]) },
 };
@@ -146,7 +150,11 @@ describe("html", () => {
     const scan = await scanHtml(html, `${base}/`, cfg);
     expect(scan.title).toBe("Home");
     expect(scan.text).toBe("Home Bun is a fast runtime absolute relative external");
-    expect(scan.assets).toEqual([`${base}/assets/logo.svg`, `${base}/assets/logo@2x.png`, `${base}/assets/site.css`]);
+    expect(scan.assets).toEqual([`${base}/assets/app-k3j2h1g0.js`, `${base}/assets/logo.svg`, `${base}/assets/logo@2x.png`, `${base}/assets/site.css`]);
+    // A bundle names its dynamic imports; a page brings files no link names.
+    expect(scanScript(new TextEncoder().encode(files["/assets/app-k3j2h1g0.js"]!.body as string), `${base}/assets/app-k3j2h1g0.js`, cfg)).toEqual([`${base}/assets/chunk-9x8y7z6w.js`, `${base}/assets/page-docs-q1w2e3r4.js`]);
+    expect(companionUrls(`${base}/docs/guides/`, cfg)).toEqual([`${base}/docs/guides.props.json`]);
+    expect(companionUrls(`${base}/`, cfg)).toEqual([`${base}/index.props.json`]);
     expect(scan.links).toEqual([`${base}/canon`, `${base}/docs/guides`, `${base}/docs/runtime/sql`]);
 
     const out = new TextDecoder().decode(await rewriteHtml(html, `${base}/`, cfg));
@@ -170,19 +178,19 @@ describe("crawl", () => {
     const store = await open("crawl");
     hits.delete("/flaky");
     const report = await crawl(cfg, store, { now: () => 1_000_000 });
-    expect(report).toMatchObject({ sitemap: 6, fetched: 8, unchanged: 0, failed: 1, assets: 3 });
-    expect(store.counts()).toEqual({ "asset:done": 3, "page:done": 5, "page:gone": 1 });
+    expect(report).toMatchObject({ sitemap: 6, fetched: 12, unchanged: 0, failed: 5, assets: 11 });
+    expect(store.counts()).toEqual({ "asset:done": 7, "asset:gone": 4, "page:done": 5, "page:gone": 1 });
     expect(hits.get("/flaky")).toBe(3);
     expect(store.page(`${origin.url.origin}/gone`)).toMatchObject({ state: "gone", status: 404 });
     expect(store.search("redis")[0]).toMatchObject({ title: "Release" });
     expect(store.search("postgres sqlite").map((h) => new URL(h.url).pathname)).toEqual(["/docs/runtime/sql"]);
     manifest = report.manifest;
     expect(manifest).toBe(store.manifest().hash);
-    expect(store.manifest().pages).toBe(8);
+    expect(store.manifest().pages).toBe(12);
 
     // A day later every page is revalidated and none has changed: 304s only, same manifest.
     const again = await crawl(cfg, store, { now: () => 1_000_000 + 25 * 3600_000 });
-    expect(again).toMatchObject({ fetched: 0, unchanged: 8, failed: 0, manifest });
+    expect(again).toMatchObject({ fetched: 0, unchanged: 12, failed: 0, manifest });
     await store.close();
   });
 
@@ -192,8 +200,20 @@ describe("crawl", () => {
     expect(first.fetched + first.failed).toBe(3);
     expect(first.manifest).not.toBe(manifest);
     const second = await crawl(cfg, store, { now: () => 1_000_001 });
-    expect(second.fetched + second.failed).toBe(6);
+    expect(second.fetched + second.failed).toBe(14);
     expect(second.manifest).toBe(manifest);
+    await store.close();
+  });
+
+  test("a revalidating run completes a mirror crawled before a discovery rule existed", async () => {
+    const store = await open("late-rule");
+    hits.delete("/flaky");
+    await crawl({ ...cfg, crawl: { ...cfg.crawl, companions: [] } }, store, { now: () => 1_000_000 });
+    expect(store.counts()).toMatchObject({ "asset:done": 6 });
+    const later = await crawl(cfg, store, { now: () => 1_000_000 + 25 * 3600_000 });
+    expect(later.assets).toBe(5);
+    expect(store.counts()).toMatchObject({ "asset:done": 7, "asset:gone": 4 });
+    expect(store.manifest().pages).toBe(12);
     await store.close();
   });
 
@@ -247,7 +267,7 @@ describe("site", () => {
     const one = await build(cfg, store, dir("out-1"));
     const two = await build(cfg, store, dir("out-2"));
     expect(one).toEqual(two);
-    expect(one.files).toBe(9);
+    expect(one.files).toBe(13);
     expect(await Bun.file(join(scratch, "out-1", "docs", "runtime", "sql", "index.html")).text()).toContain("<h1>SQL</h1>");
     expect(await Bun.file(join(scratch, "out-1", "manifest.txt")).text()).toBe(store.manifest().text);
     await store.close();

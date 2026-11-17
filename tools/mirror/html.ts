@@ -105,3 +105,25 @@ export async function rewriteHtml(html: Uint8Array, pageUrl: string, cfg: Config
   }
   return new Uint8Array(await rewriter.transform(new Response(html)).arrayBuffer());
 }
+
+// Hashed files (chunk-12sm73yr.js, page-404-e6c0x1t2.js) a script names in a string or an import; a bundle's
+// dynamic imports are invisible to the HTML scan, and a mirror without them breaks as soon as a page loads.
+const SCRIPT_REF = /["'`]([^"'`\s\\]*?[\w]+-[a-z0-9]{6,}\.(?:m?js|css|wasm))["'`]/g;
+
+/** Same-origin hashed files named in a script, resolved against the script's own URL. */
+export function scanScript(bytes: Uint8Array, scriptUrl: string, cfg: Config): string[] {
+  const origin = new URL(cfg.origin.url).origin;
+  const found = new Set<string>();
+  for (const m of new TextDecoder().decode(bytes).matchAll(SCRIPT_REF)) {
+    const url = resolve(m[1]!, scriptUrl);
+    if (url && url.origin === origin && isAsset(url, cfg)) found.add(normalizeUrl(url.href));
+  }
+  return [...found].sort();
+}
+
+/** The files a page brings along that no link names (cfg.crawl.companions, `{path}` is the page path). */
+export function companionUrls(pageUrl: string, cfg: Config): string[] {
+  const url = new URL(pageUrl);
+  const path = url.pathname === "/" ? "/index" : url.pathname.replace(/\/$/, "");
+  return cfg.crawl.companions.map((pattern) => normalizeUrl(new URL(pattern.replaceAll("{path}", path), url.origin).href));
+}

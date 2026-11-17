@@ -16,6 +16,9 @@ delay_ms = 50                         # pause of one worker between two requests
 timeout_ms = 30000
 retries = 3
 max_age_hours = 24                    # a page older than this is revalidated (ETag / Last-Modified)
+# Files every page brings that no link names; {path} is the page path ("/" is "/index"). The site's client router
+# fetches <path>.props.json on navigation, so without them the mirror falls back to full page loads.
+companions = ["{path}.props.json"]
 
 [upstream]
 url = "https://github.com/oven-sh/bun.git"   # MIRROR_UPSTREAM_URL
