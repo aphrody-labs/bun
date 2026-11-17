@@ -260,7 +260,7 @@ new BigUint64Array();
 
 ### `node:fs` support for embedded files in Single-File Executables
 
-Embedded files in Bun's [single-file executables](/docs/bundler/executable) now support Node.js filesystem APIs like `fs.stat`, `fs.readFile`, and `fs.existsSync`. Previously, only the sync version of `fs.readFile` was supported for embedded files.
+Embedded files in Bun's [single-file executables](/docs/bundler/executables) now support Node.js filesystem APIs like `fs.stat`, `fs.readFile`, and `fs.existsSync`. Previously, only the sync version of `fs.readFile` was supported for embedded files.
 
 ```js
 // These now work in single-file executables:

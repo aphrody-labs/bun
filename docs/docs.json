@@ -737,6 +737,14 @@
     {
       "source": "/compiler/internals",
       "destination": "/compiler/aot"
+    },
+    {
+      "source": "/runtime/hot",
+      "destination": "/runtime/watch-mode"
+    },
+    {
+      "source": "/bundler/html",
+      "destination": "/bundler/html-static"
     }
   ],
   "footer": {
