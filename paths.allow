@@ -15,3 +15,4 @@ scripts/build/shell.ts              # same
 scripts/build/source.ts             # same
 scripts/build/unified.ts            # same
 scripts/verify-baseline.ts          # same
+packages/os/bun-host/src/tests.rs   # target parser fixtures: drive, POSIX and ssh paths are the inputs under test

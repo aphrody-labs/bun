@@ -1,0 +1,30 @@
+[package]
+name = "bun-dotnet-host"
+version = "1.4.8"
+description = "CLR host for Bun: locates hostfxr (nethost semantics), runs the dotnet muxer in-process and binds UnmanagedCallersOnly entry points. Restored from the published legacy crate `bun-dotnet-host`."
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+license = "MIT"
+publish = false
+readme = "README.md"
+
+[features]
+default = ["c-abi"]
+c-abi = []
+
+[lib]
+name = "bun_dotnet_host"
+path = "src/lib.rs"
+
+[dependencies]
+serde_json.workspace = true
+
+[target.'cfg(unix)'.dependencies]
+libc.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { workspace = true, features = ["Win32_Foundation", "Win32_System_Console", "Win32_System_LibraryLoader", "Win32_System_Registry"] }
+
+[lints]
+workspace = true

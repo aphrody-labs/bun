@@ -1,0 +1,17 @@
+[package]
+name = "bun-emu-host"
+version = "0.1.0"
+description = "Safe Rust API over the Bun OS emulator host: melonDS, Dolphin, Azahar and Kyty cores as headless libraries. Restored from the published legacy crate `bun-emu-host`."
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+license = "GPL-3.0-or-later"
+publish = false
+readme = "README.md"
+
+[dependencies]
+bun-emu-host-sys.workspace = true
+libloading = "0.8"
+
+[lints]
+workspace = true

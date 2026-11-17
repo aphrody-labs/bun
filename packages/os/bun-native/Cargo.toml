@@ -1,0 +1,27 @@
+[package]
+name = "bun-native"
+version = "1.4.7"
+description = "Host hardware topology (CPU, RAM, CUDA) and monotonic clock probes. Restored from the published legacy crate `bun_native`."
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+license = "Apache-2.0"
+publish = false
+readme = "README.md"
+
+[lib]
+name = "bun_native"
+path = "src/lib.rs"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+
+[target.'cfg(any(windows, target_os = "linux"))'.dependencies]
+libloading = "0.9"
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { workspace = true, features = ["Win32_System_SystemInformation"] }
+
+[lints]
+workspace = true

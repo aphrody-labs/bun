@@ -1,0 +1,22 @@
+[package]
+name = "bun-emu-host-sys"
+version = "0.1.0"
+description = "Raw bindings (bindgen, runtime-loaded) to the Bun OS emulator host C ABI (include/bun_emu_host.h). Restored from the published legacy crate `bun-emu-host-sys`."
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+license = "GPL-3.0-or-later"
+publish = false
+readme = "README.md"
+
+links = "bun_emu_host"
+build = "build.rs"
+
+[dependencies]
+libloading = "0.8"
+
+[build-dependencies]
+bindgen = "0.72"
+
+[lints]
+workspace = true

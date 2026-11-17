@@ -1,0 +1,64 @@
+[package]
+name = "bun-windows-winclean"
+version = "1.4.8"
+description = "Canonical Bun Windows SDK for WinClean-compatible automation and diagnostics. Restored from the published legacy crate `bun-windows-winclean`."
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+license = "Apache-2.0"
+publish = false
+readme = "README.md"
+
+[lib]
+name = "bun_windows_winclean"
+path = "src/lib.rs"
+
+[[example]]
+name = "browser"
+path = "examples/browser.rs"
+
+[[example]]
+name = "gaming"
+path = "examples/gaming.rs"
+
+[[example]]
+name = "observe"
+path = "examples/observe.rs"
+
+[[example]]
+name = "wsl_probe"
+path = "examples/wsl_probe.rs"
+
+[[test]]
+name = "rust_surface"
+path = "tests/rust_surface.rs"
+
+[dependencies]
+aphrody-capture = "1.4.7"
+aphrody-proc = "1.4.7"
+aphrody-re = { version = "1.4.7", package = "bun-re" }
+base64 = "0.23.1"
+bun-steam = { version = "1.4.7", default-features = false }
+image = { version = "0.25.10", features = ["png", "bmp"] }
+reqwest = { version = "0.13.5", default-features = false, features = ["rustls-no-provider", "blocking", "json"] }
+rusqlite = { version = "0.40", features = ["bundled"] }
+rustls = { version = "0.23", default-features = false, features = ["ring", "std", "tls12"] }
+serde.workspace = true
+serde_json.workspace = true
+sha2 = "0.11.0"
+sysinfo = { version = "0.39.6", default-features = false, features = ["system", "disk", "network"] }
+tempfile = "3.27.0"
+thiserror.workspace = true
+
+[dev-dependencies]
+tokio = { version = "1.53.1", features = ["rt-multi-thread", "macros"] }
+
+[target.'cfg(windows)'.dependencies]
+ort = { version = "=2.0.0-rc.12", default-features = false, features = ["std", "api-24", "ndarray", "tracing", "load-dynamic"] }
+pollster = "1.0.1"
+uiautomation = { version = "0.25.1", default-features = false, features = ["input"] }
+vigem-rust = { version = "0.2.0", default-features = false, features = ["x360"] }
+windows = { version = "0.62.2", features = ["Foundation", "Globalization", "Graphics_Imaging", "Media_Ocr", "Media_SpeechSynthesis", "Media_Core", "Storage_Streams", "Win32_Foundation", "Win32_Media_Audio", "Win32_NetworkManagement_IpHelper", "Win32_Security", "Win32_Graphics_Dwm", "Win32_Graphics_Gdi", "Win32_Storage_FileSystem", "Win32_System_Com", "Win32_System_DataExchange", "Win32_System_Diagnostics_Debug", "Win32_System_Diagnostics_ToolHelp", "Win32_System_EventLog", "Win32_System_Threading", "Win32_System_Memory", "Win32_System_LibraryLoader", "Win32_System_Ole", "Win32_System_Registry", "Win32_System_SystemInformation", "Win32_System_Services", "Win32_System_Variant", "Win32_System_Wmi", "Win32_UI_Shell", "Win32_UI_WindowsAndMessaging", "Win32_UI_Input_XboxController", "Wdk_System_SystemInformation", "Graphics_Capture"] }
+
+[lints]
+workspace = true

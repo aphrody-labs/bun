@@ -1,0 +1,38 @@
+[package]
+name = "bun-git"
+version = "1.4.8"
+description = "Native Git (gix) and GitHub (octocrab) integration: repository inspection, history, ingest, search and upstream tracking. Restored from the published legacy crate `bun_git`."
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+license = "Apache-2.0"
+publish = false
+readme = "README.md"
+
+[lib]
+name = "bun_git"
+path = "src/lib.rs"
+
+[[example]]
+name = "ecosystem-audit"
+path = "examples/ecosystem-audit.rs"
+
+[dependencies]
+base64 = { version = "0.23.1", default-features = false, features = ["std"] }
+gix = { version = "0.88", default-features = false, features = ["sha1", "basic", "extras", "comfort", "max-performance-safe", "revision", "index", "worktree-mutation"] }
+globset = "0.4"
+ignore = "0.4"
+octocrab = { version = "0.54", default-features = false, features = ["default-client", "follow-redirect", "retry", "rustls", "rustls-ring", "timeout"] }
+serde.workspace = true
+serde_json.workspace = true
+serde_yaml = { version = "0.10", package = "yaml_serde" }
+tempfile.workspace = true
+thiserror.workspace = true
+url = { version = "2.5.8", default-features = false }
+
+[dev-dependencies]
+rustls = { version = "0.23.45", default-features = false }
+tokio = { version = "1.53.2", default-features = false, features = ["macros", "rt"] }
+
+[lints]
+workspace = true

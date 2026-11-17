@@ -1,0 +1,76 @@
+[workspace]
+resolver = "3"
+members = [
+  "bun-dotnet-host",
+  "bun-emu-host",
+  "bun-emu-host-sys",
+  "bun-env-cookie",
+  "bun-git",
+  "bun-host",
+  "bun-native",
+  "bun-pkg",
+  "bun-python-host",
+  "bun-vt",
+  "bun-windows-winclean",
+  "bun-x",
+]
+
+[workspace.package]
+edition = "2024"
+authors = ["aphrody-dev <contact@aphrody.com>"]
+repository = "https://github.com/aphrody-labs/bun"
+
+[workspace.dependencies]
+bun-emu-host-sys = { path = "bun-emu-host-sys" }
+libc = "0.2"
+serde = { version = "1.0.228", default-features = false, features = ["derive", "std"] }
+serde_json = { version = "1.0.151", default-features = false, features = ["std"] }
+tempfile = { version = "3.27.0", default-features = false, features = ["getrandom"] }
+thiserror = { version = "2.0.21", default-features = false, features = ["std"] }
+windows-sys = "0.61"
+
+[workspace.lints.rust]
+warnings = { level = "deny", priority = -1 }
+
+[workspace.lints.clippy]
+approx_constant = "allow"
+blocks_in_conditions = "allow"
+collapsible_else_if = "allow"
+collapsible_if = "allow"
+collapsible_match = "allow"
+declare_interior_mutable_const = "allow"
+diverging_sub_expression = "allow"
+doc_lazy_continuation = "allow"
+doc_overindented_list_items = "allow"
+empty_docs = "allow"
+empty_line_after_doc_comments = "allow"
+enum_variant_names = "allow"
+excessive_precision = "allow"
+explicit_auto_deref = "allow"
+len_without_is_empty = "allow"
+len_zero = "allow"
+let_unit_value = "allow"
+manual_range_contains = "allow"
+map_identity = "allow"
+missing_safety_doc = "allow"
+module_inception = "allow"
+needless_lifetimes = "allow"
+needless_range_loop = "allow"
+needless_return = "allow"
+needless_update = "allow"
+new_instead_of_clear = "allow"
+new_ret_no_self = "allow"
+new_without_default = "allow"
+only_used_in_recursion = "allow"
+result_unit_err = "allow"
+self_named_constructors = "allow"
+should_implement_trait = "allow"
+single_match = "allow"
+too_many_arguments = "allow"
+type_complexity = "allow"
+unnecessary_cast = "allow"
+unreadable_literal = "allow"
+upper_case_acronyms = "allow"
+while_let_loop = "allow"
+while_let_on_iterator = "allow"
+wrong_self_convention = "allow"

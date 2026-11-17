@@ -1,0 +1,17 @@
+[package]
+name = "bun-vt"
+version = "1.4.8"
+description = "Headless VT/ANSI screen (cell grid, scrollback, cursor) behind Bun.TerminalScreen. Restored from the published legacy crate `bun_vt`."
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+license = "Apache-2.0"
+publish = false
+readme = "README.md"
+
+[lib]
+name = "bun_vt"
+path = "src/lib.rs"
+
+[lints]
+workspace = true

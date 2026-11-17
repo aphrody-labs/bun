@@ -1,0 +1,24 @@
+[package]
+name = "bun-python-host"
+version = "0.1.1"
+description = "Lazy shared CPython host and compatibility C ABI for the Bun fork. Restored from the published legacy crate `bun-python-host`."
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+license = "Apache-2.0"
+publish = false
+readme = "README.md"
+
+[lib]
+name = "bun_python_host"
+crate-type = ["rlib", "cdylib"]
+path = "src/lib.rs"
+
+[target.'cfg(unix)'.dependencies]
+libc.workspace = true
+
+[target.'cfg(windows)'.dependencies]
+windows-sys = { workspace = true, features = ["Win32_System_LibraryLoader"] }
+
+[lints]
+workspace = true

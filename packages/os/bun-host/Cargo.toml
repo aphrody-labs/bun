@@ -1,0 +1,27 @@
+[package]
+name = "bun-host"
+version = "1.4.7"
+description = "Host resource inventory and the shared signed host registry (the `bun host` command). Restored from the published legacy crate `bun_host`."
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+license = "MIT"
+publish = false
+readme = "README.md"
+
+[lib]
+name = "bun_host"
+path = "src/lib.rs"
+
+[[bin]]
+name = "bun-os-host"
+path = "src/bin/bun-os-host.rs"
+
+[dependencies]
+hmac = "0.12"
+serde.workspace = true
+serde_json = { workspace = true, features = ["preserve_order"] }
+sha2 = "0.10"
+
+[lints]
+workspace = true

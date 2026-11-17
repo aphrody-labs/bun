@@ -1,0 +1,28 @@
+[package]
+name = "bun-env-cookie"
+version = "1.4.7"
+description = "The `bun env` command (.env files) and the `bun cookie` command (cookie jars on disk). Restored from the published legacy crate `bun_env_cookie`."
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+license = "MIT"
+publish = false
+readme = "README.md"
+
+[lib]
+name = "bun_env_cookie"
+path = "src/lib.rs"
+
+[[bin]]
+name = "bun-os-env"
+path = "src/bin/bun-os-env.rs"
+
+[[bin]]
+name = "bun-os-cookie"
+path = "src/bin/bun-os-cookie.rs"
+
+[dependencies]
+serde_json = { workspace = true, features = ["preserve_order"] }
+
+[lints]
+workspace = true
