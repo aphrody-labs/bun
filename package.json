@@ -55,6 +55,7 @@
     "jsc:build": "bun scripts/build.ts --profile=release-local --build-dir=build/release-local --target=jsc",
     "jsc:build:debug": "bun scripts/build.ts --profile=debug-local --build-dir=build/debug-local --target=jsc",
     "jsc:build:lto": "bun scripts/build.ts --profile=release-local --lto=on --build-dir=build/release-local-lto --target=jsc",
+    "check:paths": "bun ../ay/tools/paths.ts --include scripts --include .buildkite --include bench --include package.json",
     "typecheck": "tsc --noEmit && cd test && bun run typecheck",
     "fmt:cpp": "bun run clang-format",
     "fmt:rust": "cargo fmt --all",

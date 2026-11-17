@@ -5,7 +5,7 @@
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { userInfo } from "node:os";
-import { basename, dirname, relative, resolve } from "node:path";
+import { basename, dirname, join, relative, resolve } from "node:path";
 import {
   getAbi,
   getAbiVersion,
@@ -557,8 +557,8 @@ function getTailscale(): string {
     }
   }
 
-  if (isWindows) {
-    const tailscaleExe = "C:\\Program Files\\Tailscale\\tailscale.exe";
+  if (isWindows && process.env.ProgramFiles) {
+    const tailscaleExe = join(process.env.ProgramFiles, "Tailscale", "tailscale.exe");
     if (existsSync(tailscaleExe)) {
       return tailscaleExe;
     }

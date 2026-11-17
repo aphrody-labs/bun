@@ -429,7 +429,7 @@ function llvmSearchPaths(os: OS, arch: Arch): string[] {
 
   if (os === "windows") {
     // Prefer standalone LLVM over VS-bundled
-    paths.push("C:\\Program Files\\LLVM\\bin");
+    if (process.env.ProgramFiles) paths.push(join(process.env.ProgramFiles, "LLVM", "bin"));
   }
 
   if (os === "linux" || os === "darwin") {
@@ -891,7 +891,9 @@ export function findMsvcLinker(arch: Arch): string | undefined {
   //   <base>/Microsoft Visual Studio/2022/<edition>/VC/Tools/MSVC/<ver>/bin/<host>/<target>/link.exe
   // Community, Professional and Enterprise are 64-bit programs. BuildTools,
   // which is what CI's images have, goes under Program Files (x86).
-  const vsBases = ["C:/Program Files", "C:/Program Files (x86)"].map(base => `${base}/Microsoft Visual Studio/2022`);
+  const vsBases = [process.env.ProgramFiles, process.env["ProgramFiles(x86)"]]
+    .filter((base): base is string => !!base)
+    .map(base => `${base.replaceAll("\\", "/")}/Microsoft Visual Studio/2022`);
 
   // Pick the latest MSVC toolset version across all editions. Usually
   // there's only one edition installed, but BuildTools can be beside another.

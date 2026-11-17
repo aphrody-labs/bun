@@ -10,7 +10,8 @@ $script:VsArch = if ($script:IsARM64) { "arm64" } else { "amd64" }
 if($env:VSINSTALLDIR -eq $null) {
   Write-Host "Loading Visual Studio environment, this may take a second..."
 
-  $vswhere = "C:\Program Files (x86)\Microsoft Visual Studio\Installer\vswhere.exe"
+  $programFilesX86 = if (${env:ProgramFiles(x86)}) { ${env:ProgramFiles(x86)} } else { $env:ProgramFiles }
+  $vswhere = Join-Path $programFilesX86 "Microsoft Visual Studio\Installer\vswhere.exe"
   if (!(Test-Path $vswhere)) {
     throw "Command not found: vswhere (did you install Visual Studio?)"
   }
@@ -20,8 +21,8 @@ if($env:VSINSTALLDIR -eq $null) {
   if ($vsDir -eq $null) {
     # Check common VS installation paths
     $searchPaths = @(
-      "C:\Program Files\Microsoft Visual Studio\2022",
-      "C:\Program Files (x86)\Microsoft Visual Studio\2022"
+      (Join-Path $env:ProgramFiles "Microsoft Visual Studio\2022"),
+      (Join-Path $programFilesX86 "Microsoft Visual Studio\2022")
     )
     foreach ($searchPath in $searchPaths) {
       if (Test-Path $searchPath) {

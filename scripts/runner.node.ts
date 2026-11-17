@@ -100,8 +100,9 @@ async function unzip(
   const { only = [], without = [] } = members;
   if (isWindows) {
     // The tar of Windows reads a zip, several times as fast as Expand-Archive.
-    const tar = join(process.env.SystemRoot || "C:\\Windows", "System32", "tar.exe");
-    if (existsSync(tar)) {
+    const systemRoot = process.env.SystemRoot || process.env.windir;
+    const tar = systemRoot ? join(systemRoot, "System32", "tar.exe") : undefined;
+    if (tar && existsSync(tar)) {
       try {
         mkdirSync(destination, { recursive: true });
         await run([tar, "-xf", filename, "-C", destination, ...without.map(member => `--exclude=${member}`), ...only]);

@@ -1,0 +1,17 @@
+# Absolute-path literals that are allowed, one repo-relative glob per line (scanner: ay/tools/paths.ts, scripts/.buildkite/bench/package.json only).
+scripts/build/ci-images/spec.ts     # the layout of the Windows and Linux CI images: the paths are the spec of what the image installs
+scripts/build/ci-images/CLAUDE.md   # documents that image layout
+scripts/agent.ts                    # home of the Buildkite agent service on the Windows CI images
+.buildkite/scripts/sign-windows-artifacts.ps1   # DigiCert tools directory of the Windows signing agents
+bench/snippets/**                   # benchmark fixtures: path and URL strings parsed by the benchmark
+package.json                        # run:linux mounts the checkout at a path inside the docker image
+scripts/orderfile/app/**            # markdown and URL parser fixtures
+scripts/verify-baseline-static/**   # comments quoting archive member paths of Windows libraries
+scripts/build/buildOptionsRs.ts     # comments cite Windows paths as escaping examples
+scripts/build/compile.ts            # same
+scripts/build/deps/boringssl.ts     # same
+scripts/build/download.ts           # same
+scripts/build/shell.ts              # same
+scripts/build/source.ts             # same
+scripts/build/unified.ts            # same
+scripts/verify-baseline.ts          # same
