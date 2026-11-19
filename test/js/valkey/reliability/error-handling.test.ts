@@ -315,6 +315,7 @@ describe("Valkey: Command Arguments", () => {
     await client.connect();
     return {
       client,
+      received,
       lastReceived: () => received.at(-1),
       [Symbol.dispose]() {
         client.close();
@@ -419,5 +420,74 @@ describe("Valkey: Command Arguments", () => {
     await run(server.client, ["smove", logged("a"), logged("b"), logged("c")]);
     expect(() => run(server.client, ["smove", logged("d"), {}, logged("e")])).toThrow("Expected destination");
     expect(converted).toEqual(["a", "b", "c", "d"]);
+  });
+
+  // EXISTS counts its keys, so the answer for the first key alone is the answer to another question.
+  const secondKey: Call[] = [
+    ["exists", "a", "b"],
+    ["exists", "a", "b", "c"],
+    ["exists", "a", undefined, "c"],
+    ["exists", "a", 0, "c"],
+    ["exists", "a", "b", ["c"]],
+    ["exists", "a", ["b"]],
+    ["exists", "a", new String("b")],
+    ["exists", "a", Buffer.from("b")],
+    ["exists", "a", new Uint8Array([98])],
+    ["exists", "a", new ArrayBuffer(1)],
+    ["exists", "a", new Blob(["b"])],
+    ["exists", Buffer.from("a"), Buffer.from("b")],
+  ];
+  for (const call of secondKey) {
+    test(`${title(call)} throws and sends nothing`, async () => {
+      using server = await connect();
+      const handshake = server.received.length;
+      // toThrow() also passes for a returned promise that rejects. The refusal has to be synchronous.
+      let thrown: unknown;
+      try {
+        Promise.resolve(run(server.client, call)).catch(() => {});
+      } catch (error) {
+        thrown = error;
+      }
+      expect(thrown).toMatchObject({
+        name: "TypeError",
+        code: "ERR_INVALID_ARG_TYPE",
+        message: 'exists takes one key. Use send("EXISTS", keys) to count several keys',
+      });
+      await server.client.send("PING", []);
+      expect(server.received.slice(handshake)).toEqual([["PING"]]);
+    });
+  }
+
+  test('exists(undefined, "b") names the key first', async () => {
+    using server = await connect();
+    expect(() => run(server.client, ["exists", undefined, "b"])).toThrow(
+      "Expected key to be a string or buffer for 'exists'.",
+    );
+  });
+
+  // Any other argument is not read: map() passes an index and then the array, Array.from() an index.
+  const oneKey: Call[] = [
+    ["exists", "k", undefined],
+    ["exists", "k", null, undefined],
+    ["exists", "k", 0],
+    ["exists", "k", () => {}],
+    ["exists", "k", 0, ["g"]],
+  ];
+  for (const call of oneKey) {
+    test(`${title(call)} sends ["EXISTS","k"]`, async () => {
+      using server = await connect();
+      expect(await run(server.client, call)).toBe(true);
+      expect(server.lastReceived()).toEqual(["EXISTS", "k"]);
+    });
+  }
+
+  test("exists() as the callback of map() and Array.from() sends each key", async () => {
+    using server = await connect();
+    const client: any = server.client;
+    const handshake = server.received.length;
+    await Promise.all(["a", "b"].map(client.exists, client));
+    await Promise.all(new Proxy(["c", "d"], {}).map(client.exists, client));
+    await Promise.all(Array.from(["e", "f"], client.exists.bind(client)));
+    expect(server.received.slice(handshake)).toEqual(["a", "b", "c", "d", "e", "f"].map(key => ["EXISTS", key]));
   });
 });
