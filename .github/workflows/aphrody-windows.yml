@@ -83,6 +83,8 @@ jobs:
           mkdir -p dist/bun-windows-x64
           cp "$out/bun.exe" dist/bun-windows-x64/bun.exe
           (cd dist && zip -q -r bun-windows-x64.zip bun-windows-x64)
+          # Release asset, named and laid out like native.yml's bun-native-linux-x64-*.zip (flat archive).
+          (cd dist/bun-windows-x64 && zip -q ../bun-native-windows-x64.zip bun.exe)
           sha=$(sha256sum dist/bun-windows-x64.zip | cut -d' ' -f1)
           echo "sha256=$sha" >> "$GITHUB_OUTPUT"
           {
@@ -95,14 +97,16 @@ jobs:
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: bun-windows-x64
-          path: dist/bun-windows-x64.zip
+          path: |
+            dist/bun-windows-x64.zip
+            dist/bun-native-windows-x64.zip
           retention-days: 30
 
   test:
     name: windows regression tests
     needs: build
     runs-on: windows-2025
-    timeout-minutes: 60
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -131,13 +135,23 @@ jobs:
       - name: Run tests
         shell: bash
         env:
+          # The environment of scripts/runner.node.ts (spawnBun): the release binary only serves
+          # bun:internal-for-testing when BUN_FEATURE_FLAG_INTERNAL_FOR_TESTING is set together with
+          # BUN_GARBAGE_COLLECTOR_LEVEL (VirtualMachine.rs reads it inside that branch).
           BUN_FEATURE_FLAG_INTERNAL_FOR_TESTING: "1"
+          BUN_GARBAGE_COLLECTOR_LEVEL: "1"
+          BUN_DEBUG_QUIET_LOGS: "1"
+          BUN_DISABLE_SLOW_FILESYSTEM_WARNING: "1"
+          BUN_RUNTIME_TRANSPILER_CACHE_PATH: "0"
+          BUN_ENABLE_CRASH_REPORTING: "0"
           TESTS: ${{ inputs.tests || 'test/cli/install/bun-upgrade.test.ts test/cli/bun.test.ts test/js/node/fs/fs-mkdir.test.ts test/js/node/fs/fs.test.ts test/js/bun/shell/commands/rm.test.ts test/bundler/bundler_compile.test.ts test/cli/install/bun-run.test.ts' }}
         run: |
+          # Upstream's runner passes --timeout=testTimeout/2 (3 min / 2 = 90 s) to every `bun test`
+          # (scripts/runner.node.ts, perTestTimeout) instead of the 5 s default of a developer machine.
           status=0
           for t in $TESTS; do
             echo "::group::$t"
-            dist/bun-windows-x64/bun.exe test "$t" 2>&1 | tee -a test-output.txt || status=1
+            dist/bun-windows-x64/bun.exe test --timeout=90000 "$t" 2>&1 | tee -a test-output.txt || status=1
             echo "::endgroup::"
           done
           exit $status
@@ -147,3 +161,46 @@ jobs:
         with:
           name: windows-test-output
           path: test-output.txt
+
+  publish:
+    # native.yml's release job publishes native-YYYYMMDD-<sha10> with the Linux zips of a push to main;
+    # this adds the Windows zip to the same pre-release (or creates it when Windows finishes first).
+    name: attach to the native pre-release
+    needs: build
+    if: needs.build.result == 'success'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: bun-windows-x64
+          path: dist
+
+      - name: Publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          tag=native-$(date -u +%Y%m%d)-${GITHUB_SHA::10}
+          cd dist
+          sha256sum bun-native-windows-x64.zip > SHA256SUMS.windows
+          # Same tag as the Linux job (the date of this run and the commit); whichever job runs first creates it.
+          for attempt in 1 2 3; do
+            if gh release view "$tag" -R "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+              rm -f SHA256SUMS
+              gh release download "$tag" -R "$GITHUB_REPOSITORY" -p SHA256SUMS -O SHA256SUMS 2> /dev/null || : > SHA256SUMS
+              grep -v ' bun-native-windows-x64.zip$' SHA256SUMS > SHA256SUMS.new || true
+              cat SHA256SUMS.windows >> SHA256SUMS.new
+              mv SHA256SUMS.new SHA256SUMS
+              gh release upload "$tag" -R "$GITHUB_REPOSITORY" --clobber bun-native-windows-x64.zip SHA256SUMS && break
+            else
+              cp SHA256SUMS.windows SHA256SUMS
+              gh release create "$tag" -R "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease --title "$tag" \
+                --notes "Release build (ThinLTO) of $GITHUB_SHA, cross-compiled on ubuntu-24.04 (windows-x64)." \
+                bun-native-windows-x64.zip SHA256SUMS && break
+            fi
+            sleep 20
+          done
+          gh release view "$tag" -R "$GITHUB_REPOSITORY" --json assets --jq '.assets[] | "\(.name) \(.size)"' | tee -a "$GITHUB_STEP_SUMMARY"

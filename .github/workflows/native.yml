@@ -289,5 +289,11 @@ jobs:
           ls art/*/bun > /dev/null 2>&1 || { echo "no artifact"; exit 0; }
           tag=native-$(date -u +%Y%m%d)-${GITHUB_SHA::10}
           cd art && for d in */; do [ -n "$(ls -A "$d")" ] || continue; (cd "$d" && zip -q -r "../${d%/}.zip" .); done; ls -l *.zip; cp ../order/bun-linux-x64.order . 2>/dev/null || true; sha256sum *.zip $(ls *.order 2>/dev/null) > SHA256SUMS
-          gh release create "$tag" -R "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
-            --title "$tag" --notes "Release build (ThinLTO) of $GITHUB_SHA, cross-compiled on ubuntu-24.04-arm (debian:13)." *.zip $(ls *.order 2>/dev/null) SHA256SUMS
+          # aphrody-windows.yml attaches bun-native-windows-x64.zip to the same tag; whichever job runs first creates it.
+          if gh release view "$tag" -R "$GITHUB_REPOSITORY" > /dev/null 2>&1; then
+            gh release download "$tag" -R "$GITHUB_REPOSITORY" -p SHA256SUMS -O SHA256SUMS.remote 2> /dev/null && grep ' bun-native-windows-x64.zip$' SHA256SUMS.remote >> SHA256SUMS || true
+            gh release upload "$tag" -R "$GITHUB_REPOSITORY" --clobber *.zip $(ls *.order 2>/dev/null) SHA256SUMS
+          else
+            gh release create "$tag" -R "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --prerelease \
+              --title "$tag" --notes "Release build (ThinLTO) of $GITHUB_SHA, cross-compiled on ubuntu-24.04-arm (debian:13)." *.zip $(ls *.order 2>/dev/null) SHA256SUMS
+          fi
