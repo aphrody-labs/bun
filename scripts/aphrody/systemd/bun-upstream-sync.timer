@@ -1,0 +1,11 @@
+[Unit]
+Description=Aphrody bun fork: upstream sync every 3 hours
+
+[Timer]
+OnCalendar=*-*-* 00/3:20:00 UTC
+RandomizedDelaySec=5min
+Persistent=true
+Unit=bun-upstream-sync.service
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,18 @@
+# Merges oven-sh/bun main and vetted open PRs into aphrody-labs/bun main, mirrors issues and discussions
+# into aphrody/upstream-ledger.json and aphrody/upstream-discussions.jsonl (scripts/aphrody/README.md).
+# Installed by: bun scripts/aphrody/upstream-sync.ts install
+# Logs: journalctl --user -u bun-upstream-sync, and ~/ci/bun-upstream/log/upstream-sync-<date>.log
+# Exit 2 = upstream main conflicts with ours, 3 = gate red or push failed (nothing pushed), 4 = locked.
+[Unit]
+Description=Aphrody bun fork: sync oven-sh/bun commits, PRs, issues and discussions
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Nice=10
+Environment=PATH=%h/.local/bin:%h/.cargo/bin:%h/.bun/bin:/usr/local/bin:/usr/bin:/bin
+WorkingDirectory=%h/ci/bun-upstream
+ExecStart=%h/.local/bin/bun %h/ci/bun-upstream/clone/scripts/aphrody/upstream-sync.ts run
+SyslogIdentifier=bun-upstream-sync
+TimeoutStartSec=8h
