@@ -58,7 +58,7 @@ jobs:
             bun-build-cache-${{ matrix.target }}-
       - name: Generate the host script
         run: |
-          curl -fsSL -o bun.zip https://github.com/oven-sh/bun/releases/download/bun-v1.4.4/bun-linux-aarch64.zip
+          curl -fsSL -o bun.zip https://github.com/oven-sh/bun/releases/download/bun-v1.4.5/bun-linux-aarch64.zip
           unzip -q bun.zip && ./bun-linux-aarch64/bun scripts/build/ci-images/spec.ts linux-aarch64-debian
           rm -rf bun.zip bun-linux-aarch64
       - name: Build
@@ -187,7 +187,7 @@ jobs:
           curl -fsSL -o oha https://github.com/hatoo/oha/releases/download/v1.16.0/oha-linux-amd64 && chmod +x oha && sudo mv oha /usr/local/bin/
           mkdir -p ref
           get() { curl -fsSL -o ref/$1.zip https://github.com/oven-sh/bun/releases/download/$2/$3.zip && unzip -q -o ref/$1.zip -d ref/$1 && mv ref/$1/$3/bun ref/$1/bun; }
-          get stable bun-v1.4.4 bun-linux-x64
+          get stable bun-v1.4.5 bun-linux-x64
           get canary canary bun-linux-x64
           get canary-musl canary bun-linux-x64-musl
           chmod +x ref/*/bun; chmod +x art/*/bun* 2>/dev/null || true
