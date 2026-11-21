@@ -10,7 +10,7 @@
 //! was extracted, the exit code stayed 0, and the upgrade then failed with
 //! `Failed to verify Bun (code: ENOENT)`.
 
-use bun_libdeflate_sys::libdeflate::{Encoding, OwnedDecompressor, Status};
+use bun_deflate::{Error as DeflateError, Output, inflate};
 
 const EOCD_SIGNATURE: u32 = 0x0605_4b50;
 const EOCD_LEN: usize = 22;
@@ -264,12 +264,19 @@ impl Entry<'_> {
                 out.extend_from_slice(raw);
             }
             METHOD_DEFLATED => {
-                let decompressor = OwnedDecompressor::new().ok_or(ZipError::OutOfMemory)?;
-                let result = decompressor.decompress_to_vec(raw, &mut out, Encoding::Deflate);
-                match result.status {
-                    Status::Success if out.len() == size => {}
-                    Status::BadData => return Err(ZipError::Corrupt),
-                    _ => return Err(ZipError::SizeMismatch),
+                match inflate(
+                    raw,
+                    Output::Vec {
+                        vec: &mut out,
+                        limit: size,
+                    },
+                ) {
+                    Ok(done) if done.written == size => {}
+                    Ok(_) | Err(DeflateError::InsufficientSpace) => {
+                        return Err(ZipError::SizeMismatch);
+                    }
+                    Err(DeflateError::BadData) => return Err(ZipError::Corrupt),
+                    Err(DeflateError::Alloc(_)) => return Err(ZipError::OutOfMemory),
                 }
             }
             method => return Err(ZipError::UnsupportedMethod(method)),
