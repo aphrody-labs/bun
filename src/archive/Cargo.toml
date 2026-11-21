@@ -20,4 +20,4 @@ bun_paths.workspace = true
 bun_sys.workspace = true
 bun_wyhash.workspace = true
 bun_deflate.workspace = true
-bun_zlib.workspace = true
+bun_highway.workspace = true

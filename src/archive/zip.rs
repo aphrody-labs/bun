@@ -281,7 +281,7 @@ impl Entry<'_> {
             }
             method => return Err(ZipError::UnsupportedMethod(method)),
         }
-        if bun_zlib::crc32_bytes(0, &out) != self.crc32 {
+        if bun_highway::crc32(0, &out) != self.crc32 {
             return Err(ZipError::Crc);
         }
         Ok(out)
