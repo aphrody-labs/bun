@@ -925,8 +925,8 @@ impl FileReader {
     /// Raw parent-end fd for `child_process` `stream._handle.fd` (synchronous
     /// `fs.readSync` IPC, e.g. TypeScript 7 `syncChannel.js`). `-1` once the
     /// reader is done or closed, and on Windows, where pipes have no CRT fd
-    /// (Node `StreamBase::GetFD` also answers -1 there). Before `start` the fd
-    /// lives in the `BufferedReader`, not `self.fd`.
+    /// (Node `StreamBase::GetFD` also answers -1 there). The fd lives in the
+    /// `BufferedReader`.
     pub(crate) fn js_fd(&self) -> i32 {
         #[cfg(windows)]
         {
@@ -934,15 +934,10 @@ impl FileReader {
         }
         #[cfg(not(windows))]
         {
-            // `self.fd` is filled by `on_start` and never cleared, so gate on
-            // liveness or a closed fd would leak a stale number.
             if self.done.get() || self.reader.is_done() {
                 return -1;
             }
-            let mut fd = self.fd.get();
-            if fd == Fd::INVALID {
-                fd = self.reader.get_fd();
-            }
+            let fd = self.reader.get_fd();
             if fd == Fd::INVALID { -1 } else { fd.native() }
         }
     }
