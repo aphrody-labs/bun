@@ -50,10 +50,11 @@ fn best_coding(
         return Ok(runs);
     }
     drop(runs);
-    match quality {
-        Quality::Palette => Ok(greedy),
-        Quality::Alpha | Quality::Picture => improved(greedy, histogram, pixels, matches),
+    // Tracing back costs the most of what is done for a better coding.
+    if quality.get() < 25 {
+        return Ok(greedy);
     }
+    improved(greedy, histogram, pixels, matches)
 }
 
 enum Piece {
@@ -227,6 +228,8 @@ pub(super) struct Options {
     pub(super) max_cache_bits: u32,
     /// Whether to see what comes of copying from nearby only.
     pub(super) tries_near_copies: bool,
+    /// Whether to see what comes of a color cache of no size, if one is better than none.
+    pub(super) tries_no_cache: bool,
 }
 
 /// A stream that has everything but the pixels.
@@ -303,7 +306,12 @@ pub(super) fn finish_with(
     height: usize,
     options: Options,
 ) -> Result<Vec<u8>> {
-    let max_cache_bits = options.max_cache_bits;
+    // https://github.com/webmproject/libwebp/blob/4fa21912338357f89e4fd51cf2368325b59e9bd9/src/enc/backward_references_enc.c#L759
+    let max_cache_bits = if options.quality.get() <= 25 {
+        0
+    } else {
+        options.max_cache_bits
+    };
     let mut matches = matches::find(argb, width, options.quality)?;
     let pixels = Pixels {
         argb,
@@ -312,24 +320,34 @@ pub(super) fn finish_with(
     };
     let [histogram] = &mut *vec::array(Histogram::EMPTY)?;
     let coding = best_coding(pixels, &matches, max_cache_bits, options.quality, histogram)?;
-    if !options.tries_near_copies {
+    let tries_no_cache = options.tries_no_cache && coding.cache_bits > 0;
+    if !options.tries_near_copies && !tries_no_cache {
         drop(matches);
         let stream = Unfinished::new(writer, pixels, coding, height, options)?;
         return stream.finish(pixels, options.tile_bits);
     }
-    let first = Unfinished::new(writer.try_clone()?, pixels, coding, height, options)?;
-
-    matches::keep_near(&mut matches, argb, width)?;
-    let greedy = copies::greedy(&matches)?;
-    let greedy = Coding::with_best_cache(pixels, greedy, max_cache_bits, histogram)?;
-    let coding = improved(greedy, histogram, pixels, &matches)?;
-    let second = Unfinished::new(writer, pixels, coding, height, options)?;
-    let smaller = if second.finished_len() < first.finished_len() {
-        second
-    } else {
-        first
+    let smaller = |first: Unfinished, second: Unfinished| {
+        if second.finished_len() < first.finished_len() {
+            second
+        } else {
+            first
+        }
     };
-    smaller.finish(pixels, options.tile_bits)
+    let mut best = Unfinished::new(writer.try_clone()?, pixels, coding, height, options)?;
+    if tries_no_cache {
+        let coding = best_coding(pixels, &matches, 0, options.quality, histogram)?;
+        let uncached = Unfinished::new(writer.try_clone()?, pixels, coding, height, options)?;
+        best = smaller(best, uncached);
+    }
+    if options.tries_near_copies {
+        matches::keep_near(&mut matches, argb, width)?;
+        let greedy = copies::greedy(&matches)?;
+        let greedy = Coding::with_best_cache(pixels, greedy, max_cache_bits, histogram)?;
+        let coding = improved(greedy, histogram, pixels, &matches)?;
+        let near = Unfinished::new(writer, pixels, coding, height, options)?;
+        best = smaller(best, near);
+    }
+    best.finish(pixels, options.tile_bits)
 }
 
 #[cfg(test)]

@@ -1,12 +1,12 @@
 //! The predictor transform, which leaves of each pixel what its neighbors do not tell.
 
-use super::entropy::{ONE_BIT, set_bits};
+use super::entropy::{Cost, ONE_BIT, set_bits, x_log2};
 use super::residuals::{Bias, Counts, Totals};
 use super::sub;
 use super::tiles::{self, Tiles};
 use crate::array::At;
 use crate::error::Result;
-use crate::lossless::{Argb, BLACK};
+use crate::lossless::{Argb, BLACK, MIN_TILE_BITS};
 use crate::slice::{InBounds, known};
 use crate::vec;
 
@@ -582,15 +582,17 @@ impl<'a> Search<'a> {
     }
 }
 
+/// The modes, and what the residuals of the image and the modes would cost to code.
 fn choose_modes(
     pixels: &[Argb],
     width: usize,
     height: usize,
     bits: u32,
     rows: &mut Rows,
-) -> Result<Tiles> {
+) -> Result<(Tiles, Cost)> {
     let mut modes = Tiles::new(width, height, bits)?;
     let mut search = Search::new(pixels, width, bits, rows)?;
+    let mut by_mode = [0u32; MODES];
     for y in (0..height).step_by(1 << bits) {
         let height = (height - y).min(1 << bits);
         search.read_rows(y, height);
@@ -604,24 +606,68 @@ fn choose_modes(
             };
             let mode = search.best_mode(tile, [left, modes.above_next().map(mode_of)]);
             modes.pixels.push(BLACK | Argb::from(mode) << 8);
+            *by_mode.at_mut(mode.into()) += 1;
             left = Some(mode);
         }
     }
+    let residuals = search.channels.iter().map(|channel| channel.totals.entropy());
+    let cost = residuals.sum::<Cost>() + entropy_of(&by_mode);
     modes.merge();
-    Ok(modes)
+    Ok((modes, cost))
 }
 
-/// Returns which predictor is for which tile.
+/// What the symbols that occur `counts` times cost to code.
+fn entropy_of(counts: &[u32]) -> Cost {
+    let total = counts.iter().sum();
+    let apart = counts.iter().map(|&count| x_log2(count)).sum::<Cost>();
+    x_log2(total).saturating_sub(apart)
+}
+
+/// Returns which predictor is for which tile. Tiles of the size that `max_bits` says, and of up to `sizes_below` smaller ones,
+/// are tried, and those that are best for the residuals are kept.
+// https://github.com/webmproject/libwebp/blob/4fa21912338357f89e4fd51cf2368325b59e9bd9/src/enc/predictor_enc.c#L772
 pub(super) fn apply(
     pixels: &mut [Argb],
     width: usize,
     height: usize,
+    max_bits: u32,
+    sizes_below: u32,
+    hidden: HiddenColors,
+) -> Result<Tiles> {
+    let max_bits = tiles::fitted(max_bits, width, height, MAX_TILES);
+    let min_bits = max_bits.saturating_sub(sizes_below).max(MIN_TILE_BITS);
+    let min_bits = tiles::fitted(min_bits, width, height, MAX_TILES);
+    let mut rows = Rows::new(width, hidden)?;
+    let (mut modes, mut least) = choose_modes(pixels, width, height, min_bits, &mut rows)?;
+    for bits in min_bits + 1..=max_bits {
+        let (tried, cost) = choose_modes(pixels, width, height, bits, &mut rows)?;
+        if cost < least {
+            (modes, least) = (tried, cost);
+        }
+    }
+    subtract_all(pixels, width, height, &modes, &mut rows);
+    Ok(modes)
+}
+
+/// The same mode for all tiles, which takes no search.
+pub(super) fn apply_mode(
+    pixels: &mut [Argb],
+    width: usize,
+    height: usize,
     bits: u32,
+    mode: u8,
     hidden: HiddenColors,
 ) -> Result<Tiles> {
     let bits = tiles::fitted(bits, width, height, MAX_TILES);
+    let mut modes = Tiles::new(width, height, bits)?;
+    modes.pixels.resize(tiles::count(width, height, bits), BLACK | Argb::from(mode) << 8);
+    modes.merge();
     let mut rows = Rows::new(width, hidden)?;
-    let modes = choose_modes(pixels, width, height, bits, &mut rows)?;
+    subtract_all(pixels, width, height, &modes, &mut rows);
+    Ok(modes)
+}
+
+fn subtract_all(pixels: &mut [Argb], width: usize, height: usize, modes: &Tiles, rows: &mut Rows) {
     for y in 0..height {
         rows.advance(pixels, y, 0, width);
         let row = pixels.part_mut(y * width..(y + 1) * width);
@@ -630,7 +676,6 @@ pub(super) fn apply(
             rows.subtract(mode_of(tile), tile_x << modes.bits, y, residuals);
         }
     }
-    Ok(modes)
 }
 
 #[cfg(test)]

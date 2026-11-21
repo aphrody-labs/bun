@@ -148,8 +148,8 @@ impl Clusters {
         };
         // https://github.com/webmproject/libwebp/blob/4fa21912338357f89e4fd51cf2368325b59e9bd9/src/enc/histogram_enc.c#L1125
         let halved = [256, 512, 1024].map(|many| u32::from(tiles.len() > many));
-        let halved = halved.iter().sum::<u32>() + u32::from(quality as u32 <= 50);
-        let percent_to_save = 16 >> halved;
+        let halved = halved.iter().sum::<u32>() + u32::from(quality.get() <= 50);
+        let percent_to_save = if quality.get() < 90 { 16 >> halved } else { 16 };
 
         let mut bins: [Option<Bin>; BINS] = [None; BINS];
         let mut candidate = Counts::empty(&self.alphabets)?;
@@ -418,12 +418,13 @@ pub(super) fn find(tiles: &TileHistograms, quality: Quality) -> Result<Groups> {
     };
     let mut ids_then_groups = vec::filled(0, tiles.len())?;
     let used = tiles.tiles.iter().filter(|tile| tile.is_used());
-    if used.count() > 2 * BINS {
+    // https://github.com/webmproject/libwebp/blob/4fa21912338357f89e4fd51cf2368325b59e9bd9/src/enc/histogram_enc.c#L1165
+    if used.count() > 2 * BINS && quality.get() < 100 {
         clusters.fill_by_cost(tiles, quality, &mut ids_then_groups)?;
     } else {
         clusters.fill(tiles, &mut ids_then_groups)?;
     }
-    let goal = (quality as u64).pow(3) * (MAX_FOR_BEST_PAIRS - 1);
+    let goal = u64::from(quality.get()).pow(3) * (MAX_FOR_BEST_PAIRS - 1);
     let goal = 1 + div_round(goal, 100 * 100 * 100) as usize;
     clusters.merge_random_pairs(goal)?;
     if clusters.clusters.len() <= goal {
@@ -495,7 +496,7 @@ mod tests {
             (0..1000).for_each(|_| histogram.add_literal((tile % KINDS) << 8));
             tiles.push(histogram)?;
         }
-        let groups = find(&tiles, Quality::Picture)?.of_tiles;
+        let groups = find(&tiles, Quality::PICTURE)?.of_tiles;
         for (a, group_a) in (0..).zip(&groups) {
             for (b, group_b) in (0..).zip(&groups) {
                 assert_eq!(group_a == group_b, a % KINDS == b % KINDS);

@@ -138,18 +138,20 @@ struct Image<'a> {
 impl<'a> Image<'a> {
     // https://github.com/webmproject/libwebp/blob/4fa21912338357f89e4fd51cf2368325b59e9bd9/src/enc/backward_references_enc.c#L241
     fn new(pixels: &'a [Argb], end: &'a [Argb], width: usize, quality: Quality) -> Option<Self> {
-        let rows = match quality {
-            Quality::Palette => 16,
-            Quality::Alpha => 64,
-            Quality::Picture => 256,
+        let rows = match quality.get() {
+            ..=25 => 16,
+            26..=50 => 64,
+            51..=75 => 256,
+            _ => MAX_DISTANCE,
         };
+        let quality = quality.get() as usize;
         end.last_chunk().map(|of_last_pixel| Self {
             pixels,
             width,
             end,
             of_last_pixel,
-            max_tries: 8 + quality as usize * quality as usize / 128,
-            max_distance: (rows * width).min(MAX_DISTANCE),
+            max_tries: 8 + quality * quality / 128,
+            max_distance: rows.saturating_mul(width).min(MAX_DISTANCE),
         })
     }
 
@@ -315,6 +317,6 @@ mod tests {
 
     #[test]
     fn there_has_to_be_a_pixel() {
-        assert_eq!(find(&[], 1, Quality::Picture).err(), Some(Error::Internal));
+        assert_eq!(find(&[], 1, Quality::PICTURE).err(), Some(Error::Internal));
     }
 }

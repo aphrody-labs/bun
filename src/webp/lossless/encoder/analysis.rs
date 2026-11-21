@@ -107,14 +107,36 @@ fn for_each_change<P: Copy + Eq>(pixels: &[P], width: usize, mut visit: impl FnM
     }
 }
 
-/// `tiles` is how many the predictor would have.
-pub(super) fn for_colors(pixels: &[Argb], width: usize, tiles: usize) -> Result<Transforms> {
+/// `tiles` is how many the predictor would have. With `all`, every set of transforms is returned and not only the one that
+/// seems to suit the image.
+pub(super) fn for_colors(
+    pixels: &[Argb],
+    width: usize,
+    tiles: usize,
+    all: bool,
+) -> Result<Vec<Transforms>> {
     let [plain, predicted] = &mut *vec::array(Channels::EMPTY)?;
     for_each_change(pixels, width, |pixel, before| {
         plain.add(pixel, 1);
         predicted.add(sub(pixel, before), 1);
     });
-    Ok(choose(plain, predicted, tiles).0)
+    let mut sets = vec::with_room(4)?;
+    if all {
+        predicted.add(0, 1);
+        // https://github.com/webmproject/libwebp/blob/4fa21912338357f89e4fd51cf2368325b59e9bd9/src/enc/vp8l_enc.c#L355
+        for (subtract_green, predictor) in
+            [(false, false), (true, false), (false, true), (true, true)]
+        {
+            sets.push(Transforms {
+                subtract_green,
+                predictor,
+                cross_color: predictor && has_red_or_blue(predicted, subtract_green),
+            });
+        }
+    } else {
+        sets.push(choose(plain, predicted, tiles).0);
+    }
+    Ok(sets)
 }
 
 /// `None` stands for the palette.
@@ -162,15 +184,20 @@ fn choose(plain: &Channels, predicted: &mut Channels, tiles: usize) -> (Transfor
         }
     }
     let (cost, predictor, subtract_green) = best;
+    let transforms = Transforms {
+        subtract_green,
+        predictor,
+        cross_color: predictor && has_red_or_blue(predicted, subtract_green),
+    };
+    (transforms, cost)
+}
+
+/// Whether any red or blue is left that is not zero.
+fn has_red_or_blue(predicted: &Channels, subtract_green: bool) -> bool {
     let ([_, red @ ..], [_, blue @ ..]) = if subtract_green {
         (&predicted.red_minus_green, &predicted.blue_minus_green)
     } else {
         (&predicted.red, &predicted.blue)
     };
-    let transforms = Transforms {
-        subtract_green,
-        predictor,
-        cross_color: predictor && red.iter().chain(blue).any(|&count| count != 0),
-    };
-    (transforms, cost)
+    red.iter().chain(blue).any(|&count| count != 0)
 }

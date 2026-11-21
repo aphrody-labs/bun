@@ -23,5 +23,5 @@ mod slice;
 mod vec;
 
 pub use decoder::{Decoder, Image};
-pub use encoder::{Compression, encode};
+pub use encoder::{Compression, Lossless, encode};
 pub use error::{Error, Result};

@@ -27,6 +27,12 @@ impl Totals {
         });
     }
 
+    /// What all the tiles added so far cost to code, with the best code for them.
+    pub(super) fn entropy(&self) -> Cost {
+        let total = self.counts.iter().sum::<u32>();
+        x_log2(total).saturating_sub(self.x_log2.iter().sum::<Cost>())
+    }
+
     /// The entropy of `tile` by itself and with the totals, but for what all tiles of its size have in common.
     // https://github.com/webmproject/libwebp/blob/4fa21912338357f89e4fd51cf2368325b59e9bd9/src/dsp/lossless_enc.c#L320
     #[inline]

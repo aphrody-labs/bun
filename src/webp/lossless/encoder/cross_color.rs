@@ -14,7 +14,7 @@ use crate::slice::InBounds;
 use crate::vec;
 
 // https://github.com/webmproject/libwebp/blob/4fa21912338357f89e4fd51cf2368325b59e9bd9/src/enc/vp8l_enc.c#L282
-pub(super) const MAX_TILE_BITS: u32 = 5;
+pub(super) const MAX_TILE_BITS: u32 = 6;
 
 #[derive(Clone, Copy, Default)]
 struct Multipliers {
