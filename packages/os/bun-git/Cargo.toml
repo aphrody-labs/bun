@@ -19,7 +19,7 @@ path = "examples/ecosystem-audit.rs"
 
 [dependencies]
 base64 = { version = "0.23.1", default-features = false, features = ["std"] }
-gix = { version = "0.88", default-features = false, features = ["sha1", "basic", "extras", "comfort", "max-performance-safe", "revision", "index", "worktree-mutation"] }
+gix = { version = "0.90", default-features = false, features = ["sha1", "basic", "extras", "comfort", "max-performance", "revision", "index", "worktree-mutation"] }
 globset = "0.4"
 ignore = "0.4"
 octocrab = { version = "0.54", default-features = false, features = ["default-client", "follow-redirect", "retry", "rustls", "rustls-ring", "timeout"] }

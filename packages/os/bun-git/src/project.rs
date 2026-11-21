@@ -257,7 +257,7 @@ pub fn list_worktrees(path: impl AsRef<Path>) -> Result<Vec<GitWorktreeInfo>, Er
     }
 
     for wt in repo.worktrees().map_err(git_error)? {
-        let name = wt.id().to_string();
+        let name = wt.id().map_err(git_error)?.to_string();
         let base = wt.base().map_err(git_error)?;
         worktrees.push(GitWorktreeInfo {
             name,
