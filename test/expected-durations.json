@@ -16,6 +16,10 @@
       "windows-aarch64": "windows-aarch64-11-test-bun"
     }
   },
+  "aot/a-start-asks-the-kernel-nothing-about-the-lowest-pages.test.ts": {
+    "default": 500,
+    "asan": 13000
+  },
   "aot/the-console-and-the-loader-of-an-executable-publish-to-no-diagnostics-channel.test.ts": {
     "default": 3000,
     "asan": 12000
